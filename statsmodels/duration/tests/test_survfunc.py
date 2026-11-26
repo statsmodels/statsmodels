@@ -69,19 +69,10 @@ def test_survfunc1():
     assert_allclose(df["num at risk"].values, sr.n_risk)
     assert_allclose(df["num events"].values, sr.n_events)
 
-    # quantile(p): first time where the survival curve drops below 1-p,
-    # i.e. the smallest t with P(T > t) < 1-p
-    for p in (0.1, 0.5, 0.9):
-        q = sr.quantile(p)
-        ii = np.flatnonzero(sr.surv_prob < 1 - p)
-        expected = np.nan if len(ii) == 0 else sr.surv_times[ii[0]]
-        if np.isnan(expected):
-            assert np.isnan(q)
-        else:
-            assert q == expected
-            # the survival probability at (just before) the quantile has
-            # indeed just dropped below 1-p
-            assert sr.surv_prob[sr.surv_times == q][0] < 1 - p
+    # quantile(p): first time where the survival curve drops below 1-p.
+    # The curve is 0.875, 0.7292, 0.5469, 0 at the times 1, 2, 3, 5.
+    for p, expected in {0.1: 1, 0.2: 2, 0.4: 3, 0.5: 5, 0.9: 5}.items():
+        assert sr.quantile(p) == expected
 
     # p beyond the lowest observed survival probability: no such time
     p_beyond = 1 - sr.surv_prob.min() + 0.01
@@ -113,8 +104,9 @@ def test_survdiff_basic():
 
 def test_simultaneous_cb():
 
-    # The exact numbers here are regression tests, but they are close
-    # to page 103 of Klein and Moeschberger.
+    # Reference values: Klein and Moeschberger (2003), eqs. 4.4.4-4.4.5,
+    # n = 38, k = 1.3581; they agree with the Hall-Wellner helper
+    # functions of the R package km.ci at k = 1.3581.
 
     df = bmt.loc[bmt["Group"] == "ALL", :]
     sf = SurvfuncRight(df["T"], df["Status"])
@@ -123,16 +115,111 @@ def test_simultaneous_cb():
 
     ti = sf.surv_times.tolist()
     ix = [ti.index(x) for x in (110, 122, 129, 172)]
-    assert_allclose(lcb1[ix], np.r_[0.43590582, 0.42115592, 0.4035897, 0.38785927])
-    assert_allclose(ucb1[ix], np.r_[0.93491636, 0.89776803, 0.87922239, 0.85894181])
+    assert_allclose(lcb1[ix], np.r_[0.4631510444, 0.4435539365, 0.4288155411, 0.4120798226])
+    assert_allclose(ucb1[ix], np.r_[0.9299736078, 0.8916180109, 0.8711562469, 0.8500641135])
 
-    assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378, 0.45595321, 0.43341115])
-    assert_allclose(ucb2[ix], np.r_[0.96465636, 0.92745068, 0.90885428, 0.88796708])
+    assert_allclose(lcb2[ix], np.r_[0.5384788593, 0.4965766434, 0.47442075, 0.4517477403])
+    assert_allclose(ucb2[ix], np.r_[0.9579692632, 0.9190485398, 0.8979194877, 0.8760606392])
 
     with pytest.raises(ValueError, match="method"):
         sf.simultaneous_cb(method="not-a-method")
     with pytest.raises(ValueError, match="transform"):
         sf.simultaneous_cb(transform="not-a-transform")
+
+
+def test_simultaneous_cb_uses_total_sample_size():
+    # Hall-Wellner band: the factor n**(-1/2) * (1 + n * sigma_S**2(t)) uses
+    # the total sample size n.  Using the number at risk instead makes the
+    # band too wide early and too narrow in the tail (about 87% simultaneous
+    # coverage instead of 95% for n=100 uncensored exponential data).
+    df = bmt.loc[bmt["Group"] == "ALL", :]
+    sf = SurvfuncRight(df["T"], df["Status"])
+    ix = sf.surv_times.tolist().index(466)
+    lcb, ucb = sf.simultaneous_cb(transform="log")
+    assert_allclose([lcb[ix], ucb[ix]], [0.2404046938, 0.6655467336], rtol=1e-7)
+    lcb, ucb = sf.simultaneous_cb(transform="arcsin")
+    assert_allclose([lcb[ix], ucb[ix]], [0.2545953816, 0.6855519801], rtol=1e-7)
+
+
+@pytest.mark.parametrize("transform", ["log", "arcsin"])
+def test_simultaneous_cb_freq_weights_equal_expanded_data(transform):
+    rng = np.random.default_rng(10649)
+    time = rng.integers(1, 30, size=40).astype(np.float64)
+    status = rng.integers(0, 2, size=40)
+    status[:5] = 1
+    weights = rng.integers(1, 5, size=40)
+    # np.repeat needs counts that cast safely to intp (int32 on Pyodide)
+    counts = weights.astype(np.intp)
+
+    sf_w = SurvfuncRight(time, status, freq_weights=weights)
+    sf_x = SurvfuncRight(np.repeat(time, counts), np.repeat(status, counts))
+    assert_allclose(sf_w.surv_times, sf_x.surv_times)
+
+    lcb_w, ucb_w = sf_w.simultaneous_cb(transform=transform)
+    lcb_x, ucb_x = sf_x.simultaneous_cb(transform=transform)
+    assert_allclose(lcb_w, lcb_x, rtol=1e-12, atol=1e-14)
+    assert_allclose(ucb_w, ucb_x, rtol=1e-12, atol=1e-14)
+
+
+@pytest.mark.parametrize("n", [8, 10, 12, 18, 24])
+def test_quantile_exact_tie_does_not_depend_on_rounding(n):
+    # n uncensored distinct times 1..n: S(n/2) is exactly 1/2, so the first
+    # time with S(t) < 1/2 (strict, as documented) is n/2 + 1.  Before the
+    # fix, rounding of exp(cumsum(log(...))) returned n/2 for n = 12 and 18.
+    tm = np.arange(1, n + 1, dtype=float)
+    sf = SurvfuncRight(tm, np.ones(n))
+    assert sf.quantile(0.5) == n / 2 + 1
+    if n % 4 == 0:
+        assert sf.quantile(0.25) == n / 4 + 1
+        assert sf.quantile(0.75) == 3 * n / 4 + 1
+    # duplicating every subject leaves the curve unchanged
+    sf2 = SurvfuncRight(np.repeat(tm, 2), np.ones(2 * n))
+    assert sf2.quantile(0.5) == sf.quantile(0.5)
+
+
+# The expected values below are the first event time with S(t) < 1 - p,
+# computed with exact rational arithmetic (fractions.Fraction) for the
+# Kaplan-Meier product, and checked by hand as described in the comments.
+# The estimate is exactly 1 - p at the event time before the expected time.
+# In R, quantile(survfit(...), p, conf.int=FALSE) (survival 3.8-6) returns the
+# midpoint of the two times at an exact tie, which is not used here.
+tie_cases = {
+    # Events at 1, ..., 6 with 12, ..., 7 at risk: S(6) = 6/12 = 1/2.
+    # S(8) = 1/2 * 4/5 = 2/5.  S(3) = 9/12 = 3/4 and S(4) = 8/12.
+    "censored-p50": (
+        np.arange(1.0, 13.0),
+        [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1],
+        None,
+        0.5,
+        8,
+    ),
+    "censored-p25": (
+        np.arange(1.0, 13.0),
+        [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1],
+        None,
+        0.25,
+        4,
+    ),
+    # 8 at risk at time 1: S(1) = 7/8.  At time 2, 7 at risk with 3 events:
+    # S(2) = 7/8 * 4/7 = 1/2.  At time 3, 4 at risk: S(3) = 1/2 * 3/4 = 3/8.
+    "weighted": ([1.0, 2.0, 3.0, 4.0], [1, 1, 1, 1], [1, 3, 1, 3], 0.5, 3),
+    # S(t) = (10 - t) / 10 and 1 - p = 1/10 for p = 0.9
+    "decimal-p": (np.arange(1.0, 11.0), np.ones(10), None, 0.9, 10),
+    # S(1) = 1/2 and the single later observation is censored: the curve
+    # equals 1 - p but never gets below it.
+    "never-below": ([1.0, 2.0], [1, 0], None, 0.5, np.nan),
+}
+
+
+@pytest.mark.parametrize("case", list(tie_cases))
+def test_quantile_exact_tie_censoring_weights(case):
+    time, status, weights, p, expected = tie_cases[case]
+    sf = SurvfuncRight(time, status, freq_weights=weights)
+    q = sf.quantile(p)
+    if np.isnan(expected):
+        assert np.isnan(q)
+    else:
+        assert q == expected
 
 
 def test_bmt():

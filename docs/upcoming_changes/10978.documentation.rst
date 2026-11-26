@@ -1,0 +1,5 @@
+- Correct docstrings of ``MarkovRegression``, ``MarkovAutoregression`` and
+  their results in ``statsmodels.tsa.regime_switching``: the results take
+  ``results`` and ``cov_kwds``, the default ``cov_type`` is ``"opg"``,
+  ``nobs`` is an integer, the shapes returned by ``predict_conditional``, and
+  that ``exog`` may be one-dimensional. :pr:`10978`

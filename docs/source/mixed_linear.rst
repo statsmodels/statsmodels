@@ -129,9 +129,9 @@ where
   values are independent both within and between groups
 
 :math:`Y, X, \{Q_j\}` and :math:`Z` must be entirely observed.  :math:`\beta`,
-:math:`\Psi`, and :math:`\sigma^2` are estimated using ML or REML estimation,
-and :math:`\gamma`, :math:`\{\eta_j\}` and :math:`\epsilon` are
-random so define the probability model.
+:math:`\Psi`, :math:`\{\tau_j^2\}`, and :math:`\sigma^2` are estimated using
+ML or REML estimation, and :math:`\gamma`, :math:`\{\eta_j\}` and
+:math:`\epsilon` are random so define the probability model.
 
 The marginal mean structure is :math:`E[Y|X,Z] = X*\beta`.  If only
 the marginal mean structure is of interest, GEE is a good alternative

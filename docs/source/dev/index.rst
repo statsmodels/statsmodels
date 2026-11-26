@@ -45,7 +45,7 @@ greatly helps the job of maintaining and releasing the software a shared effort.
 - Code submissions must always include tests. See our notes on :ref:`testing`.
 - Each function, class, method, and attribute needs to be documented using
   docstrings. We conform to the
-  `numpy docstring standard <https://numpy.org/doc/stable/docs/howto_document.html#docstring-standard>`_.
+  `numpy docstring standard <https://numpydoc.readthedocs.io/en/latest/format.html>`_.
 - If you are adding new functionality, you need to add it to the documentation
   by editing (or creating) the appropriate file in ``docs/source``.
 - Make sure your documentation changes parse correctly. Change into the
@@ -60,9 +60,11 @@ greatly helps the job of maintaining and releasing the software a shared effort.
 - Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines wherever possible.
   Lint your code by running ``LINT=true ./lint.sh``. 
 - Compare your changes to what’s in main by running ``git diff upstream/main``.
-- Finally, please add your changes to the release notes. Open the
-  ``docs/source/release/versionX.X.rst`` file that has the version number of the
-  next release and add your changes to the appropriate section.
+- Finally, please add your changes to the release notes. Add a fragment file
+  ``docs/upcoming_changes/<PR number>.<section>.rst`` with your bullets, as
+  described in ``docs/upcoming_changes/README.rst``. The fragments are collected
+  into ``docs/source/release/versionX.Y.Z.rst`` at release time, so pull
+  requests do not conflict there.
 
 How to Submit a Pull Request
 ----------------------------

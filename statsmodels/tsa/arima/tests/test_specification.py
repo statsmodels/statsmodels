@@ -809,3 +809,82 @@ def test_invalid_estimator():
     spec = specification.SARIMAXSpecification()
     with pytest.raises(ValueError):
         spec.validate_estimator("not_an_estimator")
+
+
+@pytest.mark.parametrize("component", ["autoregressive", "moving average"])
+def test_duplicate_seasonal_lags(component):
+    # A lag in both the seasonal and non-seasonal polynomials is invalid,
+    # unless the specification is not validated
+    if component == "autoregressive":
+        kwargs = {"ar_order": [1, 4], "seasonal_ar_order": 1}
+    else:
+        kwargs = {"ma_order": [1, 4], "seasonal_ma_order": 1}
+    # NumPy 2 shows the lag as np.int64(4), or np.int32(4) where the default
+    # integer has 32 bits (Pyodide); older NumPy shows 4
+    match = rf"{component} lag\(s\) \{{(np\.int(32|64)\()?4\)?\}} are in both"
+    with pytest.raises(ValueError, match=match):
+        specification.SARIMAXSpecification(seasonal_periods=4, **kwargs)
+    spec = specification.SARIMAXSpecification(
+        seasonal_periods=4, validate_specification=False, **kwargs
+    )
+    # The reduced polynomial has degree 4 + 1 * 4
+    assert spec.max_reduced_ar_order + spec.max_reduced_ma_order == 8
+
+
+@pytest.mark.parametrize("estimator", ["hannan_rissanen", "innovations"])
+def test_validate_estimator_enforce_invertibility(estimator):
+    spec = specification.SARIMAXSpecification(ma_order=1, enforce_invertibility=True)
+    with pytest.raises(ValueError, match="cannot enforce an invertible"):
+        spec.validate_estimator(estimator)
+
+
+@pytest.mark.parametrize(
+    "trend, names, powers",
+    [
+        ("n", [], []),
+        ("t", ["drift"], [1]),
+        ("ctt", ["const", "drift", "trend.2"], [0, 1, 2]),
+        ([0, 0, 0, 1], ["trend.3"], [3]),
+    ],
+    ids=str,
+)
+def test_construct_trend_data_and_names(trend, names, powers):
+    # The trend terms are the powers of t = offset, offset + 1, ...
+    endog = np.zeros(10)
+    spec = specification.SARIMAXSpecification(endog, trend=trend)
+    assert spec.construct_trend_names() == names
+    data = spec.construct_trend_data(5, offset=3)
+    if not powers:
+        assert data is None
+    else:
+        t = np.arange(3.0, 8.0)
+        expected = np.column_stack([t**p for p in powers])
+        assert_allclose(data, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("trend", ["c", "t", "ct", [0, 0, 1]])
+@pytest.mark.parametrize("endog", [None, []])
+def test_trend_without_observations(trend, endog):
+    # A trend without observations raised "zero-size array to reduction
+    # operation maximum" when the trend data, which then has no rows, was
+    # checked for a constant column. The trend data is now left out, and the
+    # trend is described as for a specification with data.
+    spec = specification.SARIMAXSpecification(endog, order=(1, 0, 1), trend=trend)
+    nobs = 10
+    ref = specification.SARIMAXSpecification(
+        np.arange(1.0, nobs + 1) ** 0.5, order=(1, 0, 1), trend=trend
+    )
+    assert spec.exog is None
+    assert spec.k_exog == 0
+    assert_equal(spec.trend_terms, ref.trend_terms)
+    assert_equal(spec.k_trend, ref.k_trend)
+    assert_equal(spec.trend_order, ref.trend_order)
+    assert_equal(spec.trend_degree, ref.trend_degree)
+    # The trend data are the powers of t = 1, ..., nobs in trend_terms
+    time = np.arange(1.0, nobs + 1)[:, None]
+    expected = time ** ref.trend_terms.astype(float)
+    assert_allclose(spec.construct_trend_data(nobs), expected, rtol=1e-12)
+    assert_allclose(ref.exog, expected, rtol=1e-12)
+    # One observation is enough for the trend data
+    one = specification.SARIMAXSpecification([2.0], order=(1, 0, 1), trend=trend)
+    assert_allclose(one.exog, expected[:1], rtol=1e-12)

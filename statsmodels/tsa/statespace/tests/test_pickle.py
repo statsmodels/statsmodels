@@ -12,6 +12,7 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
+import copy
 import pickle
 
 import numpy as np
@@ -19,8 +20,15 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.statespace import sarimax
+from statsmodels.tsa.statespace import (
+    dynamic_factor,
+    exponential_smoothing,
+    sarimax,
+    varmax,
+)
+from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
+from statsmodels.tsa.statespace.mlemodel import MLEResults
 from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 
@@ -44,8 +52,10 @@ def test_pickle_fit_sarimax(data):
     mod = sarimax.SARIMAX(data["lgdp"], order=(1, 1, 0))
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
-    res = mod.fit(disp=-1, full_output=True, method="newton")
-    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="newton")
+    # L-BFGS converges here. Newton's method stops at the start values with a
+    # ConvergenceWarning.
+    res = mod.fit(disp=-1, full_output=True, method="lbfgs")
+    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="lbfgs")
 
     assert_allclose(res.llf_obs, pkl_res.llf_obs)
     assert_allclose(res.tvalues, pkl_res.tvalues)
@@ -150,3 +160,140 @@ def test_representation_pickle():
     assert_equal(mod.design, pkl_mod.design)
     assert_equal(mod.obs_intercept, pkl_mod.obs_intercept)
     assert_equal(mod.initial_variance, pkl_mod.initial_variance)
+
+
+# Parameters at which a model is used before it is copied, and different
+# parameters at which the copy is then evaluated
+USED_MODEL_PARAMS = {
+    "sarimax": ([1.0, 0.5, 0.2, 1.0], [2.0, 0.8, -0.3, 0.5]),
+    "unobserved_components": ([1.0, 0.5, 0.1], [0.2, 1.5, -0.5]),
+    "varmax": (
+        [0.0, 0.0, 0.2, 0.0, 0.0, 0.2, 1.0, 0.0, 1.0],
+        [0.1, -0.1, -0.4, 0.1, 0.2, 0.5, 0.8, 0.3, 1.2],
+    ),
+    "dynamic_factor": ([1.0, 0.5, 1.0, 1.0, 0.5], [0.3, -0.8, 0.5, 2.0, -0.6]),
+    "exponential_smoothing": ([0.1, 0.01, 10.0, 0.0], [0.6, 0.2, 9.0, -0.5]),
+}
+
+
+def _make_model(name):
+    # The same data on every call, so that a fresh model is the reference
+    rng = np.random.default_rng(20261119)
+    nobs = 60
+    endog = np.cumsum(rng.standard_normal(nobs)) + 10
+    exog = rng.standard_normal(nobs)
+    endog2 = rng.standard_normal((nobs, 2))
+    if name == "sarimax":
+        return sarimax.SARIMAX(endog, order=(1, 0, 1), trend="c")
+    if name == "unobserved_components":
+        # The regression term is a time-varying observation intercept
+        return UnobservedComponents(endog, "llevel", exog=exog)
+    if name == "varmax":
+        return varmax.VARMAX(endog2, order=(1, 0))
+    if name == "dynamic_factor":
+        return dynamic_factor.DynamicFactor(endog2, k_factors=1, factor_order=1)
+    # The known initialization is updated with the parameters
+    return exponential_smoothing.ExponentialSmoothing(endog, trend=True)
+
+
+@pytest.mark.parametrize("roundtrip", ["pickle", "deepcopy"])
+@pytest.mark.parametrize("used_by", ["loglike", "smooth"])
+@pytest.mark.parametrize("name", list(USED_MODEL_PARAMS))
+def test_model_copied_after_use(name, used_by, roundtrip):
+    # A model that was copied after it had been used ignored new parameters
+    # and kept using the system matrices of its last evaluation
+    params0, params1 = USED_MODEL_PARAMS[name]
+    mod = _make_model(name)
+    getattr(mod, used_by)(params0)
+    if roundtrip == "pickle":
+        copied = pickle.loads(pickle.dumps(mod))
+    else:
+        copied = copy.deepcopy(mod)
+
+    fresh = _make_model(name)
+    assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+    assert_allclose(
+        copied.filter(params1).llf, fresh.filter(params1).llf, rtol=1e-10
+    )
+    smoothed2 = copied.smooth(params1)
+    smoothed = fresh.smooth(params1)
+    assert_allclose(smoothed2.smoothed_state, smoothed.smoothed_state, rtol=1e-10)
+    # The standard errors use the complex-step representation
+    assert_allclose(smoothed2.bse, smoothed.bse, rtol=1e-10)
+
+
+@pytest.mark.parametrize("roundtrip", ["pickle", "save"])
+@pytest.mark.parametrize("name", list(USED_MODEL_PARAMS))
+def test_results_copied_after_use(name, roundtrip, tmp_path):
+    params0, params1 = USED_MODEL_PARAMS[name]
+    res = _make_model(name).smooth(params0)
+    if roundtrip == "pickle":
+        res2 = pickle.loads(pickle.dumps(res))
+    else:
+        path = str(tmp_path / "results.pkl")
+        res.save(path)
+        res2 = MLEResults.load(path)
+
+    # The stored output is unchanged
+    assert_allclose(res2.llf, res.llf, rtol=1e-10)
+    assert_allclose(res2.smoothed_state, res.smoothed_state, rtol=1e-10)
+
+    # and the model follows new parameters
+    fresh = _make_model(name)
+    assert_allclose(res2.model.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+    smoothed2 = res2.model.smooth(params1)
+    smoothed = fresh.smooth(params1)
+    assert_allclose(smoothed2.llf, smoothed.llf, rtol=1e-10)
+    assert_allclose(smoothed2.smoothed_state, smoothed.smoothed_state, rtol=1e-10)
+
+
+def test_fitted_results_pickled():
+    # The model of pickled fitted results returned the fitted loglikelihood
+    # for any parameters
+    res = _make_model("sarimax").fit(disp=False)
+    res2 = pickle.loads(pickle.dumps(res))
+    params1 = USED_MODEL_PARAMS["sarimax"][1]
+    fresh = _make_model("sarimax")
+    assert_allclose(res2.model.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+
+
+def _roundtrip(mod, roundtrip):
+    if roundtrip == "pickle":
+        return pickle.loads(pickle.dumps(mod))
+    return copy.deepcopy(mod)
+
+
+@pytest.mark.parametrize("roundtrip", ["pickle", "deepcopy"])
+@pytest.mark.parametrize("name", list(USED_MODEL_PARAMS))
+def test_model_copied_before_initialization(name, roundtrip):
+    # simulation_smoother creates the compiled statespace object without
+    # initializing it. A copy of the model restored it without its arrays for
+    # the initial state, so the copy could not compute the loglikelihood
+    params0, params1 = USED_MODEL_PARAMS[name]
+    mod = _make_model(name)
+    mod.update(params0)
+    mod.simulation_smoother()
+    copied = _roundtrip(mod, roundtrip)
+
+    fresh = _make_model(name)
+    assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+    smoothed2 = copied.smooth(params1)
+    smoothed = fresh.smooth(params1)
+    assert_allclose(smoothed2.smoothed_state, smoothed.smoothed_state, rtol=1e-10)
+
+
+@pytest.mark.parametrize("roundtrip", ["pickle", "deepcopy"])
+def test_model_copied_after_incomplete_initialization(roundtrip):
+    # The compiled statespace object also stays uninitialized when filtering
+    # fails because the initialization is incomplete
+    params0, params1 = USED_MODEL_PARAMS["sarimax"]
+    mod = _make_model("sarimax")
+    mod.ssm.initialization = Initialization(mod.k_states)
+    with pytest.raises(RuntimeError, match="Initialization is incomplete"):
+        mod.loglike(params0)
+    mod.ssm.initialize_stationary()
+    copied = _roundtrip(mod, roundtrip)
+
+    fresh = _make_model("sarimax")
+    fresh.ssm.initialize_stationary()
+    assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)

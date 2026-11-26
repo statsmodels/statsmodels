@@ -1,0 +1,3 @@
+- ``ConditionalLogit`` evaluates the conditional likelihood and score on the
+  log scale without recursion, avoiding overflow for large groups or large
+  common offsets. :issue:`6668`, :pr:`10530`

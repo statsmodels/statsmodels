@@ -403,7 +403,7 @@ def varsim(
         initial_values, "initial_values", optional=True, maxdim=2
     )
     if initial_values is not None:
-        if not (initial_values.shape == (p, k) or initial_values.shape == (k,)):
+        if initial_values.shape not in ((p, k), (k,)):
             raise ValueError(
                 "initial_values should have shape (p, k) or (k,) where p is the number of lags and k is the number of equations."
             )

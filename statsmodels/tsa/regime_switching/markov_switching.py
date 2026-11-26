@@ -17,7 +17,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.sm_exceptions import EstimationWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.regime_switching._hamilton_filter import (
@@ -162,7 +162,11 @@ def cy_hamilton_filter_log(
     k_regimes = len(initial_probabilities)
     nobs = conditional_loglikelihoods.shape[-1]
     order = conditional_loglikelihoods.ndim - 2
-    dtype = conditional_loglikelihoods.dtype
+    # The outputs and every input of the compiled filter share one dtype
+    dtype = np.result_type(
+        initial_probabilities, regime_transition, conditional_loglikelihoods
+    )
+    conditional_loglikelihoods = conditional_loglikelihoods.astype(dtype, copy=False)
 
     # Check for compatible shapes.
     incompatible_shapes = (
@@ -175,7 +179,9 @@ def cy_hamilton_filter_log(
 
     # Convert to log space
     initial_probabilities = np.log(initial_probabilities)
-    regime_transition = np.log(np.maximum(regime_transition, 1e-20))
+    regime_transition = np.log(np.maximum(regime_transition, 1e-20)).astype(
+        dtype, copy=False
+    )
 
     # Storage
     # Pr[S_t = s_t | Y_t]
@@ -508,6 +514,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
+
+        .. versionchanged:: 0.15.1
+
+           Raises ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf.
+           The ``missing`` option does not apply to ``exog_tvtp``.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     dates : array_like, optional
@@ -553,7 +564,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.order = order
 
         # Exogenous data
-        # TODO add checks for exog_tvtp consistent shape and indices
+        # TODO: check that the index of a pandas exog_tvtp matches endog
         self.k_tvtp, self.exog_tvtp = prepare_exog(exog_tvtp)
 
         # Initialize the base model
@@ -573,6 +584,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 " array must have the same number of observations"
                 " as the endogenous array."
             )
+        if self.tvtp and not np.isfinite(np.asarray(self.exog_tvtp, dtype=float)).all():
+            raise MissingDataError("exog_tvtp contains inf or nans")
 
         # Parameters
         self.parameters = MarkovSwitchingParams(self.k_regimes)
@@ -782,6 +795,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
+
+            .. versionchanged:: 0.15.1
+
+               An ndarray of joint probabilities, shaped like the
+               ``smoothed_joint_probabilities`` of the results, is accepted.
+               Before, an ndarray raised ValueError.
         conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
@@ -812,14 +831,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Check if we need to do weighted averaging
         if squeezed.ndim - 1 > conditional:
-            # Determine in-sample weighting probabilities
-            if probabilities is None or probabilities == "smoothed":
+            # Determine in-sample weighting probabilities; an array is used
+            # as given
+            is_str = isinstance(probabilities, str)
+            if probabilities is None or (is_str and probabilities == "smoothed"):
                 results = self.smooth(params, return_raw=True)
                 probabilities = results.smoothed_joint_probabilities
-            elif probabilities == "filtered":
+            elif is_str and probabilities == "filtered":
                 results = self.filter(params, return_raw=True)
                 probabilities = results.filtered_joint_probabilities
-            elif probabilities == "predicted":
+            elif is_str and probabilities == "predicted":
                 results = self.filter(params, return_raw=True)
                 probabilities = results.predicted_joint_probabilities
 
@@ -1645,6 +1666,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only transforms the transition-probability-
         related parameters.
         """
+        unconstrained = np.asarray(unconstrained)
         constrained = np.array(unconstrained, copy=True)
         constrained = constrained.astype(
             np.promote_types(np.float64, constrained.dtype)
@@ -1706,6 +1728,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only untransforms the transition-probability-
         related parameters.
         """
+        constrained = np.asarray(constrained)
         unconstrained = np.array(constrained, copy=True)
         unconstrained = unconstrained.astype(
             np.promote_types(np.float64, unconstrained.dtype)
@@ -2181,6 +2204,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
+
+            .. versionchanged:: 0.15.1
+
+               An ndarray of joint probabilities, shaped like the
+               ``smoothed_joint_probabilities`` of the results, is accepted.
+               Before, an ndarray raised ValueError.
         conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
@@ -2243,6 +2272,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         display_params : bool, optional
             Whether or not to display tables of estimated parameters. Default
             is True. Usually only used internally.
+
+            .. versionchanged:: 0.15.1
+
+               ``display_params=False`` leaves out the parameter tables.
+               Before, it was ignored.
 
         Returns
         -------
@@ -2352,21 +2386,22 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         for i in range(self.k_regimes):
             mask = regime_masks[i]
-            if len(mask) > 0:
+            if display_params and len(mask) > 0:
                 table = make_table(self, mask, f"Regime {i:d} parameters")
                 summary.tables.append(table)
 
         mask = []
         for _mask in other_masks.values():
             mask.extend(_mask)
-        if len(mask) > 0:
+        if display_params and len(mask) > 0:
             table = make_table(self, mask, "Non-switching parameters")
             summary.tables.append(table)
 
         # Transition parameters
-        mask = params["regime_transition"]
-        table = make_table(self, mask, "Regime transition parameters")
-        summary.tables.append(table)
+        if display_params:
+            mask = params["regime_transition"]
+            table = make_table(self, mask, "Regime transition parameters")
+            summary.tables.append(table)
 
         # Add warnings/notes, added to text format only
         etext = []
@@ -2402,6 +2437,17 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
     )
+    # Conditional predictions are not indexed by dates, see predict below
+    del _wrap_methods["predict"]
+
+    def predict(self, *args, **kwargs):
+        results = object.__getattribute__(self, "_results")
+        predict = results.predict(*args, **kwargs)
+        if predict.ndim == 1:
+            predict = results.model.data.wrap_output(predict, how="dates")
+        return predict
+
+    predict.__doc__ = MarkovSwitchingResults.predict.__doc__
 
 
 wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)

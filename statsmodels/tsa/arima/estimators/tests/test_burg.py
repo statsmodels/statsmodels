@@ -124,3 +124,22 @@ def test_misc():
     res_int = burg(endog, 2).parameters
     res_float = burg(endog * 1.0, 2).parameters
     assert_allclose(res_int.params, res_float.params)
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "integer"]
+)
+def test_burg_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # estimates of the ndarray
+    from statsmodels.tsa.tests._contract import series_forms
+
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    if form == "integer":
+        x = np.round(4 * x)
+        endog = x.astype(np.int64)
+    else:
+        endog = series_forms(x)[form]
+    p, _ = burg(endog, ar_order=2)
+    expected, _ = burg(x, ar_order=2)
+    assert_allclose(p.params, expected.params, rtol=1e-12)

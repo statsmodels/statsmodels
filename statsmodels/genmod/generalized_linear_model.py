@@ -892,7 +892,10 @@ class GLM(base.LikelihoodModel):
             not None, then k_constraints is assumed to be zero if it is None.
         exog_extra : array_like, optional
             Explanatory variables that are jointly tested for inclusion in the
-            model, i.e., omitted variables.
+            model, i.e., omitted variables. Columns that are linear
+            combinations of other columns of `exog_extra` or of `exog`, for
+            example the linear term in a spline basis, do not add a
+            constraint, see Notes.
         observed : bool, optional
             If True, then the observed Hessian is used in calculating the
             covariance matrix of the score. If false then the expected
@@ -906,11 +909,49 @@ class GLM(base.LikelihoodModel):
             P-value of the score test based on the chisquare distribution.
         df : int
             Degrees of freedom used in the p-value calculation. This is equal
-            to the number of constraints.
+            to the number of constraints. With `exog_extra` it is
+            `k_constraints` plus the rank of `exog_extra` given `exog`.
 
         Notes
         -----
         not yet verified for case with scale not equal to 1.
+
+        The number of constraints of `exog_extra` is its rank after
+        projecting out `exog`. The rank is the number of singular values
+        larger than 1e-7 of the matrix of the residuals of this projection,
+        with each column divided by the norm of the corresponding column of
+        `exog_extra`. For a single column this is the tolerance of R's
+        ``lm``: the column is redundant if the norm of its residual is less
+        than 1e-7 times its norm. For several columns this is not the
+        sequential rule of ``lm``, so a column can be dropped here that
+        ``lm`` keeps and the other way round. R's ``glm``, and so
+        ``anova(..., test="Rao")``, uses the tighter tolerance
+        ``min(1e-7, epsilon / 1000)``, which is 1e-11 with the default
+        ``epsilon``. It keeps columns that are linearly dependent on other
+        columns up to noise of relative size 1e-9 or 1e-8, which are dropped
+        here.
+
+        If `exog_extra` has redundant columns, it is replaced by an
+        orthonormal basis of its columns after projecting out `exog`. The
+        test statistic is invariant to this change of basis, and the number
+        of constraints is the rank of the basis. If all columns of
+        `exog_extra` are in the span of `exog`, a ValueError is raised.
+
+        The projection is not weighted. If the model has `freq_weights` or
+        `var_weights`, a column that differs from the span of `exog` only on
+        observations with weights close to zero, for example 1e-12, adds no
+        information to the statistic but is not redundant here, so it is
+        counted in the degrees of freedom.
+
+        .. versionchanged:: 0.15.1
+
+            With `exog_extra`, the number of constraints is the rank of
+            `exog_extra` after projecting out `exog` instead of its number
+            of columns, and the statistic is computed from a basis of the
+            independent part, so both change if columns of `exog_extra` are
+            redundant. A ValueError is raised if all columns are redundant,
+            if `exog_extra` has nan or infinite values or if it does not
+            have as many rows as `exog`.
         """
 
         if exog_extra is None:
@@ -923,12 +964,14 @@ class GLM(base.LikelihoodModel):
             hessian = self.hessian(params_constrained, observed=observed)
 
         else:
-            # exog_extra = np.asarray(exog_extra)
             if k_constraints is None:
                 k_constraints = 0
 
+            # the number of constraints is the rank of exog_extra given exog,
+            # and redundant columns are replaced by a basis, GH#5364
+            exog_extra, k_extra = pinfer._full_rank_exog_extra(self.exog, exog_extra)
             ex = np.column_stack((self.exog, exog_extra))
-            k_constraints += ex.shape[1] - self.exog.shape[1]
+            k_constraints += k_extra
 
             score_factor = self.score_factor(params_constrained)
             score = (score_factor[:, None] * ex).sum(0)
@@ -942,6 +985,124 @@ class GLM(base.LikelihoodModel):
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
         return chi2stat, pval, k_constraints
+
+    def _unscaled_deviance(self, mu):
+        """Deviance with a scale of 1, which is comparable across iterations"""
+        return self.family.deviance(
+            self.endog, mu, self.var_weights, self.freq_weights, 1.0
+        )
+
+    def _finite_deviance(self, mu):
+        """
+        The deviance with scale 1 if the step is finite, or None
+
+        The mean, the deviance and the IRLS weights have to be finite.
+        """
+        if not np.all(np.isfinite(mu)):
+            return None
+        if not np.all(np.isfinite(self.family.weights(mu))):
+            return None
+        dev = self._unscaled_deviance(mu)
+        return float(dev) if np.isfinite(dev) else None
+
+    def _canonical_link(self):
+        """True if the link of the family is its canonical link"""
+        family = self.family
+        link = family.link
+        links = families.links
+        canonical = (
+            (families.Poisson, links.Log),
+            (families.Binomial, links.Logit),
+            (families.Gaussian, links.Identity),
+            (families.Gamma, links.InversePower),
+            (families.InverseGaussian, links.InverseSquared),
+            (families.NegativeBinomial, links.NegativeBinomial),
+        )
+        # Probit, Cauchy, CLogLog and LogLog subclass Logit, so that isinstance
+        # takes them for the canonical link of the binomial family. The class
+        # of the link is the first class in its MRO of the classes below,
+        # which also resolves the deprecated aliases such as links.log.
+        not_canonical = (
+            links.CDFLink,
+            links.Probit,
+            links.Cauchy,
+            links.CLogLog,
+            links.LogLog,
+        )
+        known = tuple(lnk for _, lnk in canonical) + not_canonical
+        link_class = next((c for c in type(link).__mro__ if c in known), None)
+        for fam, lnk in canonical:
+            if isinstance(family, fam) and link_class is lnk:
+                if lnk is links.NegativeBinomial:
+                    # the link is only canonical for the alpha of the family
+                    return bool(np.array_equal(link.alpha, family.alpha))
+                return True
+        return False
+
+    def _halve_irls_step(self, params, params_prev, lin_pred, mu, dev_prev=None):
+        """
+        Halve an IRLS step that gives a non-finite or a larger deviance
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameters after the full IRLS step.
+        params_prev : ndarray
+            Parameters before the step.
+        lin_pred : ndarray
+            Linear predictor after the full step.
+        mu : ndarray
+            Mean after the full step.
+        dev_prev : float, optional
+            Deviance with scale 1 before the step. A step that increases the
+            deviance is only halved if it is given.
+
+        Returns
+        -------
+        params : ndarray
+            The parameters of the accepted step.
+        lin_pred : ndarray
+            The linear predictor of the accepted step.
+        mu : ndarray
+            The mean of the accepted step.
+        dev : float
+            Deviance with scale 1 of the accepted step.
+        halved : bool
+            True if the step was shortened.
+
+        Notes
+        -----
+        The full step is used if its deviance and IRLS weights are finite, and
+        the deviance does not increase if `dev_prev` is given, apart from a
+        small relative tolerance. Otherwise the step is halved up to 30 times
+        towards the previous parameters. If no step is found that does not
+        increase the deviance, the first step with a finite deviance is used.
+        A ValueError is raised if there is no step with a finite deviance.
+        """
+        max_halvings = 30
+        finite_prev = dev_prev is not None and np.isfinite(dev_prev)
+        # relative tolerance for the rounding error of the deviance
+        tol = 1e-12 * abs(dev_prev) if finite_prev else 0.0
+        first_finite = None
+        with np.errstate(all="ignore"):
+            for k in range(max_halvings + 1):
+                if k > 0:
+                    params = 0.5 * (params + params_prev)
+                    lin_pred = np.dot(self.exog, params) + self._offset_exposure
+                    mu = self.family.fitted(lin_pred)
+                dev = self._finite_deviance(mu)
+                if dev is None:
+                    continue
+                if not finite_prev or dev <= dev_prev + tol:
+                    return params, lin_pred, mu, dev, k > 0
+                if first_finite is None:
+                    first_finite = (params, lin_pred, mu, dev, k > 0)
+        if first_finite is not None:
+            return first_finite
+        raise ValueError(
+            "The IRLS step could not be halved to a step with a finite "
+            "deviance. Provide better start_params."
+        )
 
     def _update_history(self, tmp_result, mu, history):
         """
@@ -979,7 +1140,7 @@ class GLM(base.LikelihoodModel):
         -----
         The default scale for Binomial, Poisson and Negative Binomial
         families is 1.  The default for the other families is Pearson's
-        Chi-Square estimate.
+        Chi-Square estimate divided by ``df_resid``.
         """
         if not self.scaletype:
             if isinstance(
@@ -1237,6 +1398,9 @@ class GLM(base.LikelihoodModel):
             The default is family-specific and is given by the
             ``family.starting_mu(endog)``. If start_params is given then the
             initial mean will be calculated as ``np.dot(exog, start_params)``.
+            A ``ValueError`` is raised for IRLS if the mean or the IRLS
+            weights at start_params are not finite, for example if the
+            exponential of the linear predictor overflows.
         maxiter : int, optional
             Default is 100.
         method : str, optional
@@ -1298,6 +1462,20 @@ class GLM(base.LikelihoodModel):
             observed Hessian is used in fitting. 'eim' is the expected Hessian.
             This may provide more stable fits, but adds assumption that the
             Hessian is correctly specified.
+        step_halving : {True, False, "finite"}, optional
+            (available with ``method="newton"``) What is done with a step of
+            Newton's method that gives a log-likelihood that is not finite or
+            lower. The default is True, which halves such a step up to 30
+            times, if the link is the canonical link of the family. For the
+            other links the default is ``"finite"``, which halves only a step
+            that gives a log-likelihood that is not finite. A step that gives
+            a lower log-likelihood is kept for these links, since for some of
+            them, for example the square root link, the score and the Hessian
+            are not the derivatives of the log-likelihood where the linear
+            predictor is negative. False takes the full step. See Notes of
+            `LikelihoodModel.fit`.
+
+            .. versionadded:: 0.15.1
 
         Notes
         -----
@@ -1306,6 +1484,23 @@ class GLM(base.LikelihoodModel):
         in future versions. If attach_wls' is true, then the final WLS
         instance of the IRLS iteration is attached to the results instance
         as `results_wls` attribute.
+
+        A step of the IRLS iteration that gives a mean, IRLS weights or a
+        deviance that are not finite is halved towards the previous parameters,
+        up to 30 times, so that the fit converges from starting values for
+        which the full step overflows. For the canonical link of the family,
+        where IRLS is Newton's method, a step that increases the deviance is
+        halved as well. The convergence is not tested after a halved step. If
+        there is no finite step a ``ValueError`` is raised, and a
+        ``ValueError`` is raised if the mean or the weights at start_params
+        are not finite.
+
+        .. versionchanged:: 0.15.1
+
+           Steps of IRLS and of Newton's method are halved. Before, a step
+           that was not finite gave nan parameters with ``converged`` True for
+           Newton's method, and the IRLS fit raised a ``ValueError`` that did
+           not mention start_params.
         """
         if isinstance(scale, str):
             scale = string_like(scale, "scale", options=("x2", "dev"))
@@ -1397,13 +1592,21 @@ class GLM(base.LikelihoodModel):
             )
             start_params = irls_rslt.params
             del irls_rslt
+        fit_kwargs = dict(kwargs)
+        if method == "newton" and "step_halving" not in fit_kwargs:
+            if not self._canonical_link():
+                # For some other links, for example Sqrt, the score and the
+                # Hessian are not the derivatives of the log-likelihood where
+                # the mean is outside of its domain, so that a step is only
+                # halved if it is not finite.
+                fit_kwargs["step_halving"] = "finite"
         rslt = super().fit(
             start_params=start_params,
             maxiter=maxiter,
             full_output=full_output,
             method=method,
             disp=disp,
-            **kwargs,
+            **fit_kwargs,
         )
 
         # reset scaletype to original
@@ -1481,13 +1684,33 @@ class GLM(base.LikelihoodModel):
 
         endog = self.endog
         wlsexog = self.exog
+        # The parameters and the deviance of the last step, used to halve a
+        # step that gives a non-finite or a larger deviance. They are not
+        # known if the iteration starts from starting values of the mean, since
+        # that mean is not a fit of the model.
+        params_prev = None
+        dev_prev = None
+        # IRLS is Newton's method for a canonical link, and a step that
+        # increases the deviance is halved. For the other links the iterates
+        # are not monotone, so that only a step that is not finite is halved.
+        monotone = self._canonical_link()
         if start_params is None:
             start_params = np.zeros(self.exog.shape[1])
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:
             lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
-            mu = self.family.fitted(lin_pred)
+            with np.errstate(all="ignore"):
+                mu = self.family.fitted(lin_pred)
+                start_weights = self.family.weights(mu)
+            if not (np.all(np.isfinite(mu)) and np.all(np.isfinite(start_weights))):
+                raise ValueError(
+                    "The mean or the IRLS weights at start_params are not "
+                    "finite. Provide other start_params."
+                )
+            params_prev = np.asarray(start_params, dtype=float)
+            if monotone:
+                dev_prev = self._unscaled_deviance(mu)
         self.scale = self.estimate_scale(mu)
         dev = self.family.deviance(
             self.endog, mu, self.var_weights, self.freq_weights, self.scale
@@ -1503,6 +1726,7 @@ class GLM(base.LikelihoodModel):
         # params are none to start, so they line up with the deviance
         history = dict(params=[np.inf, start_params], deviance=[np.inf, dev])
         converged = False
+        last_halved = False
         criterion = history[tol_criterion]
         # This special case is used to get the likelihood for a specific
         # params vector.
@@ -1524,7 +1748,31 @@ class GLM(base.LikelihoodModel):
             wls_results = wls_mod.fit(method=wls_method)
             lin_pred = np.dot(self.exog, wls_results.params)
             lin_pred += self._offset_exposure
-            mu = self.family.fitted(lin_pred)
+            halved = False
+            if params_prev is not None:
+                # a step that gives a non-finite deviance (or a larger one,
+                # for a canonical link) is halved towards the last parameters
+                with np.errstate(all="ignore"):
+                    mu = self.family.fitted(lin_pred)
+                params, lin_pred, mu, dev, halved = self._halve_irls_step(
+                    wls_results.params, params_prev, lin_pred, mu, dev_prev
+                )
+                if monotone:
+                    dev_prev = dev
+                if halved:
+                    wls_results.params = params
+            else:
+                mu = self.family.fitted(lin_pred)
+                if not np.all(np.isfinite(mu)):
+                    raise ValueError(
+                        "The IRLS step from the starting values of the mean "
+                        "gave a non-finite linear predictor or mean. Provide "
+                        "start_params."
+                    )
+                if monotone:
+                    dev_prev = self._unscaled_deviance(mu)
+            last_halved = halved
+            params_prev = np.asarray(wls_results.params, dtype=float)
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
@@ -1533,7 +1781,11 @@ class GLM(base.LikelihoodModel):
                     "parameter may not be identified"
                 )
                 warnings.warn(msg, category=PerfectSeparationWarning, stacklevel=2)
-            converged = _check_convergence(criterion, iteration + 1, atol, rtol)
+            # a halved step is shorter than the step of IRLS, so the change of
+            # the deviance does not show that the iteration converged
+            converged = not halved and _check_convergence(
+                criterion, iteration + 1, atol, rtol
+            )
             if converged:
                 break
         self.mu = mu
@@ -1543,9 +1795,13 @@ class GLM(base.LikelihoodModel):
             wls_model = lm.WLS(wlsendog, wlsexog, self.weights)
             wls_results = wls_model.fit(method=wls_method2)
 
+        params = wls_results.params
+        if maxiter > 0 and last_halved:
+            # the last step was halved, so the refit of WLS gives other params
+            params = params_prev
         glm_results = GLMResults(
             self,
-            wls_results.params,
+            params,
             wls_results.normalized_cov_params,
             self.scale,
             cov_type=cov_type,
@@ -1618,7 +1874,73 @@ class GLM(base.LikelihoodModel):
 
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
-        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
+        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms, and
+        ``n`` is the sum of ``freq_weights``, which is the number of rows if
+        the model has no ``freq_weights``. A fit with ``freq_weights`` has the
+        same estimates as a fit to the data with each row repeated according
+        to its weight. The ``var_weights`` are not part of ``n``. They enter
+        ``loglike``, so that multiplying ``var_weights`` by a constant changes
+        the estimates. The log-likelihood is computed with a scale of 1.
+
+        .. versionchanged:: 0.15.1
+
+           ``n`` is the sum of ``freq_weights``. Before, it was the number of
+           rows, so that the estimates of fits with ``freq_weights`` differed
+           from those of the data with repeated rows. The estimates of fits
+           without ``freq_weights`` are unchanged.
+
+        .. warning::
+
+           The estimates of the ridge fit (``L1_wt=0``) of a family with an
+           estimated scale (all families except ``Binomial``, ``Poisson`` and
+           ``NegativeBinomial``) are different from those of versions before
+           0.15.1, and the difference is large if the estimated scale is far
+           from 1. The estimates of the other fits (``L1_wt`` greater than 0
+           and ``method="l1_slsqp"``) and of the ridge fit of ``Binomial``,
+           ``Poisson`` and ``NegativeBinomial`` are not affected.
+
+        .. versionchanged:: 0.15.1
+
+           The ridge fit uses a scale of 1 in the log-likelihood, as the other
+           fits do, and so minimizes the function above. Before, it used the
+           scale estimated at the current parameters. Where that fit
+           converged, its estimates were those of the ridge problem with the
+           penalty weight ``alpha`` multiplied by the scale estimated at the
+           estimates: the shrinkage was too strong if the estimated scale is
+           greater than 1 and too weak if it is smaller. To get the penalty of
+           earlier versions, multiply ``alpha`` by that scale, see the
+           example. The fit of earlier versions often stopped early with a
+           ``ConvergenceWarning``, and its estimates are then not those of any
+           penalty and cannot be reproduced.
+
+        Every element of ``params`` is penalized, including the coefficient
+        of the constant, and the columns of ``exog`` are used as they are. R's
+        ``glmnet`` does not penalize the intercept and standardizes the
+        columns by default (``standardize=TRUE``). With a vector ``alpha``
+        the fit has the estimates of ``glmnet``, where ``alpha`` is its
+        ``lambda`` and ``L1_wt`` is its ``alpha``:
+
+        * To leave the constant unpenalized, as ``glmnet`` with
+          ``intercept=TRUE`` and ``standardize=FALSE`` does, give it the
+          penalty weight 0. If the constant is the first of the ``k`` columns
+          of ``exog``, use ``alpha * np.r_[0.0, np.ones(k - 1)]``.
+        * To standardize the columns, as ``standardize=TRUE`` does, let
+          ``sd`` be the standard deviations of the columns other than the
+          constant, with the divisor ``n`` (and the ``freq_weights`` as
+          weights, if the model has them). Use the weights
+          ``alpha * np.r_[0.0, sd**2]`` for the ridge penalty (``L1_wt=0``)
+          and ``alpha * np.r_[0.0, sd]`` for the lasso (``L1_wt=1``). For
+          other values of ``L1_wt``, divide the columns of ``exog`` by
+          ``sd``, fit with the weights ``alpha * np.r_[0.0, np.ones(k - 1)]``
+          and divide the estimated coefficients other than the constant by
+          ``sd``.
+
+        The estimates agree with those of ``glmnet`` up to the convergence
+        tolerances of the two algorithms. In R, use a family object such as
+        ``gaussian()``: the default ``family="gaussian"`` standardizes ``y``
+        and so divides the weight of the L2 penalty,
+        ``(1 - L1_wt) * alpha``, by the standard deviation of ``y`` (with the
+        divisor ``n``).
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
@@ -1662,6 +1984,37 @@ class GLM(base.LikelihoodModel):
             If True, print out a full QC report upon failure.
         acc : float, optional
             Requested accuracy as used by slsqp (default 1e-10).
+
+        Examples
+        --------
+        The ridge fit of a Gaussian model, whose scale is estimated:
+
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
+        >>> rng = np.random.default_rng(0)
+        >>> exog = sm.add_constant(rng.standard_normal((200, 3)))
+        >>> endog = exog @ [1.0, 1.0, -0.5, 0.3] + 2.0 * rng.standard_normal(200)
+        >>> mod = sm.GLM(endog, exog, family=sm.families.Gaussian())
+        >>> alpha = 1.0
+        >>> res = mod.fit_regularized(alpha=alpha, L1_wt=0)
+
+        The penalty of versions before 0.15.1 is ``alpha`` multiplied by the
+        scale estimated at the estimates. Iterate until the scale does not
+        change:
+
+        >>> scale = 1.0
+        >>> for _ in range(100):
+        ...     res_old = mod.fit_regularized(alpha=alpha * scale, L1_wt=0)
+        ...     new_scale = mod.estimate_scale(mod.predict(res_old.params))
+        ...     if abs(new_scale - scale) < 1e-6 * new_scale:
+        ...         break
+        ...     scale = new_scale
+
+        ``res_old.params`` are the estimates that versions before 0.15.1
+        returned for this model, to better than 1e-5. The scale estimated at
+        them is about 5.6, so that the penalty weight of the earlier fit was
+        about 5.6 times ``alpha`` and its coefficients are shrunk more than
+        those of ``res.params``.
         """
 
         method = string_like(
@@ -1724,10 +2077,11 @@ class GLM(base.LikelihoodModel):
             start_params = np.zeros(self.exog.shape[1])
 
         def fun(x):
-            return -(self.loglike(x) / self.nobs - np.sum(alpha * x**2) / 2)
+            llf = self.loglike(x, scale=1)
+            return -(llf / self.wnobs - np.sum(alpha * x**2) / 2)
 
         def grad(x):
-            return -(self.score(x) / self.nobs - alpha * x)
+            return -(self.score(x, scale=1) / self.wnobs - alpha * x)
 
         from scipy.optimize import minimize
 
@@ -2204,12 +2558,28 @@ class GLMResults(base.LikelihoodModelResults):
         -------
         float
             Pseudo R-squared
+
+        Notes
+        -----
+        ``nobs`` in the Cox & Snell pseudo-R-squared is the number of
+        observations. If the model has ``freq_weights``, it is their sum, so
+        that the value is the same as for the data with each observation
+        repeated according to its frequency weight. ``var_weights`` do not
+        change ``nobs``.
+
+        .. versionchanged:: 0.15.1
+
+           ``nobs`` is the sum of the ``freq_weights`` instead of the number
+           of rows.
         """
         kind = kind.lower()
         if kind.startswith("mcf"):
             prsq = 1 - self.llf / self.llnull
         elif kind.startswith("cox") or kind in ["cs", "lr"]:
-            prsq = 1 - np.exp((self.llnull - self.llf) * (2 / self.nobs))
+            # llf and llnull are sums over the frequency weighted
+            # observations, so the number of observations is wnobs
+            nobs = self.model.wnobs
+            prsq = 1 - np.exp((self.llnull - self.llf) * (2 / nobs))
         else:
             raise ValueError("only McFadden and Cox-Snell are available")
         return prsq
@@ -2415,6 +2785,17 @@ class GLMResults(base.LikelihoodModelResults):
         In a future version ``which`` will become not None and the backwards
         compatible prediction results class will be removed.
 
+        The confidence intervals use the t distribution if ``use_t`` is True,
+        with ``df_resid_inference`` degrees of freedom if the results have it
+        (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+        ``df_resid`` otherwise. They use the normal distribution if ``use_t``
+        is False and, if ``which`` is not None, if ``average`` is True or
+        ``which`` is not "mean" or "linear".
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
         """
 
         import statsmodels.regression._prediction as linpred

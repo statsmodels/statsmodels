@@ -37,7 +37,11 @@ function jc =  c_sja(n,p)
 
 """
 
+import warnings
+
 import numpy as np
+
+from statsmodels.tools.validation import int_like
 
 ss_ejcp0 = """\
          2.9762  4.1296  6.9406
@@ -86,6 +90,25 @@ ejcp1 = np.array(ss_ejcp1.split(), float).reshape(-1, 3)
 ejcp2 = np.array(ss_ejcp2.split(), float).reshape(-1, 3)
 
 
+def _check_p(p):
+    # An integer outside -1 to 1 is valid and gives NaN, but a value that is
+    # not an integer is an error. ValueError, not the TypeError of int_like,
+    # as c_sjt raised a ValueError for 0.5 before.
+    if isinstance(p, (bool, np.bool_)):
+        # A bool selected the table of 0 or 1
+        warnings.warn(
+            "p must be an integer. Passing a bool is deprecated and will raise "
+            "a ValueError after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        return int(p)
+    try:
+        return int_like(p, "p")
+    except TypeError:
+        raise ValueError(f"p must be an integer, got {p!r}") from None
+
+
 def c_sja(n, p):
     """
     Critical values for the Johansen maximum eigenvalue statistic
@@ -100,12 +123,28 @@ def c_sja(n, p):
         deterministic part, 0 for a constant term, or 1 for a constant and
         a linear trend.
 
+        .. versionchanged:: 0.15.1
+
+           A value that is not an integer raises ValueError. A value
+           between -1 and 1 raised an UnboundLocalError, and a value
+           outside returned NaN.
+
+        .. deprecated:: 0.15.1
+
+           A bool is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. It is used as 0 or 1.
+
     Returns
     -------
     ndarray
         Array of critical values for the maximum eigenvalue statistic at
         the 90%, 95%, and 99% levels. NaNs are returned if ``n`` or ``p``
         is out of range.
+
+        .. versionchanged:: 0.15.1
+
+           A new array is returned. It used to be a view of the table, so
+           changing it changed the values returned by later calls.
 
     Notes
     -----
@@ -118,16 +157,18 @@ def c_sja(n, p):
     likelihood ratio tests for cointegration', Queen's University Institute
     for Economic Research Discussion paper.
     """
+    p = _check_p(p)
     if ((p > 1) or (p < -1)) or ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
         jc = ejcp0[n-1, :]
     elif p == 0:
         jc = ejcp1[n-1, :]
-    elif p == 1:
+    else:
         jc = ejcp2[n-1, :]
 
-    return jc
+    # A copy, so that changing the result does not change the table
+    return jc.copy()
 
 
 """
@@ -243,11 +284,27 @@ def c_sjt(n, p):
         deterministic part, 0 for a constant term, or 1 for a constant and
         a linear trend.
 
+        .. versionchanged:: 0.15.1
+
+           A value that is not an integer raises ValueError. A value
+           outside -1 to 1 returned NaN, and the error message for a value
+           between them was "invalid p".
+
+        .. deprecated:: 0.15.1
+
+           A bool is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. It is used as 0 or 1.
+
     Returns
     -------
     ndarray
         Array of critical values for the trace statistic at the 90%, 95%,
         and 99% levels. NaNs are returned if ``n`` or ``p`` is out of range.
+
+        .. versionchanged:: 0.15.1
+
+           A new array is returned. It used to be a view of the table, so
+           changing it changed the values returned by later calls.
 
     Notes
     -----
@@ -260,15 +317,15 @@ def c_sjt(n, p):
     likelihood ratio tests for cointegration', Queen's University Institute
     for Economic Research Discussion paper.
     """
+    p = _check_p(p)
     if ((p > 1) or (p < -1)) or ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
         jc = tjcp0[n-1, :]
     elif p == 0:
         jc = tjcp1[n-1, :]
-    elif p == 1:
-        jc = tjcp2[n-1, :]
     else:
-        raise ValueError("invalid p")
+        jc = tjcp2[n-1, :]
 
-    return jc
+    # A copy, so that changing the result does not change the table
+    return jc.copy()

@@ -1,0 +1,4 @@
+- :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter` raised for a list
+  or tuple ``x``, a column ``ar``, a 1-d ``x`` or ``ma``, and an ndarray
+  ``useic``, although they are documented as array_like. They are accepted;
+  a 1-d ``x`` or ``ma`` is a single column. :pr:`10870`

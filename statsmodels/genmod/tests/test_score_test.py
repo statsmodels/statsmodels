@@ -7,6 +7,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
+from scipy import stats
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -292,3 +293,268 @@ class TestScoreTestGaussian(CheckScoreTest):
         cls.exog_extra = x2
         cls.model_full = GLM(y, xx, family=families.Gaussian())
         cls.model_drop = GLM(y, x, family=families.Gaussian())
+
+
+class TestScoreTestRedundantExtra:
+    # GH#5364: columns of exog_extra that are linear combinations of other
+    # columns or of exog do not add constraints. The statistic is the same as
+    # with the redundant columns dropped by hand, and df is the rank.
+
+    @classmethod
+    def setup_class(cls):
+        rng = np.random.default_rng(5364)
+        nobs = 300
+        x = np.column_stack((np.ones(nobs), rng.standard_normal((nobs, 2))))
+        y = rng.poisson(np.exp(0.2 + 0.3 * x[:, 1] - 0.2 * x[:, 2]))
+        z = rng.standard_normal((nobs, 2))
+        cls.exog = x
+        cls.exog_extra = z
+        # a copy of a column of exog and a combination of the new columns
+        cls.exog_extra_redundant = np.column_stack((z, x[:, 1], z[:, 0] - 2 * z[:, 1]))
+        cls.res_glm = GLM(y, x, family=families.Poisson()).fit()
+        cls.res_poisson = Poisson(y, x).fit(disp=0)
+        cls.noise = rng.standard_normal((nobs, 2))
+        cls.endog = y
+
+    def test_rank(self):
+        from statsmodels.stats.multivariate_tools import partial_project
+
+        resid = partial_project(self.exog_extra_redundant, self.exog).resid
+        assert np.linalg.matrix_rank(resid) == 2
+
+    @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+    def test_exact_redundant(self, cov_type):
+        for res in (self.res_glm, self.res_poisson):
+            st = res.score_test(exog_extra=self.exog_extra, cov_type=cov_type)
+            st_red = res.score_test(
+                exog_extra=self.exog_extra_redundant, cov_type=cov_type
+            )
+            assert st_red.k_constraint == 2
+            assert_allclose(st_red.statistic, st.statistic, rtol=1e-10)
+            assert_allclose(st_red.pvalue, st.pvalue, rtol=1e-10)
+            assert_allclose(
+                st_red.pvalue, stats.chi2.sf(st_red.statistic, 2), rtol=1e-13
+            )
+
+    def test_exact_redundant_model_method(self):
+        res = self.res_glm
+        st, pv, df = res.model.score_test(res.params, exog_extra=self.exog_extra)
+        st_red, pv_red, df_red = res.model.score_test(
+            res.params, exog_extra=self.exog_extra_redundant
+        )
+        assert df == 2
+        assert df_red == 2
+        assert_allclose(st_red, st, rtol=1e-10)
+        assert_allclose(pv_red, pv, rtol=1e-10)
+        # k_constraints is added to the rank
+        _, _, df_red = res.model.score_test(
+            res.params, exog_extra=self.exog_extra_redundant, k_constraints=3
+        )
+        assert df_red == 5
+
+    def test_nearly_redundant(self):
+        # redundant up to noise below the tolerance of R's lm
+        exog_extra = self.exog_extra_redundant.copy()
+        exog_extra[:, 2:] += 1e-10 * self.noise
+        for res in (self.res_glm, self.res_poisson):
+            st = res.score_test(exog_extra=self.exog_extra)
+            st_near = res.score_test(exog_extra=exog_extra)
+            assert st_near.k_constraint == 2
+            assert_allclose(st_near.statistic, st.statistic, rtol=1e-6)
+            assert_allclose(st_near.pvalue, st.pvalue, rtol=1e-6)
+
+    def test_nearly_redundant_above_tolerance(self):
+        # noise of relative size 1e-5 is far above the tolerance 1e-7, the
+        # columns are kept: df is the number of columns and the statistic
+        # is the one of the columns as given, which differs from the statistic
+        # of the exactly redundant block.
+        exog_extra = self.exog_extra_redundant.copy()
+        exog_extra[:, 2:] += 1e-5 * self.noise
+        ex = np.column_stack((self.exog, exog_extra))
+        mu = np.exp(self.exog @ self.res_glm.params)
+        # closed form of the score statistic for the Poisson model with log
+        # link: score = ex'(y - mu), information = ex' diag(mu) ex
+        score = ex.T @ (self.endog - mu)
+        info = (ex.T * mu) @ ex
+        stat = score @ np.linalg.solve(info, score)
+        for res in (self.res_glm, self.res_poisson):
+            st = res.score_test(exog_extra=exog_extra)
+            assert st.k_constraint == 4
+            # the information matrix has a condition number of about 4e7
+            assert_allclose(st.statistic, stat, rtol=1e-4)
+            assert_allclose(st.pvalue, stats.chi2.sf(stat, 4), rtol=1e-4)
+            st_exact = res.score_test(exog_extra=self.exog_extra)
+            assert st_exact.k_constraint == 2
+            assert abs(st.statistic / st_exact.statistic - 1) > 0.1
+
+    @pytest.mark.parametrize(
+        "case, match",
+        [
+            ("nan", "nan or infinite"),
+            ("inf", "nan or infinite"),
+            ("nan_1d", "nan or infinite"),
+            ("few_rows", "same number of rows"),
+            ("more_rows", "same number of rows"),
+            ("few_rows_1d", "same number of rows"),
+            ("ndim3", "same number of rows"),
+        ],
+    )
+    @pytest.mark.parametrize("caller", ["glm", "poisson", "glm_hc0", "model", "generic"])
+    def test_invalid_exog_extra(self, case, match, caller):
+        # bad input raises a ValueError with a message that names the
+        # problem. Before the check it was a LinAlgError from the SVD of the
+        # helper, "SVD did not converge" or "Incompatible dimensions"
+        z = self.exog_extra
+        exog_extra = {
+            "nan": np.where(np.arange(z.size).reshape(z.shape) == 7, np.nan, z),
+            "inf": np.where(np.arange(z.size).reshape(z.shape) == 8, np.inf, z),
+            "nan_1d": np.where(np.arange(z.shape[0]) == 3, np.nan, z[:, 0]),
+            "few_rows": z[:-5],
+            "more_rows": np.vstack((z, z[:5])),
+            "few_rows_1d": z[:-5, 0],
+            "ndim3": z[:, :, None],
+        }[case]
+        res = self.res_poisson if caller == "poisson" else self.res_glm
+        with pytest.raises(ValueError, match=match):
+            if caller == "model":
+                res.model.score_test(res.params, exog_extra=exog_extra)
+            elif caller == "generic":
+                score_test(res, exog_extra=exog_extra)
+            elif caller == "glm_hc0":
+                res.score_test(exog_extra=exog_extra, cov_type="HC0")
+            else:
+                res.score_test(exog_extra=exog_extra)
+
+    @pytest.mark.parametrize("weights", ["freq_weights", "var_weights"])
+    def test_weights_not_used_in_rank(self, weights):
+        # Documented in the Notes: the projection is unweighted. A column
+        # that is in the span of exog except on observations with weight 1e-12
+        # is not redundant, but it adds nothing to the statistic: the
+        # statistic is that without the column and df is one larger.
+        nobs = self.exog.shape[0]
+        w = np.ones(nobs)
+        w[:5] = 1e-12
+        col = self.exog[:, 1].copy()
+        col[:5] += 1.0
+        mod = GLM(self.endog, self.exog, family=families.Poisson(), **{weights: w})
+        params = mod.fit().params
+        st, pv, df = mod.score_test(params, exog_extra=self.exog_extra)
+        st_col, pv_col, df_col = mod.score_test(
+            params, exog_extra=np.column_stack((self.exog_extra, col))
+        )
+        assert df == 2
+        assert df_col == 3
+        assert_allclose(st_col, st, rtol=1e-8)
+        assert_allclose(pv_col, stats.chi2.sf(st_col, 3), rtol=1e-10)
+        assert pv_col > pv
+
+    def test_independent_unchanged(self):
+        # without redundancy the columns are used as given
+        from statsmodels.base._parameter_inference import _full_rank_exog_extra
+
+        ex, k = _full_rank_exog_extra(self.exog, self.exog_extra)
+        assert k == 2
+        assert ex is self.exog_extra
+        ex, k = _full_rank_exog_extra(self.exog, self.exog_extra[:, 0])
+        assert k == 1
+        assert ex.shape == (self.exog.shape[0], 1)
+        # a column with a small scale is not redundant
+        ex, k = _full_rank_exog_extra(self.exog, 1e-12 * self.exog_extra)
+        assert k == 2
+
+    def _exog_extra_in_span(self):
+        x = self.exog
+        # a column of exog, all columns of exog except the constant, and
+        # linear combinations of the columns of exog
+        return [
+            x[:, 1],
+            x[:, 1:],
+            np.column_stack((x[:, 1] - 2 * x[:, 2], 3 + x[:, 2])),
+        ]
+
+    @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+    def test_all_redundant(self, cov_type):
+        # exog_extra in the span of exog adds no constraint, there is
+        # nothing to test
+        msg = "exog_extra is in the span of exog"
+        for exog_extra in self._exog_extra_in_span():
+            for res in (self.res_glm, self.res_poisson):
+                with pytest.raises(ValueError, match=msg):
+                    res.score_test(exog_extra=exog_extra, cov_type=cov_type)
+
+    def test_all_redundant_hc0(self):
+        # with HC0, rank 0 selected all rows of the identity as the
+        # constraint matrix, k_constraint was the number of parameters and
+        # the p-value 1
+        msg = "exog_extra is in the span of exog"
+        for res in (self.res_glm, self.res_poisson):
+            with pytest.raises(ValueError, match=msg):
+                res.score_test(exog_extra=self.exog[:, 1], cov_type="HC0")
+            # with a column outside the span of exog the test has 1 constraint
+            exog_extra = np.column_stack((self.exog[:, 1], self.exog_extra[:, 0]))
+            st = res.score_test(exog_extra=exog_extra, cov_type="HC0")
+            st1 = res.score_test(exog_extra=self.exog_extra[:, 0], cov_type="HC0")
+            assert st.k_constraint == 1
+            assert_allclose(st.statistic, st1.statistic, rtol=1e-10)
+            assert_allclose(st.pvalue, st1.pvalue, rtol=1e-10)
+            assert_allclose(st.pvalue, stats.chi2.sf(st.statistic, 1), rtol=1e-13)
+
+    def test_all_redundant_model_method(self):
+        msg = "exog_extra is in the span of exog"
+        res = self.res_glm
+        for exog_extra in self._exog_extra_in_span():
+            with pytest.raises(ValueError, match=msg):
+                res.model.score_test(res.params, exog_extra=exog_extra)
+            with pytest.raises(ValueError, match=msg):
+                res.model.score_test(res.params, exog_extra=exog_extra, k_constraints=1)
+
+    def test_all_redundant_separate(self):
+        # the separate z-tests do not use the rank and are still computed
+        st = self.res_glm.score_test(exog_extra=self.exog[:, 1], hypothesis="separate")
+        assert st.statistic.shape == (4,)
+
+    def test_separate_unchanged(self):
+        # the separate z-tests use the columns as given
+        st = self.res_glm.score_test(
+            exog_extra=self.exog_extra_redundant, hypothesis="separate"
+        )
+        # z-tests for the 3 parameters of the model and the 4 added columns
+        assert st.statistic.shape == (7,)
+        st_ind = self.res_glm.score_test(
+            exog_extra=self.exog_extra, hypothesis="separate"
+        )
+        assert st_ind.statistic.shape == (5,)
+        assert_allclose(st.statistic[:5], st_ind.statistic, rtol=1e-12)
+
+
+def test_score_test_spline_basis_rank():
+    # the example of GH#5364: the B-spline basis of two variables contains
+    # their linear terms, which are already in the model
+    from statsmodels.gam.smooth_basis import BSplines
+    from statsmodels.stats.multivariate_tools import partial_project
+
+    rng = np.random.default_rng(1234)
+    nobs = 250
+    x = rng.uniform(-1, 1, size=(nobs, 2))
+    exog = np.column_stack((np.ones(nobs), x))
+    y = rng.poisson(np.exp(0.5 + x[:, 0] - 0.5 * x[:, 1] ** 2))
+    res = GLM(y, exog, family=families.Poisson()).fit()
+    bs = BSplines(x, df=[6, 6], degree=[3, 3], include_intercept=False)
+    basis = bs.basis
+    k_extra = basis.shape[1]
+    rank = np.linalg.matrix_rank(partial_project(basis, exog).resid)
+    assert rank == k_extra - 2
+
+    st_basis = res.score_test(exog_extra=basis)
+    assert st_basis.k_constraint == rank
+    # reduce the basis by hand to its principal components as in the issue
+    u, s, _ = np.linalg.svd(partial_project(basis, exog).resid, full_matrices=False)
+    reduced = u[:, :rank] * s[:rank]
+    st_reduced = res.score_test(exog_extra=reduced)
+    assert st_reduced.k_constraint == rank
+    assert_allclose(st_basis.statistic, st_reduced.statistic, rtol=1e-8)
+    assert_allclose(st_basis.pvalue, st_reduced.pvalue, rtol=1e-8)
+    assert_allclose(st_basis.pvalue, stats.chi2.sf(st_basis.statistic, rank))
+    st, pv, df = res.model.score_test(res.params, exog_extra=basis)
+    assert df == rank
+    assert_allclose(st, st_basis.statistic, rtol=1e-10)

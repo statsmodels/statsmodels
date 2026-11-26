@@ -11,7 +11,8 @@ def bkfilter(x, low=6, high=32, K=12):
     Parameters
     ----------
     x : array_like
-        A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
+        The 1 or 2d data to filter. If 2d, variables are assumed to be in
+        columns.
     low : float, optional
         Minimum period for oscillations, i.e., Baxter and King suggest that
         the Burns-Mitchell U.S. business cycle has 6 for quarterly data and
@@ -25,8 +26,12 @@ def bkfilter(x, low=6, high=32, K=12):
 
     Returns
     -------
-    ndarray
-        The cyclical component of x.
+    ndarray, Series or DataFrame
+        The cyclical component of x, without the first and last K
+        observations, which the centered moving average cannot compute. It
+        has the number of dimensions of x. A Series or DataFrame x returns a
+        Series or DataFrame with the index of x less its first and last K
+        values, and with ``"_cycle"`` appended to the name or columns of x.
 
     See Also
     --------
@@ -66,7 +71,7 @@ def bkfilter(x, low=6, high=32, K=12):
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
-    >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
+    >>> index = pd.period_range('1959Q1', '2009Q3', freq='Q')
     >>> dta = dta.set_index(index)
 
     >>> cycles = sm.tsa.filters.bkfilter(dta[['realinv']], 6, 24, 12)

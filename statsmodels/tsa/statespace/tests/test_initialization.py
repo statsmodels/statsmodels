@@ -10,8 +10,11 @@ from numpy.testing import assert_allclose
 import pytest
 from scipy.linalg import solve_discrete_lyapunov
 
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.initialization import Initialization
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
+from statsmodels.tsa.statespace.representation import Representation
 
 
 def check_initialization(mod, init, a_true, Pinf_true, Pstar_true):
@@ -437,3 +440,219 @@ def test_uses_stationary():
     init_inner.set(1, "stationary")
     nested.set(2, "diffuse")
     assert nested._uses_stationary()
+
+
+def test_stationary_blocks():
+    def blocks(init):
+        return [list(index) for index in init._stationary_blocks()]
+
+    assert blocks(Initialization(3, "stationary")) == [[0, 1, 2]]
+    assert blocks(Initialization(3, "diffuse")) == []
+    assert blocks(Initialization(3)) == []
+
+    nested = Initialization(5)
+    nested.set(0, "diffuse")
+    init_inner = Initialization(2)
+    init_inner.set(0, "known", constant=[0.0])
+    init_inner.set(1, "stationary")
+    nested.set((1, 3), init_inner)
+    nested.set((3, 5), "stationary")
+    assert blocks(nested) == [[2], [3, 4]]
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.complex64])
+def test_stationary_single_precision(dtype):
+    # The stationary initialization of a single precision model solves the
+    # discrete Lyapunov equation with the "s" or "c" Cython routines. The
+    # complex64 version raised "Buffer dtype mismatch, expected 'float32_t'
+    # but got 'double'".
+    def build(dtype):
+        endog = np.random.default_rng(1234).standard_normal((15, 2))
+        kf = KalmanFilter(k_endog=2, k_states=2, dtype=dtype)
+        kf.bind(endog.astype(dtype))
+        kf["design"] = np.array([[1.0, 0.0], [0.5, 1.0]], dtype=dtype)
+        kf["obs_intercept"] = np.array([[0.1], [0.3]], dtype=dtype)
+        kf["obs_cov"] = np.array([[0.8, 0.2], [0.2, 0.5]], dtype=dtype)
+        kf["transition"] = transition.astype(dtype)
+        kf["state_intercept"] = state_intercept.astype(dtype)
+        kf["selection"] = np.eye(2, dtype=dtype)
+        kf["state_cov"] = state_cov.astype(dtype)
+        kf.initialize_stationary()
+        return kf
+
+    transition = np.array([[0.5, 0.1], [-0.2, 0.3]])
+    state_intercept = np.array([[0.2], [-0.1]])
+    state_cov = np.array([[1.0, 0.3], [0.3, 0.6]])
+    kf = build(dtype)
+    res = kf.filter()
+    desired = build(np.float64).filter()
+    assert kf.prefix == {np.float32: "s", np.complex64: "c"}[dtype]
+    assert res.prefix == kf.prefix
+
+    # Single precision: the float64 results agree to about 4e-6 (relative)
+    rtol = 1e-4
+    initial_state = np.linalg.solve(np.eye(2) - transition, state_intercept[:, 0])
+    initial_state_cov = solve_discrete_lyapunov(transition, state_cov)
+    names = [
+        "initial_state",
+        "initial_state_cov",
+        "llf_obs",
+        "filtered_state",
+        "filtered_state_cov",
+        "forecasts",
+        "forecasts_error_cov",
+    ]
+    for name in names:
+        actual = getattr(res, name)
+        assert actual.dtype == dtype
+        assert_allclose(actual.real, getattr(desired, name), rtol=rtol)
+        # The imaginary part is zero in exact arithmetic. The complex Schur
+        # decomposition in the Lyapunov solver leaves rounding errors of the
+        # order of the single precision epsilon times the size of the values
+        # (6e-8 here), hence the atol relative to the real part.
+        atol = 1e-5 * np.abs(actual.real).max()
+        assert_allclose(actual.imag, 0, atol=atol)
+    assert_allclose(res.initial_state.real, initial_state, rtol=rtol)
+    assert_allclose(res.initial_state_cov.real, initial_state_cov, rtol=rtol)
+
+
+@pytest.mark.parametrize("dtype", [np.float64, np.complex128])
+@pytest.mark.parametrize("scale", [1.0, 1e295, 1e300])
+def test_stationary_cov_large_state_cov(scale, dtype):
+    # For a state covariance of about 1e295 or more, LAPACK's Sylvester
+    # solver scales its solution down to avoid overflow. The compiled
+    # stationary initialization multiplied by that factor instead of
+    # dividing, which gave a stationary covariance of about zero.
+    transition = np.array([[0.5, 0.1], [0.0, 0.3]])
+    kf = KalmanFilter(k_endog=1, k_states=2, dtype=dtype)
+    kf.bind(np.zeros(5, dtype=dtype))
+    kf["design"] = np.array([[1.0, 0.0]], dtype=dtype)
+    kf["transition"] = transition.astype(dtype)
+    kf["selection"] = np.eye(2, dtype=dtype)
+    kf["state_cov"] = np.eye(2, dtype=dtype) * scale
+    kf["obs_cov"] = np.eye(1, dtype=dtype)
+    kf.initialize_stationary()
+    res = kf.filter()
+
+    # vec(P) = (I - T kron T)^{-1} vec(Q), here with Q = scale * I
+    vec_cov = np.linalg.solve(
+        np.eye(4) - np.kron(transition, transition), np.eye(2).ravel(order="F")
+    )
+    desired = vec_cov.reshape(2, 2, order="F")
+    assert_allclose(res.initial_state_cov / scale, desired, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"Pinf": np.eye(2), "A": np.eye(2)}, "Cannot specify both the diffuse"),
+        ({"a": [1.0], "Pstar": np.eye(2)}, "Must provide constant initialization"),
+        ({"R0": np.eye(2)}, "If specifying either of R0 or Q0"),
+        ({"Q0": np.eye(2)}, "If specifying either of R0 or Q0"),
+        (
+            {"Pstar": np.eye(2), "Pinf": np.diag([1.0, 0.0])},
+            "The state at position 0 was specified as diffuse in Pinf",
+        ),
+        ({"Pinf": np.diag([1.0, 0.0])}, "Must provide initial covariance matrix"),
+    ],
+)
+def test_from_components_invalid(kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        Initialization.from_components(2, **kwargs)
+
+
+@pytest.mark.parametrize("kwargs", [{"Pinf": np.eye(2)}, {"A": np.eye(2)}])
+def test_from_components_all_diffuse(kwargs):
+    # With every state diffuse no stationary covariance is needed, and the
+    # result is the global diffuse initialization
+    init = Initialization.from_components(2, **kwargs)
+    desired = Initialization(2, "diffuse")()
+    for actual_part, desired_part in zip(init(), desired, strict=True):
+        assert_allclose(actual_part, desired_part)
+    assert_allclose(desired[1], np.eye(2))
+
+
+def test_set_global_approximate_diffuse_variance():
+    init = Initialization(2)
+    init.set(None, "approximate_diffuse", approximate_diffuse_variance=50.0)
+    a, Pinf, Pstar = init()
+    assert_allclose(Pstar, 50.0 * np.eye(2))
+    assert_allclose(init.approximate_diffuse_variance, 50.0)
+
+    init = Initialization(2)
+    with pytest.raises(ValueError, match="`approximate_diffuse_variance` can only"):
+        init.set(None, "known", constant=[0, 0], approximate_diffuse_variance=50.0)
+
+
+def test_set_block_approximate_diffuse_variance():
+    init = Initialization(3)
+    init.set((0, 2), "approximate_diffuse", approximate_diffuse_variance=7.0)
+    init.set(2, "known", constant=[3.0], stationary_cov=[[2.0]])
+    a, Pinf, Pstar = init()
+    assert_allclose(a, [0.0, 0.0, 3.0])
+    assert_allclose(Pstar, np.diag([7.0, 7.0, 2.0]))
+    # The variance of the whole object is unchanged
+    assert_allclose(init.approximate_diffuse_variance, 1e6)
+
+
+def test_set_diffuse_with_constant():
+    # A constant has no effect under exact diffuse initialization: the
+    # loglikelihood equals the one with a zero constant
+    endog = np.random.default_rng(112233).standard_normal((20, 2))
+    llf = {}
+    for constant in (None, [1.0, -2.0]):
+        init = Initialization(2)
+        if constant is None:
+            init.set(None, "diffuse")
+        else:
+            with pytest.warns(SpecificationWarning, match="Constant values provided"):
+                init.set(None, "diffuse", constant=constant)
+        mod = KalmanFilter(np.ascontiguousarray(endog), k_states=2)
+        mod["design"] = np.array([[1.0, 0.2], [0.3, 1.0]])
+        mod["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+        mod["selection"] = np.eye(2)
+        mod["state_cov"] = np.eye(2)
+        mod["obs_cov"] = np.eye(2)
+        mod.initialize(init)
+        llf[constant is None] = mod.loglike()
+        assert_allclose(init()[1], np.eye(2))
+    assert_allclose(llf[False], llf[True], rtol=1e-12)
+
+
+def test_unset_empty_index():
+    # An empty index changes nothing
+    init = Initialization(2, "diffuse")
+    init.unset((1, 1))
+    assert init.initialization_type == "diffuse"
+    assert_allclose(init()[1], np.eye(2))
+
+
+def test_call_stationary_unit_root():
+    mod = Representation(1, k_states=2)
+    mod["transition"] = np.diag([1.0, 0.5])
+    init = Initialization(2, "stationary")
+    with pytest.raises(ValueError, match="Transition equation is not stationary"):
+        init(model=mod)
+
+
+def test_stationary_initialization_without_state_disturbance():
+    # With k_posdef=0 the stationary covariance solves P = T P T', so P = 0,
+    # and the mean is (I - T)^{-1} c: the same as a known initialization
+    endog = np.random.default_rng(445566).standard_normal(30)
+    transition = np.array([[0.5, 0.1], [0.0, 0.3]])
+    state_intercept = np.array([0.4, -0.2])
+    mod = KalmanFilter(k_endog=1, k_states=2, k_posdef=0)
+    mod.bind(endog)
+    mod["design"] = np.array([[1.0, 0.5]])
+    mod["transition"] = transition
+    mod["state_intercept"] = state_intercept
+    mod["obs_cov"] = np.array([[1.0]])
+    mod.initialize_stationary()
+    res = mod.filter()
+    mean = np.linalg.solve(np.eye(2) - transition, state_intercept)
+    assert_allclose(res.initial_state, mean)
+    # atol: zero by construction; a nonzero R Q R' gives entries of order one
+    assert_allclose(res.initial_state_cov, np.zeros((2, 2)), atol=1e-14)
+
+    mod.initialize_known(mean, np.zeros((2, 2)))
+    assert_allclose(res.llf, mod.filter().llf, rtol=1e-12)

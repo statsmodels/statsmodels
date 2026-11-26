@@ -94,6 +94,19 @@ class TruncatedLFGeneric(CountModel):
         self._init_keys.extend(["truncation"])
         self._null_drop_keys = []
 
+    def _exposure_main(self):
+        """
+        Exposure in the original scale for creating the underlying model.
+
+        ``CountModel.__init__`` stores the log of exposure, but the count
+        models used for the untruncated distribution take exposure on the
+        original scale and log it again.
+        """
+        exposure = getattr(self, "exposure", None)
+        if exposure is not None:
+            exposure = np.exp(exposure)
+        return exposure
+
     def loglike(self, params):
         """
         Log-likelihood of Generic Truncated model.
@@ -172,12 +185,16 @@ class TruncatedLFGeneric(CountModel):
         pmf = np.zeros_like(self.endog, dtype=np.float64)
         # TODO: can we rewrite to following without creating new models
         score_trunc = np.zeros_like(score_main, dtype=np.float64)
+        # the models for the truncated counts need the same `p` as model_main
+        init_kwds = self.model_main._get_init_kwds()
+        kwds = {"p": init_kwds["p"]} if "p" in init_kwds else {}
         for i in range(self.trunc + 1):
             model = self.model_main.__class__(
                 np.ones_like(self.endog) * i,
                 self.exog,
                 offset=getattr(self, "offset", None),
-                exposure=getattr(self, "exposure", None),
+                exposure=self._exposure_main(),
+                **kwds,
                 )
             pmf_i = np.exp(model.loglikeobs(params))
             score_trunc += (model.score_obs(params).T * pmf_i).T
@@ -476,7 +493,7 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
             **kwargs
             )
         self.model_main = Poisson(self.endog, self.exog,
-                                  exposure=getattr(self, "exposure", None),
+                                  exposure=self._exposure_main(),
                                   offset=getattr(self, "offset", None),
                                   )
         self.model_dist = truncatedpoisson
@@ -559,7 +576,7 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
         self.model_main = NegativeBinomialP(
             self.endog,
             self.exog,
-            exposure=getattr(self, "exposure", None),
+            exposure=self._exposure_main(),
             offset=getattr(self, "offset", None),
             p=p
             )
@@ -653,7 +670,7 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
         self.model_main = GeneralizedPoisson(
             self.endog,
             self.exog,
-            exposure=getattr(self, "exposure", None),
+            exposure=self._exposure_main(),
             offset=getattr(self, "offset", None),
             p=p
             )

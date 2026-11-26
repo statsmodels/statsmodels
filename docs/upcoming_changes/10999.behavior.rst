@@ -1,0 +1,2 @@
+- ``summary(display_params=False)`` of ``MarkovSwitchingResults`` ignored the argument.
+  The parameter tables are left out. :pr:`10999`

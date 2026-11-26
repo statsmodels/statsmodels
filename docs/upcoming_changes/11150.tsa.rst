@@ -1,0 +1,5 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` raised
+  ``ValueError: Only monthly and quarterly periods are supported`` for
+  an ``endog`` with a business month or business quarter frequency,
+  such as ``BME`` or ``BQE-DEC``. These are monthly and quarterly.
+  :pr:`11150`

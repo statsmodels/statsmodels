@@ -7,7 +7,7 @@ License: BSD-3
 
 Notes
 -----
-Contains fleiss_kappa and cohens_kappa.
+Contains fleiss_kappa, cohens_kappa and krippendorff_alpha.
 
 aggregate_raters:
     helper function to get data into fleiss_kappa format
@@ -34,6 +34,8 @@ see also R package irr
 
 import numpy as np
 from scipy import stats  # get rid of this? need only norm.sf
+
+from statsmodels.tools.validation import array_like, string_like
 
 
 class ResultsBunch(dict):
@@ -286,6 +288,178 @@ def fleiss_kappa(table, method="fleiss"):
     return kappa
 
 
+def krippendorff_alpha(data, level="nominal"):
+    r"""
+    Compute Krippendorff's alpha reliability coefficient.
+
+    Agreement among any number of raters, for nominal, ordinal, interval or
+    ratio data, with any number of missing ratings.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    data : array_like
+        Numeric ratings in a 2-D array with subjects in rows and raters in
+        columns, the layout used by
+        :func:`statsmodels.stats.inter_rater.aggregate_raters`. Missing
+        ratings are coded as ``nan``. Nominal categories can be any numeric
+        codes. See examples.
+    level : {"nominal", "ordinal", "interval", "ratio"}, optional
+        Level of measurement of the ratings. It defines the squared difference
+        :math:`\delta^2_{ck}` between two ratings :math:`c` and :math:`k`.
+        The default is "nominal".
+
+        - "nominal": 0 if :math:`c = k` and 1 otherwise.
+        - "ordinal": :math:`(\sum_{g=c}^{k} n_g - (n_c + n_k) / 2)^2`, which
+          depends on how often the ratings between :math:`c` and :math:`k`
+          are used, not on their numeric distance.
+        - "interval": :math:`(c - k)^2`.
+        - "ratio": :math:`((c - k) / (c + k))^2`. The ratings must be
+          nonnegative.
+
+    Returns
+    -------
+    float
+        Krippendorff's alpha. It is 1 for perfect agreement and 0 for
+        agreement at the level of chance. It is ``nan`` if no subject has two
+        or more ratings, or if all those ratings are equal, because alpha is
+        0 / 0 then.
+
+    See Also
+    --------
+    fleiss_kappa : Fleiss' kappa for nominal ratings without missing values.
+    cohens_kappa : Cohen's kappa for two raters.
+
+    Notes
+    -----
+    Only subjects with at least two ratings are used. Following Krippendorff
+    (2011), the ratings within each subject :math:`u` with :math:`m_u`
+    ratings are tabulated in the coincidence matrix :math:`o_{ck}`: each of
+    the :math:`m_u (m_u - 1)` ordered pairs of ratings adds
+    :math:`1 / (m_u - 1)` to the cell of its two values. With the margins
+    :math:`n_c = \sum_k o_{ck}` and :math:`n = \sum_c n_c`,
+
+    .. math::
+
+       \alpha = 1 - (n - 1)
+       \frac{\sum_c \sum_k o_{ck} \delta^2_{ck}}
+       {\sum_c \sum_k n_c n_k \delta^2_{ck}}
+
+    For nominal data without missing ratings, alpha is a function of
+    Fleiss' kappa, :math:`\alpha = 1 - (1 - \kappa) (n - 1) / n` (see
+    :func:`fleiss_kappa`). For two raters, Fleiss' kappa is Scott's pi, so
+    nominal alpha is 1 - (1 - pi) (n - 1) / n, which is Scott's pi with a
+    correction for the finite number n of ratings.
+
+    If all ratings of the subjects with at least two ratings have the same
+    value, the agreement is perfect but alpha is 0 / 0 and ``nan`` is
+    returned, for example for ``[[1, 1], [1, 1]]``, while ``[[1, 1], [2, 2]]``
+    gives 1. R's ``irr::kripp.alpha`` returns 1 in that case.
+
+    The ratings are held in a matrix of subjects by distinct values and in
+    matrices of distinct values by distinct values. Memory and time therefore
+    grow with the number of subjects times the number of distinct ratings
+    plus the square of the number of distinct ratings. This is small for
+    ratings on a scale with a few levels but large for continuous ratings.
+
+    References
+    ----------
+    Krippendorff, Klaus. 2011. "Computing Krippendorff's Alpha-Reliability."
+    Annenberg School for Communication, University of Pennsylvania.
+    https://repository.upenn.edu/asc_papers/43
+
+    Hayes, Andrew F., and Klaus Krippendorff. 2007. "Answering the Call for a
+    Standard Reliability Measure for Coding Data." Communication Methods and
+    Measures 1 (1): 77-89. https://doi.org/10.1080/19312450709336664
+
+    Examples
+    --------
+    The example of Krippendorff (2011): 12 subjects rated by 4 raters, with
+    7 missing ratings.
+
+    >>> import numpy as np
+    >>> from statsmodels.stats.inter_rater import krippendorff_alpha
+    >>> nan = np.nan
+    >>> data = [[1, 1, nan, 1], [2, 2, 3, 2], [3, 3, 3, 3], [3, 3, 3, 3],
+    ...         [2, 2, 2, 2], [1, 2, 3, 4], [4, 4, 4, 4], [1, 1, 2, 1],
+    ...         [2, 2, 2, 2], [nan, 5, 5, 5], [nan, nan, 1, 1],
+    ...         [nan, 3, nan, nan]]
+    >>> round(krippendorff_alpha(data), 3)
+    0.743
+    >>> round(krippendorff_alpha(data, level="interval"), 3)
+    0.849
+
+    Subjects are in rows. Data with raters in rows, as used by R, has to be
+    transposed. Here 6 subjects are rated by 3 raters. The transposed matrix
+    is accepted as 3 subjects with 6 ratings each and gives a different alpha
+    without an error.
+
+    >>> ratings = np.array([[1, 1, 2], [2, 2, 2], [3, 3, 1],
+    ...                     [1, 2, 1], [3, 3, 3], [2, 2, 3]])
+    >>> round(krippendorff_alpha(ratings), 3)
+    0.364
+    >>> round(krippendorff_alpha(ratings.T), 3)
+    -0.112
+    """
+    data = array_like(data, "data", maxdim=2)
+    if data.ndim != 2:
+        raise ValueError(
+            f"data must be a 2-d array of subjects by raters, got a {data.ndim}-d array"
+        )
+    level = string_like(
+        level, "level", options=("nominal", "ordinal", "interval", "ratio")
+    )
+    if np.isinf(data).any():
+        raise ValueError("data must not contain inf; code missing ratings as nan")
+    if level == "ratio" and (data < 0).any():
+        raise ValueError("ratings must be nonnegative for level='ratio'")
+
+    observed = ~np.isnan(data)
+    n_ratings = observed.sum(1)
+    # a subject with fewer than two ratings has no pair of ratings to compare
+    pairable = n_ratings >= 2
+    data = data[pairable]
+    observed = observed[pairable]
+    n_ratings = n_ratings[pairable]
+    if data.shape[0] == 0:
+        return np.nan
+
+    values, codes = np.unique(data[observed], return_inverse=True)
+    if len(values) < 2:
+        return np.nan
+    # counts[u, c]: number of ratings of subject u equal to values[c]
+    counts = np.zeros((data.shape[0], len(values)))
+    np.add.at(counts, (np.nonzero(observed)[0], codes), 1)
+
+    # coincidence matrix: sum over subjects of
+    # (n_uc * n_uk - [c == k] * n_uc) / (m_u - 1)
+    weights = counts / (n_ratings - 1)[:, None]
+    coincidence = counts.T @ weights - np.diag(weights.sum(0))
+    n_c = coincidence.sum(1)
+    n = n_c.sum()
+
+    if level == "nominal":
+        delta2 = 1.0 - np.eye(len(values))
+    elif level == "ordinal":
+        # with midpoints cumsum(n)_c - n_c / 2, the difference of two
+        # midpoints is sum_{g=c}^{k} n_g - (n_c + n_k) / 2
+        midpoint = np.cumsum(n_c) - n_c / 2
+        delta2 = np.subtract.outer(midpoint, midpoint) ** 2
+    elif level == "interval":
+        delta2 = np.subtract.outer(values, values) ** 2
+    else:
+        diff = np.subtract.outer(values, values)
+        total = np.add.outer(values, values)
+        # c + k is 0 only for c = k = 0, where the difference is 0
+        ratio = np.divide(diff, total, out=np.zeros_like(diff), where=total > 0)
+        delta2 = ratio**2
+
+    d_observed = (coincidence * delta2).sum()
+    d_expected = (np.outer(n_c, n_c) * delta2).sum()
+    return float(1.0 - (n - 1) * d_observed / d_expected)
+
+
 def cohens_kappa(table, weights=None, return_results=True, wt=None):
     '''
     Compute Cohen's kappa with variance and equal-zero test
@@ -354,10 +528,51 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
     weights and using wt = 'toeplitz'.
 
+    If one rater uses a single category, then kappa is 0, its standard
+    errors and confidence limits are 0, and the z statistic and the p-values
+    are nan. If both raters use the same single category, which includes a
+    table with a single row and column, then kappa and all other statistics
+    are nan.
+
+    .. versionchanged:: 0.15.1
+
+       The results if a rater uses a single category are set explicitly.
+       Before, they depended on rounding errors, and NumPy emitted a
+       ``RuntimeWarning``.
+
+    Kappa depends on the prevalence of the categories, not only on the
+    accuracy of the raters. Chance agreement is computed from the margins of
+    the table. If one category is rare, both raters mostly assign the common
+    category, chance agreement is close to the observed agreement, and kappa
+    is small even if raw agreement is high. See the example below.
+
     References
     ----------
     Wikipedia
     SAS Manual
+
+    Examples
+    --------
+    Two raters each have sensitivity and specificity of 0.9, and their errors
+    are independent given the true class. The expected tables for 10000
+    subjects (rows: rater 1 positive, negative; columns: rater 2) differ only
+    in the proportion of positive subjects.
+
+    >>> from statsmodels.stats.inter_rater import cohens_kappa
+
+    With 50% positive subjects, observed agreement is 0.82 and chance
+    agreement is 0.50.
+
+    >>> table_balanced = [[4100, 900], [900, 4100]]
+    >>> print(f"{cohens_kappa(table_balanced, return_results=False):.4f}")
+    0.6400
+
+    With 1% positive subjects, observed agreement is still 0.82, but chance
+    agreement from the margins is 0.8073, so kappa is much smaller.
+
+    >>> table_rare = [[180, 900], [900, 8020]]
+    >>> print(f"{cohens_kappa(table_rare, return_results=False):.4f}")
+    0.0658
     '''
     table = np.asarray(table, float)  # avoid integer division
     if table.ndim != 2 or table.shape[0] != table.shape[1]:
@@ -366,22 +581,41 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         raise ValueError(
             f"table must be a square 2-d array, got shape {table.shape}"
         )
+    if not np.isfinite(table).all():
+        raise ValueError("table must contain only finite counts")
     agree = np.diag(table).sum()
     nobs = table.sum()
+    if not np.isfinite(nobs):
+        raise ValueError("the sum of the table must be finite")
+    if nobs == 0:
+        raise ValueError("table must have a positive number of observations")
     probs = table / nobs
     freqs = probs  # TODO: rename to use freqs instead of probs for observed
     probs_diag = np.diag(probs)
     freq_row = table.sum(1) / nobs
     freq_col = table.sum(0) / nobs
     prob_exp = freq_col * freq_row[:, None]
-    assert np.allclose(prob_exp.sum(), 1)
-    # print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
+    # If a rater uses a single category, then kappa and its variances are 0,
+    # and if both raters use the same single category, then they are 0 / 0.
+    # The computation below gives rounding errors or 0 / 0 in these cases.
+    rows_used = np.flatnonzero(table.sum(1))
+    cols_used = np.flatnonzero(table.sum(0))
+    one_category = len(rows_used) == 1 or len(cols_used) == 1
+    same_category = (
+        len(rows_used) == 1 and len(cols_used) == 1 and rows_used[0] == cols_used[0]
+    )
+    one_category_value = np.nan if same_category else 0.0
     if weights is None and wt is None:
         kind = "Simple"
-        kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
+        if one_category:
+            kappa = one_category_value
+        else:
+            kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
-        if return_results:
+        if return_results and one_category:
+            var_kappa = var_kappa0 = one_category_value
+        elif return_results:
             # variance
             term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
             term_a = term_a.sum()
@@ -422,9 +656,14 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             if (table.shape != weights.shape):
                 raise ValueError("weights are not square")
         # this is formula from Wikipedia
-        kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
+        if one_category:
+            kappa = one_category_value
+        else:
+            kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
         # TODO: add var_kappa for weighted version
-        if return_results:
+        if return_results and one_category:
+            var_kappa = var_kappa0 = one_category_value
+        elif return_results:
             var_kappa = np.nan
             var_kappa0 = np.nan
             # switch to SAS manual weights, problem if user specifies weights
@@ -444,8 +683,11 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             var_kappa0 -= agree_wexp**2
             var_kappa0 *= fac
 
-    kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
-                (1 - agree_exp)
+    if same_category:
+        kappa_max = np.nan
+    else:
+        kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
+                    (1 - agree_exp)
 
     if return_results:
         res = KappaResults(
@@ -551,7 +793,11 @@ class KappaResults(ResultsBunch):
         self["std_kappa"] = np.sqrt(self["var_kappa"])
         self["std_kappa0"] = np.sqrt(self["var_kappa0"])
 
-        self["z_value"] = self["kappa"] / self["std_kappa0"]
+        if self["std_kappa0"] > 0:
+            self["z_value"] = self["kappa"] / self["std_kappa0"]
+        else:
+            # kappa is 0 or nan if its variance under H0 is 0 or nan
+            self["z_value"] = np.nan
 
         self["pvalue_one_sided"] = stats.norm.sf(self["z_value"])
         self["pvalue_two_sided"] = stats.norm.sf(np.abs(self["z_value"])) * 2

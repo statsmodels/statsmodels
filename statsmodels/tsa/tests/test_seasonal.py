@@ -1,5 +1,7 @@
 from statsmodels.compat.pandas import MONTH_END, QUARTER_END, YEAR_END
 
+import warnings
+
 import numpy as np
 from numpy.testing import (
     assert_allclose,
@@ -9,7 +11,8 @@ from numpy.testing import (
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.seasonal import seasonal_decompose, seasonal_mean
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 # Verification values for tests
 SEASONAL = [
@@ -954,6 +957,64 @@ def test_seasonal_decompose_multiple():
     assert_allclose(res.resid[:, 0], res.resid[:, 1])
 
 
+def _dataframe_to_decompose(ncols):
+    rng = np.random.default_rng(20261130)
+    index = pd.date_range("2000-01-01", periods=48, freq="MS")
+    t = np.arange(48)[:, None]
+    x = 10 + 0.1 * t + np.sin(2 * np.pi * t / 12) + rng.standard_normal((48, ncols))
+    columns = ["a", "b", "c"][:ncols]
+    return pd.DataFrame(x, index=index, columns=columns)
+
+
+@pytest.mark.parametrize("extrapolate_trend", [0, "period"])
+@pytest.mark.parametrize("model", ["additive", "multiplicative"])
+@pytest.mark.parametrize("ncols", [1, 2, 3])
+def test_seasonal_decompose_dataframe(ncols, model, extrapolate_trend):
+    # A DataFrame with more than one column raised a TypeError when the
+    # components were wrapped. Each column is decomposed on its own, as for a
+    # 2-d ndarray, and the components keep the index and columns of x. A
+    # one-column DataFrame still gives Series named after the component.
+    df = _dataframe_to_decompose(ncols)
+    kwargs = {"model": model, "extrapolate_trend": extrapolate_trend}
+    res = seasonal_decompose(df, **kwargs)
+    names = {
+        "observed": None,
+        "seasonal": "seasonal",
+        "trend": "trend",
+        "resid": "resid",
+    }
+    for attr, name in names.items():
+        component = getattr(res, attr)
+        pd.testing.assert_index_equal(component.index, df.index)
+        if ncols == 1:
+            assert isinstance(component, pd.Series)
+            assert component.name == name
+        else:
+            assert isinstance(component, pd.DataFrame)
+            pd.testing.assert_index_equal(component.columns, df.columns)
+        values = np.asarray(component).reshape(48, ncols)
+        for i, col in enumerate(df.columns):
+            # the period, 12, comes from the monthly index
+            single = seasonal_decompose(df[col].to_numpy(), period=12, **kwargs)
+            # atol: seasonal and resid are differences of values of order
+            # ten, so values near zero carry absolute rounding
+            expected = getattr(single, attr)
+            assert_allclose(values[:, i], expected, rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_seasonal_decompose_dataframe_plot(close_figures):
+    # a DataFrame result has one seasonal panel per column
+    df = _dataframe_to_decompose(2)
+    res = seasonal_decompose(df)
+    fig = res.plot()
+    assert len(fig.axes) == 5
+    for ax, col in zip(fig.axes[2:4], df.columns, strict=True):
+        ydata = np.asarray(ax.lines[0].get_ydata(), dtype=float)
+        assert_allclose(ydata, res.seasonal[col].to_numpy(), rtol=1e-12)
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("model", ["additive", "multiplicative"])
@@ -999,13 +1060,27 @@ def test_seasonal_decompose_plot(
             184,
         ]
     )
-    x -= x.min() + 1
+    # a minimum of 1, since the multiplicative model needs positive data
+    x -= x.min() - 1
     x2 = np.r_[x[12:], x[:12]]
     x = np.c_[x, x2]
     res = seasonal_decompose(
-        x, period=period, two_sided=two_sided, extrapolate_trend=extrapolate_trend
+        x,
+        model=model,
+        period=period,
+        two_sided=two_sided,
+        extrapolate_trend=extrapolate_trend,
+    )
+    # the seasonal component of a cycle averages to 0 for the additive and
+    # to 1 for the multiplicative model, in each column. atol since the
+    # additive average is zero up to rounding of values of order 100.
+    expected = 0.0 if model == "additive" else 1.0
+    assert_allclose(
+        res.seasonal[:period].mean(axis=0), [expected, expected], atol=1e-10
     )
     fig = res.plot()
+    # observed, trend, one seasonal panel per column and residual
+    assert len(fig.axes) == 5
 
     import matplotlib.pyplot as plt
 
@@ -1022,3 +1097,184 @@ def test_seasonal_decompose_period_validation():
     # a float period with an integral value is still tolerated
     res = seasonal_decompose(x, period=12.0)
     assert_equal(res.trend.shape[0], 48)
+
+
+def test_period_from_inferred_freq():
+    # A DatetimeIndex without a freq gives the period of its inferred freq,
+    # without the warning pandas 3.1 gives when inferred_freq is read
+    rng = np.random.default_rng(20261121)
+    dates = pd.date_range("2000-01-01", periods=48, freq="QS")
+    x = pd.Series(10 + rng.standard_normal(48), index=list(dates))
+    assert x.index.freq is None
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        res = seasonal_decompose(x)
+    assert [str(w.message) for w in record] == []
+    expected = seasonal_decompose(x.to_numpy(), period=4)
+    assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
+
+
+def _seasonal_series(nobs, period, seed):
+    rng = np.random.default_rng(seed)
+    t = np.arange(nobs)
+    season = np.sin(2 * np.pi * t / period)
+    return 10 + 0.1 * t + season + 0.2 * rng.standard_normal(nobs)
+
+
+@pytest.mark.parametrize("freq, period", [("M", 12), ("Q", 4)])
+def test_seasonal_decompose_period_from_period_index(freq, period):
+    # without period, a PeriodIndex gives the period of its frequency: 12 for
+    # monthly and 4 for quarterly data
+    x = _seasonal_series(4 * period, period, 20261125)
+    index = pd.period_range("2000-01", periods=x.shape[0], freq=freq)
+    res = seasonal_decompose(pd.Series(x, index=index))
+    expected = seasonal_decompose(x, period=period)
+    for attr in ("seasonal", "trend", "resid"):
+        actual = getattr(res, attr).to_numpy()
+        assert_allclose(actual, getattr(expected, attr), rtol=1e-12)
+    # the seasonal component repeats with that period
+    seasonal = res.seasonal.to_numpy()
+    assert_allclose(seasonal[period:], seasonal[:-period], rtol=1e-12)
+    pd.testing.assert_index_equal(res.seasonal.index, index)
+
+
+@pytest.mark.parametrize("model", ["additive", "multiplicative"])
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_seasonal_decompose_input_forms(form, model):
+    # x is documented as array_like: every form of a 1-d series gives the
+    # values of the ndarray, and pandas input gives Series with its index
+    x = _seasonal_series(60, 12, 20261126)
+    forms = series_forms(x)
+    forms["int"] = np.round(10 * x).astype(np.int64)
+    x_form = forms[form]
+    x_float = np.asarray(x_form, dtype=float).squeeze()
+    res = seasonal_decompose(x_form, model=model, period=12)
+    expected = seasonal_decompose(x_float, model=model, period=12)
+    for attr in ("observed", "seasonal", "trend", "resid"):
+        actual = getattr(res, attr)
+        # atol: seasonal and resid are differences of values of order ten, so
+        # values near zero carry absolute rounding
+        desired = getattr(expected, attr)
+        assert_allclose(np.asarray(actual), desired, rtol=1e-12, atol=1e-12)
+        if isinstance(x_form, (pd.Series, pd.DataFrame)):
+            assert isinstance(actual, pd.Series)
+            pd.testing.assert_index_equal(actual.index, x_form.index)
+        else:
+            assert isinstance(actual, np.ndarray)
+            assert actual.shape == (60,)
+    # the components make up the series
+    observed = np.asarray(res.observed)
+    parts = [np.asarray(res.trend), np.asarray(res.seasonal), np.asarray(res.resid)]
+    valid = np.isfinite(parts[0])
+    if model == "additive":
+        combined = parts[0] + parts[1] + parts[2]
+    else:
+        combined = parts[0] * parts[1] * parts[2]
+    assert_allclose(combined[valid], observed[valid], rtol=1e-12)
+    assert_allclose(observed, x_float, rtol=1e-15)
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+def test_seasonal_decompose_filt_forms(form):
+    # filt is documented as array_like
+    x = _seasonal_series(48, 4, 20261127)
+    filt = np.array([1, 2, 2, 2, 1]) / 8.0
+    expected = seasonal_decompose(x, filt=filt, period=4)
+    res = seasonal_decompose(x, filt=series_forms(filt)[form], period=4)
+    for attr in ("seasonal", "trend", "resid"):
+        assert_allclose(getattr(res, attr), getattr(expected, attr), rtol=1e-12)
+
+
+def test_seasonal_decompose_two_column_list():
+    # 2-d x has one series per column, also as a nested list
+    x = np.c_[_seasonal_series(48, 4, 1), _seasonal_series(48, 4, 2)]
+    res = seasonal_decompose(x.tolist(), period=4)
+    for i in range(2):
+        expected = seasonal_decompose(x[:, i], period=4)
+        for attr in ("seasonal", "trend", "resid"):
+            actual = getattr(res, attr)[:, i]
+            assert_allclose(actual, getattr(expected, attr), rtol=1e-12)
+
+
+def test_seasonal_mean():
+    # the mean of every period-th value, ignoring NaN, for each column of 2-d
+    # input
+    x = np.tile([1.0, 2.0, 3.0], 4)
+    x[4] = np.nan
+    assert_allclose(seasonal_mean(x, 3), [1.0, 2.0, 3.0], rtol=1e-15)
+    x2 = np.c_[x, 10 * x]
+    expected = [[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]]
+    assert_allclose(seasonal_mean(x2, 3), expected, rtol=1e-15)
+    assert_allclose(seasonal_mean(np.arange(6), 2), [2.0, 3.0], rtol=1e-15)
+
+
+SEASONAL_MEAN_X = np.array([1.0, 2.0, 3.0, 4.0, 5.0, np.nan, 7.0, 8.0, 9.0, 10.0])
+# with period 3, the means of positions (0, 3, 6, 9), (1, 4, 7) and (2, 5, 8),
+# without the NaN at position 5
+SEASONAL_MEAN_EXPECTED = np.array([5.5, 5.0, 6.0])
+
+
+@pytest.mark.parametrize(
+    "form",
+    [
+        "ndarray",
+        "list",
+        "tuple",
+        "series",
+        "series-float-index",
+        "dataframe",
+        "dataframe-2",
+        "ndarray-2d",
+        "ndarray-3d",
+    ],
+)
+def test_seasonal_mean_array_like(form):
+    # a list, tuple, Series or DataFrame raised an AttributeError or a
+    # ValueError from pandas' private nanmean. Time is in the first axis, by
+    # position, also for a pandas object with a float index.
+    x, expected = SEASONAL_MEAN_X, SEASONAL_MEAN_EXPECTED
+    x2, expected2 = np.c_[x, 10 * x], np.c_[expected, 10 * expected]
+    index = pd.date_range("2000-01-01", periods=10, freq="MS")
+    forms = {
+        "ndarray": (x, expected),
+        "list": (x.tolist(), expected),
+        "tuple": (tuple(x), expected),
+        "series": (pd.Series(x, index=index), expected),
+        "series-float-index": (pd.Series(x, index=np.arange(10.0)), expected),
+        "dataframe": (pd.DataFrame({"a": x}, index=index), expected[:, None]),
+        "dataframe-2": (pd.DataFrame(x2, index=index, columns=["a", "b"]), expected2),
+        "ndarray-2d": (x2, expected2),
+        "ndarray-3d": (x2[:, None, :], expected2[:, None, :]),
+    }
+    x_in, expected = forms[form]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = seasonal_mean(x_in, 3)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == expected.shape
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+def test_seasonal_mean_dtype():
+    # float32 and complex x keep their dtype, and integer x has float means,
+    # as before
+    x, expected = SEASONAL_MEAN_X, SEASONAL_MEAN_EXPECTED
+    res = seasonal_mean(x.astype(np.float32), 3)
+    assert res.dtype == np.float32
+    assert_allclose(res, expected, rtol=1e-6)
+    res = seasonal_mean(x + 2j * x, 3)
+    assert res.dtype == np.complex128
+    assert_allclose(res, expected + 2j * expected, rtol=1e-12)
+    # the means of positions (0, 3, 6, 9), (1, 4, 7) and (2, 5, 8)
+    res = seasonal_mean(np.arange(10), 3)
+    assert res.dtype == np.float64
+    assert_allclose(res, [4.5, 4.0, 5.0], rtol=1e-12)
+
+
+def test_seasonal_mean_all_nan_period():
+    # a period without any non-NaN value has a NaN mean, without a warning
+    x = np.array([1.0, np.nan, 3.0, np.nan, 5.0, np.nan])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = seasonal_mean(x, 2)
+    assert_allclose(res, [3.0, np.nan], rtol=1e-12)

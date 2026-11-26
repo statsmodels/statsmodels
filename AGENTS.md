@@ -61,9 +61,10 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
   2. Added to the Sphinx docs — find the relevant `docs/source/*.rst` file
      (e.g. `docs/source/vector_ar.rst` for VAR-family models) and add an
      `autosummary` entry.
-  3. Noted in the current release notes file under `docs/source/release/`
-     (currently `version0.15.0.rst` — check for the highest-numbered
-     unreleased `versionX.Y.Z.rst`).
+  3. Noted in a release-note fragment in `docs/upcoming_changes/` (see
+     "Release notes and version directives" below). The fragments are
+     collected into the unreleased release notes file under
+     `docs/source/release/` (currently `version0.15.1.rst`) at release time.
 - If it's a substantial new feature, an example notebook is strongly encouraged.
   (see the "Add an example" step in `CONTRIBUTING.md`).
 
@@ -144,6 +145,54 @@ dedicated cleanup:
   and don't silently "fix" the docstring to match buggy behavior without
   flagging the underlying bug.
 
+### Release notes and version directives
+
+A missing or incomplete release note is among the most frequent points raised
+in review. Check before submitting:
+
+- Add a bullet for every user-visible change: new public API, a bug fix,
+  different results or output for valid input, a deprecation, or a
+  documentation-only fix. Tests, internals and style need none.
+- Do not edit the release notes file itself. Write the bullets in a fragment
+  file `docs/upcoming_changes/<pr number>.<key>.rst`, so that pull requests do
+  not conflict in the release notes; `docs/upcoming_changes/README.rst` lists
+  the keys and the format. A PR with notes in several sections adds one file
+  per section.
+- Pick the section (the key) by kind of change: changed results of an
+  existing function go under "Behavior changes" (`behavior`, not a "Bug
+  Fixes" key), deprecations and removals under "Deprecations"
+  (`deprecation`), new API under "New Features and Enhancements" (`feature`),
+  fixes under "Bug Fixes" in the topic subsection (`tsa`, `stats`,
+  `regression`, ...), and docs-only fixes under "Documentation"
+  (`documentation`). Bullets have no blank lines between them.
+- End every bullet with the roles ``:issue:`1234`, :pr:`5678` ``. `:pr:` is
+  required, so a bullet without it is incomplete. `:issue:` is required for
+  each issue the change fixes or addresses (several are written
+  ``:issue:`1234`, :issue:`1235` ``) and is left out only if there is none.
+  The PR number is only known once the PR is open, so add the fragment, named
+  with it, in a follow-up commit right after opening the PR, before asking for
+  review. Do not use a placeholder. Check the fragments with
+  `python tools/releasing/collect_release_notes.py --check`.
+- Say what a user sees: what was wrong, what changes, and that results of
+  valid input change if they do. No internals, no timings from one machine,
+  and no claim of agreement with R or Stata that you did not compute.
+- Add `.. versionadded::` for new public behavior and `.. versionchanged::`
+  for changed behavior (different results, arguments that now raise) to the
+  docstring, with the version of the unreleased release notes file.
+- Do not remove or rename documented public API outright. Keep it working
+  with a `FutureWarning` and list it under "Deprecations".
+
+### Inputs and edge cases
+
+- Public array arguments accept `array_like` (lists, pandas objects): coerce
+  and validate with `statsmodels.tools.validation` (`array_like`,
+  `float_like`, `int_like`, ...), and do not test a value that may be an array
+  with `if x == 0`.
+- For the degenerate input that a change touches (empty, constant, NaN,
+  rank-deficient design), raise a clear error or return NaN by a documented
+  rule, and test it. Do not return a plausible number silently. Silence a
+  warning only around the statement that causes it, not a whole function.
+
 ## Testing conventions
 
 - Tests live in a `tests/` subpackage next to the code
@@ -159,6 +208,17 @@ dedicated cleanup:
   follows a test-driven-development norm for new models/statistical
   functions) — an internal-consistency-only test suite (e.g. "shape is
   right", "output is finite") is necessary but not sufficient.
+- A regression test must fail on `main` and pass with the fix: run it on both,
+  and check that each branch the change adds is guarded (alter the changed
+  line and a test must fail). Parametrize over the cases the code branches on.
+- Use `rtol`, and give a reason for every `atol` (the default `atol` of
+  `np.isclose` is 1e-8 and treats small valid values as zero). Do not assert
+  exact zero or NaN for a value that is zero only because of rounding, and do
+  not assert on where an optimizer stops; compare at fixed parameters.
+- The CI also runs the tests on Pyodide (wasm32, 32-bit `intp`). Do not rely
+  there on `LinAlgError` for singular matrices, on floating-point warnings,
+  on borderline rank decisions, or on int64 arrays as sizes or repeat counts
+  (`np.repeat(x, w)` raises; use `w.astype(np.intp)`).
 - Two sharp edges that will make a locally-green test suite fail once
   merged — **verify against the actual `pytest` run in this repo, not just
   by reading the code**:
@@ -239,7 +299,12 @@ not reimplement it standalone:
   - `REF:` refactoring
   - `REL:` release-related
 - Reference/close issues via `#XXXX`, `GH-XXXX`, or `gh-XXXX` in the commit
-  message where applicable.
+  message where applicable, not only in the PR description. Squash fix-up
+  commits (for example "Add the PR number") before the PR is ready.
+- Check every claim in the PR description, commit message and release note by
+  running code. Write `closes #XXXX` only if the PR fully fixes the issue
+  (otherwise `xref #XXXX`), and remove unused template lines such as
+  `closes #xxxx`.
 - Every non-trivial PR needs: tests, numpydoc docstrings, a docs entry if
   it's new public API, and a release-notes line — a PR description claiming
   "N/N tests pass" should be independently verified by actually running

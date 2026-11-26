@@ -504,7 +504,7 @@ if __name__ == "__main__":
     plt.title("spd ar1")
 
     plt.figure()
-    wper, spdper = arma1.periodogram(nfreq)
+    wper, spdper = arma1.periodogram(nfreq, normalization="2pi")
     print(spdper.shape)
     _ = plt.plot(w, spdper)
     plt.title("periodogram")

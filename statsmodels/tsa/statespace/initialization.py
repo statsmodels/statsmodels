@@ -91,7 +91,7 @@ class Initialization:
     can be initialized in the following ways:
 
     - 'known'
-    - 'diffuse' or 'exact_diffuse' or 'approximate_diffuse'
+    - 'diffuse' (exact diffuse) or 'approximate_diffuse'
     - 'stationary'
     - 'mixed'
 
@@ -179,30 +179,31 @@ class Initialization:
     >>> Initialization(2, 'known', constant=[0, 1])
     >>> Initialization(2, 'known', stationary_cov=np.eye(2))
     >>> Initialization(2, 'known', constant=[0, 1],
-                       stationary_cov=np.eye(2))
+    ...                stationary_cov=np.eye(2))
     >>> Initialization(2, 'diffuse')
     >>> Initialization(2, 'approximate_diffuse',
-                       approximate_diffuse_variance=1e6)
+    ...                approximate_diffuse_variance=1e6)
     >>> Initialization(2, 'stationary')
 
-    More complex examples initialize different blocks of states separately
+    More complex examples initialize different blocks of states separately;
+    here the block of the first two states
 
     >>> init = Initialization(k_states=3)
-    >>> init.set((0, 1), 'known', constant=[0, 1])
-    >>> init.set((0, 1), 'known', stationary_cov=np.eye(2))
-    >>> init.set((0, 1), 'known', constant=[0, 1],
-                 stationary_cov=np.eye(2))
-    >>> init.set((0, 1), 'diffuse')
-    >>> init.set((0, 1), 'approximate_diffuse',
-                 approximate_diffuse_variance=1e6)
-    >>> init.set((0, 1), 'stationary')
+    >>> init.set((0, 2), 'known', constant=[0, 1])
+    >>> init.set((0, 2), 'known', stationary_cov=np.eye(2))
+    >>> init.set((0, 2), 'known', constant=[0, 1],
+    ...          stationary_cov=np.eye(2))
+    >>> init.set((0, 2), 'diffuse')
+    >>> init.set((0, 2), 'approximate_diffuse',
+    ...          approximate_diffuse_variance=1e6)
+    >>> init.set((0, 2), 'stationary')
 
     A still more complex example initializes a block using a previously
     created `Initialization` object:
 
     >>> init1 = Initialization(2, 'known', constant=[0, 1])
     >>> init2 = Initialization(k_states=3)
-    >>> init2.set((1, 2), init1)
+    >>> init2.set((1, 3), init1)
     """
 
     def __init__(
@@ -247,6 +248,14 @@ class Initialization:
                 constant=constant,
                 stationary_cov=stationary_cov,
             )
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # A compiled initialization object copies `constant` and
+        # `stationary_cov` when it is pickled or deep-copied, so afterwards it
+        # would not see later changes to them. Drop the compiled objects;
+        # they are rebuilt on first use.
+        self._initializations = {}
 
     @classmethod
     def from_components(
@@ -472,11 +481,12 @@ class Initialization:
 
         Parameters
         ----------
-        index : tuple or int or None
-            Arguments used to create a `slice` of states. Can be a tuple with
-            `(start, stop)` (note that for `slice`, stop is not inclusive), or
-            an integer (to select a specific state), or None (to select all the
-            states).
+        index : slice, tuple, int or None
+            A `slice` of states, or arguments used to create one. Can be a
+            tuple with `(start, stop)` (note that for `slice`, stop is not
+            inclusive), or an integer (to select a specific state), or None
+            (to select all the states). The selected states must be
+            consecutive.
         initialization_type : str or Initialization
             The type of initialization used for the states selected by `index`.
             If a string, must be one of 'known', 'diffuse',
@@ -495,7 +505,8 @@ class Initialization:
         approximate_diffuse_variance : float, optional
             The approximate diffuse variance, denoted :math:`\kappa`. Only
             applicable with 'approximate_diffuse' initialization. Default is
-            1e6.
+            the `approximate_diffuse_variance` of this object (1e6 unless
+            given to the constructor).
         """
         # Construct the index, using a slice object as an intermediate step
         # to enforce regularity
@@ -716,6 +727,21 @@ class Initialization:
         if self.initialization_type == "stationary":
             return True
         return any(block._uses_stationary() for block in self.blocks.values())
+
+    def _stationary_blocks(self):
+        """
+        Indices of the blocks of states that are initialized as stationary
+
+        The initial covariance of each block solves its own discrete Lyapunov
+        equation.
+        """
+        if self.initialization_type == "stationary":
+            return [np.arange(self.k_states)]
+        blocks = []
+        for block_index, block in self.blocks.items():
+            block_index = np.asarray(block_index, dtype=int)
+            blocks += [block_index[index] for index in block._stationary_blocks()]
+        return blocks
 
     @property
     def initialized(self):

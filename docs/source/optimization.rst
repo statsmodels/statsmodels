@@ -30,6 +30,17 @@ associated with that specific optimizer:
 
     tol : float
         Relative error in params acceptable for convergence.
+    step_halving : {True, False, "finite"}
+        What is done with a Newton step that gives an objective that is not
+        finite or larger than the current one. ``True``, the default, halves
+        such a step up to 30 times, ``"finite"`` halves only a step with an
+        objective that is not finite, and ``False`` takes the full step. If no
+        step is found, the iteration stops at the last parameters, the
+        ``warnflag`` of the results is 2, ``converged`` is ``False`` and a
+        ``ConvergenceWarning`` is issued. The iteration stops if the full
+        Newton step is at most ``tol``; a step that was shortened does not end
+        it. ``GLM`` uses ``"finite"`` for the links that are not the canonical
+        link of the family. *Added in 0.15.1.*
 
 - ``nm`` - scipy's ``fmin_nm``
 

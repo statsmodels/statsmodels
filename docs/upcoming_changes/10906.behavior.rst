@@ -1,0 +1,5 @@
+- :class:`~statsmodels.tsa.ardl.ARDL` and :class:`~statsmodels.tsa.ardl.UECM`
+  without ``hold_back`` overstated ``nobs`` when the largest exog lag was
+  larger than the largest endog lag, so the log-likelihood, information
+  criteria, ``sigma2``, ``df_resid`` and the p-values and intervals were wrong.
+  They use the number of observations in the estimation sample. :pr:`10906`

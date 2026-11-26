@@ -9,7 +9,9 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 from statsmodels.compat import lrange
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+import itertools
 from pathlib import Path
 import warnings
 
@@ -23,6 +25,7 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy import stats
 from scipy.stats.distributions import norm
 
 from statsmodels import tools
@@ -32,6 +35,7 @@ import statsmodels.genmod.generalized_estimating_equations as gee
 from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
     SingularMatrixWarning,
     SpecificationWarning,
 )
@@ -1836,15 +1840,20 @@ class CheckConsistency:
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
         res_robust_bc = mod.fit(start_params=self.start_params, cov_type="bias_reduced")
+        res_robust_kc = mod.fit(
+            start_params=self.start_params, cov_type="kauermann_carroll"
+        )
 
         # call summary to make sure it does not change cov_type
         res_naive.summary()
         res_robust_bc.summary()
+        res_robust_kc.summary()
 
         # check cov_type
         assert_equal(res_robust.cov_type, "robust")
         assert_equal(res_naive.cov_type, "naive")
         assert_equal(res_robust_bc.cov_type, "bias_reduced")
+        assert_equal(res_robust_kc.cov_type, "kauermann_carroll")
 
         # check bse and cov_params
         # we are comparing different runs of the optimization
@@ -1855,10 +1864,11 @@ class CheckConsistency:
             (res_robust, "robust", res_robust.cov_robust),
             (res_naive, "naive", res_robust.cov_naive),
             (res_robust_bc, "bias_reduced", res_robust_bc.cov_robust_bc),
+            (res_robust_kc, "kauermann_carroll", res_robust_kc.cov_robust_kc),
         ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
-            if cov_type != "bias_reduced":
+            if cov_type not in ("bias_reduced", "kauermann_carroll"):
                 # cov_type=naive shortcuts calculation of bias reduced
                 # covariance for efficiency
                 bse = res_naive.standard_errors(cov_type=cov_type)
@@ -1870,6 +1880,7 @@ class CheckConsistency:
         assert_(res_robust.cov_params_default is res_robust.cov_robust)
         assert_(res_naive.cov_params_default is res_naive.cov_naive)
         assert_(res_robust_bc.cov_params_default is res_robust_bc.cov_robust_bc)
+        assert_(res_robust_kc.cov_params_default is res_robust_kc.cov_robust_kc)
 
         # check exception for misspelled cov_type
         with pytest.raises(ValueError):
@@ -2729,3 +2740,565 @@ def test_autoregressive_equal_objective():
     result = model.fit(scale=1.0, start_params=[1.0, 2.0, 3.0, 5.0])
     ar.update(result.params)
     assert ar.dep_params == 0.0
+
+
+def _small_cluster_data():
+    rng = np.random.default_rng(5243)
+    n_groups, m = 12, 4
+    groups = np.repeat(np.arange(n_groups), m)
+    exog = np.column_stack((np.ones(n_groups * m), rng.standard_normal((48, 2))))
+    endog = exog @ [1.0, 0.5, -0.3] + np.repeat(rng.standard_normal(n_groups), m)
+    endog += rng.standard_normal(n_groups * m)
+    return endog, exog, groups
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+def test_use_t(use_t):
+    # GH 8610
+    endog, exog, groups = _small_cluster_data()
+
+    def fit(**kwds):
+        cs = cov_struct.Exchangeable()
+        return gee.GEE(endog, exog, groups, cov_struct=cs).fit(**kwds)
+
+    res = fit(use_t=use_t)
+
+    assert res.use_t is use_t
+    assert_equal(res.df_resid_inference, 12 - 3)
+    assert_allclose(res.bse, fit().bse, rtol=1e-12)
+
+    if use_t:
+        dist = stats.t(res.df_resid_inference)
+    else:
+        dist = stats.norm
+    assert_allclose(res.pvalues, 2 * dist.sf(np.abs(res.tvalues)), rtol=1e-10)
+    q = dist.ppf(0.975)
+    ci = np.column_stack((res.params - q * res.bse, res.params + q * res.bse))
+    assert_allclose(res.conf_int(), ci, rtol=1e-10)
+    assert_allclose(res.t_test(np.eye(3)).pvalue, res.pvalues, rtol=1e-10)
+    assert ("P>|t|" in str(res.summary())) is use_t
+
+
+def test_use_t_df_constraint():
+    # GH 8610
+    endog, exog, groups = _small_cluster_data()
+    constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
+    res = gee.GEE(endog, exog, groups, constraint=constraint).fit(use_t=True)
+    assert_equal(res.df_resid_inference, 12 - 2)
+
+
+@pytest.mark.parametrize("n_groups", [2, 3])
+def test_use_t_too_few_groups(n_groups):
+    # GH 8610, df_resid_inference would be <= 0
+    endog, exog, groups = _small_cluster_data()
+    keep = groups < n_groups
+    mod = gee.GEE(endog[keep], exog[keep], groups[keep])
+    with pytest.raises(ValueError, match="more groups"):
+        mod.fit(use_t=True)
+    mod.fit()
+
+    keep = groups < 4
+    res = gee.GEE(endog[keep], exog[keep], groups[keep]).fit(use_t=True)
+    assert_equal(res.df_resid_inference, 1)
+
+
+@pytest.mark.parametrize("model_class", [gee.OrdinalGEE, gee.NominalGEE])
+def test_use_t_multicategory(model_class):
+    # GH 8610
+    endog, exog, groups = _small_cluster_data()
+    endog = np.digitize(endog, [0.5, 1.5])
+    if model_class is gee.OrdinalGEE:
+        exog = exog[:, 1:]
+    res = model_class(endog, exog, groups).fit(use_t=True)
+
+    assert res.use_t
+    assert_equal(res.df_resid_inference, 12 - len(res.params))
+    pvalues = 2 * stats.t.sf(np.abs(res.tvalues), res.df_resid_inference)
+    assert_allclose(res.pvalues, pvalues, rtol=1e-10)
+
+
+def test_kauermann_carroll_constraint():
+    # GH 1183, the KC covariance must be projected onto the constraint
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="kauermann_carroll", use_t=True)
+
+    assert_allclose(res.params @ lhs.T, 0, atol=1e-10)
+    cov = res.cov_robust_kc
+    assert_equal(cov.shape, (3, 3))
+    assert_allclose(lhs @ cov @ lhs.T, 0, atol=1e-12)
+    assert_allclose(res.bse, np.sqrt(np.diag(cov)), rtol=1e-12)
+
+
+def _small_sample_ref():
+    path = Path(__file__).parent / "results"
+    data = pd.read_csv(path / "gee_small_sample.csv")
+    ref = pd.read_csv(path / "gee_small_sample_geesmv.csv")
+    return data, ref
+
+
+_FAMILIES = {
+    "gaussian": ("y_gauss", families.Gaussian),
+    "poisson": ("y_pois", families.Poisson),
+    "binomial": ("y_bin", families.Binomial),
+}
+
+
+@pytest.mark.parametrize("row", range(4))
+def test_small_sample_cov_geesmv(row):
+    # GH 1183, reference values from R geesmv, see gee_small_sample.R
+    data, ref = _small_sample_ref()
+    ref = ref.iloc[row]
+    yname, family = _FAMILIES[ref["family"]]
+    cov_type = {"kc": "kauermann_carroll", "md": "bias_reduced"}[ref["method"]]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[yname], exog, data["id"], family=family())
+    res = mod.fit(cov_type=cov_type)
+    var = ref[["var0", "var1", "var2"]].to_numpy(float)
+    assert_allclose(np.diag(res.cov_params()), var, rtol=1e-7)
+    assert_allclose(res.standard_errors(cov_type), np.sqrt(var), rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "fam, cs",
+    [
+        ("poisson", cov_struct.Independence),
+        ("binomial", cov_struct.Independence),
+        ("gaussian", cov_struct.Exchangeable),
+    ],
+)
+def test_kauermann_carroll_root(fam, cs):
+    # GH 1183, I - H is not symmetric here, compare to the principal root
+    from scipy.linalg import sqrtm
+
+    data, _ = _small_sample_ref()
+    yname, family = _FAMILIES[fam]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[yname], exog, data["id"], family=family(), cov_struct=cs())
+    res = mod.fit(cov_type="kauermann_carroll")
+
+    dmats, vmats, resids = [], [], []
+    for i in range(mod.num_group):
+        mu, lpr = mod.cached_means[i]
+        sd = np.sqrt(mod.family.variance(mu))
+        cmat, _ = mod.cov_struct.covariance_matrix(mu, i)
+        dmats.append(mod.mean_deriv(mod.exog_li[i], lpr))
+        vmats.append(np.outer(sd, sd) * cmat)
+        resids.append(mod.endog_li[i] - mu)
+    bread = np.linalg.inv(
+        sum(d.T @ np.linalg.solve(v, d) for d, v in zip(dmats, vmats, strict=True))
+    )
+    meat = 0
+    for d, v, r in zip(dmats, vmats, resids, strict=True):
+        hmat = d @ bread @ d.T @ np.linalg.inv(v)
+        root = np.real(sqrtm(np.linalg.inv(np.eye(len(r)) - hmat)))
+        u = d.T @ np.linalg.solve(v, root @ r)
+        meat = meat + np.outer(u, u)
+    assert_allclose(res.cov_robust_kc, bread @ meat @ bread, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE, gee.NominalGEE])
+@pytest.mark.parametrize(
+    "cov_type", ["Robust", "NAIVE", "Bias_Reduced", "Kauermann_Carroll"]
+)
+def test_cov_type_case_insensitive(model_class, cov_type):
+    endog, exog, groups = _small_cluster_data()
+    if model_class is not gee.GEE:
+        endog = np.digitize(endog, [0.5, 1.5])
+    if model_class is gee.OrdinalGEE:
+        exog = exog[:, 1:]
+    mod = model_class(endog, exog, groups)
+    res = mod.fit(cov_type=cov_type)
+    res_lower = mod.fit(cov_type=cov_type.lower())
+    assert_equal(res.cov_type, cov_type.lower())
+    assert_allclose(res.bse, res_lower.bse, rtol=1e-12)
+
+
+def test_cov_type_case_weights_naive():
+    endog, exog, groups = _small_cluster_data()
+    mod = gee.GEE(endog, exog, groups, weights=np.ones(len(endog)))
+    with pytest.raises(ValueError, match="may not be naive"):
+        mod.fit(cov_type="Naive")
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+def test_constraint_small_sample_cov_fails(cov_type, monkeypatch):
+    # The expansion fails only for the small-sample covariance. That call is
+    # found by its argument (the matrix returned by _bc_covmat), not by its
+    # position among the calls of fit.
+    endog, exog, groups = _small_cluster_data()
+    constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
+    mod = gee.GEE(endog, exog, groups, constraint=constraint)
+    handle = mod._handle_constraint
+    bc_covmat = mod._bc_covmat
+    small_sample_covs = []
+
+    def record_small_sample_cov(*args, **kwargs):
+        cov = bc_covmat(*args, **kwargs)
+        small_sample_covs.append(cov)
+        return cov
+
+    def fail_small_sample_cov(mean_params, bcov):
+        if any(bcov is cov for cov in small_sample_covs):
+            return None, None
+        return handle(mean_params, bcov)
+
+    monkeypatch.setattr(mod, "_bc_covmat", record_small_sample_cov)
+    monkeypatch.setattr(mod, "_handle_constraint", fail_small_sample_cov)
+    with pytest.warns(ConvergenceWarning, match="constrained GEE"):
+        assert mod.fit(cov_type=cov_type) is None
+    # the failing call was reached
+    assert len(small_sample_covs) == 1
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+@pytest.mark.parametrize("family", [families.Gaussian, families.Poisson])
+def test_small_sample_cov_leverage_one(family, cov_type):
+    # a single observation with its own dummy has leverage 1; the labels are
+    # strings, so that the message cannot show the position of the group
+    rng = np.random.default_rng(1)
+    labels = np.array([f"site_{c}" for c in "abcdefghijk"])
+    groups = np.concatenate((np.repeat(labels[:10], 4), labels[10:]))
+    n = len(groups)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), groups == "site_k"))
+    endog = rng.poisson(2, n).astype(float)
+    mod = gee.GEE(endog, exog, groups, family=family())
+    match = f'Group site_k has leverage 1.*cov_type="{cov_type}"'
+    with pytest.raises(ValueError, match=match):
+        mod.fit(cov_type=cov_type)
+    mod.fit()
+
+
+def _full_leverage(res, exog, groups):
+    # Largest eigenvalue of the full leverage matrix D_i B^{-1} D_i' V_i^{-1}
+    # of each group, for a Gaussian family and an exchangeable correlation
+    # (D_i = X_i, V_i = R_i up to a scale that cancels), in plain numpy.
+    rho = res.cov_struct.dep_params
+    blocks = {}
+    for g in np.unique(groups):
+        m = np.sum(groups == g)
+        blocks[g] = (1 - rho) * np.eye(m) + rho * np.ones((m, m))
+    bmat = sum(
+        exog[groups == g].T @ np.linalg.solve(r, exog[groups == g])
+        for g, r in blocks.items()
+    )
+    lev = []
+    for g, r in blocks.items():
+        x = exog[groups == g]
+        hmat = x @ np.linalg.solve(bmat, x.T) @ np.linalg.inv(r)
+        lev.append(np.linalg.eigvals(hmat).real.max())
+    return np.array(lev)
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+@pytest.mark.parametrize(
+    "jitter, raises",
+    [(0.0, True), (1e-5, True), (1e-4, False)],
+    ids=["exact", "within_1e-8", "outside_1e-8"],
+)
+def test_small_sample_cov_leverage_exchangeable(jitter, raises, cov_type):
+    # The leverages are the eigenvalues of the full leverage matrix of each
+    # group. A single observation with a dummy that is 1 there and `jitter`
+    # times noise elsewhere has a leverage 1 - O(jitter**2), and leverages
+    # within 1e-8 of 1 count as 1.
+    rng = np.random.default_rng(1)
+    groups = np.r_[np.repeat(np.arange(10), 4), 10]
+    n = len(groups)
+    dummy = (groups == 10) + jitter * rng.standard_normal(n) * (groups != 10)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), dummy))
+    endog = rng.standard_normal(n)
+    mod = gee.GEE(endog, exog, groups, cov_struct=cov_struct.Exchangeable())
+    lev = _full_leverage(mod.fit(), exog, groups)
+    assert lev[:10].max() < 0.5
+    assert bool(1 - lev[10] < 1e-8) is raises
+    if raises:
+        with pytest.raises(ValueError, match="Group 10 has leverage 1"):
+            mod.fit(cov_type=cov_type)
+    else:
+        assert np.all(np.isfinite(mod.fit(cov_type=cov_type).bse))
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+def test_small_sample_cov_naive_not_finite(cov_type):
+    # An observation with y = 0 and its own dummy in a Poisson model drives
+    # the estimate of the dummy to -inf and the covariance to NaN.
+    rng = np.random.default_rng(3)
+    groups = np.repeat(np.arange(11), 4)
+    n = len(groups)
+    dummy = np.zeros(n)
+    dummy[-1] = 1.0
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), dummy))
+    endog = rng.poisson(2, n) + 1.0
+    endog[-1] = 0.0
+    mod = gee.GEE(
+        endog,
+        exog,
+        groups,
+        family=families.Poisson(),
+        cov_struct=cov_struct.Exchangeable(),
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        assert not np.isfinite(mod.fit().cov_naive).all()
+        match = f'not finite.*cov_type="{cov_type}"'
+        with pytest.raises(ValueError, match=match):
+            mod.fit(cov_type=cov_type)
+
+
+def _margeff_model(model_class, use_t=False):
+    endog, exog, groups = _small_cluster_data()
+    if model_class is gee.OrdinalGEE:
+        endog = np.digitize(endog, [0.5, 1.5])
+        mod = gee.OrdinalGEE(endog, exog[:, 1:], groups)
+    else:
+        mod = gee.GEE(1.0 * (endog > 1), exog, groups, family=families.Binomial())
+    return mod.fit(use_t=use_t)
+
+
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_summary(model_class):
+    marg = _margeff_model(model_class).get_margeff()
+    smry = str(marg.summary(alpha=0.1))
+    assert "[0.05" in smry
+    assert "0.95]" in smry
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_use_t(model_class, use_t):
+    res = _margeff_model(model_class, use_t=use_t)
+    marg = res.get_margeff()
+
+    dist = stats.t(res.df_resid_inference) if use_t else stats.norm
+    assert_allclose(marg.pvalues, 2 * dist.sf(np.abs(marg.tvalues)), rtol=1e-12)
+    q = dist.ppf(0.975)
+    ci = marg.conf_int()
+    assert_allclose(ci[:, 0], marg.margeff - q * marg.margeff_se, rtol=1e-12)
+    assert_allclose(ci[:, 1], marg.margeff + q * marg.margeff_se, rtol=1e-12)
+    assert ("P>|t|" in str(marg.summary())) is use_t
+    assert ("t" in marg.summary_frame().columns) is use_t
+
+
+_FG_MBN_FAMILIES = ["y_gauss", "y_pois", "y_bin"]
+_FG_MBN_CORSTR = ["independence", "exchangeable"]
+_MBN_CASES = list(
+    itertools.product(["equal", "equal8"], _FG_MBN_FAMILIES, _FG_MBN_CORSTR)
+)
+# "hilev" has a cluster with a leverage of 0.985, above the bound b = 0.75
+_FG_CASES = [
+    *itertools.product(
+        ["equal", "equal8", "unequal"], _FG_MBN_FAMILIES, _FG_MBN_CORSTR
+    ),
+    ("hilev", "y_gauss", "exchangeable"),
+]
+
+
+@pytest.fixture(scope="module")
+def fg_mbn_ref():
+    path = Path(__file__).parent / "results"
+    ref = pd.read_csv(path / "gee_fg_mbn_ref.csv")
+    sim = pd.read_csv(path / "gee_fg_mbn.csv")
+    data = {
+        "equal": sim[sim["id"] <= 12],
+        "equal8": sim[sim["id"] <= 8],
+        "hilev": sim[sim["id"] > 100],
+        "unequal": pd.read_csv(path / "gee_small_sample.csv"),
+    }
+    return ref, data
+
+
+def _fg_mbn_case(fg_mbn_ref, method, data_name, endog, corstr):
+    ref, data = fg_mbn_ref
+    row = ref[
+        (ref["method"] == method)
+        & (ref["data"] == data_name)
+        & (ref["endog"] == endog)
+        & (ref["corstr"] == corstr)
+    ]
+    assert len(row) == 1
+    return data[data_name], row.iloc[0]
+
+
+def _fg_mbn_fit(data, endog, corstr, cov_type):
+    family = {
+        "y_gauss": families.Gaussian,
+        "y_pois": families.Poisson,
+        "y_bin": families.Binomial,
+    }[endog]
+    cs = {
+        "independence": cov_struct.Independence,
+        "exchangeable": cov_struct.Exchangeable,
+    }[corstr]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[endog], exog, data["id"], family=family(), cov_struct=cs())
+    return mod.fit(cov_type=cov_type, ctol=1e-12, maxiter=200)
+
+
+@pytest.mark.parametrize(
+    "data_name, endog, corstr", _FG_CASES, ids=["-".join(c) for c in _FG_CASES]
+)
+def test_fay_graubard_saws(fg_mbn_ref, data_name, endog, corstr):
+    # reference values from R saws, see gee_fg_mbn.R
+    data, ref = _fg_mbn_case(fg_mbn_ref, "fg_saws", data_name, endog, corstr)
+    res = _fg_mbn_fit(data, endog, corstr, "fay_graubard")
+    cov = ref[[f"v{i}" for i in range(9)]].to_numpy(float).reshape(3, 3)
+    assert_equal(res.cov_type, "fay_graubard")
+    assert_allclose(res.cov_params(), cov, rtol=1e-9, atol=1e-12)
+    assert_allclose(res.standard_errors("fay_graubard"), np.sqrt(np.diag(cov)))
+    assert res.cov_params_default is res.cov_robust_fg
+
+
+def test_fay_graubard_weights():
+    # direct computation with each group's weighted score and information
+    endog, exog, groups = _small_cluster_data()
+    weights = np.repeat(np.linspace(0.5, 2, 12), 4)
+    mod = gee.GEE(endog, exog, groups, weights=weights)
+    res = mod.fit(cov_type="fay_graubard")
+
+    resid = endog - exog @ res.params
+    omega = [
+        exog[groups == g].T @ (weights[groups == g, None] * exog[groups == g])
+        for g in range(12)
+    ]
+    omegai = np.linalg.inv(sum(omega))
+    meat = meat_fg = 0
+    for g in range(12):
+        ix = groups == g
+        score = exog[ix].T @ (weights[ix] * resid[ix])
+        meat = meat + np.outer(score, score)
+        score = score / np.sqrt(1 - np.minimum(0.75, np.diag(omega[g] @ omegai)))
+        meat_fg = meat_fg + np.outer(score, score)
+    # the same convention as the robust covariance
+    assert_allclose(res.cov_robust, omegai @ meat @ omegai, rtol=1e-10)
+    assert_allclose(res.cov_robust_fg, omegai @ meat_fg @ omegai, rtol=1e-10)
+
+
+def test_fay_graubard_constraint():
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="fay_graubard")
+    assert_equal(res.cov_robust_fg.shape, (3, 3))
+    assert_allclose(lhs @ res.cov_robust_fg @ lhs.T, 0, atol=1e-12)
+    assert_allclose(res.bse, np.sqrt(np.diag(res.cov_robust_fg)), rtol=1e-12)
+
+
+def test_fay_graubard_not_available():
+    endog, exog, groups = _small_cluster_data()
+    res = gee.GEE(endog, exog, groups).fit()
+    with pytest.raises(ValueError, match="fay_graubard"):
+        res.standard_errors("fay_graubard")
+
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="np.linalg.inv does not raise for a singular matrix on WASM",
+)
+@pytest.mark.parametrize("cov_type", ["fay_graubard", "morel_bokossa_neerchal"])
+def test_fg_mbn_rank_deficient(cov_type):
+    # a duplicated column: like the robust covariance, the covariance
+    # uses the pseudoinverse of the information matrix
+    endog, exog, groups = _small_cluster_data()
+    exog = np.column_stack((exog, exog[:, 1]))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = gee.GEE(endog, exog, groups).fit(cov_type=cov_type)
+
+    # direct computation for the Gaussian family and independence
+    n_groups, k_params = 12, exog.shape[1]
+    resid = endog - exog @ res.params
+    omega = [exog[groups == g].T @ exog[groups == g] for g in range(n_groups)]
+    omegai = np.linalg.pinv(sum(omega))
+    scores = [exog[groups == g].T @ resid[groups == g] for g in range(n_groups)]
+    if cov_type == "fay_graubard":
+        scores = [
+            s / np.sqrt(1 - np.minimum(0.75, np.diag(o @ omegai)))
+            for s, o in zip(scores, omega, strict=True)
+        ]
+        expected = omegai @ sum(np.outer(s, s) for s in scores) @ omegai
+    else:
+        # the scale of a Gaussian fit divides by the degrees of freedom of
+        # the rank of exog, see test_df_resid_rank_deficient
+        nobs = len(endog)
+        df_resid = nobs - np.linalg.matrix_rank(exog)
+        scale = np.sum(resid**2) / df_resid
+        meat = sum(np.outer(s, s) for s in scores)
+        c = (nobs - 1) / (nobs - k_params) * n_groups / (n_groups - 1)
+        delta = k_params / (n_groups - k_params)
+        xi = max(1.0, np.trace(omegai @ meat) / (k_params * scale))
+        expected = c * omegai @ meat @ omegai + delta * xi * scale * omegai
+    assert_allclose(res.cov_params(), expected, rtol=1e-8, atol=1e-12)
+    assert np.isfinite(res.bse).all()
+    assert_allclose(res.bse, np.sqrt(np.diag(expected)), rtol=1e-8)
+
+
+def test_fay_graubard_bound():
+    # x2 is nonzero only in group 0, so the share of group 0 is 1 for it and
+    # the bound b = 0.75 applies
+    endog, exog, groups = _small_cluster_data()
+    exog = exog.copy()
+    exog[groups != 0, 2] = 0
+    res = gee.GEE(endog, exog, groups).fit(cov_type="fay_graubard")
+
+    resid = endog - exog @ res.params
+    omega = [exog[groups == g].T @ exog[groups == g] for g in range(12)]
+    omegai = np.linalg.inv(sum(omega))
+    share = np.diag(omega[0] @ omegai)
+    assert share.max() > 0.75
+    meat = 0
+    for g in range(12):
+        ix = groups == g
+        score = exog[ix].T @ resid[ix]
+        score = score / np.sqrt(1 - np.minimum(0.75, np.diag(omega[g] @ omegai)))
+        meat = meat + np.outer(score, score)
+    assert np.isfinite(res.cov_robust_fg).all()
+    assert_allclose(res.cov_robust_fg, omegai @ meat @ omegai, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "data_name, endog, corstr", _MBN_CASES, ids=["-".join(c) for c in _MBN_CASES]
+)
+def test_morel_bokossa_neerchal_geesmv(fg_mbn_ref, data_name, endog, corstr):
+    # reference variances from R geesmv, see gee_fg_mbn.R
+    data, ref = _fg_mbn_case(fg_mbn_ref, "mbn_geesmv", data_name, endog, corstr)
+    res = _fg_mbn_fit(data, endog, corstr, "morel_bokossa_neerchal")
+    var = ref[["v0", "v1", "v2"]].to_numpy(float)
+    assert_equal(res.cov_type, "morel_bokossa_neerchal")
+    assert_allclose(np.diag(res.cov_params()), var, rtol=1e-9)
+    assert_allclose(res.standard_errors("morel_bokossa_neerchal"), np.sqrt(var))
+    assert res.cov_params_default is res.cov_robust_mbn
+
+
+def test_morel_bokossa_neerchal_constraint():
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="morel_bokossa_neerchal")
+    assert_equal(res.cov_robust_mbn.shape, (3, 3))
+    assert_allclose(lhs @ res.cov_robust_mbn @ lhs.T, 0, atol=1e-12)
+
+
+def test_morel_bokossa_neerchal_one_group():
+    # the constant c has the factor n_groups / (n_groups - 1)
+    endog, exog, _ = _small_cluster_data()
+    mod = gee.GEE(endog, exog, np.zeros(len(endog)))
+    with pytest.raises(ValueError, match="requires more than one group"):
+        mod.fit(cov_type="morel_bokossa_neerchal")
+
+
+def test_morel_bokossa_neerchal_nobs_equals_params():
+    # the constant c has the factor (nobs - 1) / (nobs - k_params); the start
+    # parameters keep the fit itself free of warnings
+    rng = np.random.default_rng(4182)
+    exog = np.column_stack((np.ones(3), rng.standard_normal((3, 2))))
+    endog = np.array([1.0, 3.0, 2.0])
+    mod = gee.GEE(endog, exog, [0, 0, 1], family=families.Poisson())
+    with pytest.raises(ValueError, match="more observations than parameters"):
+        mod.fit(cov_type="morel_bokossa_neerchal", start_params=np.zeros(3))
+
+
+def test_morel_bokossa_neerchal_not_available():
+    endog, exog, groups = _small_cluster_data()
+    res = gee.GEE(endog, exog, groups).fit()
+    with pytest.raises(ValueError, match="morel_bokossa_neerchal"):
+        res.standard_errors("morel_bokossa_neerchal")

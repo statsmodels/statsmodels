@@ -488,6 +488,117 @@ class TestStationaryMultivariate:
             assert_allclose(reunconstrained, unconstrained, atol=1e-4)
 
 
+def _assert_twins_agree(actual, expected, rtol):
+    # The compiled routine returns the dtype of its input, while the Python
+    # twin returns float64 for float32 input: compare in the wider dtype.
+    # Rounding error in these Cholesky-based recursions is relative to the
+    # largest entry of a matrix, not to each entry, so entries much smaller
+    # than the largest get an absolute allowance of the same relative size.
+    dtype = np.promote_types(actual.dtype, expected.dtype)
+    actual = np.asarray(actual, dtype=dtype)
+    expected = np.asarray(expected, dtype=dtype)
+    assert_allclose(actual, expected, rtol=rtol, atol=rtol * np.abs(expected).max())
+
+
+def _assert_stationary_var(coefficients, k_endog, order):
+    # The coefficients of a stationary VAR give a companion matrix whose
+    # eigenvalues are all inside the unit circle
+    coefficients = np.real(coefficients).astype(np.float64)
+    polynomial = [1] + [
+        -np.squeeze(coefficients[:, i * k_endog : (i + 1) * k_endog])
+        for i in range(order)
+    ]
+    eigenvalues = np.linalg.eigvals(tools.companion_matrix(polynomial))
+    assert_array_less(np.abs(eigenvalues), 1)
+
+
+# Input dtype, scale of the unconstrained draws and rtol for comparing
+# constrain_stationary_multivariate_python with the compiled
+# constrain_stationary_multivariate. Over 200 draws for each k_endog 1-4,
+# order 1-3 and transform_variance, the largest difference relative to the
+# largest entry was 2e-13 for standard normal draws in double precision
+# (float64 or complex128). Scaled by 10 it was 3.4e-7: large unconstrained
+# values give partial autocorrelations with singular values close to one, and
+# the variance recursion becomes ill-conditioned. For float32 input, which the
+# compiled routine computes in single precision, it was 3.1e-5. Float32 input
+# is not scaled up because single precision cannot resolve singular values
+# that close to one.
+TWIN_CASES = [
+    pytest.param(np.float64, 1.0, 1e-10, id="float64"),
+    pytest.param(np.float64, 10.0, 1e-5, id="float64-large"),
+    pytest.param(np.complex128, 1.0, 1e-10, id="complex128"),
+    pytest.param(np.complex128, 10.0, 1e-5, id="complex128-large"),
+    pytest.param(np.float32, 1.0, 1e-3, id="float32"),
+    pytest.param(np.complex64, 1.0, 1e-3, id="complex64"),
+]
+
+
+@pytest.mark.parametrize("dtype, scale, rtol", TWIN_CASES)
+@pytest.mark.parametrize("transform_variance", [True, False])
+@pytest.mark.parametrize("order", [1, 2, 3])
+@pytest.mark.parametrize("k_endog", [1, 2, 3, 4])
+def test_constrain_stationary_multivariate_python_twin(
+    k_endog, order, transform_variance, dtype, scale, rtol
+):
+    # constrain_stationary_multivariate_python is the pure-Python twin of the
+    # compiled constrain_stationary_multivariate: both must return the same
+    # coefficients and variance, and coefficients of a stationary VAR.
+    # Complex input has a zero imaginary part; these routines are not
+    # complex-step safe (the Cholesky factorizations conjugate).
+    rng = np.random.default_rng([k_endog, order, transform_variance, int(scale)])
+    for _ in range(3):
+        unconstrained = scale * rng.standard_normal((k_endog, k_endog * order))
+        factor = rng.standard_normal((k_endog, k_endog))
+        variance = factor @ factor.T + k_endog * np.eye(k_endog)
+        unconstrained = unconstrained.astype(dtype)
+        variance = variance.astype(dtype)
+
+        expected = tools.constrain_stationary_multivariate(
+            unconstrained, variance, transform_variance
+        )
+        actual = tools.constrain_stationary_multivariate_python(
+            unconstrained, variance, transform_variance
+        )
+        # Coefficients, then variance
+        _assert_twins_agree(actual[0], expected[0], rtol)
+        _assert_twins_agree(actual[1], expected[1], rtol)
+        _assert_stationary_var(actual[0], k_endog, order)
+        _assert_stationary_var(expected[0], k_endog, order)
+
+
+@pytest.mark.parametrize("transform_variance", [True, False])
+@pytest.mark.parametrize("order", [1, 2, 3])
+@pytest.mark.parametrize("k_endog", [1, 2, 3, 4])
+def test_constrain_stationary_multivariate_python_twin_list(
+    k_endog, order, transform_variance
+):
+    # A list of coefficient matrices gives a list back, with the blocks of the
+    # result for the horizontally concatenated matrices
+    rng = np.random.default_rng([k_endog, order, transform_variance])
+    unconstrained = rng.standard_normal((k_endog, k_endog * order))
+    blocks = [
+        unconstrained[:, i * k_endog : (i + 1) * k_endog] for i in range(order)
+    ]
+    variance = np.eye(k_endog)
+
+    from_array, _ = tools.constrain_stationary_multivariate_python(
+        unconstrained, variance, transform_variance
+    )
+    actual, actual_variance = tools.constrain_stationary_multivariate_python(
+        blocks, variance, transform_variance
+    )
+    expected, expected_variance = tools.constrain_stationary_multivariate(
+        blocks, variance, transform_variance
+    )
+    assert isinstance(actual, list)
+    assert len(actual) == order
+    for i in range(order):
+        block = from_array[:, i * k_endog : (i + 1) * k_endog]
+        assert_allclose(actual[i], block, rtol=1e-14)
+        _assert_twins_agree(actual[i], expected[i], 1e-10)
+    _assert_twins_agree(actual_variance, expected_variance, 1e-10)
+
+
 def test_reorder_matrix_rows():
     nobs = 5
     k_endog = 3
@@ -976,3 +1087,189 @@ def test_prepare_trend_spec_invalid_array(trend):
     # UFuncTypeError, or to be accepted and give a trend with the wrong terms
     with pytest.raises(ValueError, match="Valid trend inputs are"):
         tools.prepare_trend_spec(trend)
+
+
+@pytest.mark.parametrize("dtype", [bool, np.int64, np.intc])
+def test_missing_index_dtype(dtype):
+    # GH 10770: masks that were not C int raised a buffer dtype error
+    rng = np.random.default_rng(10770)
+    a = rng.standard_normal((2, 2, 10))
+    b = rng.standard_normal((2, 2, 10))
+    mask = rng.uniform(size=(2, 10)) < 0.5
+    expected = tools.reorder_missing_matrix(a, mask.astype(np.intc), True)
+    actual = tools.reorder_missing_matrix(a, mask.astype(dtype), True)
+    assert_equal(actual, expected)
+    expected = tools.copy_missing_vector(a[0], b[0], mask.astype(np.intc))
+    actual = tools.copy_missing_vector(a[0], b[0], mask.astype(dtype))
+    assert_equal(actual, expected)
+    expected = tools.copy_index_matrix(a, b, mask.astype(np.intc), True)
+    actual = tools.copy_index_matrix(a, b, mask.astype(dtype), True)
+    assert_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"compatibility": None}, {"compatibility": False}]
+)
+def test_set_mode_off(kwargs):
+    with pytest.warns(FutureWarning, match=r"tools\.set_mode is deprecated"):
+        assert tools.set_mode(**kwargs) is None
+
+
+@pytest.mark.parametrize("compatibility", [True, 1])
+def test_set_mode_compatibility_raises(compatibility):
+    with (
+        pytest.warns(FutureWarning, match=r"tools\.set_mode is deprecated"),
+        pytest.raises(NotImplementedError, match=r"statsmodels <= 0\.9"),
+    ):
+        tools.set_mode(compatibility)
+
+
+def _mask_results(mask):
+    rng = np.random.default_rng(10795)
+    a = rng.standard_normal((2, 2, 10))
+    b = rng.standard_normal((2, 2, 10))
+    return [
+        tools.reorder_missing_matrix(a, mask, True),
+        tools.reorder_missing_vector(a[0], mask),
+        tools.copy_missing_matrix(a, b, mask, True),
+        tools.copy_missing_vector(a[0], b[0], mask),
+        tools.copy_index_matrix(a, b, mask, True),
+        tools.copy_index_vector(a[0], b[0], mask),
+    ]
+
+
+def test_missing_index_nan_mask():
+    # NaN is nonzero, so it is True. Cast to int it is undefined, and the
+    # Cython code used it as an index and crashed the interpreter.
+    rng = np.random.default_rng(10795)
+    mask = rng.uniform(size=(2, 10)) < 0.5
+    nan_mask = np.where(mask, np.nan, 0.0)
+    for actual, expected in zip(
+        _mask_results(nan_mask), _mask_results(mask), strict=True
+    ):
+        assert_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "make_mask",
+    [
+        lambda m: m.astype(np.uint8),
+        lambda m: m.astype(np.float64),
+        lambda m: 2 * m.astype(np.int64),
+        lambda m: np.asfortranarray(m.astype(np.int64)),
+        lambda m: np.repeat(m, 2, axis=1)[:, ::2],
+    ],
+    ids=["uint8", "float01", "int64-two", "int64-fortran", "strided"],
+)
+def test_missing_index_values(make_mask):
+    # any nonzero value of a mask is True, as for a bool mask
+    mask = np.random.default_rng(10795).uniform(size=(2, 10)) < 0.5
+    for actual, expected in zip(
+        _mask_results(make_mask(mask)), _mask_results(mask), strict=True
+    ):
+        assert_equal(actual, expected)
+
+
+COMPANION_C0 = np.array([[2.0, 0.5], [0.0, 1.0]])
+COMPANION_C1 = np.array([[0.3, 0.1], [0.2, 0.4]])
+COMPANION_C2 = np.array([[-0.1, 0.05], [0.0, 0.2]])
+
+
+@pytest.mark.parametrize(
+    "polynomial, desired",
+    [
+        # An ndarray leading matrix in a list or tuple (it raised "truth value
+        # is ambiguous"), against nested lists
+        (
+            [COMPANION_C0, COMPANION_C1, COMPANION_C2],
+            [COMPANION_C0.tolist(), COMPANION_C1, COMPANION_C2],
+        ),
+        ((COMPANION_C0, COMPANION_C1), [COMPANION_C0.tolist(), COMPANION_C1]),
+        ([np.eye(2), COMPANION_C1], [1, COMPANION_C1]),
+        # A 3-dimensional array (it raised a broadcasting error)
+        (
+            np.array([COMPANION_C0, COMPANION_C1, COMPANION_C2]),
+            [COMPANION_C0.tolist(), COMPANION_C1, COMPANION_C2],
+        ),
+        (np.array([np.eye(2), COMPANION_C1]), [1, COMPANION_C1]),
+        (np.array([[[2.0]], [[-0.6]], [[0.4]]]), [2.0, -0.6, 0.4]),
+    ],
+)
+def test_companion_matrix_arrays(polynomial, desired):
+    actual = tools.companion_matrix(polynomial)
+    assert_allclose(actual, tools.companion_matrix(desired), rtol=1e-15)
+
+    # The eigenvalues z of the companion matrix solve
+    # det(C_0 z^p + C_1 z^(p-1) + ... + C_p) = 0
+    coefficients = np.asarray(desired[1:], dtype=float)
+    leading = desired[0]
+    order = len(coefficients)
+    for z in np.linalg.eigvals(actual):
+        if np.ndim(coefficients) == 1:
+            value = leading * z**order + np.polyval(coefficients, z)
+            scale = abs(leading * z**order)
+        else:
+            c0 = np.eye(2) if np.ndim(leading) == 0 else np.asarray(leading)
+            value = np.linalg.det(
+                c0 * z**order
+                + sum(c * z ** (order - 1 - i) for i, c in enumerate(coefficients))
+            )
+            scale = abs(np.linalg.det(c0 * z**order))
+        # atol: the determinant is zero up to rounding
+        assert_allclose(abs(value), 0, atol=1e-12 * max(scale, 1.0))
+
+
+@pytest.mark.parametrize("complex_step", [False, True])
+@pytest.mark.parametrize("container", [list, tuple])
+def test_solve_discrete_lyapunov_array_like(container, complex_step):
+    # a and q can be nested lists or tuples (a raised AttributeError); the
+    # solution solves X = a X a' + q, with the non-conjugating transpose and
+    # complex a for the complex step, and agrees with SciPy for real a
+    a = [[0.5, 0.2], [-0.1, 0.3]]
+    if complex_step:
+        a[0][0] += 1e-3j
+    q = [[1.0, 0.4], [0.4, 2.0]]
+    actual = tools.solve_discrete_lyapunov(
+        container(map(container, a)), container(map(container, q)), complex_step
+    )
+    a_arr = np.array(a)
+    assert_allclose(actual, a_arr @ actual @ a_arr.T + np.array(q), rtol=1e-12)
+    if complex_step:
+        assert np.abs(actual.imag).max() > 1e-4
+    else:
+        desired = solve_discrete_lyapunov(a_arr, np.array(q))
+        assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_prepare_trend_data_array_like(container):
+    # The polynomial can be a list or tuple (it raised AttributeError): a
+    # constant, a linear and a cubic trend in time
+    actual = tools.prepare_trend_data(container([1, 1, 0, 1]), 3, 5, offset=2)
+    time = np.arange(2.0, 7.0)
+    desired = np.column_stack([np.ones(5), time, time**3])
+    assert_allclose(actual, desired, rtol=1e-15)
+
+
+def test_concat_unnamed_series():
+    # Along the rows, a Series without a name takes the name of the first
+    # series, as an unnamed column of a DataFrame does; it raised "Columns
+    # must match to concatenate along rows"
+    first = pd.Series([1.0, 2.0], index=[0, 1], name="y")
+    second = pd.Series([3.0, 4.0], index=[2, 3])
+    actual = tools.concat([first, second])
+    assert actual.name == "y"
+    assert_allclose(actual.to_numpy(), [1.0, 2.0, 3.0, 4.0], rtol=1e-15)
+    assert_equal(actual.index.to_numpy(), np.arange(4, dtype=np.int64))
+    # The given series keeps its name
+    assert second.name is None
+
+    # A Series with another name still raises
+    with pytest.raises(ValueError, match="Columns must match"):
+        tools.concat([first, second.rename("z")])
+
+    # Along the columns, the unnamed series keeps its default column name
+    second.index = first.index
+    actual = tools.concat([first, second], axis=1)
+    assert list(actual.columns) == ["y", 0]
+    assert_allclose(actual.to_numpy(), [[1.0, 3.0], [2.0, 4.0]], rtol=1e-15)

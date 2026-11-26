@@ -1,0 +1,5 @@
+- Correct docstrings in ``statsmodels.tsa.base``: the Parameters section of
+  ``TimeSeriesModel`` (its header was repeated), what ``dates``, ``freq`` and
+  ``**kwargs`` accept, the return values of ``get_index_loc`` and
+  ``get_index_label_loc``, and the arguments of ``PredictionResults`` and
+  ``get_prediction_index``. :pr:`10903`

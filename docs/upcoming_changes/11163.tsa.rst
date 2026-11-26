@@ -1,0 +1,5 @@
+- Quarter strings such as ``"2001Q2"`` as the ``start`` or ``end``
+  of a prediction raised "Cannot compare tz-naive and tz-aware
+  datetime-like objects" for time series models with a tz-aware
+  :class:`~pandas.DatetimeIndex`. They select the dates of the quarter
+  in the time zone of the index. :pr:`11163`

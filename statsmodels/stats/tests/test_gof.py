@@ -4,6 +4,8 @@ Created on Thu Feb 28 13:24:59 2013
 
 Author: Josef Perktold
 """
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
@@ -39,6 +41,79 @@ def test_powerdiscrepancy_lambd_aliases():
 
     with pytest.raises(ValueError, match="lambd"):
         powerdiscrepancy(observed, expected, lambd="not-a-lambd")
+
+
+# Reference values for zero observed counts, G (log likelihood ratio) test
+# against equal cell probabilities, computed in R 4.6.1 with DescTools 0.99.60:
+#   DescTools::GTest(c(0, 15, 15), p = rep(1/3, 3))
+#   DescTools::GTest(c(0, 0, 30), p = rep(1/3, 3))
+# printed with options(digits = 17); (G statistic, p-value)
+ZERO_COUNTS_R = {
+    (0, 15, 15): (24.327906486489862, 5.2150950508465653e-06),
+    (0, 0, 30): (65.916737320086582, 4.8569357496188591e-15),
+}
+
+
+@pytest.mark.parametrize("lambd", [0, "loglikeratio"], ids=["0", "name"])
+def test_powerdiscrepancy_zero_counts(lambd):
+    # GH 10703: zero observed counts should not produce NaN or warnings
+    # for G-test / log-likelihood ratio (lambd=0)
+    observed = np.array([0, 15, 15])
+    expected = np.array([10, 10, 10])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        stat, pval = powerdiscrepancy(observed, expected, lambd=lambd)
+    ref = stats.power_divergence(observed, expected, lambda_=0)
+
+    assert_allclose(stat, ref.statistic, rtol=1e-12)
+    assert_allclose(pval, ref.pvalue, rtol=1e-12)
+    r_stat, r_pval = ZERO_COUNTS_R[(0, 15, 15)]
+    assert_allclose(stat, r_stat, rtol=1e-12)
+    assert_allclose(pval, r_pval, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "observed", [(0, 15, 15), (0, 0, 30)], ids=["one_zero", "two_zeros"]
+)
+def test_powerdiscrepancy_zero_counts_reference(observed):
+    # expected given as probabilities, as in the R calls above
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        stat, pval = powerdiscrepancy(observed, np.ones(3) / 3, lambd=0)
+    ref = stats.power_divergence(observed, lambda_=0)
+
+    r_stat, r_pval = ZERO_COUNTS_R[observed]
+    assert_allclose(stat, r_stat, rtol=1e-12)
+    assert_allclose(pval, r_pval, rtol=1e-12)
+    assert_allclose(stat, ref.statistic, rtol=1e-12)
+    assert_allclose(pval, ref.pvalue, rtol=1e-12)
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+def test_powerdiscrepancy_zero_counts_2d(axis):
+    # rows (or columns) with one zero, two zeros and no zero count
+    observed = np.array([[0, 15, 15], [0, 0, 30], [10, 10, 10]])
+    if axis == 0:
+        observed = observed.T
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        stat, pval = powerdiscrepancy(
+            observed, np.ones(3) / 3, lambd=0, axis=axis
+        )
+    ref = stats.power_divergence(observed, lambda_=0, axis=axis)
+
+    assert stat.shape == pval.shape == (1, 3)
+    assert_allclose(stat.ravel(), ref.statistic, rtol=1e-12)
+    assert_allclose(pval.ravel(), ref.pvalue, rtol=1e-12)
+    for i, key in enumerate([(0, 15, 15), (0, 0, 30)]):
+        r_stat, r_pval = ZERO_COUNTS_R[key]
+        assert_allclose(stat[0, i], r_stat, rtol=1e-12)
+        assert_allclose(pval[0, i], r_pval, rtol=1e-12)
+    # equal counts: no discrepancy
+    assert_equal(stat[0, 2], 0.0)
+    assert_equal(pval[0, 2], 1.0)
 
 
 def test_gof_binning_discrete_bernoulli():

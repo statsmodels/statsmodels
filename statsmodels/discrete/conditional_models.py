@@ -7,7 +7,7 @@ import itertools
 import warnings
 
 import numpy as np
-from scipy.special import logsumexp
+from scipy.special import expit, logsumexp
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -308,6 +308,14 @@ class _ConditionalModel(base.LikelihoodModel):
         return model
 
 
+def _complex_logaddexp(a, b):
+    # Order by real part to bound the exponential and keep complex-step terms.
+    a_larger = np.real(a) >= np.real(b)
+    larger = np.where(a_larger, a, b)
+    smaller = np.where(a_larger, b, a)
+    return larger + np.log1p(np.exp(smaller - larger))
+
+
 class ConditionalLogit(_ConditionalModel):
     """
     Fit a conditional logistic regression model to grouped data.
@@ -341,6 +349,19 @@ class ConditionalLogit(_ConditionalModel):
 
         self.K = self.exog.shape[1]
         # i.e., self.k_params, for compatibility with MNLogit
+
+        offsets = getattr(self, "_offset_grp", None)
+        self._pair_contrasts = [None] * self._n_groups
+        for grp, size in enumerate(self._groupsize):
+            if size == 2:
+                success = int(self._endog_grp[grp][0] == 0)
+                failure = 1 - success
+                x = self._exog_grp[grp]
+                offset_diff = 0.0
+                if offsets is not None:
+                    ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
+                    offset_diff = ofs[success] - ofs[failure]
+                self._pair_contrasts[grp] = x[success] - x[failure], offset_diff
 
     def loglike(self, params):
         """
@@ -385,75 +406,85 @@ class ConditionalLogit(_ConditionalModel):
 
         return score
 
-    def _denom(self, grp, params, ofs=None):
+    def _group_log_weights(self, grp, params):
+        x = self._exog_grp[grp]
+        eta = x @ params
+        offsets = getattr(self, "_offset_grp", None)
+        if offsets is not None:
+            ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
+            eta = eta + (ofs - ofs[0])
 
-        if ofs is None:
-            ofs = 0
+        n_selected = int(self._n1[grp])
+        sign = 1
+        if n_selected > len(eta) - n_selected:
+            # Selecting failures with negated weights gives the same likelihood.
+            sign = -1
+            n_selected = len(eta) - n_selected
+            eta = -eta
 
-        exb = np.exp(np.dot(self._exog_grp[grp], params) + ofs)
+        # A common shift cancels when every subset has the same size.
+        eta = eta - eta.real.max()
+        selected = np.asarray(self._endog_grp[grp]) == (sign == 1)
+        return eta, n_selected, selected, sign
 
-        nobs = len(exb)
-        n1 = int(self._n1[grp])
-        denom = np.zeros(n1 + 1, dtype=exb.dtype)
-        denom[0] = 1
-        for t, value in enumerate(exb, 1):
-            # 只更新仍可能达到最终成功数的状态 避免计算无关的大组合数
-            lower = max(1, n1 - nobs + t)
-            upper = min(t, n1)
-            # D(t, k) = D(t-1, k) + value * D(t-1, k-1).
-            # The right-hand side is evaluated before updating the slice.
-            denom[lower : upper + 1] += value * denom[lower - 1 : upper]
+    def _log_normalizer(self, eta, n_selected, x=None):
+        if n_selected == 1:
+            log_z = logsumexp(eta)
+            mean = None if x is None else np.exp(eta - log_z) @ x
+            return log_z, mean
 
-        return denom[n1]
+        logaddexp = _complex_logaddexp if np.iscomplexobj(eta) else np.logaddexp
+        log_mass = np.full(n_selected + 1, -np.inf, dtype=eta.dtype)
+        log_mass[0] = 0
+        if x is not None:
+            mean = np.zeros((n_selected + 1, self.k_params), dtype=eta.dtype)
 
-    def _denom_grad(self, grp, params, ofs=None):
+        nobs = len(eta)
+        for t, log_weight in enumerate(eta, 1):
+            # Retain reachable counts that can still reach the final subset size.
+            lower = max(1, n_selected - nobs + t)
+            upper = min(t, n_selected)
+            count = slice(lower, upper + 1)
+            previous = slice(lower - 1, upper)
+            skip = log_mass[count]
+            take = log_mass[previous] + log_weight
+            total = logaddexp(skip, take)
+            if x is not None:
+                # Propagate the conditional mean of the covariate sum.
+                mean[count] = (
+                    np.exp(skip - total)[:, None] * mean[count]
+                    + np.exp(take - total)[:, None] * (mean[previous] + x[t - 1])
+                )
+            log_mass[count] = total
 
-        if ofs is None:
-            ofs = 0
-
-        ex = self._exog_grp[grp]
-        exb = np.exp(np.dot(ex, params) + ofs)
-
-        nobs = len(exb)
-        n1 = int(self._n1[grp])
-        denom = np.zeros(n1 + 1, dtype=exb.dtype)
-        grad = np.zeros((n1 + 1, self.k_params), dtype=exb.dtype)
-        denom[0] = 1
-        for t, value in enumerate(exb, 1):
-            lower = max(1, n1 - nobs + t)
-            upper = min(t, n1)
-            # 梯度先更新 乘积法则需要上一轮的分母和梯度
-            grad[lower : upper + 1] += value * (
-                grad[lower - 1 : upper]
-                + denom[lower - 1 : upper, None] * ex[t - 1]
-            )
-            denom[lower : upper + 1] += value * denom[lower - 1 : upper]
-
-        return denom[n1], grad[n1]
+        return log_mass[n_selected], None if x is None else mean[n_selected]
 
     def loglike_grp(self, grp, params):
+        pair = self._pair_contrasts[grp]
+        if pair is not None:
+            contrast, offset_diff = pair
+            delta = contrast @ params + offset_diff
+            if np.iscomplexobj(delta):
+                return -_complex_logaddexp(0, -delta)
+            return -np.logaddexp(0, -delta)
 
-        ofs = None
-        if hasattr(self, "offset"):
-            ofs = self._offset_grp[grp]
-
-        llg = np.dot(self._xy[grp], params)
-
-        if ofs is not None:
-            llg += self._endofs[grp]
-
-        llg -= np.log(self._denom(grp, params, ofs))
-
-        return llg
+        eta, n_selected, selected, _ = self._group_log_weights(grp, params)
+        log_z, _ = self._log_normalizer(eta, n_selected)
+        return eta[selected].sum() - log_z
 
     def score_grp(self, grp, params):
+        pair = self._pair_contrasts[grp]
+        if pair is not None:
+            contrast, offset_diff = pair
+            delta = contrast @ params + offset_diff
+            if np.iscomplexobj(delta):
+                return np.exp(-delta - _complex_logaddexp(0, -delta)) * contrast
+            return expit(-delta) * contrast
 
-        ofs = 0
-        if hasattr(self, "offset"):
-            ofs = self._offset_grp[grp]
-
-        d, h = self._denom_grad(grp, params, ofs)
-        return self._xy[grp] - h / d
+        x = self._exog_grp[grp]
+        eta, n_selected, selected, sign = self._group_log_weights(grp, params)
+        _, mean = self._log_normalizer(eta, n_selected, x=x)
+        return sign * (x[selected].sum(axis=0) - mean)
 
 
 class ConditionalPoisson(_ConditionalModel):

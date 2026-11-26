@@ -1,0 +1,3 @@
+- Time series models with an ``int8``, ``uint8``, ``int16`` or
+  ``uint16`` index raised when predicting past the maximum of the dtype.
+  :pr:`10944`

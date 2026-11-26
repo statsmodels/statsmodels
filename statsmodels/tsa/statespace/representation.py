@@ -12,6 +12,13 @@ from . import tools
 from .initialization import Initialization, _StationaryInitializationError
 from .tools import find_best_blas_type, validate_matrix_shape, validate_vector_shape
 
+_NOT_STATIONARY_MESSAGE = (
+    "The transition matrix of the states with stationary initialization is"
+    " not stationary to numerical precision, so their initial covariance does"
+    " not exist. Use a different initialization, such as"
+    " 'approximate_diffuse', for non-stationary models."
+)
+
 
 class OptionWrapper:
     def __init__(self, mask_attribute, mask_value):
@@ -90,13 +97,16 @@ class Representation:
     Parameters
     ----------
     k_endog : ndarray or int
-        The observed time-series process :math:`y` if array like or the
-        number of variables in the process if an integer.
+        The observed time-series process :math:`y` if an ndarray, or the
+        number of variables in the process if an integer. An ndarray is read
+        as shaped (`nobs`, `k_endog`) if C-ordered and (`k_endog`, `nobs`) if
+        Fortran-ordered (see `bind`); a 1-dimensional array is a single
+        observation of `len(k_endog)` variables.
     k_states : int
         The dimension of the unobserved state process.
     k_posdef : int, optional
         The dimension of a guaranteed positive definite covariance matrix
-        describing the shocks in the measurement equation. Must be less than
+        describing the shocks in the transition equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
     initial_variance : float, optional
         Initial variance used when approximate diffuse initialization is
@@ -106,10 +116,10 @@ class Representation:
         of {'diffuse', 'approximate_diffuse', 'stationary', 'known'}.
     initial_state : array_like, optional
         If `initialization='known'` is used, the mean of the initial state's
-        distribution.
+        distribution. May also be given as `constant`.
     initial_state_cov : array_like, optional
         If `initialization='known'` is used, the covariance matrix of the
-        initial state's distribution.
+        initial state's distribution. May also be given as `stationary_cov`.
     nobs : int, optional
         If an endogenous vector is not given (i.e., `k_endog` is an integer),
         the number of observations can optionally be specified. If not
@@ -136,6 +146,9 @@ class Representation:
     state_cov : array_like, optional
         The covariance matrix for the state equation :math:`Q`. Default is set
         to zeros.
+    statespace_classes : dict, optional
+        Dictionary mapping BLAS prefixes to Cython statespace classes. Default
+        is the classes defined in `statsmodels.tsa.statespace.tools`.
     **kwargs
         Additional keyword arguments. Not used directly. It is present to
         improve compatibility with subclasses, so that they can use `**kwargs`
@@ -154,7 +167,7 @@ class Representation:
     k_posdef : int
         The dimension of a guaranteed positive
         definite covariance matrix describing
-        the shocks in the measurement equation.
+        the shocks in the transition equation.
     shapes : dict of str to tuple
         A dictionary recording the initial shapes
         of each of the representation matrices as
@@ -389,6 +402,28 @@ class Representation:
         # Caches
         self._time_invariant = None
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # A compiled statespace object that was not initialized is restored
+        # without its arrays for the initial state, so it cannot be
+        # initialized any more. Drop it; it is re-created on first use.
+        uninitialized = [
+            prefix
+            for prefix, statespace in self._statespaces.items()
+            if not statespace.initialized
+        ]
+        for prefix in uninitialized:
+            del self._statespaces[prefix]
+        # A compiled statespace object copies its matrices when it is pickled
+        # or deep-copied, so afterwards it no longer shares memory with the
+        # arrays in `_representations`, and new parameters written to those
+        # arrays would not reach it. Restore the shared memory.
+        for prefix, statespace in self._statespaces.items():
+            for name in self.shapes:
+                self._representations[prefix][name] = np.asarray(
+                    getattr(statespace, name)
+                )
+
     def __getitem__(self, key):
         _type = type(key)
         # If only a string is given then we must be getting an entire matrix
@@ -522,8 +557,9 @@ class Representation:
 
         Parameters
         ----------
-        endog : array_like
-            An observed time-series process :math:`y`.
+        endog : ndarray
+            An observed time-series process :math:`y`, in a form accepted by
+            `bind`.
         **kwargs
             Keyword arguments to pass to the new state space representation
             model constructor. Those that are not specified are copied from
@@ -552,13 +588,14 @@ class Representation:
         endog : array_like
             An observed time-series process :math:`y`.
         start : int, optional
-            The first period of a time-varying state space model to include in
-            the new model. Has no effect if the state space model is
-            time-invariant. Default is the initial period.
+            The first period of the current sample to include in the new
+            model, for the observed data and for any time-varying system
+            matrices. Default is the initial period. A negative value counts
+            from the end of the sample.
         end : int, optional
-            The last period of a time-varying state space model to include in
-            the new model. Has no effect if the state space model is
-            time-invariant. Default is the final period.
+            The end of the current sample to include in the new model,
+            excluded as in a slice. Default is the end of the sample. A
+            negative value counts from the end of the sample.
         **kwargs
             Keyword arguments to pass to the new state space representation
             model constructor. Those that are not specified are copied from
@@ -693,9 +730,9 @@ class Representation:
 
         Parameters
         ----------
-        new_endog : array_like
-            New observation data to compare against the currently bound
-            endogenous data.
+        new_endog : ndarray
+            New observation data, shaped (`nobs`, `k_endog`), to compare
+            against the currently bound endogenous data.
         tolerance : float, optional
             Tolerance used when comparing values to determine whether a
             change represents a revision. Default is 1e-10.
@@ -861,10 +898,6 @@ class Representation:
                 "Invalid endogenous array; must be ordered in contiguous memory."
             )
 
-        # We may still have a non-fortran contiguous array, so double-check
-        if not endog.flags["F_CONTIGUOUS"]:
-            endog = np.asfortranarray(endog)
-
         # Set a flag for complex data
         self._complex_endog = np.iscomplexobj(endog)
 
@@ -873,8 +906,7 @@ class Representation:
         self.nobs = self.endog.shape[1]
 
         # Reset shapes
-        if hasattr(self, "shapes"):
-            self.shapes["obs"] = self.endog.shape
+        self.shapes["obs"] = self.endog.shape
 
     def initialize(
         self,
@@ -1067,16 +1099,35 @@ class Representation:
         self.initialize("components", a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0)
 
     def initialize_stationary(self):
-        """Initialize the statespace model as stationary"""
+        """
+        Initialize the statespace model as stationary
+
+        Notes
+        -----
+        The initial state covariance is the solution of the discrete Lyapunov
+        equation of the transition matrix. It does not exist if the transition
+        matrix has a unit root, for example if an AR(1) coefficient is 1. In
+        that case ``filter`` and ``smooth`` raise a
+        ``numpy.linalg.LinAlgError`` that says that the transition matrix is
+        not stationary to numerical precision, and ``MLEModel.loglike``
+        returns ``-inf``. Use ``initialize_approximate_diffuse`` or
+        ``initialize_diffuse`` for such models. Explosive transition matrices
+        that are not close to a unit root are not detected.
+
+        .. versionchanged:: 0.15.1
+
+           A transition matrix with a unit root raises or gives ``-inf``
+           instead of being filtered with an initial state covariance that
+           has negative variances.
+        """
         self.initialize("stationary")
 
     def initialize_diffuse(self):
         """Initialize the statespace model as diffuse"""
         self.initialize("diffuse")
 
-    def _initialize_representation(self, prefix=None):
-        if prefix is None:
-            prefix = self.prefix
+    def _initialize_representation(self):
+        prefix = self.prefix
         dtype = tools.prefix_dtype_map[prefix]
 
         # If the dtype-specific representation matrices do not exist, create
@@ -1161,9 +1212,40 @@ class Representation:
             except np.linalg.LinAlgError as exc:
                 if not self.initialization._uses_stationary():
                     raise
-                raise _StationaryInitializationError(str(exc)) from exc
+                raise _StationaryInitializationError(
+                    f"{exc} {_NOT_STATIONARY_MESSAGE}"
+                ) from exc
+            if self.initialization._uses_stationary():
+                self._check_stationary_initialization(prefix)
         else:
             raise RuntimeError("Statespace model not initialized.")
+
+    def _check_stationary_initialization(self, prefix):
+        # At a unit root the Lyapunov equation of the stationary covariance is
+        # singular, but the solver may not raise and instead return a matrix
+        # with negative variances (GH#5459). Filtering with it gives a
+        # meaningless loglikelihood, often exactly 0, so raise instead. The
+        # negative variances are checked first, since that is cheap; the
+        # eigenvalues then tell this apart from an explosive transition, for
+        # which the equation has a solution, although not a covariance matrix.
+        cov = np.asarray(self._statespaces[prefix].initial_state_cov)
+        transition = self._representations[prefix]["transition"][..., 0]
+        eps = np.finfo(float).eps
+        for index in self.initialization._stationary_blocks():
+            variances = np.real(np.diagonal(cov))[index]
+            finite = variances[np.isfinite(variances)]
+            scale = np.max(np.abs(finite)) if finite.size else 0.0
+            if not np.any(variances < -np.sqrt(eps) * scale):
+                continue
+            # The equation is singular if the product of two eigenvalues of
+            # the transition matrix is 1. The tolerance allows for the error
+            # of the computed eigenvalues of a root of multiplicity up to 4.
+            eigvals = np.linalg.eigvals(np.real(transition[np.ix_(index, index)]))
+            if np.min(np.abs(1 - np.outer(eigvals, eigvals))) < eps**0.25:
+                raise _StationaryInitializationError(
+                    "The stationary initial state covariance has negative"
+                    f" variances. {_NOT_STATIONARY_MESSAGE}"
+                )
 
 
 class FrozenRepresentation:
@@ -1188,7 +1270,7 @@ class FrozenRepresentation:
     k_posdef : int
         The dimension of a guaranteed positive definite
         covariance matrix describing the shocks in the
-        measurement equation.
+        transition equation.
     dtype : dtype
         Datatype of representation matrices
     prefix : str

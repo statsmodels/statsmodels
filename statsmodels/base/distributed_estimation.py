@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 
 from statsmodels.base.elastic_net import RegularizedResults
@@ -518,6 +520,11 @@ class DistributedModel:
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
+        .. versionchanged:: 0.15.1
+
+           Raises ``NotImplementedError`` before fitting for models that
+           cannot use the default estimation method.
+
         Parameters
         ----------
         data_generator : generator
@@ -543,10 +550,18 @@ class DistributedModel:
             An instance of results_class (RegularizedResults by
             default), initialized using the dummy result model and
             the join_method result as params.
+
+        Raises
+        ------
+        NotImplementedError
+            If the default debiased estimation method is used with a model
+            whose ``fit_regularized`` does not accept ``alpha``, e.g. GEE.
         """
 
         if fit_kwds is None:
             fit_kwds = {}
+
+        self._check_estimation_method()
 
         parallel_method = string_like(
             parallel_method,
@@ -571,9 +586,47 @@ class DistributedModel:
         # if it is provided.  It is possible to imagine an edge case where
         # this might be a problem but given that the results model instance
         # does not correspond to any data partition this seems reasonable.
-        res_mod = self.model_class([0], [0], **self.init_kwds)
+        res_mod = self._dummy_model()
 
         return self.results_class(res_mod, params, **self.results_kwds)
+
+    def _check_estimation_method(self):
+        """Raise early if the debiased method cannot use this model."""
+        if self.estimation_method is not _est_regularized_debiased:
+            return
+        fit_reg = getattr(self.model_class, "fit_regularized", None)
+        if fit_reg is None:
+            accepts_alpha = False
+        else:
+            params = inspect.signature(fit_reg).parameters
+            accepts_alpha = "alpha" in params or any(
+                p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+            )
+        if not accepts_alpha:
+            name = self.model_class.__name__
+            raise NotImplementedError(
+                f"The default estimation method (_est_regularized_debiased) "
+                f"requires a model whose fit_regularized accepts alpha, which "
+                f"{name} does not support. Use, for example, "
+                f"estimation_method=_est_unregularized_naive with "
+                f"join_method=_join_naive."
+            )
+
+    def _dummy_model(self):
+        """Fake-data model for the results, e.g. for predict."""
+        init_kwds = dict(self.init_kwds)
+        try:
+            sig_params = inspect.signature(self.model_class).parameters
+        except (TypeError, ValueError):
+            sig_params = {}
+        groups = sig_params.get("groups")
+        if (
+            groups is not None
+            and groups.default is inspect.Parameter.empty
+            and "groups" not in init_kwds
+        ):
+            init_kwds["groups"] = [0]
+        return self.model_class([0], [0], **init_kwds)
 
     def fit_sequential(self, data_generator, fit_kwds, init_kwds_generator=None):
         """Sequentially performs the distributed estimation using

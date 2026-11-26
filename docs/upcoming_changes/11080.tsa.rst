@@ -1,0 +1,25 @@
+- ``summary_impacts`` and ``summary`` of the news of state space
+  models (``NewsResults``) showed ``NaT`` in place of the repeated
+  impact dates of multivariate models, and raised a ``TypeError`` on
+  pandas 3 (a ``FutureWarning`` on pandas 2.x) for data with integer
+  dates (given as a list or an ndarray). The repeated dates are
+  blank. :pr:`11080`
+- ``summary_impacts`` and ``summary`` of the news of state space
+  models raised an ``AttributeError`` for a single impact date with a
+  single impacted variable (for univariate models whose series has a
+  one-letter name, for any single impact date). They show the rows of
+  that date and variable. :pr:`11080`
+- ``summary_impacts`` of the news of state space models did not
+  sparsify the first column for ``groupby="impact_date"`` and
+  ``"impacted_variable"``, and its title joined a single impacted
+  variable or impact date with "for" in every case. Every spelling
+  gives the same table, and the title says "Impacts on [impacted
+  variable = ...]" when grouping by impact date (the default) and
+  "Impacts for [impact date = ...]" when grouping by impacted
+  variable. :pr:`11080`
+- ``summary_details`` of the news of state space models with
+  ``multiple_tables=True`` and ``groupby="impact date"`` or
+  ``"impacted variable"`` raised a ``KeyError``, and so did
+  ``summary(details_groupby="impact date")`` (or ``"impacted
+  variable"``) of multivariate models. They give one table for each
+  impact date or impacted variable. :pr:`11080`

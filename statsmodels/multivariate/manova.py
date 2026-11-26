@@ -71,7 +71,7 @@ class MANOVA(Model):
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 
     def fit(self):
-        raise NotImplementedError("fit is not needed to use MANOVA. Call"
+        raise NotImplementedError("fit is not needed to use MANOVA. Call "
                                   "mv_test directly on a MANOVA instance.")
 
     @Substitution(hypotheses_doc=_hypotheses_doc)
@@ -123,7 +123,7 @@ class MANOVA(Model):
 
                 for key in terms:
                     if skip_intercept_test and (
-                        key == "Intercept" or key == mgr.intercept_term
+                        key in ("Intercept", mgr.intercept_term)
                     ):
                         continue
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]

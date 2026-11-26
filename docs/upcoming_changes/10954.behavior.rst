@@ -1,0 +1,5 @@
+- ``Description`` and ``describe`` label non-integer percentiles with rounded
+  instead of truncated values, so labels for valid input change (for example
+  ``33.3%`` instead of ``33.2%``). Integer percentiles such as 29 no longer get
+  a decimal label, and a percentile strictly between 0 and 100 is never
+  labeled ``0.0%`` or ``100.0%``. :pr:`10954`

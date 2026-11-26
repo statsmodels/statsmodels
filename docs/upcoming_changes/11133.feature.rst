@@ -1,0 +1,6 @@
+- ``DynamicFactor`` has a keyword-only argument ``error_cov_start``. With
+  VAR errors and ``error_cov_type="unstructured"``, ``"cholesky"`` starts
+  the error covariance at the Cholesky factor of the residual covariance
+  of a VAR of the errors, instead of the identity matrix times the square
+  root of the mean residual variance (``"scaled_identity"``, the
+  default, which keeps the start values and fits unchanged). :pr:`11133`

@@ -1,0 +1,5 @@
+- ``GLM.fit`` of a saturated model (as many observations as
+  parameters) warned "divide by zero" (or "invalid value") in
+  every iteration of IRLS, from the scale of the weighted least
+  squares step, which GLM does not use. Results are unchanged.
+  :pr:`11171`

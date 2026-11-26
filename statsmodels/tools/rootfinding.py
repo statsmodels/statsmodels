@@ -141,6 +141,14 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     if upp is None:
         su = max(su, sl + 1.)
 
+    # The expansion multiplies the starting bounds. A Python int grows beyond
+    # int64 if the function has no root, and then a function that creates an
+    # array from it fails with an object array, so int bounds become floats.
+    if isinstance(sl, (int, np.integer)):
+        sl = float(sl)
+    if isinstance(su, (int, np.integer)):
+        su = float(su)
+
     # increasing or not ?
     if ((low is None) or (upp is None)) and increasing is None:
         assert sl < su  # check during development
@@ -178,7 +186,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                 if not np.isnan(f_upp):
                     break
             else:
-                raise ValueError("could not determine whether function is"
+                raise ValueError("could not determine whether function is "
                                  "increasing based on starting interval."
                                  "\nspecify increasing or change starting "
                                  "bounds")
@@ -219,7 +227,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
             # can we still get here?
             raise ValueError("max_it reached"
                              "\nthe function values at both bounds are NaN"
-                             "\nchange the starting bounds, set bounds"
+                             "\nchange the starting bounds, set bounds "
                              "or increase max_it")
 
     res = optimize.brentq(func, left, right, args=args,

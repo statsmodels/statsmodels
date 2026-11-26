@@ -1,0 +1,2 @@
+- ``forecast`` and ``forecast_interval`` of a ``VARProcess`` built from
+  coefficients raised an ``AttributeError``. :pr:`10965`

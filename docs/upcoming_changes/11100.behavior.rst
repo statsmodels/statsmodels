@@ -1,0 +1,5 @@
+- :class:`~statsmodels.tsa.ardl.UECM` differenced bool exog variables
+  with an exclusive or, so the differences were their absolute
+  values: a change from True to False was 1 instead of -1. Bool
+  variables are differenced as 0 and 1, so the parameters and all
+  other results of these models change. :pr:`11100`

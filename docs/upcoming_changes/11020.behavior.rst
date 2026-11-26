@@ -1,0 +1,3 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` replaced all column names of an ``exog`` DataFrame that has a
+  column called "name" by x1, x2, ... in the spec and in the output
+  of X-13ARIMA-SEATS. The column names are kept. :pr:`11020`

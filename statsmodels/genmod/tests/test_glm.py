@@ -3,6 +3,7 @@ Test functions for models.GLM
 """
 import contextlib
 import copy
+import itertools
 from pathlib import Path
 import re
 import warnings
@@ -25,6 +26,7 @@ from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod.tests.results import results_poisson_large_exog as large_exog
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import (
     approx_fprime,
@@ -33,6 +35,7 @@ from statsmodels.tools.numdiff import (
     approx_hess_cs,
 )
 from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
     DomainWarning,
     PerfectSeparationWarning,
     ValueWarning,
@@ -461,9 +464,16 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.data.endog = np.require(cls.data.endog, requirements="W")
         cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
-        cls.res1 = GLM(
-            cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
-        ).fit(method="newton")
+        with warnings.catch_warnings():
+            # With the badly conditioned Longley design, rounding error can
+            # change the intercept (about -3.5e6) by 1e-7 in every Newton
+            # step, more than the absolute tolerance of 1e-8, after the
+            # parameters agree with OLS to 1e-11: newton can stop at maxiter
+            # and warn
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            cls.res1 = GLM(
+                cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
+            ).fit(method="newton")
         from .results.results_glm import Longley
 
         cls.res2 = Longley()
@@ -2566,11 +2576,13 @@ def test_tweedie_EQL():
         atol=atol,
     )
 
-    # Series of ridge fits using gradients
+    # Series of ridge fits using gradients.  The values are the fits with
+    # a log-likelihood of scale 1, which the coordinate descent of
+    # fit_regularized with L1_wt=1e-8 reproduces to 2e-6.
     ev = (
-        np.array([1.001778, -0.99388, 0.00797, 0.506183]),
-        np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
-        np.array([0.206429, -0.164547, 0.000235, 0.102489]),
+        np.array([0.983342, -0.965747, 0.007411, 0.496125]),
+        np.array([0.830026, -0.762183, 0.004555, 0.415303]),
+        np.array([0.776406, -0.699885, 0.003953, 0.387769]),
     )
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
@@ -2743,6 +2755,357 @@ def test_glm_lasso_6431():
                 else:
                     fit = model._fit_ridge(alpha=0, start_params=None, method=method)
                 assert_allclose(params, fit.params, atol=1e-6, rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "family", [sm.families.Gaussian, sm.families.Binomial, sm.families.Poisson]
+)
+@pytest.mark.parametrize(
+    "fit_kwds",
+    [
+        {"L1_wt": 1.0},
+        {"L1_wt": 0.5},
+        {"L1_wt": 0.0},
+        {"method": "l1_slsqp"},
+    ],
+)
+def test_regularized_freq_weights_match_expanded_data(family, fit_kwds):
+    # A row with frequency weight w is w identical observations, so the
+    # penalized fit has to match the fit on the expanded data set.  The
+    # log-likelihood used to be scaled by the number of rows instead of
+    # the total frequency weight, which silently changed the effective
+    # penalty.
+    rng = np.random.default_rng(1)
+    n = 60
+    exog = add_constant(rng.normal(size=(n, 3)))
+    if family is sm.families.Binomial:
+        endog = (rng.random(n) < 0.4).astype(float)
+    elif family is sm.families.Poisson:
+        endog = rng.poisson(2, n).astype(float)
+    else:
+        endog = rng.normal(size=n)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    freq_weights = rng.integers(1, 5, size=n).astype(np.intp)
+
+    weighted = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+    )
+    res_w = weighted.fit_regularized(alpha=0.05, **fit_kwds)
+    res_e = expanded.fit_regularized(alpha=0.05, **fit_kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+# glmnet 5.2 in R 4.6.1, coefficients at lambda = 0.05 of
+#   glmnet(cbind(x1, x2), y, weights=w, family=<family>(), alpha=<L1_wt>,
+#          lambda=c(0.1, 0.05), standardize=FALSE, intercept=TRUE,
+#          control=list(thresh=1e-15, maxit=1e7))
+# with family gaussian(), binomial() or poisson() objects (the string
+# family="gaussian" standardizes y and is not comparable for alpha < 1).
+# glmnet normalizes the weights to sum to one, so that its objective is
+# -loglike / sum(w) + lambda * penalty.  The coefficients are
+# (intercept, x1, x2); the intercept is not penalized.
+_GLMNET_X = np.array(
+    [
+        [-1.5, 0.5],
+        [-0.9, -1.1],
+        [-0.4, 0.9],
+        [0.1, -0.3],
+        [0.6, 1.4],
+        [1.2, -0.8],
+        [-0.2, 0.2],
+        [0.8, -1.6],
+        [1.6, 0.7],
+        [-0.7, 1.0],
+    ]
+)
+_GLMNET_WEIGHTS = np.array([1, 2, 3, 1, 2, 4, 1, 3, 2, 1], dtype=float)
+_GLMNET_ENDOG = {
+    "gaussian": np.array([-1.1, -0.4, 0.3, 0.6, 1.5, 1.9, 0.0, 0.5, 2.3, -0.2]),
+    "binomial": np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0], dtype=float),
+    "poisson": np.array([1, 0, 2, 1, 3, 4, 0, 2, 5, 1], dtype=float),
+}
+_GLMNET_FAMILY = {
+    "gaussian": sm.families.Gaussian,
+    "binomial": sm.families.Binomial,
+    "poisson": sm.families.Poisson,
+}
+_GLMNET_PARAMS = {
+    ("gaussian", 1.0): [0.509708349454511, 0.994210219261278, 0.188258616019091],
+    ("gaussian", 0.5): [0.510134669236970, 0.998738456435588, 0.207760873833476],
+    ("binomial", 1.0): [0.722158356609137, 1.981320957929859, 0.190660850592927],
+    ("binomial", 0.5): [0.699130656029896, 1.758602609605634, 0.270808310371468],
+    ("poisson", 1.0): [0.442847222150387, 0.732251879893724, 0.158090127698189],
+    ("poisson", 0.5): [0.438121461213865, 0.738352935954592, 0.167097604621228],
+}
+
+
+@pytest.mark.parametrize("family_name", ["gaussian", "binomial", "poisson"])
+@pytest.mark.parametrize(
+    "fit_kwds, atol",
+    [
+        ({"L1_wt": 1.0}, 1e-5),
+        ({"L1_wt": 0.5}, 1e-5),
+        ({"method": "l1_slsqp", "L1_wt": 1.0}, 1e-4),
+    ],
+    ids=["lasso", "elastic_net", "l1_slsqp"],
+)
+def test_regularized_freq_weights_glmnet(family_name, fit_kwds, atol):
+    # Reference values from glmnet, see _GLMNET_PARAMS.  The atol is the
+    # agreement that the two algorithms reach: the coordinate descent of
+    # glmnet and of fit_regularized stop at different convergence tolerances
+    # (1.6e-6 is the largest difference for the elastic net), and slsqp
+    # needs 1e-4 (largest difference 1e-5).
+    L1_wt = fit_kwds["L1_wt"]
+    exog = add_constant(_GLMNET_X)
+    family = _GLMNET_FAMILY[family_name]()
+    model = GLM(
+        _GLMNET_ENDOG[family_name], exog, family=family, freq_weights=_GLMNET_WEIGHTS
+    )
+    res = model.fit_regularized(alpha=np.array([0.0, 0.05, 0.05]), **fit_kwds)
+    assert_allclose(res.params, _GLMNET_PARAMS[(family_name, L1_wt)], rtol=0, atol=atol)
+
+
+# "gaussian3" is three times the gaussian endog, a fit whose estimated scale
+# is far from one.
+_GLMNET_ENDOG["gaussian3"] = 3 * _GLMNET_ENDOG["gaussian"]
+_GLMNET_FAMILY["gaussian3"] = sm.families.Gaussian
+
+# glmnet 5.2 in R 4.6.1, coefficients at lambda = 0.05 of the ridge fit
+#   glmnet(cbind(x1, x2), y, weights=w, family=<family>(), alpha=0,
+#          lambda=c(0.1, 0.05), standardize=<standardize>, intercept=TRUE,
+#          control=list(thresh=1e-15, maxit=1e7))
+# for the data above, keyed by (family, standardize).
+_GLMNET_RIDGE_PARAMS = {
+    ("gaussian", False): [0.510617305852763, 1.002798798238448, 0.226304497872358],
+    ("gaussian", True): [0.507375167371321, 1.013455083680229, 0.227510723479926],
+    ("gaussian3", False): [1.531851917558288, 3.008396394715344, 0.678913493617074],
+    ("gaussian3", True): [1.522125502113962, 3.040365251040688, 0.682532170439778],
+    ("binomial", False): [0.694534509059638, 1.638376304534531, 0.337697239564448],
+    ("binomial", True): [0.700131555014648, 1.760255781444299, 0.358205674504501],
+    ("poisson", False): [0.433493697370173, 0.744212456224561, 0.175919409656114],
+    ("poisson", True): [0.429531349130683, 0.749061735199303, 0.176059335523080],
+}
+# The same call with alpha=1 and alpha=0.5 and standardize=TRUE, keyed by
+# (family, L1_wt).
+_GLMNET_STANDARDIZED_PARAMS = {
+    ("gaussian", 1.0): [0.507901765688611, 0.999830775960993, 0.187878527540250],
+    ("gaussian", 0.5): [0.507599056296679, 1.006928816255381, 0.208227720180257],
+    ("binomial", 1.0): [0.730716709231770, 2.055864265964942, 0.194987333479025],
+    ("binomial", 0.5): [0.706741323493328, 1.868584142717468, 0.287684067143429],
+    ("poisson", 1.0): [0.440035166880792, 0.735703795858661, 0.157746087565982],
+    ("poisson", 0.5): [0.434745233729621, 0.742495056136925, 0.167002648710089],
+}
+
+
+def _glmnet_column_sd():
+    # glmnet standardizes with the weights and the divisor sum(weights)
+    mean = np.average(_GLMNET_X, axis=0, weights=_GLMNET_WEIGHTS)
+    var = np.average((_GLMNET_X - mean) ** 2, axis=0, weights=_GLMNET_WEIGHTS)
+    return np.sqrt(var)
+
+
+@pytest.mark.parametrize("standardize", [False, True])
+@pytest.mark.parametrize("family_name", ["gaussian", "gaussian3", "binomial", "poisson"])
+def test_ridge_glmnet(family_name, standardize):
+    # The ridge fit (L1_wt=0) minimizes the objective of glmnet with
+    # alpha=0, also for a family with an estimated scale (gaussian3).  The
+    # intercept is left unpenalized with a zero in alpha, and glmnet's
+    # standardize=TRUE is the weight alpha * sd**2 for each penalized
+    # coefficient (see the Notes of fit_regularized).  The atol is the
+    # tolerance of the BFGS solver of the ridge fit (largest difference 8e-6).
+    exog = add_constant(_GLMNET_X)
+    family = _GLMNET_FAMILY[family_name]()
+    model = GLM(
+        _GLMNET_ENDOG[family_name], exog, family=family, freq_weights=_GLMNET_WEIGHTS
+    )
+    penalty = _glmnet_column_sd() ** 2 if standardize else np.ones(2)
+    res = model.fit_regularized(alpha=0.05 * np.r_[0.0, penalty], L1_wt=0.0)
+    expected = _GLMNET_RIDGE_PARAMS[(family_name, standardize)]
+    assert_allclose(res.params, expected, rtol=0, atol=5e-5)
+
+
+@pytest.mark.parametrize("L1_wt", [1.0, 0.5])
+@pytest.mark.parametrize("family_name", ["gaussian", "binomial", "poisson"])
+def test_regularized_glmnet_standardized_columns(family_name, L1_wt):
+    # glmnet's standardize=TRUE: divide the columns of exog by their standard
+    # deviations, fit with the penalty weight alpha for each of them and
+    # divide the coefficients by the standard deviations.  For the lasso, the
+    # penalty weights alpha * sd on the unscaled columns are the same fit.
+    sd = _glmnet_column_sd()
+    expected = _GLMNET_STANDARDIZED_PARAMS[(family_name, L1_wt)]
+    family = _GLMNET_FAMILY[family_name]()
+    endog = _GLMNET_ENDOG[family_name]
+    model = GLM(
+        endog,
+        add_constant(_GLMNET_X / sd),
+        family=family,
+        freq_weights=_GLMNET_WEIGHTS,
+    )
+    res = model.fit_regularized(alpha=np.array([0.0, 0.05, 0.05]), L1_wt=L1_wt)
+    params = np.r_[res.params[0], res.params[1:] / sd]
+    assert_allclose(params, expected, rtol=0, atol=1e-5)
+    if L1_wt == 1.0:
+        model = GLM(
+            endog,
+            add_constant(_GLMNET_X),
+            family=family,
+            freq_weights=_GLMNET_WEIGHTS,
+        )
+        res = model.fit_regularized(alpha=0.05 * np.r_[0.0, sd], L1_wt=L1_wt)
+        assert_allclose(res.params, expected, rtol=0, atol=1e-5)
+
+
+def _regularized_freq_weights_data(family, seed=2):
+    rng = np.random.default_rng(seed)
+    n = 60
+    exog = add_constant(rng.normal(size=(n, 3)))
+    if family is sm.families.Binomial:
+        endog = (rng.random(n) < 0.4).astype(float)
+    elif family is sm.families.Poisson:
+        endog = rng.poisson(2, n).astype(float)
+    else:
+        endog = rng.normal(size=n)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    freq_weights = rng.integers(1, 5, size=n).astype(np.intp)
+    offset = 0.2 * rng.normal(size=n)
+    return endog, exog, freq_weights, offset
+
+
+_FIT_KWDS = [
+    {"L1_wt": 1.0},
+    {"L1_wt": 0.5},
+    {"L1_wt": 0.0},
+    {"method": "l1_slsqp"},
+]
+_FIT_KWDS_IDS = ["lasso", "elastic_net", "ridge", "l1_slsqp"]
+_FAMILIES = [sm.families.Gaussian, sm.families.Binomial, sm.families.Poisson]
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("fit_kwds", _FIT_KWDS, ids=_FIT_KWDS_IDS)
+def test_regularized_freq_weights_rescaled(family, fit_kwds):
+    # The penalty is relative to the total weight, so that rescaling the
+    # frequency weights does not change the estimates (glmnet has the same
+    # property).  The Gaussian ridge fit estimated a scale before.
+    endog, exog, freq_weights, _ = _regularized_freq_weights_data(family)
+    freq_weights = freq_weights.astype(float)
+    res = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    res_scaled = GLM(endog, exog, family=family(), freq_weights=0.3 * freq_weights)
+    p = res.fit_regularized(alpha=0.05, **fit_kwds).params
+    p_scaled = res_scaled.fit_regularized(alpha=0.05, **fit_kwds).params
+    assert_allclose(p_scaled, p, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("fit_kwds", _FIT_KWDS, ids=_FIT_KWDS_IDS)
+@pytest.mark.parametrize("variant", ["alpha_with_zero", "offset"])
+def test_regularized_freq_weights_alpha_array_offset(family, fit_kwds, variant):
+    endog, exog, freq_weights, offset = _regularized_freq_weights_data(family)
+    alpha = 0.05
+    kwds = {}
+    expanded_kwds = {}
+    if variant == "alpha_with_zero":
+        # no penalty for the constant, other penalty weights differ
+        alpha = np.array([0.0, 0.05, 0.1, 0.05])
+    else:
+        kwds["offset"] = offset
+        expanded_kwds["offset"] = np.repeat(offset, freq_weights)
+    weighted = GLM(
+        endog, exog, family=family(), freq_weights=freq_weights, **kwds
+    )
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+        **expanded_kwds,
+    )
+    res_w = weighted.fit_regularized(alpha=alpha, **fit_kwds)
+    res_e = expanded.fit_regularized(alpha=alpha, **fit_kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("L1_wt", [1.0, 0.5])
+def test_regularized_freq_weights_first_sweep(family, L1_wt):
+    # The Hessian (nphess in statsmodels.base.elastic_net) only sets the
+    # step of the coordinate descent, so that the estimates at convergence do
+    # not depend on it.  After a single sweep through the coefficients they do:
+    # the sweep on the weighted data has to equal the sweep on the data with
+    # each row repeated, which needs the Hessian divided by the sum of the
+    # frequency weights as well.
+    endog, exog, freq_weights, _ = _regularized_freq_weights_data(family)
+    weighted = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+    )
+    kwds = {"alpha": 0.05, "L1_wt": L1_wt, "maxiter": 1, "cnvrg_tol": 1e-15}
+    with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+        res_w = weighted.fit_regularized(**kwds)
+    with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+        res_e = expanded.fit_regularized(**kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "alpha",
+    [0.15, np.array([0.0, 0.1, 0.3, 0.3])],
+    ids=["scalar", "array_with_zero"],
+)
+def test_ridge_gaussian_matches_closed_form(alpha):
+    # With L1_wt=0 the objective is the penalized least squares problem
+    # RSS / (2 n) + sum(alpha * params**2) / 2, whose minimizer is
+    # solve(X'X / n + diag(alpha), X'y / n).  The ridge fit used to divide the
+    # residual sum of squares by the scale estimated at each parameter value.
+    rng = np.random.default_rng(20261117)
+    n = 100
+    exog = add_constant(rng.normal(size=(n, 3)))
+    endog = exog @ [0.5, 1.0, -0.5, 0.3] + rng.normal(size=n)
+    expected = np.linalg.solve(
+        exog.T @ exog / n + np.diag(np.ones(4) * alpha), exog.T @ endog / n
+    )
+    model = GLM(endog, exog, family=sm.families.Gaussian())
+    res = model.fit_regularized(alpha=alpha, L1_wt=0)
+    # atol: the ridge problem is solved with BFGS (gradient tolerance 1e-5)
+    assert_allclose(res.params, expected, rtol=1e-5, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "family",
+    [
+        sm.families.Gaussian(),
+        sm.families.Gamma(sm.families.links.Log()),
+        sm.families.Binomial(),
+        sm.families.Poisson(),
+    ],
+    ids=["Gaussian", "Gamma", "Binomial", "Poisson"],
+)
+def test_ridge_matches_elastic_net_with_tiny_l1_wt(family):
+    # L1_wt=0 is solved with scipy, any L1_wt > 0 with coordinate descent,
+    # which uses a log-likelihood with scale 1.  A tiny L1_wt gives the same
+    # problem, whatever the family.  Binomial and Poisson have a fixed scale.
+    rng = np.random.default_rng(20261118)
+    n = 100
+    exog = add_constant(rng.normal(size=(n, 3)))
+    eta = 0.3 + exog[:, 1:] @ [0.4, -0.3, 0.2]
+    if isinstance(family, sm.families.Binomial):
+        endog = (rng.random(n) < 1 / (1 + np.exp(-eta))).astype(float)
+    elif isinstance(family, sm.families.Poisson):
+        endog = rng.poisson(np.exp(eta)).astype(float)
+    elif isinstance(family, sm.families.Gamma):
+        endog = np.exp(eta) * rng.gamma(5, 0.2, size=n)
+    else:
+        endog = eta + rng.normal(size=n)
+    alpha = np.array([0.0, 0.1, 0.1, 0.1])
+    model = GLM(endog, exog, family=family)
+    res_ridge = model.fit_regularized(alpha=alpha, L1_wt=0)
+    res_enet = model.fit_regularized(alpha=alpha, L1_wt=1e-8)
+    # atol: BFGS stops at a gradient norm of 1e-5
+    assert_allclose(res_ridge.params, res_enet.params, rtol=1e-5, atol=1e-4)
 
 
 class TestRegularized:
@@ -3695,7 +4058,11 @@ def _offset_model_case(name, rng):
         res = sm.Poisson(y, x, exposure=expo).fit(disp=0)
         explicit = {"exposure": expo}
     elif name == "nb_offset":
-        res = sm.NegativeBinomial(y, x, offset=off).fit(disp=0)
+        # Overdispersed counts, gamma-Poisson with alpha=0.5. With Poisson counts
+        # the estimate of alpha is on the boundary (about 1e-6), where the Hessian
+        # is nearly singular and its inversion depends on the BLAS library.
+        y_nb = rng.poisson(mean * rng.gamma(2.0, 0.5, size=nobs))
+        res = sm.NegativeBinomial(y_nb, x, offset=off).fit(disp=0)
         explicit = {"offset": off}
     elif name == "zip_offset":
         res = sm.ZeroInflatedPoisson(y, x, offset=off).fit(disp=0, maxiter=200)
@@ -3844,6 +4211,288 @@ def test_get_prediction_default_offset_formula_pandas():
     assert_allclose(sf["predicted"], res.predict(), rtol=1e-10)
 
 
+def _poisson_overflow_model():
+    exog = add_constant(large_exog.x_overflow)
+    return GLM(large_exog.y_overflow, exog, family=sm.families.Poisson())
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_irls_step_halving_large_exog(start):
+    # The full IRLS steps from these start params need 96 and 35 iterations,
+    # the limit is far below that.
+    exog = add_constant(large_exog.x_large)
+    mod = GLM(large_exog.y_large, exog, family=sm.families.Poisson())
+    res = mod.fit(start_params=start, maxiter=20)
+    assert res.converged
+    assert_allclose(res.params, large_exog.params_large, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_large, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_large, rtol=1e-10)
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_irls_step_halving_overflow(start):
+    # The first IRLS step gives mu of inf. It raised "NaN, inf or invalid
+    # value detected in weights" before.
+    res = _poisson_overflow_model().fit(start_params=start, maxiter=100)
+    assert res.converged
+    assert_allclose(res.params, large_exog.params_overflow, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_overflow, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_overflow, rtol=1e-10)
+    assert np.all(np.isfinite(res.fit_history["deviance"][1:]))
+
+
+@pytest.mark.parametrize(
+    "x, y, params",
+    [
+        (large_exog.x_large, large_exog.y_large, large_exog.params_large),
+        (large_exog.x_overflow, large_exog.y_overflow, large_exog.params_overflow),
+    ],
+    ids=["large", "overflow"],
+)
+def test_irls_default_start_unchanged_large_exog(x, y, params):
+    res = GLM(y, add_constant(x), family=sm.families.Poisson()).fit()
+    assert res.converged
+    assert_allclose(res.params, params, rtol=1e-8)
+
+
+def test_irls_halved_step_is_not_convergence():
+    # atol is so large that the change of the deviance shows convergence at
+    # every iteration. The first step is halved and a halved step is shorter
+    # than the IRLS step, so it does not show convergence.
+    res = _poisson_overflow_model().fit(start_params=np.zeros(2), atol=1e10)
+    assert res.fit_history["iteration"] > 1
+
+
+def test_irls_params_of_halved_last_step():
+    # The only step is halved. The results have the parameters of that step
+    # and not those of the refit of WLS, which are those of the full step.
+    mod = _poisson_overflow_model()
+    res = mod.fit(start_params=np.zeros(2), maxiter=1)
+    assert not res.converged
+    assert_allclose(res.params, res.fit_history["params"][-1])
+    assert np.all(np.isfinite(res.mu))
+    assert_allclose(res.mu, np.exp(mod.exog @ res.params), rtol=1e-10)
+    assert np.all(np.isfinite(res.params))
+
+
+@pytest.mark.parametrize("start", [[0.0, 8.0], [1000.0, 1000.0], [-1000.0, 20.0]])
+def test_irls_start_params_not_finite(start):
+    # exp of the linear predictor overflows, or the mean is 0 and so are the
+    # IRLS weights of the identity link at the start
+    with pytest.raises(ValueError, match="start_params"):
+        _poisson_overflow_model().fit(start_params=start)
+
+
+def test_irls_start_params_weights_not_finite():
+    # the mean is finite but the IRLS weights 1 / mu of the identity link are
+    # not, for a mean of 0
+    family = sm.families.Poisson(sm.families.links.Identity())
+    exog = add_constant(large_exog.x_large)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DomainWarning)
+        mod = GLM(large_exog.y_large, exog, family=family)
+    with pytest.raises(ValueError, match="start_params"):
+        mod.fit(start_params=[0.0, 0.0])
+
+
+def test_irls_start_params_finite_but_large():
+    # a mean of up to 1e78 is finite and so are its weights, so that the start
+    # is valid. The fit needs more than two iterations from there.
+    mod = _poisson_overflow_model()
+    res = mod.fit(start_params=[0.0, 1.8], maxiter=2)
+    assert not res.converged
+    assert np.all(np.isfinite(res.params))
+    assert np.all(np.isfinite(res.mu))
+
+
+def _halve_irls(devs, dev_prev):
+    """Halve a step of GLM for the deviances `devs` of the trial steps"""
+    mod = _poisson_overflow_model()
+    values = itertools.chain(devs, itertools.repeat(None))
+    mod._finite_deviance = lambda mu: next(values)
+    params, params_prev = np.array([2.0, 1.0]), np.zeros(2)
+    lin_pred = mod.exog @ params
+    mu = mod.family.fitted(lin_pred)
+    return params, params_prev, mod._halve_irls_step(
+        params, params_prev, lin_pred, mu, dev_prev
+    )
+
+
+def test_halve_irls_step_tolerance():
+    # noise in the deviance of a relative size of 1e-14 does not shorten the
+    # step, an increase of 1e-6 does
+    params, _, out = _halve_irls([1 + 1e-14, 0.5], 1.0)
+    assert not out[4]
+    assert_allclose(out[0], params)
+    assert_allclose(out[3], 1 + 1e-14)
+
+    params, params_prev, out = _halve_irls([1 + 1e-6, 0.5], 1.0)
+    assert out[4]
+    assert_allclose(out[0], 0.5 * (params + params_prev))
+    assert out[3] == 0.5
+
+
+def test_halve_irls_step_no_decrease_found():
+    # no step decreases the deviance, the first with a finite deviance is used
+    params, params_prev, out = _halve_irls([2.0, 3.0], 1.0)
+    assert not out[4]
+    assert_allclose(out[0], params)
+    assert out[3] == 2.0
+
+    params, params_prev, out = _halve_irls([None, 3.0, 2.5], 1.0)
+    assert out[4]
+    assert_allclose(out[0], 0.5 * (params + params_prev))
+    assert out[3] == 3.0
+
+
+def test_halve_irls_step_nonfinite():
+    # a step with a non-finite deviance is halved even if there is no previous
+    # deviance, and a step with a larger deviance is then not halved
+    params, params_prev, out = _halve_irls([None, None, 1e9], None)
+    assert out[4]
+    assert_allclose(out[0], params_prev + (params - params_prev) / 4)
+    assert out[3] == 1e9
+
+    params, _, out = _halve_irls([1e9], None)
+    assert not out[4]
+    assert_allclose(out[0], params)
+
+    with pytest.raises(ValueError, match="start_params"):
+        _halve_irls([], 1.0)
+
+
+def test_finite_deviance_needs_finite_mean_and_weights(monkeypatch):
+    mod = _poisson_overflow_model()
+    mu = np.full(mod.endog.shape[0], 5.0)
+    assert mod._finite_deviance(mu) == pytest.approx(mod._unscaled_deviance(mu))
+    # the deviance can be finite while the IRLS weights are not
+    monkeypatch.setattr(
+        mod.family, "weights", lambda mu: np.full(np.shape(mu), np.inf)
+    )
+    assert np.isfinite(mod._unscaled_deviance(mu))
+    assert mod._finite_deviance(mu) is None
+    monkeypatch.undo()
+    assert mod._finite_deviance(np.where(np.arange(mu.size) == 3, np.inf, mu)) is None
+
+
+LINKS = sm.families.links
+
+
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.DomainWarning")
+@pytest.mark.parametrize(
+    "family, link, canonical",
+    [
+        ("Binomial", LINKS.Logit(), True),
+        ("Binomial", LINKS.Probit(), False),
+        ("Binomial", LINKS.Cauchy(), False),
+        ("Binomial", LINKS.CLogLog(), False),
+        ("Binomial", LINKS.LogLog(), False),
+        ("Poisson", LINKS.Log(), True),
+        ("Poisson", LINKS.Sqrt(), False),
+        ("Poisson", LINKS.Identity(), False),
+        ("Gaussian", LINKS.Identity(), True),
+        ("Gaussian", LINKS.Log(), False),
+        ("Gamma", LINKS.InversePower(), True),
+        ("Gamma", LINKS.Log(), False),
+        ("InverseGaussian", LINKS.InverseSquared(), True),
+        ("InverseGaussian", LINKS.Identity(), False),
+        ("NegativeBinomial", LINKS.NegativeBinomial(alpha=0.5), True),
+        ("NegativeBinomial", LINKS.NegativeBinomial(alpha=3.0), False),
+        ("NegativeBinomial", LINKS.Log(), False),
+    ],
+)
+def test_canonical_link(family, link, canonical):
+    # Probit, Cauchy, CLogLog and LogLog subclass Logit
+    kwds = {"alpha": 0.5} if family == "NegativeBinomial" else {}
+    fam = getattr(sm.families, family)(link=link, **kwds)
+    mod = GLM(np.ones(5), np.ones((5, 1)), family=fam)
+    assert mod._canonical_link() is canonical
+
+
+def test_canonical_link_deprecated_alias():
+    # the deprecated aliases are subclasses of the link classes
+    with pytest.warns(FutureWarning, match="alias is deprecated"):
+        log_alias = LINKS.log()
+    with pytest.warns(FutureWarning, match="alias is deprecated"):
+        probit_alias = LINKS.probit()
+    mod = GLM(np.ones(5), np.ones((5, 1)), family=sm.families.Poisson(log_alias))
+    assert mod._canonical_link()
+    mod = GLM(np.ones(5), np.ones((5, 1)), family=sm.families.Binomial(probit_alias))
+    assert not mod._canonical_link()
+
+
+def _irls_wiring_data(family, seed=20261117):
+    rng = np.random.default_rng(seed)
+    exog = add_constant(rng.uniform(0.5, 1.5, size=(200, 2)))
+    eta = exog @ np.array([0.2, 0.4, -0.3])
+    if isinstance(family, sm.families.Poisson):
+        mean = np.exp(eta) if isinstance(family.link, LINKS.Log) else (1 + eta) ** 2
+        return rng.poisson(mean), exog
+    prob = 1 / (1 + np.exp(-eta)) if isinstance(family.link, LINKS.Logit) else 0.5 + 0.3 * eta
+    return (rng.uniform(size=200) < prob).astype(float), exog
+
+
+WIRING_FAMILIES = [
+    (sm.families.Poisson(), True),
+    (sm.families.Poisson(LINKS.Sqrt()), False),
+    (sm.families.Binomial(), True),
+    (sm.families.Binomial(LINKS.Probit()), False),
+]
+
+
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.DomainWarning")
+@pytest.mark.parametrize("family, monotone", WIRING_FAMILIES)
+@pytest.mark.parametrize("with_start", [False, True])
+def test_irls_halves_deviance_increase_only_for_canonical_link(
+    monkeypatch, family, monotone, with_start
+):
+    # A step is checked in every iteration after the first of the default
+    # start, and in every iteration if there are start_params. The deviance
+    # is only compared for a canonical link.
+    y, exog = _irls_wiring_data(family)
+    calls = []
+    halve = GLM._halve_irls_step
+
+    def spy(self, params, params_prev, lin_pred, mu, dev_prev=None):
+        calls.append(dev_prev is not None)
+        return halve(self, params, params_prev, lin_pred, mu, dev_prev)
+
+    monkeypatch.setattr(GLM, "_halve_irls_step", spy)
+    start_params = None
+    if with_start:
+        start_params = GLM(y, exog, family=family).fit().params * 0.5 + 0.1
+        calls.clear()
+    res = GLM(y, exog, family=family).fit(start_params=start_params)
+    n_iter = res.fit_history["iteration"]
+    assert n_iter > 1
+    assert len(calls) == (n_iter if with_start else n_iter - 1)
+    assert all(calls) == monotone
+    assert any(calls) == monotone
+
+
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.DomainWarning")
+@pytest.mark.parametrize("family, monotone", WIRING_FAMILIES)
+def test_newton_step_halving_option_by_link(monkeypatch, family, monotone):
+    # GLM only halves the steps of Newton's method that are not finite
+    # ("finite") if the link is not canonical, unless the user chooses.
+    from statsmodels.base import optimizer
+
+    y, exog = _irls_wiring_data(family)
+    seen = []
+    fit_newton = optimizer._fit_newton
+
+    def spy(f, score, start_params, fargs, kwargs, *args, **kw):
+        seen.append(kwargs.get("step_halving", True))
+        return fit_newton(f, score, start_params, fargs, kwargs, *args, **kw)
+
+    monkeypatch.setattr(optimizer, "_fit_newton", spy)
+    GLM(y, exog, family=family).fit(method="newton", disp=0)
+    assert seen == [True if monotone else "finite"]
+    seen.clear()
+    GLM(y, exog, family=family).fit(method="newton", disp=0, step_halving=False)
+    assert seen == [False]
+
+
 @pytest.mark.parametrize(
     "to_response",
     [
@@ -3887,7 +4536,7 @@ def test_glm_formula_two_column_numeric_endog():
     counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
     x = np.arange(6.0)
     family = sm.families.Binomial()
-    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    res = GLM.from_formula("counts ~ x", pd.DataFrame({"x": x}), family=family).fit()
     expected = GLM(counts, add_constant(x), family=family).fit()
     assert_allclose(res.params.values, expected.params, rtol=1e-10)
 
@@ -4002,3 +4651,21 @@ def test_glm_formula_categorical_endog_coded_levels():
     res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
     assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
     assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "endog, params",
+    [([2.0, 5.0], [np.log(2.0), np.log(2.5)]), ([1.0, 1.0], [0.0, 0.0])],
+    ids=["divide", "exact"],
+)
+def test_glm_saturated_no_runtime_warning(endog, params):
+    # The scale of the WLS step of IRLS divides by the residual degrees of
+    # freedom, which are 0 in a saturated model; it warned "divide by zero"
+    # (or "invalid value" when the residuals are exactly 0) in every
+    # iteration. GLM only warns that the fit is perfect.
+    exog = add_constant(np.array([0.0, 1.0]))
+    with pytest.warns(PerfectSeparationWarning) as record:
+        res = GLM(np.array(endog), exog, family=sm.families.Poisson()).fit()
+    assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
+    # The fitted means are the observations; atol for the zero parameters
+    assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)

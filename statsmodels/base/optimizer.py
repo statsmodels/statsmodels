@@ -7,13 +7,14 @@ from __future__ import annotations
 
 from statsmodels.compat.scipy import SP_LT_115, SP_LT_118
 
+import contextlib
 from typing import TYPE_CHECKING, Any
 import warnings
 
 import numpy as np
 from scipy import optimize
 
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import bool_like, string_like
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -119,6 +120,14 @@ class Optimizer:
             'newton'
                 tol : float
                     Relative error in params acceptable for convergence.
+                step_halving : {True, False, "finite"}
+                    What is done with a Newton step that gives an objective
+                    that is not finite or larger than the current one. True,
+                    the default, halves such a step up to 30 times, "finite"
+                    halves only a step with an objective that is not finite,
+                    and False takes the full step. If no step is found, the
+                    iteration stops at the last parameters, `warnflag` is 2
+                    and `converged` is False.
             'nm' -- Nelder Mead
                 xtol : float
                     Relative error in params acceptable for convergence
@@ -454,6 +463,89 @@ def _fit_minimize(
     return xopt, retvals
 
 
+def _newton_step_halving(
+    f, fargs, oldparams, step, fold, max_halvings=30, use_first_finite=True
+):
+    """
+    Shorten a Newton step that increases the objective or is not finite
+
+    Parameters
+    ----------
+    f : callable
+        Returns negative log likelihood given parameters.
+    fargs : tuple
+        Extra arguments passed to f.
+    oldparams : ndarray
+        The current parameters.
+    step : ndarray
+        The Newton step, so that the update is ``oldparams - step``.
+    fold : float
+        The value of f at oldparams, or nan if a step does not have to
+        decrease f.
+    max_halvings : int, optional
+        The maximum number of times that the step is halved.
+    use_first_finite : bool, optional
+        If True and no step that does not increase f is found, the first step
+        with a finite value of f is used. If False, there is no step then.
+
+    Returns
+    -------
+    newparams : ndarray
+        The parameters of the update.
+    fnew : float
+        The value of f at newparams.
+    success : bool
+        False if there is no step, which is the case if f is not finite for
+        every step, or if f increases for every step and `use_first_finite`
+        is False. Then newparams is the unchanged oldparams and fnew is the
+        argument `fold`.
+    shortened : bool
+        True if the step was shortened, so that newparams is not the full
+        Newton update.
+
+    Notes
+    -----
+    The full step is used if f is finite at the updated parameters and does
+    not increase, apart from a small relative tolerance. Otherwise the step is
+    halved until that is the case. A step is not required to decrease f if
+    `fold` is nan, and then only a step with a finite value of f is needed.
+    This makes a step from poor starting values
+    that overshoots, for example into a linear predictor for which exp
+    overflows or is huge, converge instead of diverging. If no step is found
+    that does not increase f, the first step with a finite value of f is used
+    if `use_first_finite` is True, which is the choice if f and its gradient
+    disagree because of the rounding error of f. It is False if the Newton
+    direction is not a direction of descent, since the steps then increase f
+    where they are small. A step with a non-finite value of f is never used.
+    """
+    finite_fold = np.isfinite(fold)
+    # a relative tolerance far above the rounding error of f, so that a step
+    # is not rejected because of noise, and far below the decrease of f that
+    # is possible while the step is still larger than the tolerance of the fit
+    tol = 1e-12 * abs(fold) if finite_fold else 0.0
+    first_finite = None
+    # overflow and invalid values at the trial points are handled here
+    with np.errstate(all="ignore"):
+        factor = 1.0
+        for _ in range(max_halvings + 1):
+            newparams = oldparams - factor * step
+            fnew = f(newparams, *fargs)
+            if np.isfinite(fnew):
+                if not finite_fold or fnew <= fold + tol:
+                    return newparams, fnew, True, factor < 1
+                if first_finite is None:
+                    first_finite = (newparams, fnew, True, factor < 1)
+            factor /= 2
+    if use_first_finite and first_finite is not None:
+        return first_finite
+    return oldparams, fold, False, False
+
+
+def _quiet_if(condition):
+    """Context that ignores floating point warnings if `condition` is True"""
+    return np.errstate(all="ignore") if condition else contextlib.nullcontext()
+
+
 def _fit_newton(
     f,
     score,
@@ -480,8 +572,8 @@ def _fit_newton(
     start_params : array_like
         Initial guess of the solution for the loglikelihood maximization.
     fargs : tuple
-        Extra arguments passed to the objective function, i.e.
-        objective(x,*args)
+        Extra arguments passed to the objective function, its score and its
+        Hessian, i.e. objective(x,*args)
     kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
@@ -513,30 +605,124 @@ def _fit_newton(
         If `full_output` is True then this is a dictionary which holds
         information returned from the solver used. If it is False, this is
         None.
+
+    Notes
+    -----
+    The keyword arguments in `kwargs` are ``tol``, ``ridge_factor`` and
+    ``step_halving``. The iteration stops if the change of the parameters is
+    at most ``tol`` in every element.
+
+    ``step_halving`` controls what is done with a Newton step that gives a
+    value of the objective that is not finite or larger than the current one.
+    It is one of the following.
+
+    * ``True`` (the default): the step is halved up to 30 times until the
+      value of the objective is finite and does not increase.
+    * ``"finite"``: the step is halved only if the value of the objective is
+      not finite. This is the choice for models where the score and the
+      Hessian are not the derivatives of the objective.
+    * ``False``: the full Newton step is always taken.
+
+    If no step is found, the iteration stops at the last parameters,
+    `warnflag` is 2 and `converged` is False. If the Newton step is not a
+    direction of descent, for example because the Hessian is not positive
+    definite, no step with a larger objective is taken, and only a step that
+    decreases it is accepted. Otherwise, if no step decreases the objective,
+    the first step with a finite value is used.
+
+    For a step that was shortened the change of the parameters that is
+    compared with ``tol`` is that of the full Newton step, since a shortened
+    step can be small only because the objective is not finite or increases
+    beyond it. An iteration that only takes shortened steps ends at `maxiter`
+    with `warnflag` 1, or at a point beyond which no step is found.
+
+    .. versionchanged:: 0.15.1
+
+       Added ``step_halving``. Before, a step that left the region where the
+       objective is finite continued with nan parameters and `converged` True.
     """
-    check_kwargs(kwargs, ("tol", "ridge_factor"), "newton")
+    check_kwargs(kwargs, ("tol", "ridge_factor", "step_halving"), "newton")
     tol = kwargs.setdefault("tol", 1e-8)
     ridge_factor = kwargs.setdefault("ridge_factor", 1e-10)
+    step_halving = kwargs.setdefault("step_halving", True)
+    if isinstance(step_halving, str):
+        step_halving = string_like(step_halving, "step_halving", options=("finite",))
+    else:
+        step_halving = bool_like(step_halving, "step_halving", strict=True)
     iterations = 0
     oldparams = np.inf
-    newparams = np.asarray(start_params)
+    # a copy, so that the result does not share memory with start_params
+    newparams = np.array(start_params, dtype=float)
+    step_failed = False
+    # The value of f at newparams if it is known. It is the current value
+    # that a step has to decrease, and it is not needed to evaluate f again at
+    # the end.
+    fcur = None
+    if step_halving is True:
+        with np.errstate(all="ignore"):
+            fcur = f(newparams, *fargs)
     if retall:
         history = [oldparams, newparams]
-    while iterations < maxiter and np.any(np.abs(newparams - oldparams) > tol):
-        H = np.asarray(hess(newparams))
-        # regularize Hessian, not clear what ridge factor should be
-        # keyword option with absolute default 1e-10, see #1847
-        if not np.all(ridge_factor == 0):
-            H[np.diag_indices(H.shape[0])] += ridge_factor
-        oldparams = newparams
-        newparams = oldparams - np.linalg.solve(H, score(oldparams))
+    change = np.abs(newparams - oldparams)
+    while iterations < maxiter and np.any(change > tol):
+        # The score and the Hessian at a start for which f is not finite are
+        # only used to look for a step, so that an overflow is not of interest.
+        with _quiet_if(fcur is not None and not np.isfinite(fcur)):
+            H = np.asarray(hess(newparams, *fargs))
+            # regularize Hessian, not clear what ridge factor should be
+            # keyword option with absolute default 1e-10, see #1847
+            if not np.all(ridge_factor == 0):
+                H[np.diag_indices(H.shape[0])] += ridge_factor
+            oldparams = newparams
+            grad = score(oldparams, *fargs)
+            step = np.linalg.solve(H, grad)
+        if step_halving:
+            # Halve the step if it gives a value of f that is not finite or
+            # larger, instead of continuing with nan, inf or a worse value. If
+            # the step is not a direction of descent its short steps increase
+            # f, so that the step is not used if f increases for all of them.
+            descent = float(np.dot(np.ravel(grad), np.ravel(step))) > 0
+            trial, ftrial, success, shortened = _newton_step_halving(
+                f,
+                fargs,
+                oldparams,
+                step,
+                fcur if step_halving is True else np.nan,
+                use_first_finite=descent,
+            )
+            if not success:
+                step_failed = True
+                break
+            newparams, fcur = trial, ftrial
+        else:
+            newparams = oldparams - step
+            shortened = False
+        # A shortened step can be small only because f is not finite or
+        # increases beyond it, which does not show that the iteration
+        # converged. Then the change of the full Newton step is used.
+        change = np.abs(step) if shortened else np.abs(newparams - oldparams)
         if retall:
             history.append(newparams)
         if callback is not None:
             callback(newparams)
         iterations += 1
-    fval = f(newparams, *fargs)  # this is the negative likelihood
-    if iterations == maxiter:
+    # The objective, the score and the Hessian at the parameters of a failed
+    # step are only reported, so that a warning about an overflow there is not
+    # of interest.
+    with _quiet_if(step_failed):
+        if fcur is None:
+            fcur = f(newparams, *fargs)
+    fval = fcur  # this is the negative likelihood
+    if step_failed or not (np.all(np.isfinite(newparams)) and np.isfinite(fval)):
+        warnflag = 2
+        if disp:
+            if step_failed:
+                print("Warning: No acceptable step was found.")
+            else:
+                print("Warning: The parameters or the function value are not finite.")
+            print(f"         Current function value: {fval:f}")
+            print(f"         Iterations: {iterations:d}")
+    elif iterations == maxiter:
         warnflag = 1
         if disp:
             print("Warning: Maximum number of iterations has been exceeded.")
@@ -549,13 +735,14 @@ def _fit_newton(
             print(f"         Current function value: {fval:f}")
             print(f"         Iterations {iterations:d}")
     if full_output:
-        xopt, fopt, niter, gopt, hopt = (
-            newparams,
-            f(newparams, *fargs),
-            iterations,
-            score(newparams),
-            hess(newparams),
-        )
+        with _quiet_if(step_failed):
+            xopt, fopt, niter, gopt, hopt = (
+                newparams,
+                fval,
+                iterations,
+                score(newparams, *fargs),
+                hess(newparams, *fargs),
+            )
         converged = not warnflag
         retvals = {
             "fopt": fopt,
@@ -1007,6 +1194,7 @@ def _fit_cg(
         f,
         start_params,
         score,
+        args=fargs,
         gtol=gtol,
         norm=norm,
         epsilon=epsilon,

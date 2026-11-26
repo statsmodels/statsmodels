@@ -1,0 +1,4 @@
+- ``fit`` and ``smooth`` of :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` take ``param_index``: ``"names"``
+  indexes ``params``, ``bse``, ``tvalues``, ``pvalues``, ``conf_int`` and
+  ``cov_params`` by parameter name, ``"integer"`` by position.
+  :pr:`10975`

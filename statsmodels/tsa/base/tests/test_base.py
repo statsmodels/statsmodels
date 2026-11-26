@@ -5,10 +5,15 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import stats
 
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import MissingDataError, ValueWarning
 from statsmodels.tools.testing import assert_equal
-from statsmodels.tsa.base.tsa_model import TimeSeriesModel
+from statsmodels.tsa.base.tsa_model import (
+    TimeSeriesModel,
+    TimeSeriesModelResults,
+    TimeSeriesResultsWrapper,
+)
 
 YE_APR = "A-APR" if PD_LT_2_2_0 else "YE-APR"
 
@@ -115,3 +120,73 @@ def test_get_predict_start_end():
     for start in predict_starts:
         for end in predict_ends:
             assert_equal(model._get_prediction_index(start, end)[:3], desired)
+
+
+class ConstantMean(TimeSeriesModel):
+    # A minimal model, so that TimeSeriesModel is reached through the public
+    # methods of its results, as in the TSA models
+    def predict(self, params, exog=None, start=None, end=None):
+        start = 0 if start is None else start
+        start, end, out_of_sample, _ = self._get_prediction_index(start, end)
+        return np.full(end - start + 1 + out_of_sample, params[0])
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_results_wrapper(use_pandas):
+    # The results keep the data of the model, and the wrapper labels the
+    # parameters with the exog names and the predictions with dates
+    index = pd.date_range("2000-01-01", periods=8, freq="MS")
+    endog = pd.Series(np.arange(8.0), index=index)
+    exog = pd.DataFrame({"const": np.ones(8)}, index=index)
+    if not use_pandas:
+        endog, exog = endog.to_numpy(), exog.to_numpy()
+    mod = ConstantMean(endog, exog)
+    params = np.array([2.5])
+    results = TimeSeriesModelResults(mod, params, np.array([[0.08]]), scale=2.0)
+    res = TimeSeriesResultsWrapper(results)
+    assert res.data is mod.data
+
+    # bse is sqrt(scale * normalized_cov_params) = 0.4
+    np.testing.assert_allclose(np.asarray(res.bse), [0.4])
+    q = stats.norm.ppf(0.975)
+    np.testing.assert_allclose(
+        np.asarray(res.conf_int()), [[2.5 - q * 0.4, 2.5 + q * 0.4]]
+    )
+    pred = res.predict(start=6, end=9)
+    np.testing.assert_allclose(np.asarray(pred), np.full(4, 2.5))
+    if use_pandas:
+        assert list(res.params.index) == ["const"]
+        assert list(res.conf_int().index) == ["const"]
+        expected = pd.date_range("2000-07-01", periods=4, freq="MS")
+        assert pred.index.equals(expected)
+    else:
+        assert isinstance(pred, np.ndarray)
+
+
+def test_exog_names():
+    exog = pd.DataFrame({"x": np.ones(5)})
+    mod = TimeSeriesModel(pd.Series(np.arange(5.0)), exog)
+    assert mod.exog_names == ["x"]
+    # A single name is put in a list
+    mod.exog_names = "const"
+    assert mod.exog_names == ["const"]
+    mod.exog_names = ["intercept"]
+    assert mod.exog_names == ["intercept"]
+
+
+def test_kwargs_reach_base_model():
+    # The constant column is detected unless hasconst says otherwise
+    endog = np.arange(5.0)
+    exog = np.ones((5, 1))
+    assert TimeSeriesModel(endog, exog).k_constant == 1
+    assert TimeSeriesModel(endog, exog, hasconst=False).k_constant == 0
+
+
+def test_missing():
+    endog = np.array([1.0, np.nan, 3.0, 4.0])
+    assert np.isnan(TimeSeriesModel(endog).endog[1])
+    np.testing.assert_allclose(
+        TimeSeriesModel(endog, missing="drop").endog, [1.0, 3.0, 4.0]
+    )
+    with pytest.raises(MissingDataError):
+        TimeSeriesModel(endog, missing="raise")

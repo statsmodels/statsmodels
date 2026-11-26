@@ -18,6 +18,8 @@ https://arxiv.org/pdf/2107.13462.pdf
 """
 from __future__ import annotations
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from typing import TYPE_CHECKING
 import warnings
 
@@ -37,7 +39,7 @@ if TYPE_CHECKING:
 
 class MSTL:
     """
-    MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2,
+    MSTL(endog, *, periods=None, windows=None, lmbda=None, iterate=2,
          stl_kwargs=None)
 
     Season-Trend decomposition using LOESS for multiple seasonalities
@@ -48,16 +50,16 @@ class MSTL:
     ----------
     endog : array_like
         Data to be decomposed. Must be squeezable to 1-d.
-    periods : int, sequence of int, or None, optional
+    periods : int or sequence of int, optional
         Periodicity of the seasonal components. If None and endog is a pandas
         Series or DataFrame, attempts to determine from endog. If endog is a
         ndarray, periods must be provided.
-    windows : int, sequence of int, or None, optional
+    windows : int or sequence of int, optional
         Length of the seasonal smoothers for each corresponding period.
         Must be an odd integer, and should normally be >= 7 (default). If None
         then default values determined using 7 + 4 * np.arange(1, n + 1, 1)
         where n is number of seasonal components.
-    lmbda : float, "auto", or None, optional
+    lmbda : float or "auto", optional
         The lambda parameter for the Box-Cox transform to be applied to `endog`
         prior to decomposition. If None, no transform is applied. If "auto", a
         value will be estimated that maximizes the log-likelihood function.
@@ -69,6 +71,14 @@ class MSTL:
     See Also
     --------
     statsmodels.tsa.seasonal.STL
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       Without ``periods``, a pandas endog with a PeriodIndex has the period
+       of the frequency of its index, for example 12 for monthly periods,
+       where it raised a ValueError.
 
     References
     ----------
@@ -256,7 +266,12 @@ class MSTL:
     def _infer_period(self) -> int:
         freq = None
         if isinstance(self.endog, (pd.Series, pd.DataFrame)):
-            freq = getattr(self.endog.index, "inferred_freq", None)
+            if isinstance(self.endog.index, pd.PeriodIndex):
+                # a PeriodIndex has a freq but no inferred_freq
+                freq = self.endog.index.freq
+            else:
+                with _infer_freq_returns_offset():
+                    freq = getattr(self.endog.index, "inferred_freq", None)
         if freq is None:
             raise ValueError("Unable to determine period from endog")
         period = freq_to_period(freq)

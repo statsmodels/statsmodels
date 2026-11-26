@@ -97,10 +97,7 @@ def _is_pos_int(x, odd):
     valid = (isinstance(x, (int, np.integer))
              and not isinstance(x, np.timedelta64))
     valid = valid and not isinstance(x, (float, np.floating))
-    try:
-        valid = valid and x > 0
-    except Exception:
-        valid = False
+    valid = valid and x > 0
     if valid and odd:
         valid = valid & (x % 2) == 1
     return valid
@@ -115,20 +112,27 @@ cdef class STL(object):
     Parameters
     ----------
     endog : array_like
-        Data to be decomposed. Must be squeezable to 1-d.
-    period : {int, None}, optional
+        Data to be decomposed. Must be 1-d or an (n, 1) column, such as a
+        one-column DataFrame.
+    period : int, optional
         Periodicity of the sequence. If None and endog is a pandas Series or
         DataFrame, attempts to determine from endog. If endog is a ndarray,
         period must be provided.
+
+        .. versionchanged:: 0.15.1
+
+           Without ``period``, a pandas endog with a PeriodIndex has the
+           period of the frequency of its index, for example 12 for monthly
+           periods, where it raised a ValueError.
     seasonal : int, optional
         Length of the seasonal smoother. Must be an odd integer, and should
         normally be >= 7 (default).
-    trend : {int, None}, optional
+    trend : int, optional
         Length of the trend smoother. Must be an odd integer. If not provided
         uses the smallest odd integer greater than
         1.5 * period / (1 - 1.5 / seasonal), following the suggestion in
         the original implementation.
-    low_pass : {int, None}, optional
+    low_pass : int, optional
         Length of the low-pass filter. Must be an odd integer >=3. If not
         provided, uses the smallest odd integer > period.
     seasonal_deg : int, optional
@@ -169,6 +173,13 @@ cdef class STL(object):
     contains a bug that appears in the determination of the median that is
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
+
+    .. versionchanged:: 0.15.1
+
+       A list or tuple ``endog`` is stored as an ndarray, so the ``observed``
+       data of the results is an ndarray, as for ndarray input. It was the
+       list or tuple, and ``nobs`` and ``plot`` of the results raised an
+       AttributeError.
 
     See the notebook `Seasonal Decomposition
     <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
@@ -213,6 +224,10 @@ cdef class STL(object):
     def __init__(self, endog, period=None, seasonal=7, trend=None, low_pass=None,
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
+        if not isinstance(endog, (pd.Series, pd.DataFrame)):
+            # the results hold endog as the observed data, so a list or
+            # tuple is stored as an ndarray, as for ndarray input
+            endog = np.asarray(endog)
         self.endog = endog
         y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
         self._ya = y
@@ -220,8 +235,12 @@ cdef class STL(object):
         if period is None:
             freq = None
             if isinstance(endog, (pd.Series, pd.DataFrame)):
-                with _infer_freq_returns_offset():
-                    freq = getattr(endog.index, 'inferred_freq', None)
+                if isinstance(endog.index, pd.PeriodIndex):
+                    # a PeriodIndex has a freq but no inferred_freq
+                    freq = endog.index.freq
+                else:
+                    with _infer_freq_returns_offset():
+                        freq = getattr(endog.index, 'inferred_freq', None)
             if freq is None:
                 raise ValueError('Unable to determine period from endog')
             period = freq_to_period(freq)
@@ -296,7 +315,7 @@ cdef class STL(object):
 
         Returns
         -------
-        dict[str, Union[int, bool]]
+        dict of str to int or bool
             The values used in the STL decomposition.
         """
         return dict(period=self._period,
@@ -319,10 +338,10 @@ cdef class STL(object):
 
         Parameters
         ----------
-        inner_iter : {int, None}, optional
+        inner_iter : int, optional
             Number of iterations to perform in the inner loop. If not provided
             uses 2 if ``robust`` is True, or 5 if not.
-        outer_iter : {int, None}, optional
+        outer_iter : int, optional
             Number of iterations to perform in the outer loop. If not provided
             uses 15 if ``robust`` is True, or 0 if not.
 

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
+    MONTH_END,
     PD_LT_2_2_0,
     PD_LT_3_1_0,
+    QUARTER_END,
+    YEAR_END,
     _infer_freq_returns_offset,
     is_int_index,
     to_numpy,
@@ -11,6 +14,7 @@ from statsmodels.compat.pandas import (
 from abc import ABC, abstractmethod
 import datetime as dt
 from typing import TYPE_CHECKING
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -37,6 +41,24 @@ START_BEFORE_INDEX_ERR = """\
 start is less than the first observation in the index. Values can only be \
 created for observations after the start of the index.
 """
+
+
+def _int_index_step(index: pd.Index) -> int | None:
+    """
+    The step of an integer index whose values have a constant step
+
+    None if the index is not an integer index, or if the differences of its
+    values are not all equal and nonzero. An index with fewer than two
+    values has step 1, as the RangeIndex with the same values.
+    """
+    if not is_int_index(index):
+        return None
+    if index.shape[0] < 2:
+        return 1
+    step = int(index[1]) - int(index[0])
+    if step == 0 or np.any(np.diff(index) != step):
+        return None
+    return step
 
 
 class DeterministicTerm(ABC):
@@ -84,9 +106,25 @@ class DeterministicTerm(ABC):
         index : index_like
             An index-like object. If not an index, it is converted to an
             index.
+
+            .. versionchanged:: 0.15.1
+
+               An integer index with a constant step is extended like the
+               ``RangeIndex`` with the same values. Before, only a step of 1
+               was supported, and other integer indexes were extended with
+               labels counted from the number of observations, with a
+               warning.
         forecast_index : index_like, optional
             An Index or index-like object to use for the forecasts. If
-            provided must have steps elements.
+            provided must have steps elements. If not provided, index is
+            extended.
+
+            .. versionchanged:: 0.15.1
+
+               A ``DatetimeIndex`` without a ``freq`` is extended with the
+               inferred freq, as in ``DeterministicProcess``. Before, the
+               forecasts had integer labels, with a warning, and calendar
+               terms raised.
 
         Returns
         -------
@@ -132,25 +170,33 @@ class DeterministicTerm(ABC):
                     f"({forecast_index.shape[0]}) must match steps ({steps})."
                 )
             return forecast_index
+        freq = None
+        if isinstance(index, pd.DatetimeIndex):
+            # The freq of the index, else the inferred freq
+            with _infer_freq_returns_offset():
+                freq = index.freq or index.inferred_freq
         if isinstance(index, pd.PeriodIndex):
             return pd.period_range(index[-1] + 1, periods=steps, freq=index.freq)
-        elif isinstance(index, pd.DatetimeIndex) and index.freq is not None:
-            next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
-            return pd.date_range(next_obs, freq=index.freq, periods=steps)
+        elif freq is not None:
+            next_obs = pd.date_range(index[-1], freq=freq, periods=2)[1]
+            return pd.date_range(next_obs, freq=freq, periods=steps)
         elif isinstance(index, pd.RangeIndex):
             step = index.step
             start = index.stop
             stop = start + step * steps
             return pd.RangeIndex(start, stop, step=step)
-        elif is_int_index(index) and np.all(np.diff(index) == 1):
-            idx_arr = np.arange(index[-1] + 1, index[-1] + steps + 1)
+        elif (int_step := _int_index_step(index)) is not None:
+            # As the RangeIndex with the same values
+            last = index[-1]
+            idx_arr = np.arange(last + int_step, last + (steps + 1) * int_step, int_step)
             return pd.Index(idx_arr)
         # default range index
         import warnings
 
         warnings.warn(
-            "Only PeriodIndexes, DatetimeIndexes with a frequency set, "
-            "RangesIndexes, and Index with a unit increment support "
+            "Only PeriodIndexes, DatetimeIndexes with a frequency set or "
+            "inferred, RangesIndexes, and integer Indexes with a constant step "
+            "support "
             "extending. The index is set will contain the position relative "
             "to the data length.",
             UserWarning,
@@ -179,6 +225,8 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
     def __init__(self, constant: bool = True, order: int = 0) -> None:
         self._constant = bool_like(constant, "constant")
         self._order = required_int_like(order, "order")
+        if self._order < 0:
+            raise ValueError(f"order must be non-negative, got {self._order}.")
 
     @property
     def constant(self) -> bool:
@@ -216,7 +264,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
         if self._constant:
             terms.append("Constant")
         if self._order:
-            terms.append(f"Powers 1 to {self._order + 1}")
+            terms.append(f"Powers 1 to {self._order}")
         if not terms:
             terms = ["Empty"]
         terms_str = ",".join(terms)
@@ -233,6 +281,11 @@ class TimeTrend(TimeTrendDeterministicTerm):
         Flag indicating whether a constant should be included.
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
 
     See Also
     --------
@@ -376,8 +429,10 @@ class Seasonality(DeterministicTerm):
 
         Parameters
         ----------
-        index : DatetimeIndex or PeriodIndex
-            An index with its frequency (`freq`) set.
+        index : DatetimeIndex, PeriodIndex, or index_like
+            An index with its frequency (`freq`) set, or with a frequency
+            that can be inferred. If not an index, it is converted to an
+            index.
 
         Returns
         -------
@@ -470,7 +525,8 @@ class Fourier(FourierDeterministicTerm):
     period : float
         The length of a full cycle. Must be >= 2.
     order : int
-        The number of Fourier components to include. Must be <= 2*period.
+        The number of Fourier components to include. Must satisfy
+        ``2 * order <= period``.
 
     See Also
     --------
@@ -553,15 +609,64 @@ class Fourier(FourierDeterministicTerm):
         return f"Fourier(period={self._period}, order={self._order})"
 
 
+def _end_anchored(offset: pd.DateOffset) -> pd.DateOffset:
+    """
+    The end-anchored offset with the same periods as a start-anchored one
+
+    "MS" -> "ME", "QS-m" -> "QE-(m - 1)" and "YS-m" -> "YE-(m - 1)", where the
+    month before January is December. The calendar quarters, "QS-m" for m in
+    JAN, APR, JUL and OCT, are "QE-DEC", as in pandas 2.2 and 2.3. The
+    business-day freqs "BMS", "BQS-m" and "BYS-m" are mapped as "MS", "QS-m"
+    and "YS-m". Other offsets are returned unchanged.
+    """
+    offsets = pd.offsets
+    if type(offset) in (offsets.MonthBegin, offsets.BusinessMonthBegin):
+        return offsets.MonthEnd(offset.n)
+    if type(offset) in (offsets.QuarterBegin, offsets.BQuarterBegin):
+        month = (offset.startingMonth - 2) % 12 + 1
+        if month % 3 == 0:
+            # The calendar quarters
+            month = 12
+        return offsets.QuarterEnd(offset.n, startingMonth=month)
+    if type(offset) in (offsets.YearBegin, offsets.BYearBegin):
+        return offsets.YearEnd(offset.n, month=(offset.month - 2) % 12 + 1)
+    return offset
+
+
 class CalendarDeterministicTerm(DeterministicTerm, ABC):
     """Abstract Base Class for calendar deterministic terms"""
 
-    def __init__(self, freq: str) -> None:
+    # Set _uses_periods to False if the terms do not use periods of freq
+    _uses_periods = True
+
+    def __init__(self, freq: str, *, map_start_anchored: bool = True) -> None:
+        map_start_anchored = bool_like(map_start_anchored, "map_start_anchored")
         try:
             index = pd.date_range("2020-01-01", freq=freq, periods=1)
             self._freq = index.freq
         except ValueError as exc:
             raise ValueError("freq is not understood by pandas") from exc
+        # The freq of the periods that the terms are computed from
+        self._period_freq = self._freq
+        if map_start_anchored:
+            self._period_freq = _end_anchored(self._freq)
+        if not self._uses_periods:
+            return
+        try:
+            with warnings.catch_warnings():
+                # Periods with freq "B" are deprecated in pandas, but work
+                warnings.simplefilter("ignore", FutureWarning)
+                index.to_period(self._period_freq)
+        except (AttributeError, ValueError) as exc:
+            raise ValueError(
+                f'freq "{freq}" is not supported by {type(self).__name__}. Its '
+                "terms are computed from periods, so freq must be a frequency "
+                "that pandas supports for periods, for example "
+                f'"D", "W", "{MONTH_END}", "{QUARTER_END}" or "{YEAR_END}", or '
+                'one of the start-anchored frequencies "MS", "QS" and "YS" (or '
+                '"BMS", "BQS" and "BYS"), which are mapped to end-anchored ones '
+                "unless map_start_anchored is False."
+            ) from exc
 
     @property
     def freq(self) -> str:
@@ -573,8 +678,8 @@ class CalendarDeterministicTerm(DeterministicTerm, ABC):
     ) -> np.ndarray:
         if isinstance(index, pd.PeriodIndex):
             index = index.to_timestamp()
-        delta = index - index.to_period(self._freq).to_timestamp()
-        pi = index.to_period(self._freq)
+        delta = index - index.to_period(self._period_freq).to_timestamp()
+        pi = index.to_period(self._period_freq)
         gap = (pi + 1).to_timestamp() - pi.to_timestamp()
         return to_numpy(delta) / to_numpy(gap)
 
@@ -612,9 +717,38 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     Parameters
     ----------
     freq : str
-        A string convertible to a pandas frequency.
+        A string convertible to a pandas frequency that pandas supports for
+        periods, for example "D", "W", "ME", "QE" or "YE", or a
+        start-anchored frequency ("MS", "QS-m", "YS-m", "BMS", "BQS-m" or
+        "BYS-m"), which is mapped to the end-anchored frequency with the same
+        periods (see ``map_start_anchored``).
+
+        .. versionchanged:: 0.15.1
+
+           A frequency that pandas does not support for periods raises a
+           ``ValueError``. Before, an error, usually an ``AttributeError``, was
+           raised when the terms were computed. Start-anchored frequencies are
+           mapped to end-anchored ones.
     order : int
-        The number of Fourier components to include. Must be <= 2*period.
+        The number of Fourier components to include.
+    map_start_anchored : bool, optional
+        Whether to compute the terms of a start-anchored freq from the periods
+        of the end-anchored freq with the same periods. The default is True.
+        "MS" is mapped to "ME", "QS-m" to "QE" anchored in the month before
+        m (so "QS-FEB" to "QE-JAN"), except that the calendar quarters, "QS"
+        and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
+        and "YS-m" to "YE" anchored in the month before m (so "YS" to
+        "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
+        "2ME"). The business-day frequencies "BMS", "BQS-m" and "BYS-m" are
+        mapped as "MS", "QS-m" and "YS-m", and older aliases such as "AS-JUL"
+        and "BAS-JUL" as "YS-JUL" and "BYS-JUL". "SMS" has no end-anchored
+        equivalent and is not mapped. If False, freq is passed to pandas as
+        given. pandas supports periods of start-anchored frequencies, except
+        "BMS", only in versions 2.2 and 2.3, which anchor the periods of
+        "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
+        m, so that, for example, "QS-FEB" has the quarters of "QE-DEC".
+
+        .. versionadded:: 0.15.1
 
     See Also
     --------
@@ -654,8 +788,10 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     >>> cal_fourier_gen.in_sample(index)
     """
 
-    def __init__(self, freq: str, order: int) -> None:
-        super().__init__(freq)
+    def __init__(
+        self, freq: str, order: int, *, map_start_anchored: bool = True
+    ) -> None:
+        super().__init__(freq, map_start_anchored=map_start_anchored)
         FourierDeterministicTerm.__init__(self, order)
         self._order = required_int_like(order, "terms")
 
@@ -694,7 +830,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
 
     @property
     def _eq_attr(self) -> tuple[Hashable, ...]:
-        return self._freq.freqstr, self._order
+        return self._freq.freqstr, self._order, self._period_freq.freqstr
 
     def __str__(self) -> str:
         return f"Fourier(freq={self._freq.freqstr}, order={self._order})"
@@ -732,11 +868,14 @@ class CalendarSeasonality(CalendarDeterministicTerm):
     >>> index = pd.DatetimeIndex(pd.to_datetime(times))
 
     >>> from statsmodels.tsa.deterministic import CalendarSeasonality
-    >>> cal_seas_gen = CalendarSeasonality("H", "D")
+    >>> cal_seas_gen = CalendarSeasonality("h", "D")
     >>> cal_seas_gen.in_sample(index)
     """
 
     _is_dummy = True
+    # The dummies are computed from the fields of the time stamps, so "MS"
+    # can be used
+    _uses_periods = False
 
     # out_of: freq
     if PD_LT_2_2_0:
@@ -881,16 +1020,51 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     Parameters
     ----------
     freq : str
-        A string convertible to a pandas frequency.
+        A string convertible to a pandas frequency that pandas supports for
+        periods, for example "D", "W", "ME", "QE" or "YE", or a
+        start-anchored frequency ("MS", "QS-m", "YS-m", "BMS", "BQS-m" or
+        "BYS-m"), which is mapped to the end-anchored frequency with the same
+        periods (see ``map_start_anchored``).
+
+        .. versionchanged:: 0.15.1
+
+           A frequency that pandas does not support for periods raises a
+           ``ValueError``. Before, an error, usually an ``AttributeError``, was
+           raised when the terms were computed. Start-anchored frequencies are
+           mapped to end-anchored ones.
     constant : bool, optional
         Flag indicating whether a constant should be included.
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
     base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
         The base period to use when computing the time stamps. This value is
         treated as 1 and so all other time indices are defined as the number
         of periods since or before this time stamp. If not provided, defaults
         to pandas base period for a PeriodIndex.
+    map_start_anchored : bool, optional
+        Whether to compute the terms of a start-anchored freq from the periods
+        of the end-anchored freq with the same periods. The default is True.
+        "MS" is mapped to "ME", "QS-m" to "QE" anchored in the month before
+        m (so "QS-FEB" to "QE-JAN"), except that the calendar quarters, "QS"
+        and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
+        and "YS-m" to "YE" anchored in the month before m (so "YS" to
+        "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
+        "2ME"). The business-day frequencies "BMS", "BQS-m" and "BYS-m" are
+        mapped as "MS", "QS-m" and "YS-m", and older aliases such as "AS-JUL"
+        and "BAS-JUL" as "YS-JUL" and "BYS-JUL". "SMS" has no end-anchored
+        equivalent and is not mapped. If False, freq is passed to pandas as
+        given. pandas supports periods of start-anchored frequencies, except
+        "BMS", only in versions 2.2 and 2.3, which anchor the periods of
+        "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
+        m, so that, for example, "QS-FEB" has the quarters of "QE-DEC", and
+        which cannot use a base_period with them.
+
+        .. versionadded:: 0.15.1
 
     See Also
     --------
@@ -903,6 +1077,15 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     -----
     The time stamp, :math:`\tau_t`, is the number of periods that have elapsed
     since the base_period. :math:`\tau_t` may be fractional.
+
+    .. versionchanged:: 0.15.1
+
+       The terms have the index that is passed in. Before, a
+       ``DatetimeIndex`` was converted to a ``PeriodIndex``, so the terms did
+       not align with the other terms of a ``DeterministicProcess``. The
+       periods of a ``PeriodIndex`` with a frequency other than ``freq`` are
+       now counted in units of ``freq``. Before, they were counted in units
+       of the frequency of the index, which gave wrong values.
 
     Examples
     --------
@@ -935,12 +1118,13 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         order: int = 0,
         *,
         base_period: str | DateLike | None = None,
+        map_start_anchored: bool = True,
     ) -> None:
-        super().__init__(freq)
+        super().__init__(freq, map_start_anchored=map_start_anchored)
         TimeTrendDeterministicTerm.__init__(self, constant=constant, order=order)
         self._ref_i8 = 0
         if base_period is not None:
-            pr = pd.period_range(base_period, periods=1, freq=self._freq)
+            pr = pd.period_range(base_period, periods=1, freq=self._period_freq)
             self._ref_i8 = pr.asi8[0]
         self._base_period = None if base_period is None else str(base_period)
 
@@ -955,6 +1139,8 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         freq: str,
         trend: str,
         base_period: str | DateLike | None = None,
+        *,
+        map_start_anchored: bool = True,
     ) -> CalendarTimeTrend:
         """
         Create a TimeTrend from a string description.
@@ -964,7 +1150,10 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         Parameters
         ----------
         freq : str
-            A string convertible to a pandas frequency.
+            A string convertible to a pandas frequency that pandas supports
+            for periods, or a start-anchored frequency, "MS", "QS-m" or
+            "YS-m", which is mapped to the end-anchored frequency with the
+            same periods (see ``map_start_anchored``).
         trend : {"n", "c", "t", "ct", "ctt"}
             The string representation of the time trend. The terms are:
 
@@ -978,6 +1167,12 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             is treated as 1 and so all other time indices are defined as the
             number of periods since or before this time stamp. If not
             provided, defaults to pandas base period for a PeriodIndex.
+        map_start_anchored : bool, optional
+            Whether to compute the terms of a start-anchored freq from the
+            periods of the end-anchored freq with the same periods. The
+            default is True. See ``CalendarTimeTrend``.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
@@ -991,15 +1186,23 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             order = 2
         elif "t" in trend:
             order = 1
-        return cls(freq, constant, order, base_period=base_period)
+        return cls(
+            freq,
+            constant,
+            order,
+            base_period=base_period,
+            map_start_anchored=map_start_anchored,
+        )
 
     def _terms(
         self, index: pd.DatetimeIndex | pd.PeriodIndex, ratio: np.ndarray
     ) -> pd.DataFrame:
-        if isinstance(index, pd.DatetimeIndex):
-            index = index.to_period(self._freq)
-
-        index_i8 = index.asi8
+        # Count the periods in the (end-anchored) freq of the term, from the
+        # start of each period of a PeriodIndex as in _compute_ratio
+        timestamps = index
+        if isinstance(index, pd.PeriodIndex):
+            timestamps = index.to_timestamp()
+        index_i8 = timestamps.to_period(self._period_freq).asi8
         index_i8 = index_i8 - self._ref_i8 + 1
         time = index_i8.astype(np.double) + ratio
         time = time[:, None]
@@ -1033,6 +1236,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             self._constant,
             self._order,
             self._freq.freqstr,
+            self._period_freq.freqstr,
         )
         if self._base_period is not None:
             attr += (self._base_period,)
@@ -1069,6 +1273,11 @@ class DeterministicProcess:
     order : int, optional
         The order of the time trend to include. For example, 2 will include
         both linear and quadratic terms. 0 excludes time trend terms.
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
     seasonal : bool, optional
         Whether to include seasonal dummies
     fourier : int, optional
@@ -1097,34 +1306,34 @@ class DeterministicProcess:
     --------
     >>> from statsmodels.tsa.deterministic import DeterministicProcess
     >>> from pandas import date_range
-    >>> index = date_range("2000-1-1", freq="M", periods=240)
+    >>> index = date_range("2000-1-1", freq="MS", periods=240)
 
     First a deterministic process with a constant and quadratic time trend.
 
     >>> dp = DeterministicProcess(index, constant=True, order=2)
     >>> dp.in_sample().head(3)
                 const  trend  trend_squared
-    2000-01-31    1.0    1.0            1.0
-    2000-02-29    1.0    2.0            4.0
-    2000-03-31    1.0    3.0            9.0
+    2000-01-01    1.0    1.0            1.0
+    2000-02-01    1.0    2.0            4.0
+    2000-03-01    1.0    3.0            9.0
 
     Seasonal dummies are included by setting seasonal to True.
 
     >>> dp = DeterministicProcess(index, constant=True, seasonal=True)
     >>> dp.in_sample().iloc[:3,:5]
                 const  s(2,12)  s(3,12)  s(4,12)  s(5,12)
-    2000-01-31    1.0      0.0      0.0      0.0      0.0
-    2000-02-29    1.0      1.0      0.0      0.0      0.0
-    2000-03-31    1.0      0.0      1.0      0.0      0.0
+    2000-01-01    1.0      0.0      0.0      0.0      0.0
+    2000-02-01    1.0      1.0      0.0      0.0      0.0
+    2000-03-01    1.0      0.0      1.0      0.0      0.0
 
     Fourier components can be used to alternatively capture seasonal patterns,
 
     >>> dp = DeterministicProcess(index, constant=True, fourier=2)
     >>> dp.in_sample().head(3)
                 const  sin(1,12)  cos(1,12)  sin(2,12)  cos(2,12)
-    2000-01-31    1.0   0.000000   1.000000   0.000000        1.0
-    2000-02-29    1.0   0.500000   0.866025   0.866025        0.5
-    2000-03-31    1.0   0.866025   0.500000   0.866025       -0.5
+    2000-01-01    1.0   0.000000   1.000000   0.000000        1.0
+    2000-02-01    1.0   0.500000   0.866025   0.866025        0.5
+    2000-03-01    1.0   0.866025   0.500000   0.866025       -0.5
 
     Multiple Seasonalities can be captured using additional terms.
 
@@ -1241,8 +1450,16 @@ you can pass additional components using the additional_terms input.""")
             terms = terms.loc[:, ~surplus_consts]
         return terms
 
-    @Appender(DeterministicTerm.in_sample.__doc__)
     def in_sample(self) -> pd.DataFrame:
+        """
+        Produce deterministic trends for in-sample fitting
+
+        Returns
+        -------
+        DataFrame
+            A DataFrame containing the deterministic terms, with the index
+            of the process.
+        """
         if self._cached_in_sample is not None:
             return self._cached_in_sample
         index = self._index
@@ -1280,18 +1497,61 @@ you can pass additional components using the additional_terms input.""")
         self._cached_in_sample = terms
         return terms
 
-    @Appender(DeterministicTerm.out_of_sample.__doc__)
     def out_of_sample(
         self,
         steps: int,
         forecast_index: Sequence[Hashable] | pd.Index | None = None,
     ) -> pd.DataFrame:
+        """
+        Produce deterministic trends for out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int
+            The number of steps to forecast.
+        forecast_index : index_like, optional
+            An Index or index-like object to use for the forecasts. If
+            provided must have steps elements. If not provided, the index of
+            the process is extended.
+
+            .. versionchanged:: 0.15.1
+
+               A ``DatetimeIndex`` without a ``freq`` is extended with the
+               inferred freq, as in ``range``. Before, the forecasts had
+               integer labels, with a warning, and calendar terms raised.
+
+        Returns
+        -------
+        DataFrame
+            A DataFrame containing the deterministic terms, with ``steps``
+            rows and the columns of ``in_sample``.
+
+            .. versionchanged:: 0.15.1
+
+               Without deterministic terms, the result has ``steps`` rows on
+               the forecast index. Before, it had the rows and index of the
+               sample.
+        """
         steps = required_int_like(steps, "steps")
         if self._retain_cols is None:
             self.in_sample()
         index = self._index
+        if (
+            forecast_index is None
+            and isinstance(index, pd.DatetimeIndex)
+            and self._index_freq is not None
+        ):
+            # Extend with the freq of the process, which may have been
+            # inferred, since the terms can only use the freq of the index
+            forecast_index = pd.date_range(
+                index[-1], freq=self._index_freq, periods=steps + 1
+            )[1:]
         if not self._deterministic_terms:
-            return pd.DataFrame(np.empty((index.shape[0], 0)), index=index)
+            # The forecast index that the terms would have, with no columns
+            fcast_index = DeterministicTerm._extend_index(
+                index, steps, forecast_index
+            )
+            return pd.DataFrame(np.empty((steps, 0)), index=fcast_index)
         raw_terms = [
             term.out_of_sample(steps, index, forecast_index)
             for term in self._deterministic_terms
@@ -1313,14 +1573,16 @@ you can pass additional components using the additional_terms input.""")
 
     def _range_from_range_index(self, start: int, stop: int) -> pd.DataFrame:
         index = self._index
-        is_int64_index = is_int_index(index)
+        # A RangeIndex also has an integer dtype
+        is_int64_index = is_int_index(index) and not isinstance(index, pd.RangeIndex)
         assert isinstance(index, pd.RangeIndex) or is_int64_index
         if start < index[0]:
             raise ValueError(START_BEFORE_INDEX_ERR)
         if isinstance(index, pd.RangeIndex):
             idx_step = index.step
         else:
-            idx_step = np.diff(index).max() if len(index) > 1 else 1
+            idx_step = _int_index_step(index)
+            assert idx_step is not None
         if idx_step != 1 and ((start - index[0]) % idx_step) != 0:
             raise ValueError(
                 f"The step of the index is not 1 (actual step={idx_step})."
@@ -1328,7 +1590,7 @@ you can pass additional components using the additional_terms input.""")
                 "generated by the index."
             )
         if is_int64_index:
-            new_idx = pd.Index(np.arange(start, stop))
+            new_idx = pd.Index(np.arange(start, stop, idx_step))
         else:
             new_idx = pd.RangeIndex(start, stop, step=idx_step)
         if new_idx[-1] <= self._index[-1]:
@@ -1408,12 +1670,26 @@ you can pass additional components using the additional_terms input.""")
         -------
         DataFrame
             A data frame of deterministic terms
+
+            .. versionchanged:: 0.15.1
+
+               With a ``RangeIndex`` whose step is not 1, the rows are those
+               of the labels ``start``, ``start + step``, ... up to ``stop``.
+               Before, the step was ignored, so the rows were wrong or a
+               ``KeyError`` was raised.
+
+            .. versionchanged:: 0.15.1
+
+               An integer ``Index`` with a constant step is extended like
+               the ``RangeIndex`` with the same values. Before, only an
+               integer ``Index`` that starts at 0 with step 1 could be
+               extended, and others raised a ``TypeError``.
         """
         if not self._extendable:
             raise TypeError("""The index in the deterministic process does not \
 support extension. Only PeriodIndex, DatetimeIndex with a frequency, \
-RangeIndex, and integral Indexes that start at 0 and have only unit \
-differences can be extended when producing out-of-sample forecasts.
+RangeIndex, and integral Indexes with a constant step can be extended \
+when producing out-of-sample forecasts.
 """)
         if type(self._index) is pd.RangeIndex or is_int_index(self._index):
             start = required_int_like(start, "start")
@@ -1442,7 +1718,7 @@ differences can be extended when producing out-of-sample forecasts.
         elif isinstance(self._index, pd.RangeIndex):
             self._extendable = True
         elif is_int_index(self._index):
-            self._extendable = self._index[0] == 0 and np.all(np.diff(self._index) == 1)
+            self._extendable = _int_index_step(self._index) is not None
 
     def apply(self, index):
         """

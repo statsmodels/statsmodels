@@ -161,8 +161,8 @@ Optional Dependencies
   some models.
 * `Matplotlib <https://matplotlib.org/>`__ >= 3 is needed for plotting
   functions and running many of the examples.
-* If installed, `X-12-ARIMA <https://www.census.gov/srd/www/x13as/>`__ or
-  `X-13ARIMA-SEATS <https://www.census.gov/srd/www/x13as/>`__ can be used
+* If installed, `X-12-ARIMA <https://www.census.gov/data/software/x13as.html>`__ or
+  `X-13ARIMA-SEATS <https://www.census.gov/data/software/x13as.html>`__ can be used
   for time-series analysis.
 * `pytest <https://docs.pytest.org/en/latest/>`__ is required to run
   the test suite.

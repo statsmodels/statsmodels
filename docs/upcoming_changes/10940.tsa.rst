@@ -1,0 +1,4 @@
+- A ``dynamic`` date key that covers several dates, such as
+  ``"2001-04"`` for daily data, raised a ``TypeError`` in the prediction
+  methods of AutoReg, ARDL, state space models, STLForecast, ETSModel and
+  RecursiveLS. Dynamic prediction begins at its first date. :pr:`10940`
