@@ -2898,6 +2898,47 @@ def test_period_and_range_index_output(index_type):
         pd.testing.assert_index_equal(value.index, expected_index)
 
 
+@pytest.mark.parametrize(
+    "steps",
+    [6.0, np.float64(6.0), np.array(6), np.int32(6)],
+    ids=["float", "float64", "0d-array", "int32"],
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date", "period", "range"])
+def test_forecast_int_like_steps(steps, index_type):
+    # A float with an integral value is a number of steps, as an int is, and
+    # so is a 0-d integer array with a date index. They raised a KeyError or
+    # a TypeError. The forecasts from R are the reference.
+    index = {
+        "ndarray": None,
+        "date": pd.date_range("2005-01-01", periods=30, freq="MS"),
+        "period": pd.period_range("2005Q1", periods=30, freq="Q"),
+        "range": pd.RangeIndex(30),
+    }[index_type]
+    endog = np.asarray(aust)
+    if index is not None:
+        endog = pd.Series(endog, index=index[:24])
+    fcast = _r_hw_fit(endog).forecast(steps)
+    assert_allclose(fcast, R_HW_FORECAST, rtol=1e-12)
+    if index is not None:
+        pd.testing.assert_index_equal(fcast.index, index[24:])
+
+
+@pytest.mark.parametrize(
+    "steps", [True, np.True_, 2.5], ids=["True", "np.True_", "2.5"]
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date"])
+def test_forecast_steps_not_int(steps, index_type):
+    # A bool was one step without a date index; 2.5 raised a KeyError or a
+    # TypeError from the date arithmetic
+    endog = np.asarray(aust)
+    if index_type == "date":
+        index = pd.date_range("2005-01-01", periods=24, freq="MS")
+        endog = pd.Series(endog, index=index)
+    res = _r_hw_fit(endog)
+    with pytest.raises(TypeError, match="steps must be integer_like"):
+        res.forecast(steps)
+
+
 def test_integer_endog_matches_float():
     y = np.round(np.asarray(aust))
     res_int = _r_hw_fit(y.astype(int))
