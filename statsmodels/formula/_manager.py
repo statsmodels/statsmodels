@@ -185,17 +185,8 @@ class _FormulaOption:
     @formula_engine.setter
     def formula_engine(self, value: Literal["patsy", "formulaic"]) -> None:
         if value not in self._allowed_options:
-            msg = "Invalid formula engine option. Must be "
-            if len(self._allowed_options) == 1:
-                msg += f"{self._allowed_options[0]}"
-            else:
-                allowed = list(self._allowed_options)
-                allowed[-1] = f"or {allowed[-1]}"
-                if len(allowed) > 2:
-                    msg += ", ".join(allowed)
-                else:
-                    msg += " ".join(allowed)
-            raise ValueError(f"{msg}.")
+            allowed = " or ".join(self._allowed_options)
+            raise ValueError(f"Invalid formula engine option. Must be {allowed}.")
 
         self._formula_engine = value
 
@@ -215,7 +206,7 @@ class _FormulaOption:
     def ordering(self, value: str):
         if value not in ("degree", "sort", "none", "legacy"):
             raise ValueError(
-                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy."
+                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy'."
             )
         self._ordering = value
 
@@ -244,7 +235,7 @@ class LinearConstraintValues(NamedTuple):
         The constraint coefficient matrix.
     constraint_values : ndarray
         The constraint constant values.
-    variable_names : list[str]
+    variable_names : list of str
         The names of the variables in the constraint matrix.
     """
 
@@ -757,17 +748,18 @@ class FormulaManager:
 
     def remove_intercept(self, terms):
         """
-        Remove intercept from Patsy terms.
+        Remove the intercept from a list of terms.
 
         Parameters
         ----------
-        terms : list[Term]
-            A list of terms that might have an intercept
+        terms : list of Term
+            Terms of the formula engine in use, which might include the
+            intercept. The list is changed in place.
 
         Returns
         -------
-        list[Term]
-            The terms with the intercept removed, if present.
+        list of Term
+            The same list, without the intercept.
         """
         intercept = self.intercept_term
         if intercept in terms:
@@ -817,10 +809,11 @@ class FormulaManager:
         Parameters
         ----------
         action : str, optional
-            The action to take on missing values, e.g., "drop" or "raise".
-        types : Sequence[Any], optional
-            The types of missing values to consider, e.g., "None" or "NaN".
-            Only used when using patsy.
+            The action to take on missing values: "drop" or "raise", and with
+            formulaic also "ignore".
+        types : sequence of str, optional
+            The types of missing values to consider, e.g., "None" or "NaN"
+            (the default is both). Only used when using patsy.
 
         Returns
         -------
@@ -880,7 +873,7 @@ class FormulaManager:
 
         Returns
         -------
-        list[str]
+        list of str
             The list of term names.
         """
         spec = self._ensure_spec(spec_or_frame)
@@ -901,7 +894,7 @@ class FormulaManager:
 
         Returns
         -------
-        list[str]
+        list of str
             The column names.
         """
         spec = self._ensure_spec(spec_or_frame)
@@ -919,7 +912,7 @@ class FormulaManager:
 
         Returns
         -------
-        dict[str, slice]
+        dict of str to slice
             A dictionary mapping term names to location in the materialized formula.
         """
         spec = self._ensure_spec(spec_or_frame)
@@ -930,12 +923,14 @@ class FormulaManager:
 
     def get_model_spec(self, frame, optional=False):
         """
-        Get the model specification attached to a DataFrame.
+        Get the model specification attached to a design matrix.
 
         Parameters
         ----------
-        frame : DataFrame
-            The frame to get the model specification from.
+        frame : DataFrame or ndarray
+            The design matrix to get the model specification from: a
+            DataFrame, or a NumPy design matrix (a patsy ``DesignMatrix`` or a
+            formulaic ``ModelMatrix``).
         optional : bool, optional
             Whether to return None if the frame does not have a model specification.
 
@@ -962,8 +957,8 @@ class FormulaManager:
         ----------
         model_spec : ModelSpec or DesignInfo
             The model specification.
-        term : Term
-            The model term.
+        term : Term or str
+            The model term, or its name.
 
         Returns
         -------

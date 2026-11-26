@@ -1,3 +1,9 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
+import json
+import os
+import subprocess
+import sys
 import threading
 
 import numpy as np
@@ -793,3 +799,236 @@ def test_is_categorical(engine, lhs, expected):
     mgr = FormulaManager(engine=engine)
     lhs_mat, _ = mgr.get_matrices(f"{lhs} ~ x", df)
     assert mgr.is_categorical(lhs_mat) is expected
+
+
+def test_engine_options_err_message():
+    allowed = " or ".join(ENGINES)
+    with pytest.raises(ValueError, match=f"Must be {allowed}\\.$"):
+        statsmodels.formula.options.formula_engine = "unknown"
+
+
+def test_engine_options_order_err_message():
+    match = "Must be 'degree', 'sort', 'none', or 'legacy'\\.$"
+    with pytest.raises(ValueError, match=match):
+        statsmodels.formula.options.ordering = "unknown"
+
+
+def test_engine_error_types(engine, data):
+    mgr = FormulaManager(engine=engine)
+    with PATSY_ERROR_LOCK:
+        with pytest.raises(mgr.factor_evaluation_error, match="undefined_variable"):
+            mgr.get_matrices("y ~ x + undefined_variable", data)
+        # Neither engine can evaluate a formula on a list
+        with pytest.raises(mgr.formula_materializer_error):
+            with pytest.warns(DeprecationWarning, match="Using list"):
+                mgr.get_matrices("~ x", [[1.0], [2.0]])
+
+
+def _expected_design(data, columns):
+    def column(name):
+        if name == "Intercept":
+            return np.ones(data.shape[0])
+        if name == "c[T.b]":
+            return (data["c"] == "b").astype(float)
+        return data[name]
+
+    return np.column_stack([column(name) for name in columns])
+
+
+def test_get_matrices_numpy_output(engine, data):
+    mgr = FormulaManager(engine=engine)
+    lhs, rhs = mgr.get_matrices("y ~ x + c", data, pandas=False)
+    for mat in (lhs, rhs):
+        assert isinstance(mat, np.ndarray)
+        assert not isinstance(mat, pd.DataFrame)
+    columns = mgr.get_column_names(rhs)
+    assert sorted(columns) == ["Intercept", "c[T.b]", "x"]
+    np.testing.assert_allclose(np.asarray(rhs), _expected_design(data, columns))
+    np.testing.assert_allclose(np.asarray(lhs)[:, 0], data["y"])
+
+
+@pytest.mark.parametrize("data_type", ["dict", "dict-of-scalars", "recarray"])
+def test_get_matrices_other_data(engine, data, data_type):
+    mgr = FormulaManager(engine=engine)
+    if data_type == "dict":
+        other = {key: val.to_numpy() for key, val in data.items()}
+        expected = data
+    elif data_type == "dict-of-scalars":
+        other = {"x": 2.5, "z": -1.0}
+        expected = pd.DataFrame({"x": [2.5], "z": [-1.0]})
+    else:
+        other = data[["x", "z"]].to_records(index=False)
+        expected = data
+    with pytest.warns(DeprecationWarning, match="Using"):
+        out = mgr.get_matrices("~ x + z", other)
+    columns = mgr.get_column_names(out)
+    assert columns == ["Intercept", "x", "z"]
+    np.testing.assert_allclose(
+        np.asarray(out, dtype=float), _expected_design(expected, columns)
+    )
+
+
+@require_formulaic
+@require_patsy
+def test_get_matrices_formulaic_eval_environment(data):
+    mgr = FormulaManager(engine="formulaic")
+    w = np.arange(7.0) ** 2
+    env = patsy.eval.EvalEnvironment([{"w": w}])
+    with pytest.warns(FutureWarning, match="EvalEnvironment is deprecated"):
+        _, rhs = mgr.get_matrices("y ~ x + w", data, eval_env=env)
+    np.testing.assert_allclose(np.asarray(rhs["w"]), w)
+
+
+@require_formulaic
+def test_get_matrices_formulaic_eval_env_type(data):
+    mgr = FormulaManager(engine="formulaic")
+    with pytest.raises(TypeError, match="must be an int or a dict"):
+        mgr.get_matrices("y ~ x", data, eval_env="env")
+
+
+@require_formulaic
+def test_get_matrices_formulaic_unsupported_structure(data):
+    formula = formulaic.Formula(lhs="y", rhs="x", other="z")
+    mgr = FormulaManager(engine="formulaic")
+    with pytest.raises(ValueError, match="not currently supported"):
+        mgr.get_matrices(formula, data)
+
+
+def test_get_slice_term_name(engine, data):
+    mgr = FormulaManager(engine=engine)
+    _, rhs = mgr.get_matrices("y ~ x + z + c", data)
+    spec = mgr.spec
+    for term in spec.terms:
+        name = mgr.get_term_name(term)
+        loc = mgr.get_slice(spec, term)
+        assert mgr.get_slice(spec, name) == loc
+        assert mgr.get_term_name_slices(spec)[name] == loc
+        np.testing.assert_allclose(
+            np.asarray(rhs, dtype=float)[:, loc],
+            _expected_design(data, mgr.get_column_names(spec)[loc]),
+        )
+
+
+def test_remove_intercept_in_place(engine, data):
+    mgr = FormulaManager(engine=engine)
+    mgr.get_matrices("y ~ x + c", data)
+    terms = list(mgr.spec.terms)
+    out = mgr.remove_intercept(terms)
+    assert out is terms
+    assert [mgr.get_term_name(term) for term in out] == ["c", "x"]
+    # No intercept to remove
+    assert mgr.remove_intercept(out) == out
+
+
+# Selection of the formula engine when statsmodels.formula is imported, run
+# in a subprocess that blocks the imports of the engines
+ENGINE_SELECTION = """
+import importlib
+import json
+import os
+import sys
+
+
+def fresh_import(env, blocked):
+    for name in list(sys.modules):
+        if name == "statsmodels.formula" or name.startswith("statsmodels.formula."):
+            del sys.modules[name]
+    saved = {name: sys.modules.get(name) for name in blocked}
+    sys.modules.update({name: None for name in blocked})
+    if env is None:
+        os.environ.pop("SM_FORMULA_ENGINE", None)
+    else:
+        os.environ["SM_FORMULA_ENGINE"] = env
+    try:
+        return importlib.import_module("statsmodels.formula")
+    finally:
+        for name, module in saved.items():
+            if module is None:
+                del sys.modules[name]
+            else:
+                sys.modules[name] = module
+
+
+def engine(env, blocked):
+    return fresh_import(env, blocked).options.formula_engine
+
+
+def set_option(env, blocked, value):
+    fresh_import(env, blocked).options.formula_engine = value
+
+
+def manager(env, blocked, value):
+    fresh_import(env, blocked)
+    from statsmodels.formula._manager import FormulaManager
+
+    return FormulaManager(engine=value).engine
+
+
+cases = {
+    "invalid": (engine, "unknown", []),
+    "formulaic": (engine, "formulaic", []),
+    "patsy": (engine, "patsy", []),
+    "no-patsy": (engine, None, ["patsy"]),
+    "no-patsy-env-patsy": (engine, "patsy", ["patsy"]),
+    "no-patsy-option": (set_option, None, ["patsy"], "patsy"),
+    "no-patsy-manager": (manager, None, ["patsy"], "patsy"),
+    "no-formulaic": (engine, None, ["formulaic"]),
+    "no-formulaic-env-formulaic": (engine, "formulaic", ["formulaic"]),
+    "no-formulaic-manager": (manager, None, ["formulaic"], "formulaic"),
+    "neither": (engine, None, ["patsy", "formulaic"]),
+}
+results = {}
+for key, (func, *args) in cases.items():
+    try:
+        results[key] = ["ok", func(*args)]
+    except Exception as exc:
+        results[key] = [type(exc).__name__, str(exc)]
+print(json.dumps(results))
+"""
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="no subprocesses in Pyodide")
+@pytest.mark.skipif(
+    not (HAS_PATSY and HAS_FORMULAIC), reason="requires patsy and formulaic"
+)
+def test_engine_selection_on_import():
+    env = {k: v for k, v in os.environ.items() if k != "SM_FORMULA_ENGINE"}
+    proc = subprocess.run(
+        [sys.executable, "-c", ENGINE_SELECTION],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=300,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    results = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert results["invalid"] == [
+        "ValueError",
+        "Invalid value for SM_FORMULA_ENGINE: unknown",
+    ]
+    assert results["formulaic"] == ["ok", "formulaic"]
+    assert results["patsy"] == ["ok", "patsy"]
+    # Without patsy, formulaic is the default and the only option
+    assert results["no-patsy"] == ["ok", "formulaic"]
+    assert results["no-patsy-env-patsy"][0] == "RuntimeError"
+    assert "patsy is not installed" in results["no-patsy-env-patsy"][1]
+    assert results["no-patsy-option"] == [
+        "ValueError",
+        "Invalid formula engine option. Must be formulaic.",
+    ]
+    assert results["no-patsy-manager"] == [
+        "ImportError",
+        "patsy is not available. Please install patsy.",
+    ]
+    assert results["no-formulaic"] == ["ok", "patsy"]
+    assert results["no-formulaic-env-formulaic"][0] == "RuntimeError"
+    assert "formulaic is not installed" in results["no-formulaic-env-formulaic"][1]
+    assert results["no-formulaic-manager"] == [
+        "ImportError",
+        "formulaic is not available. Please install formulaic.",
+    ]
+    assert results["neither"] == [
+        "ImportError",
+        "One of patsy or formulaic must be installed to use statsmodels",
+    ]

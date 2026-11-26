@@ -343,3 +343,33 @@ def test_formula_predict_series_exog():
     oos = data_full.iloc[500:]["x"]
     prediction = res.get_prediction(oos)
     assert prediction.predicted_mean.shape[0] == 500
+
+
+@pytest.mark.parametrize("model", ["ols", "gee", "phreg"])
+def test_from_formula_eval_env(model):
+    # Without eval_env, variables are looked up in the caller's namespace, also
+    # for models whose from_formula adds a stack frame (advance_eval_env); a
+    # dict is used as given
+    import statsmodels.formula.api as smf
+
+    rng = np.random.default_rng(20261125)
+    data = pd.DataFrame(
+        {
+            "y": rng.standard_normal(40),
+            "x": rng.standard_normal(40),
+            "g": np.repeat(np.arange(8), 5),
+            "t": rng.exponential(size=40),
+        }
+    )
+    w = rng.standard_normal(40)
+    other = {"w": rng.standard_normal(40)}
+    for eval_env, expected in ((None, w), (other, other["w"])):
+        kwargs = {} if eval_env is None else {"eval_env": eval_env}
+        if model == "ols":
+            mod = smf.ols("y ~ x + w", data, **kwargs)
+        elif model == "gee":
+            mod = smf.gee("y ~ x + w", "g", data, **kwargs)
+        else:
+            mod = smf.phreg("t ~ x + w", data, **kwargs)
+        loc = list(mod.exog_names).index("w")
+        npt.assert_allclose(mod.exog[:, loc], expected)
