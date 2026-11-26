@@ -739,7 +739,10 @@ def test_fit_ic_selects_order(trend, maxlags, ic):
 def test_fit_ic_verbose_and_unknown(capsys):
     data = _macro_dlog()[:, :2]
     B = np.asarray([["E", 0], ["E", "E"]], dtype="U")
-    res = SVAR(data, "B", B=B).fit(maxlags=6, ic="bic", trend="n", verbose=True)
+    # As for the other SVAR fits here, whether the optimizer reports
+    # convergence depends on the environment
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        res = SVAR(data, "B", B=B).fit(maxlags=6, ic="bic", trend="n", verbose=True)
     assert res.k_ar == _ic_order(data, 6, "n", "bic")
     out = capsys.readouterr().out
     assert "Selected orders are" in out
