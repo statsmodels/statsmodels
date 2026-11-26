@@ -927,7 +927,8 @@ def test_invalid():
         TypeError,
         match=(
             "seasonal must be integer_like"
-            r" \(int or np.integer, but not bool or timedelta64\) or None"
+            r" \(an int, a NumPy integer or a float with an integral value,"
+            r" but not a bool\) or None"
         ),
     ):
         ExponentialSmoothing(aust, seasonal=True)

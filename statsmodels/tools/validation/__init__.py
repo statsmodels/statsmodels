@@ -7,6 +7,7 @@ from .validation import (
     dict_like,
     float_like,
     int_like,
+    is_int_like,
     required_int_like,
     string_like,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "dict_like",
     "float_like",
     "int_like",
+    "is_int_like",
     "required_int_like",
     "string_like",
 ]

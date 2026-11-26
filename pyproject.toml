@@ -418,6 +418,7 @@ filterwarnings = [
     "error:Keyword arguments have been passed:FutureWarning:",
     "error:After statsmodels 0.15 is released:FutureWarning:",
     "error:Passing `None` as the seed currently:FutureWarning:",
+    "error:Passing .* is deprecated and will raise a TypeError in statsmodels 0.17:FutureWarning:",
     "error:the 'random_state' keyword is deprecated:FutureWarning:",
     "error:the 'seed' keyword is deprecated:FutureWarning:",
     "error:the 'center' keyword is deprecated:FutureWarning:",
