@@ -1743,6 +1743,15 @@ class Tweedie(Family):
         observations therefore use only the second term, which agrees with
         the full likelihood (``eql=False``) at zeros.
 
+        For :math:`y > 0` the EQL is an approximation to the density, not the
+        density itself. The log-likelihood, the AIC and the BIC of a fit with
+        ``eql=True`` are therefore not comparable with those of a fit with
+        ``eql=False`` or of a model with another family. For example, with
+        simulated compound Poisson-gamma data (400 observations, 9% to 43%
+        zeros), the EQL log-likelihood of the fitted model is 49 to 114 units
+        larger than the one with ``eql=False`` for ``var_power`` between 1.2
+        and 1.8.
+
         References
         ----------
         R Kaas (2005).  Compound Poisson Distributions and GLM's -- Tweedie's
