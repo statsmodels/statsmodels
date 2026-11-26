@@ -16,7 +16,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.api import ols
 from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
-from statsmodels.tools.testing import assert_equal
+from statsmodels.tools.testing import assert_equal, warns_or_none
 
 try:
     import patsy
@@ -64,8 +64,10 @@ class CheckFormulaOLS:
     @pytest.mark.thread_unsafe("fit method mutates the model object")
     @pytest.mark.smoke
     def test_summary(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "kurtosistest only valid for n>=20")
+        # SciPy warns that kurtosistest needs 20 observations (16 here):
+        # "kurtosistest only valid for n>=20" in 1.8-1.12, "`kurtosistest`
+        # p-value may be inaccurate" in 1.15, and no warning in 1.18
+        with warns_or_none(UserWarning, match="`?kurtosistest"):
             self.model.fit().summary()
 
 

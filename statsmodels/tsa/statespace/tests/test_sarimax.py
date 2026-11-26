@@ -705,7 +705,10 @@ class TestFriedmanMLERegression(Friedman):
 
     @pytest.mark.thread_unsafe(reason="statespace cython is not thread safe")
     def test_mle(self):
-        result = self.model.fit(disp=-1)
+        # Whether the optimizer reports convergence here depends on rounding:
+        # it does not on some CI runners (macOS)
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            result = self.model.fit(disp=-1)
         # Use ratio to make atol more meaningful parameter scale differs
         ratio = result.params / self.result.params
         assert_allclose(ratio, np.ones(5), atol=1e-2, rtol=1e-3)

@@ -395,6 +395,8 @@ filterwarnings = [
     "ignore:`formatargspec`:DeprecationWarning:statsmodels",
     "ignore:Using or importing:DeprecationWarning",
     "ignore:Session._key_changed is deprecated:DeprecationWarning",
+    # pandas' date converters set Locator.locs, deprecated in matplotlib 3.11
+    "ignore:The locs attribute was deprecated in Matplotlib:DeprecationWarning:pandas",
     "error:Support for multi-dimensional:DeprecationWarning",
     "error:Mutating unit root tests is deprecated:FutureWarning",
     "error:Lag selection has changed:DeprecationWarning",

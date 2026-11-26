@@ -318,10 +318,8 @@ class TestOLS(CheckRegressionResults):
 
     def test_summary_slim(self):
         # check that slim summary is smaller, does not verify content
-        with warnings.catch_warnings():
-            msg = "kurtosistest only valid for n>=20"
-            warnings.filterwarnings("ignore", message=msg, category=UserWarning)
-
+        # SciPy 1.8-1.15 warns that kurtosistest needs 20 observations
+        with warns_or_none(UserWarning, match="`?kurtosistest"):
             summ = self.res1.summary(slim=True)
         assert len(summ.tables) == 2
         assert len(str(summ)) < 6700
@@ -2062,10 +2060,10 @@ def _fit_gls_for_summary():
 def test_summary_after_remove_data(fit_func):
     # summary() must still work after remove_data() has been called
     res = fit_func()
-    with warnings.catch_warnings():
-        # scipy < 1.16 warns that kurtosistest needs 20 observations (16 here)
-        msg = "kurtosistest only valid for n>=20"
-        warnings.filterwarnings("ignore", message=msg, category=UserWarning)
+    # SciPy 1.8-1.15 warns that kurtosistest needs 20 observations (16 here),
+    # with "kurtosistest only valid" up to 1.12 and "`kurtosistest` p-value
+    # may be inaccurate" in 1.15
+    with warns_or_none(UserWarning, match="`?kurtosistest"):
         assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)

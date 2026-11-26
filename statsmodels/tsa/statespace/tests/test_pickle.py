@@ -20,6 +20,8 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     exponential_smoothing,
@@ -52,10 +54,13 @@ def test_pickle_fit_sarimax(data):
     mod = sarimax.SARIMAX(data["lgdp"], order=(1, 1, 0))
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
-    # L-BFGS converges here. Newton's method stops at the start values with a
-    # ConvergenceWarning.
-    res = mod.fit(disp=-1, full_output=True, method="lbfgs")
-    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="lbfgs")
+    # The start values are already at the maximum. L-BFGS reports convergence
+    # with SciPy 1.8, but newer SciPy stops at the start values with a
+    # line-search warning (warnflag 2), as Newton's method does. The two fits
+    # agree either way, which is what is tested.
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+        res = mod.fit(disp=-1, full_output=True, method="lbfgs")
+        pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="lbfgs")
 
     assert_allclose(res.llf_obs, pkl_res.llf_obs)
     assert_allclose(res.tvalues, pkl_res.tvalues)

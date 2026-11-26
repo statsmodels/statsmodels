@@ -29,6 +29,7 @@ from statsmodels.tools.sm_exceptions import (
     MissingDataError,
     PrecisionWarning,
 )
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.base import (
@@ -1205,15 +1206,29 @@ def test_seasonal_order(method):
         seasonal_periods=12,
         initialization_method=method,
     )
+    # The series has no noise, so the likelihood has no maximum: it grows
+    # without bound as the residual variance goes to zero. On some CI runners
+    # (macOS) the residual variance is exactly 0, and the standardized
+    # forecast errors are 0 / 0.
+    zero_variance = warns_or_none(
+        RuntimeWarning, match="invalid value encountered in divide"
+    )
     if method == "estimated":
-        # The series has no noise, so the likelihood has no maximum: it grows
-        # without bound as the residual variance goes to zero. The start
-        # values already fit the series up to rounding, and the optimizer
-        # stops there without converging.
-        with pytest.warns(ConvergenceWarning, match="Maximum Likelihood"):
+        # The start values already fit the series up to rounding, and the
+        # optimizer stops there without converging.
+        with (
+            pytest.warns(ConvergenceWarning, match="Maximum Likelihood"),
+            zero_variance,
+        ):
             res = mod.fit()
     else:
-        res = mod.fit()
+        # Whether the optimizer reports convergence here depends on rounding:
+        # it does on some machines but not on most CI runners
+        with (
+            warns_or_none(ConvergenceWarning, match="Maximum Likelihood"),
+            zero_variance,
+        ):
+            res = mod.fit()
     assert_allclose(
         res.initial_seasonal + res.initial_level,
         seasonal,
