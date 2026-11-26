@@ -3429,3 +3429,17 @@ def test_use_boxcox_numpy_scalars(austourists, use_boxcox, expected):
         assert_allclose(res.params["lamda"], ref.params["lamda"], rtol=1e-12)
     if not isinstance(expected, bool):
         assert res.params["lamda"] == expected
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
+    # A NumPy bool raised "use_boxcox must be True, False, 'log' or a float."
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit()
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit()
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    assert res.params["use_boxcox"] is expected

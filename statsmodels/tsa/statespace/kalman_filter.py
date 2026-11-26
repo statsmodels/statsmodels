@@ -13,7 +13,7 @@ from warnings import warn
 import numpy as np
 
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.validation import is_int_like
+from statsmodels.tools.validation import is_bool_like, is_int_like
 
 from . import tools
 from .representation import FrozenRepresentation, OptionWrapper, Representation
@@ -2043,6 +2043,8 @@ class FilterResults(FrozenRepresentation):
 
         # If `dynamic=True`, then assume that we want to begin dynamic
         # prediction at the start of the sample prediction.
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if dynamic is True:
             dynamic = 0
         # If `dynamic=False`, then assume we want no dynamic prediction

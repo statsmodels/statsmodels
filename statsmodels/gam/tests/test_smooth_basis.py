@@ -162,3 +162,19 @@ def test_cubic_splines_transform_not_shadowed():
     cs = CubicSplines(x, df=[5], transform="domain")
     assert cs.transform_arg == "domain"
     assert callable(cs.transform)
+
+
+@pytest.mark.parametrize(
+    "include_intercept, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_bsplines_include_intercept_numpy_bool(include_intercept, expected):
+    # A NumPy bool was not recognised as a bool and was used as the list of
+    # per-variable flags, which failed
+    rng = np.random.default_rng(20261126)
+    x = rng.uniform(size=(50, 2))
+    bs = BSplines(x, df=[5, 6], degree=[3, 3], include_intercept=include_intercept)
+    ref = BSplines(x, df=[5, 6], degree=[3, 3], include_intercept=expected)
+    assert bs.include_intercept == [expected, expected]
+    assert_allclose(bs.basis, ref.basis, rtol=1e-12)

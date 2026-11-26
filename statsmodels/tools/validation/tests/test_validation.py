@@ -16,6 +16,7 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_bool_like,
     is_float_like,
     is_int_like,
     required_int_like,
@@ -595,24 +596,96 @@ def test_required_int_like():
         required_int_like(np.True_, "value")
 
 
-@pytest.fixture(params=[True, False, 1, 1.2, "a", ""])
-def boolean(request):
-    return request.param
+# (id, value, its bool value) for values that are bools even if strict
+STRICT_BOOLS = [
+    ("True", True, True),
+    ("False", False, False),
+    ("np.True_", np.True_, True),
+    ("np.False_", np.False_, False),
+    ("0-d bool array", np.array(True), True),
+]
+# bools only if not strict
+INTEGER_BOOLS = [
+    ("int 1", 1, True),
+    ("int 0", 0, False),
+    ("int64 1", np.int64(1), True),
+    ("uint8 0", np.uint8(0), False),
+    ("0-d int array", np.array(1), True),
+]
+# not bools, but convertible: accepted by bool_like with a FutureWarning
+DEPRECATED_BOOLS = [
+    ("str False", "False", True),
+    ("empty str", "", False),
+    ("float", 1.0, True),
+    ("float zero", 0.0, False),
+    ("int 2", 2, True),
+    ("negative int", -1, True),
+    ("list", [0], True),
+    ("empty list", [], False),
+    ("None", None, False),
+    ("1 element bool array", np.array([False]), False),
+    ("1 element bool Series", pd.Series([True]), True),
+]
 
 
-def test_bool_like(boolean):
-    assert isinstance(bool_like(boolean, "boolean"), bool)
-    assert bool_like(None, "boolean", optional=True) is None
-    if isinstance(boolean, bool):
-        assert isinstance(bool_like(boolean, "boolean", strict=True), bool)
-    else:
-        with pytest.raises(TypeError):
-            bool_like(boolean, "boolean", strict=True)
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize(
+    "name, value, expected", STRICT_BOOLS, ids=_ids(STRICT_BOOLS)
+)
+def test_is_bool_like_bools(name, value, expected, strict):
+    assert is_bool_like(value, strict=strict) is True
+    converted = bool_like(value, "value", strict=strict)
+    assert type(converted) is bool
+    assert converted is expected
 
 
-def test_not_bool_like():
-    with pytest.raises(TypeError):
-        bool_like(np.array([True, True]), boolean)
+@pytest.mark.parametrize(
+    "name, value, expected", INTEGER_BOOLS, ids=_ids(INTEGER_BOOLS)
+)
+def test_is_bool_like_integers(name, value, expected):
+    assert is_bool_like(value) is True
+    converted = bool_like(value, "value")
+    assert type(converted) is bool
+    assert converted is expected
+    assert is_bool_like(value, strict=True) is False
+    with pytest.raises(TypeError, match=r"value must be a bool \(True, False or"):
+        bool_like(value, "value", strict=True)
+
+
+@pytest.mark.parametrize(
+    "name, value, expected", DEPRECATED_BOOLS, ids=_ids(DEPRECATED_BOOLS)
+)
+def test_bool_like_deprecated(name, value, expected):
+    assert is_bool_like(value) is False
+    assert is_bool_like(value, strict=True) is False
+    match = (
+        rf"Passing flag of type {type(value).__name__} is deprecated and will "
+        rf"raise a TypeError in statsmodels 0\.17\. Pass flag={expected} as"
+    )
+    with pytest.warns(FutureWarning, match=match):
+        converted = bool_like(value, "flag")
+    assert type(converted) is bool
+    assert converted is expected
+    with pytest.raises(TypeError, match="flag must be a bool"):
+        bool_like(value, "flag", strict=True)
+
+
+@pytest.mark.parametrize(
+    "value", [np.array([True, False]), pd.Series([1, 0])], ids=["array", "Series"]
+)
+@pytest.mark.parametrize("strict", [True, False])
+def test_bool_like_not_convertible(value, strict):
+    assert is_bool_like(value, strict=strict) is False
+    with pytest.raises(TypeError, match="flag must be a bool"):
+        bool_like(value, "flag", strict=strict)
+
+
+def test_bool_like_none():
+    assert bool_like(None, "value", optional=True) is None
+    assert bool_like(None, "value", optional=True, strict=True) is None
+    with pytest.raises(TypeError, match=r"value must be a bool.* or None"):
+        bool_like("a", "value", optional=True, strict=True)
+    assert is_bool_like(None) is False
 
 
 def test_array_like_mindim():

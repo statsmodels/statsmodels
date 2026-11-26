@@ -273,45 +273,133 @@ class PandasWrapper:
             raise ValueError("Can only wrap 1 or 2-d array_like")
 
 
-def bool_like(value, name, optional=False, strict=False):
+def is_bool_like(value: Any, strict: bool = False) -> bool:
+    """
+    Check whether a value is a scalar bool
+
+    Parameters
+    ----------
+    value : object
+        Value to check.
+    strict : bool, optional
+        If True, only ``bool`` and ``np.bool_`` are bools. If False, the
+        integers 0 and 1 (any integer accepted by
+        ``is_int_like(value, strict=True)``) are also bools.
+
+    Returns
+    -------
+    bool
+        True if `value` is a scalar bool.
+
+    See Also
+    --------
+    bool_like
+        Convert a value to a bool, raising if it is not bool-like.
+    is_int_like
+        Check whether a value is a scalar integer.
+
+    Notes
+    -----
+    A 0-d array is treated as the scalar it holds; any other array, a Series
+    and a list are not bools, even if they hold a single value. Strings,
+    floats and None are never bools, although Python converts them to one.
+
+    Use this function to dispatch on a parameter that can be a bool or
+    something else, such as ``dynamic : bool, int, str or datetime``. Test
+    it with ``strict=True`` before :func:`is_int_like`, which rejects bools.
+
+    .. versionadded:: 0.15.1
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from statsmodels.tools.validation import is_bool_like
+    >>> is_bool_like(True), is_bool_like(np.False_), is_bool_like(1)
+    (True, True, True)
+    >>> is_bool_like(1, strict=True), is_bool_like("False"), is_bool_like(2)
+    (False, False, False)
+    """
+    if isinstance(value, np.ndarray) and value.ndim == 0:
+        value = value[()]
+    if isinstance(value, (bool, np.bool_)):
+        return True
+    return not strict and is_int_like(value, strict=True) and int(value) in (0, 1)
+
+
+def bool_like(
+    value: Any, name: str, optional: bool = False, strict: bool = False
+) -> bool | None:
     """
     Convert to bool or raise if not bool_like
 
     Parameters
     ----------
     value : object
-        Value to verify
+        Value to verify.
     name : str
-        Variable name for exceptions
+        Variable name for exceptions.
     optional : bool, optional
-        Flag indicating whether None is allowed
+        Flag indicating whether None is allowed.
     strict : bool, optional
-        If True, then only allow bool. If False, allow types that support
-        casting to bool.
+        If True, only ``bool`` and ``np.bool_`` are accepted. If False, the
+        integers 0 and 1 are also accepted.
 
     Returns
     -------
     converted : bool
-        value converted to a bool
+        Value converted to a bool.
 
+    Raises
+    ------
+    TypeError
+        If `value` is not bool-like according to :func:`is_bool_like`.
+
+    Warns
+    -----
+    FutureWarning
+        If `strict` is False and `value` is anything else that Python can
+        convert to a bool, such as a string (``"False"`` is True), a float,
+        an integer other than 0 or 1, a list, None, or a container holding a
+        single value. These are converted as before for now and will raise a
+        ``TypeError`` in statsmodels 0.17.
+
+    See Also
+    --------
+    is_bool_like
+        The rule that decides what is bool-like.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       With ``strict=True``, ``np.bool_`` and 0-d boolean arrays are
+       accepted. Values that are only convertible to a bool are deprecated.
     """
     if optional and value is None:
-        return value
-    extra_text = " or None" if optional else ""
-    if strict:
-        if isinstance(value, bool):
-            return value
-        else:
-            raise TypeError(f"{name} must be a bool{extra_text}")
-
-    if hasattr(value, "squeeze") and callable(value.squeeze):
-        value = value.squeeze()
-    try:
+        return None
+    if is_bool_like(value, strict=strict):
         return bool(value)
-    except Exception as exc:
-        raise TypeError(
-            f"{name} must be a bool (or bool-compatible){extra_text}"
-        ) from exc
+    extra_text = " or None" if optional else ""
+    if not strict:
+        legacy = value
+        if hasattr(legacy, "squeeze") and callable(legacy.squeeze):
+            legacy = legacy.squeeze()
+        try:
+            legacy = bool(legacy)
+        except Exception as exc:
+            raise TypeError(
+                f"{name} must be a bool (True or False, a NumPy bool, or the "
+                f"integer 0 or 1){extra_text}"
+            ) from exc
+        warnings.warn(
+            f"Passing {name} of type {type(value).__name__} is deprecated and "
+            f"will raise a TypeError in statsmodels 0.17. Pass {name}={legacy} "
+            "as a bool instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return legacy
+    raise TypeError(f"{name} must be a bool (True, False or a NumPy bool){extra_text}")
 
 
 def is_int_like(value: Any, strict: bool = False) -> bool:

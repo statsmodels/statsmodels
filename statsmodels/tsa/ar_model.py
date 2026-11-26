@@ -27,6 +27,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_bool_like,
     is_int_like,
     string_like,
 )
@@ -917,6 +918,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 )
                 raise ValueError(msg.format(num_oos, exog_oos.shape[0]))
 
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if (isinstance(dynamic, bool) and not dynamic) or self._maxlag == 0:
             # If model has no lags, static and dynamic are identical
             return self._static_predict(params, start, end, num_oos, exog, exog_oos)

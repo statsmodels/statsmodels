@@ -164,6 +164,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_bool_like,
     is_int_like,
     string_like,
 )
@@ -2272,6 +2273,8 @@ class ETSResults(base.StateSpaceMLEResults):
         # sample (_get_prediction_index raises if end lies before start)
 
         # Handle `dynamic`
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
             # A key that covers several dates gives a slice of locations

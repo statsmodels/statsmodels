@@ -1914,3 +1914,23 @@ def test_autoreg_forecast_bool_steps(steps, use_pandas):
     res = AutoReg(y, 2).fit()
     with pytest.raises(TypeError if use_pandas else KeyError):
         res.forecast(steps)
+
+
+NUMPY_BOOLS = [
+    (np.True_, True),
+    (np.False_, False),
+    (np.array(True), True),
+    (np.array(False), False),
+]
+NUMPY_BOOL_IDS = ["np.True_", "np.False_", "0-d True", "0-d False"]
+
+
+@pytest.mark.parametrize("dynamic, expected", NUMPY_BOOLS, ids=NUMPY_BOOL_IDS)
+def test_predict_dynamic_numpy_bool(ar2, dynamic, expected):
+    # A NumPy bool was taken as an integer offset: np.False_ as 0 (all
+    # predictions dynamic) and np.True_ as 1 (dynamic from the second one)
+    res = AutoReg(ar2, 2, trend="c").fit()
+    pred = res.predict(start=10, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=10, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=10, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-3
