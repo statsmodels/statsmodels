@@ -502,12 +502,17 @@ class PHReg(model.LikelihoodModel):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with one exception: ``eval_env``,
+            the namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, and an integer k is the namespace k
+            stack frames above ``from_formula``. -1 is an empty namespace,
+            and a dict maps names to values.
+
+            .. versionchanged:: 0.15.1
+
+               An integer counts stack frames as in other models. Before, it
+               referred to one frame lower: 2 was the calling namespace.
 
         Returns
         -------

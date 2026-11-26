@@ -658,12 +658,12 @@ class RollingWLS:
             data = data.loc[subset]
         eval_env = kwargs.pop("eval_env", None)
         if eval_env is None:
-            eval_env = 2
+            eval_env = 1
         elif eval_env == -1:
             mgr = FormulaManager()
             eval_env = mgr.get_empty_eval_env()
-        else:
-            eval_env += 1  # we're going down the stack again
+        # get_matrices is called from here, so an integer counts stack frames
+        # above this method, as in Model.from_formula
         missing = kwargs.get("missing", "skip")
 
         na_action = FormulaManager().get_na_action(action="raise", types=[])

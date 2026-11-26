@@ -113,14 +113,26 @@ def make_hypotheses_matrices(model_results, test_formula):
 
 def advance_eval_env(kwargs):
     """
-    Adjusts the keyword arguments for from_formula to account for the patsy
-    eval environment being passed down once on the stack. Adjustments are
-    made in place.
+    Adjust ``eval_env`` for a ``from_formula`` that calls its parent's.
+
+    Calling the parent class's ``from_formula`` adds a stack frame, so
+    ``eval_env`` is moved one frame up to keep pointing at the same
+    namespace: None (the namespace that calls ``from_formula``) becomes 2, an
+    integer k becomes k + 1, and -1 becomes an empty namespace. A dict is
+    kept. Adjustments are made in place.
 
     Parameters
     ----------
     kwargs : dict
         The dictionary of keyword arguments passed to `from_formula`.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       Integers other than -1 are moved up too. Before, they were kept, so
+       an integer referred to a namespace one frame lower than in the
+       parent's ``from_formula``.
     """
 
     eval_env = kwargs.get("eval_env", None)
@@ -128,3 +140,5 @@ def advance_eval_env(kwargs):
         kwargs["eval_env"] = 2
     elif eval_env == -1:
         kwargs["eval_env"] = FormulaManager().get_empty_eval_env()
+    elif isinstance(eval_env, (int, np.integer)):
+        kwargs["eval_env"] = int(eval_env) + 1
