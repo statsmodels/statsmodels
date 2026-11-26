@@ -86,6 +86,16 @@ def test_custom_exog_and_binary(teff):
     assert list(teff.balance_table(x.to_numpy()).index) == ["x0", "x1"]
 
 
+def test_custom_exog_list(teff):
+    x = [[0, 0], [1, 0], [1, 1], [1, 1]]
+    result = teff.balance_table(x)
+    assert list(result.index) == ["x0", "x1"]
+    # Sample variances are 1/2 and 0: pooled SD=1/2.
+    assert_allclose(result.loc["x0", "smd"], 1)
+    assert_allclose(result.loc["x0", "smd_weighted"], 6 / 7)
+    assert result.loc["x1", ["smd", "smd_weighted"]].isna().all()
+
+
 def test_constant_column_unequal_groups():
     # Rounding makes group means of 0.1 differ, so variances are not exactly 0.
     selection = SimpleNamespace(
@@ -101,17 +111,20 @@ def test_constant_column_unequal_groups():
 
 
 @pytest.mark.parametrize(
-    "exog",
+    "exog, match",
     [
-        np.ones(4),
-        np.ones((3, 2)),
-        np.empty((4, 0)),
-        np.full((4, 1), np.nan),
-        np.full((4, 1), np.inf),
+        (np.ones(4), "exog must have"),
+        (np.ones((4, 2, 1)), "exog must have"),
+        (1.0, "exog must have"),
+        (np.ones((3, 2)), "exog must"),
+        (np.empty((4, 0)), "exog must"),
+        (np.full((4, 1), np.nan), "exog must"),
+        (np.full((4, 1), np.inf), "exog must"),
     ],
+    ids=["1d", "3d", "scalar", "rows", "empty", "nan", "inf"],
 )
-def test_invalid_exog(teff, exog):
-    with pytest.raises(ValueError, match="exog must"):
+def test_invalid_exog(teff, exog, match):
+    with pytest.raises(ValueError, match=match):
         teff.balance_table(exog)
 
 
