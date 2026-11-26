@@ -498,16 +498,53 @@ def test_aggregate_raters():
     assert_equal(np.unique(diagnoses), categories)
 
 
-def test_to_table_rejects_1d_data():
+@pytest.mark.parametrize(
+    "data",
+    [
+        [[0, 0], [0, 1], [1, 1], [1, 1]],
+        np.array([[0, 0], [0, 1], [1, 1], [1, 1]]),
+        pd.DataFrame([[0, 0], [0, 1], [1, 1], [1, 1]]),
+        [["a", "a"], ["a", "b"], ["b", "b"], ["b", "b"]],
+    ],
+    ids=["list", "ndarray", "dataframe", "str"],
+)
+def test_to_table_array_like(data):
+    # counts of the (rater 1, rater 2) pairs, counted by hand
+    table, bins = to_table(data)
+    assert_equal(table, [[1, 1], [0, 2]])
+    assert_equal(bins, [-0.5, 0.5, 1.5])
+
+
+@pytest.mark.parametrize(
+    "data",
+    [np.array([1, 2, 3]), np.ones((3, 2, 2)), 1],
+    ids=["1d", "3d", "scalar"],
+)
+def test_to_table_rejects_non_2d(data):
     # 1-d data used to crash with a bare "not enough values to unpack"
-    with pytest.raises(ValueError, match="2-d array"):
-        to_table(np.array([1, 2, 3]))
+    with pytest.raises(ValueError, match="data must have"):
+        to_table(data)
+
+
+@pytest.mark.parametrize("convert", [list, np.asarray, pd.DataFrame])
+def test_cohens_kappa_array_like(convert):
+    # observed agreement 0.82 and chance agreement 0.5 give kappa 0.64
+    table = convert([[4100, 900], [900, 4100]])
+    assert_allclose(cohens_kappa(table, return_results=False), 0.64, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "table",
+    [np.array([1, 2, 3]), np.ones((2, 2, 2)), np.ones((2, 2, 1)), 5.0],
+    ids=["1d", "3d", "2x2x1", "scalar"],
+)
+def test_cohens_kappa_rejects_non_2d_table(table):
+    # a 1-d table used to crash with a raw AxisError from np.diag
+    with pytest.raises(ValueError, match="table must have"):
+        cohens_kappa(table)
 
 
 def test_cohens_kappa_rejects_non_square_table():
-    # a 1-d table used to crash with a raw AxisError from np.diag
-    with pytest.raises(ValueError, match="square 2-d array"):
-        cohens_kappa(np.array([1, 2, 3]))
     with pytest.raises(ValueError, match="square 2-d array"):
         cohens_kappa(np.ones((2, 3)))
 
