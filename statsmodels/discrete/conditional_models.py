@@ -357,6 +357,7 @@ class ConditionalLogit(_ConditionalModel):
                 success = int(self._endog_grp[grp][0] == 0)
                 failure = 1 - success
                 x = self._exog_grp[grp]
+                x = x.astype(np.result_type(x, float), copy=False)
                 offset_diff = 0.0
                 if offsets is not None:
                     ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
@@ -408,11 +409,13 @@ class ConditionalLogit(_ConditionalModel):
 
     def _group_log_weights(self, grp, params):
         x = self._exog_grp[grp]
+        x = x.astype(np.result_type(x, float), copy=False)
         eta = x @ params
         offsets = getattr(self, "_offset_grp", None)
         if offsets is not None:
             ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
-            eta = eta + (ofs - ofs[0])
+            offset_center = np.clip(0, ofs.real.min(), ofs.real.max())
+            eta = eta + (ofs - offset_center)
 
         n_selected = int(self._n1[grp])
         sign = 1
@@ -422,10 +425,12 @@ class ConditionalLogit(_ConditionalModel):
             n_selected = len(eta) - n_selected
             eta = -eta
 
-        # A common shift cancels when every subset has the same size.
-        eta = eta - eta.real.max()
+        # A common shift cancels. Center at the endpoint nearest zero so a
+        # single extreme value does not drown out differences among other rows.
+        center = np.clip(0, eta.real.min(), eta.real.max())
+        eta = eta - center
         selected = np.asarray(self._endog_grp[grp]) == (sign == 1)
-        return eta, n_selected, selected, sign
+        return x, eta, n_selected, selected, sign
 
     def _log_normalizer(self, eta, n_selected, x=None):
         if n_selected == 1:
@@ -468,7 +473,7 @@ class ConditionalLogit(_ConditionalModel):
                 return -_complex_logaddexp(0, -delta)
             return -np.logaddexp(0, -delta)
 
-        eta, n_selected, selected, _ = self._group_log_weights(grp, params)
+        _, eta, n_selected, selected, _ = self._group_log_weights(grp, params)
         log_z, _ = self._log_normalizer(eta, n_selected)
         return eta[selected].sum() - log_z
 
@@ -481,8 +486,7 @@ class ConditionalLogit(_ConditionalModel):
                 return np.exp(-delta - _complex_logaddexp(0, -delta)) * contrast
             return expit(-delta) * contrast
 
-        x = self._exog_grp[grp]
-        eta, n_selected, selected, sign = self._group_log_weights(grp, params)
+        x, eta, n_selected, selected, sign = self._group_log_weights(grp, params)
         _, mean = self._log_normalizer(eta, n_selected, x=x)
         return sign * (x[selected].sum(axis=0) - mean)
 

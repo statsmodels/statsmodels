@@ -82,7 +82,8 @@ def test_logit_balanced_group_log_space(beta, shift):
 @pytest.mark.parametrize("shift", [0.0, 300.0, -300.0])
 @pytest.mark.parametrize("endog", [[1, 0], [0, 1]])
 def test_logit_matched_pair(endog, shift):
-    exog = np.array([[2.0], [-1.0]])
+    # The signed contrast must also work for unsigned design matrices.
+    exog = np.array([[2], [0]], dtype=np.uint8)
     offset = np.array([0.25, -0.125]) + shift
     model = ConditionalLogit(np.asarray(endog), exog, groups=np.zeros(2), offset=offset)
     params = np.array([0.2])
@@ -98,6 +99,29 @@ def test_logit_matched_pair(endog, shift):
     complex_params = params + 1e-20j
     assert_allclose(model.loglike(complex_params).imag / 1e-20, expected_score[0])
     assert_allclose(model.score(complex_params).imag / 1e-20, [expected_hess])
+
+
+def test_logit_integer_group():
+    # With four equally likely rows, the mean sum is twice the population mean.
+    exog = np.arange(4, dtype=np.int16)[:, None]
+    model = ConditionalLogit(np.array([1, 0, 1, 0]), exog, groups=np.zeros(4))
+    params = np.array([0], dtype=np.int16)
+    assert_allclose(model.loglike(params), -np.log(6))
+    assert_allclose(model.score(params), [-1.0])
+
+
+def test_logit_offset_outlier():
+    # The first row has negligible weight, so evaluate the other three rows.
+    exog = np.arange(4.0)[:, None]
+    offset = np.array([-1e16, 0.0, 1.0, 2.0])
+    model = ConditionalLogit(
+        np.array([0, 0, 1, 0]), exog, groups=np.zeros(4), offset=offset
+    )
+    params = np.array([0.0])
+    log_total = logsumexp(offset[1:])
+    expected_score = exog[2] - np.exp(offset[1:] - log_total) @ exog[1:]
+    assert_allclose(model.loglike(params), offset[2] - log_total)
+    assert_allclose(model.score(params), expected_score)
 
 
 @pytest.mark.parametrize("n_success", [1, 2, 4, 5])
