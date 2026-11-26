@@ -16,6 +16,7 @@ from scipy import stats
 
 from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.iolib.summary import Summary, summary_params
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
@@ -953,6 +954,7 @@ class ARDL(AutoReg):
         hold_back: int | None = None,
         period: int | None = None,
         missing: Literal["none", "raise"] = "none",
+        eval_env: int | dict | None = None,
     ) -> ARDL | UECM:
         """
         Construct an ARDL from a formula
@@ -1013,6 +1015,14 @@ class ARDL(AutoReg):
             Available options are 'none', 'drop', and 'raise'. If 'none', no
             NaN checking is done. If 'drop', any observations with NaNs are
             dropped. If 'raise', an error is raised. Default is 'none'.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
@@ -1037,7 +1047,10 @@ class ARDL(AutoReg):
         if "|" in formula:
             formula, fixed_formula = formula.split("|")
             fixed_formula = fixed_formula.strip()
-        mod = OLS.from_formula(formula + " -1", data)
+        # The formulas are evaluated by OLS.from_formula, one stack frame down
+        ols_kwargs = {"eval_env": eval_env}
+        advance_eval_env(ols_kwargs)
+        mod = OLS.from_formula(formula + " -1", data, **ols_kwargs)
         exog = mod.data.orig_exog
         exog.index = index
         endog = mod.data.orig_endog
@@ -1045,7 +1058,7 @@ class ARDL(AutoReg):
         if fixed_formula is not None:
             endog_name = formula.split("~")[0].strip()
             fixed_formula = f"{endog_name} ~ {fixed_formula} - 1"
-            mod = OLS.from_formula(fixed_formula, data)
+            mod = OLS.from_formula(fixed_formula, data, **ols_kwargs)
             fixed: pd.DataFrame | None = mod.data.orig_exog
             fixed.index = index
         else:
@@ -2660,7 +2673,11 @@ class UECM(ARDL):
         hold_back: int | None = None,
         period: int | None = None,
         missing: Literal["none", "raise"] = "none",
+        eval_env: int | dict | None = None,
     ) -> UECM:
+        # ARDL.from_formula is one stack frame further down
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         return super().from_formula(
             formula,
             data,
@@ -2673,6 +2690,7 @@ class UECM(ARDL):
             hold_back=hold_back,
             period=period,
             missing=missing,
+            **kwargs,
         )
 
 
