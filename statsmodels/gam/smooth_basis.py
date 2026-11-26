@@ -19,7 +19,7 @@ import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
-from statsmodels.tools.validation import is_int_like, string_like
+from statsmodels.tools.validation import is_bool_like, is_int_like, string_like
 
 # Obtain b splines from patsy
 
@@ -1101,8 +1101,8 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
             self.x = x
 
         self.nobs, self.k_variables = self.x.shape
-        if isinstance(include_intercept, bool):
-            self.include_intercept = [include_intercept] * self.k_variables
+        if is_bool_like(include_intercept, strict=True):
+            self.include_intercept = [bool(include_intercept)] * self.k_variables
         else:
             self.include_intercept = include_intercept
 

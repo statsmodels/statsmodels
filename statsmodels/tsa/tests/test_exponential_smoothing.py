@@ -3243,3 +3243,19 @@ def test_forecast_bool_steps(oildata, steps):
     res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     with pytest.raises(TypeError):
         res.forecast(steps)
+
+
+@pytest.mark.parametrize(
+    "dynamic, expected",
+    [(np.True_, True), (np.False_, False), (np.array(False), False)],
+    ids=["np.True_", "np.False_", "0-d False"],
+)
+def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
+    # np.False_ equals 0, so it was taken as "dynamic from the start"
+    rng = np.random.default_rng(20261126)
+    y = pd.Series(10 + np.cumsum(rng.standard_normal(80)))
+    res = ETSModel(y, error="add", trend="add").fit(disp=False)
+    pred = res.predict(start=20, end=60, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=20, end=60, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=20, end=60, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-3

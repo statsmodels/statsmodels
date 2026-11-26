@@ -29,6 +29,7 @@ from statsmodels.tools.validation import (
     bool_like,
     float_like,
     int_like,
+    is_bool_like,
     is_int_like,
     string_like,
 )
@@ -913,6 +914,8 @@ class ARDL(AutoReg):
             if isinstance(self.data.orig_exog, pd.DataFrame):
                 exog_oos = pd.DataFrame(exog_oos, columns=self.data.orig_exog.columns)
         x = self._forecasting_x(start, end, num_oos, exog, exog_oos, fixed, fixed_oos)
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if dynamic is False:
             dynamic_start = end + 1 - start
         else:
@@ -2610,6 +2613,8 @@ class UECM(ARDL):
                ``summary_frame`` had the index 0, 1, ..., instead of the
                index of the data.
         """
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if dynamic is not False:
             raise NotImplementedError("dynamic forecasts are not supported")
         params, exog, exog_oos, start, end, num_oos = self._prepare_prediction(

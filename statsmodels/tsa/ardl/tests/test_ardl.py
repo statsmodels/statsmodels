@@ -3245,3 +3245,37 @@ def test_ardl_forecast_bool_steps(steps):
     res = ARDL(y[:-3], 2, x[:-3], 1).fit()
     with pytest.raises(KeyError):
         res.forecast(steps, exog=x[-3:])
+
+
+NUMPY_BOOLS = [
+    (np.True_, True),
+    (np.False_, False),
+    (np.array(True), True),
+    (np.array(False), False),
+]
+NUMPY_BOOL_IDS = ["np.True_", "np.False_", "0-d True", "0-d False"]
+
+
+@pytest.mark.parametrize("dynamic, expected", NUMPY_BOOLS, ids=NUMPY_BOOL_IDS)
+def test_ardl_predict_dynamic_numpy_bool(dynamic, expected):
+    # np.True_ was taken as the integer offset 1, and np.False_ as the offset 0
+    # (all predictions dynamic) instead of no dynamic predictions
+    res = ARDL(dane_data.lrm, 2, dane_data[["lry", "ibo"]], 1).fit()
+    pred = res.predict(start=10, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=10, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=10, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-4
+
+
+@pytest.mark.parametrize(
+    "dynamic", [np.False_, np.array(False)], ids=["np.False_", "0-d False"]
+)
+def test_uecm_predict_dynamic_numpy_false(dynamic):
+    # A NumPy False raised NotImplementedError ("dynamic forecasts are not
+    # supported"), which only a dynamic forecast should
+    res = UECM(dane_data.lrm, 2, dane_data[["lry", "ibo"]], 1).fit()
+    assert_allclose(
+        res.predict(dynamic=dynamic), res.predict(dynamic=False), rtol=1e-12
+    )
+    with pytest.raises(NotImplementedError, match="dynamic forecasts"):
+        res.predict(dynamic=np.True_)

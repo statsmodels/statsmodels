@@ -12,7 +12,7 @@ import pandas as pd
 from statsmodels.base.data import PandasData
 from statsmodels.iolib.summary import SimpleTable, Summary
 from statsmodels.tools.docstring import Docstring, Parameter, indent
-from statsmodels.tools.validation import array_like, is_int_like
+from statsmodels.tools.validation import array_like, is_bool_like, is_int_like
 from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
@@ -385,6 +385,8 @@ class STLForecastResults:
             start, end, self._nobs, self._index, data=data
         )
 
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = get_index_loc(dynamic, self._index)
             # A key that covers several dates gives a slice of locations

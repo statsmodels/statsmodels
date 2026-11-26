@@ -31,6 +31,7 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_bool_like,
     is_float_like,
     is_int_like,
     string_like,
@@ -315,7 +316,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         self._estimate_trend = estimated and self.trend is not None
         self._estimate_seasonal = estimated and self.seasonal is not None
         self._bounds = self._check_bounds(bounds)
-        if is_int_like(use_boxcox, strict=True):
+        if is_bool_like(use_boxcox, strict=True):
+            use_boxcox = bool(use_boxcox)
+        elif is_int_like(use_boxcox, strict=True):
             use_boxcox = int(use_boxcox)
         elif is_float_like(use_boxcox):
             use_boxcox = float(use_boxcox)
