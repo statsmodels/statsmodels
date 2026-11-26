@@ -1858,8 +1858,15 @@ def linear_reset(
 
     .. versionchanged:: 0.15.1
 
-        The auxiliary regression now uses the weights or covariance of the
-        supplied WLS or GLS results.
+        The auxiliary regression of a ``WLS`` result now uses the weights of
+        the model and that of a ``GLS`` result uses its ``sigma``. It was an
+        unweighted regression before, so the statistic and the p-value change
+        for results of ``WLS`` and ``GLS`` but not for those of ``OLS``.
+
+    A ``GLSAR`` result has no ``sigma``, and the AR coefficients of the model
+    are not used. Its auxiliary regression is a ``GLSAR`` model of order 1 with
+    a zero AR coefficient, which is OLS without the first observation. The
+    exog and the fitted values still come from the supplied result.
 
     The test is a Wald test of the null :math:`H_0:\gamma=0`. If use_f
     is True, then the quadratic-form test statistic is divided by the
