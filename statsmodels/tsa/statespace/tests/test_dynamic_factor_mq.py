@@ -3869,3 +3869,47 @@ def test_standardize_ndarray_like_dataframe(missing):
     sim_df = mod_df.smooth(params).simulate(4, **kwargs)
     assert_allclose(mod.smooth(params).simulate(4, **kwargs), sim_df,
                     rtol=1e-8)
+
+
+def _int_like_dfm_endog():
+    rng = np.random.default_rng(20261126)
+    return pd.DataFrame(
+        rng.standard_normal((60, 4)),
+        index=pd.period_range("2000-01", periods=60, freq="M"),
+        columns=list("abcd"),
+    )
+
+
+@pytest.mark.parametrize(
+    "convert", [np.int64, np.array, float], ids=["int64", "0d-array", "float"]
+)
+def test_int_like_factor_arguments(convert):
+    # A 0-d integer array or an integral float is an integer, as an int is.
+    # They raised a ValueError. The model with ints is the reference.
+    endog = _int_like_dfm_endog()
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=convert(2), factor_orders=convert(2)
+    )
+    expected = dynamic_factor_mq.DynamicFactorMQ(endog, factors=2, factor_orders=2)
+    assert mod.k_factors == 2
+    assert mod.max_factor_order == 2
+    assert mod.param_names == expected.param_names
+    assert_allclose(mod.ssm["transition"], expected.ssm["transition"], rtol=1e-15)
+
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, factor_multiplicities=convert(2)
+    )
+    expected = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, factor_multiplicities=2
+    )
+    assert mod.k_factors == 2
+    assert mod.param_names == expected.param_names
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("arg", ["factors", "factor_orders", "factor_multiplicities"])
+def test_bool_factor_arguments(value, arg):
+    # A bool is not an integer
+    endog = _int_like_dfm_endog()
+    with pytest.raises(ValueError, match=f"`{arg}` argument must"):
+        dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})

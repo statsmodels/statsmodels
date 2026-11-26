@@ -1392,9 +1392,7 @@ def etest_poisson_2indep(
         threshold = max(threshold, 100)  # keep at least 100
         y_grid = np.arange(threshold + 1)
     else:
-        y_grid = np.asarray(y_grid)
-        if y_grid.ndim != 1:
-            raise ValueError("y_grid needs to be None or 1-dimensional array")
+        y_grid = array_like(y_grid, "y_grid", dtype=None, mindim=0, shape=(None,))
     pdf1 = stats.poisson.pmf(y_grid, mean1)
     pdf2 = stats.poisson.pmf(y_grid, mean2)
 

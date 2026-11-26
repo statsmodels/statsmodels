@@ -18,6 +18,7 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import is_int_like
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel,
     MLEResults,
@@ -696,6 +697,12 @@ class RecursiveLSResults(MLEResults):
                their positions. A tuple that holds a name, and an iterable
                without a length such as a generator, work; they raised a
                TypeError.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a variable, as the integer it
+               holds does. A bool raises a TypeError.
+
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
         legend_loc : str, optional
@@ -714,10 +721,13 @@ class RecursiveLSResults(MLEResults):
 
         """
         # Get variables
-        if isinstance(variables, (int, np.integer, str)):
+        if isinstance(variables, str):
             variables = [variables]
-        # A copy, since names are replaced by their positions below
-        variables = list(variables)
+        elif is_int_like(variables, strict=True):
+            variables = [int(variables)]
+        else:
+            variables = list(variables)
+
         k_variables = len(variables)
 
         # If a string was given for `variable`, try to get it from exog names

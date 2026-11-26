@@ -296,7 +296,7 @@ def test_mcnemar_non_2x2():
         ctab.mcnemar(table, exact=False)
 
     table_3d = np.ones((2, 2, 2))
-    with pytest.raises(ValueError, match="two-dimensional"):
+    with pytest.raises(ValueError, match="table must have"):
         ctab.mcnemar(table_3d)
 
     # A genuine 2x2 table must still work.
@@ -1255,3 +1255,23 @@ def test_null_odds_zero_variance(tables, correction):
         res = st.test_null_odds(correction=correction)
     assert np.isnan(res.statistic)
     assert np.isnan(res.pvalue)
+
+
+@pytest.mark.parametrize("convert", [list, np.asarray, pd.DataFrame])
+def test_mcnemar_array_like(convert):
+    table = convert([[10, 5], [2, 20]])
+    res = ctab.mcnemar(table, exact=False, correction=False)
+    # (n12 - n21)**2 / (n12 + n21), and the chi2(1) survival function is
+    # erfc(sqrt(x / 2))
+    assert_allclose(res.statistic, 9 / 7, rtol=1e-14)
+    assert_allclose(res.pvalue, erfc(sqrt(9 / 14)), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "table",
+    [[10, 5, 2, 20], np.ones((2, 2, 1)), 5.0],
+    ids=["1d", "3d", "scalar"],
+)
+def test_mcnemar_rejects_non_2d(table):
+    with pytest.raises(ValueError, match="table must have"):
+        ctab.mcnemar(table)

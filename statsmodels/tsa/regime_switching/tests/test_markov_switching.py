@@ -717,3 +717,40 @@ def test_complex_transition_with_real_loglikelihoods(lagged):
     llf_obs = complex_mod.loglikeobs(params)
     assert np.iscomplexobj(llf_obs)
     assert_allclose(llf_obs, mod.loglikeobs(params), rtol=1e-13)
+
+
+def _int_like_params():
+    # Two switching transition parameters, then a non-switching and a
+    # switching exog parameter
+    params = markov_switching.MarkovSwitchingParams(k_regimes=2)
+    params["regime_transition"] = [1, 1]
+    params["exog"] = [0, 1]
+    return params
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_params_int_like_regime(to_key):
+    # A NumPy integer or a 0-d integer array is a regime number, as an int
+    # is. A 0-d array raised an IndexError.
+    params = _int_like_params()
+    assert_equal(params[to_key(0)], [0, 2, 4, 5])
+    assert_equal(params[to_key(1)], [1, 3, 4, 6])
+    assert_equal(params[to_key(0), "exog"], [4, 5])
+    assert_equal(params["exog", to_key(1)], [4, 6])
+    assert_equal(params[to_key(1), "regime_transition"], [1, 3])
+
+
+@pytest.mark.parametrize(
+    "key", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+def test_params_bool_float_regime(key):
+    # A bool or a float is not a regime number: True was regime 1 in a tuple
+    params = _int_like_params()
+    with pytest.raises(IndexError, match="Invalid index"):
+        params[key]
+    with pytest.raises(IndexError, match="Invalid index"):
+        params[key, "exog"]
+    with pytest.raises(IndexError, match="Invalid index"):
+        params["exog", key]

@@ -367,6 +367,35 @@ def test_plot_recursive_coefficient_variables(make_variables, names, close_figur
         assert_allclose(ydata, coef[-len(ydata) :], rtol=1e-12)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables",
+    [1, np.int64(1), np.array(1), "x1", [np.int64(1)]],
+    ids=["int", "int64", "0d-array", "name", "list"],
+)
+def test_plot_recursive_coefficient_int_like(variables, close_figures):
+    # A 0-d integer array selects a variable, as the integer it holds does
+    res = RecursiveLS(endog.values, exog.values).fit()
+    fig = res.plot_recursive_coefficient(variables=variables, alpha=None)
+    assert len(fig.axes) == 1
+    line = fig.axes[0].get_lines()[0]
+    assert line.get_label() == "Recursive estimates: x1"
+    d = max(res.nobs_diffuse, res.loglikelihood_burn)
+    expected = res.recursive_coefficients.filtered[1, d:]
+    assert_allclose(line.get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("variables", [True, np.True_], ids=["True", "np.True_"])
+def test_plot_recursive_coefficient_bool(variables, close_figures):
+    # A bool does not select a variable
+    res = RecursiveLS(endog.values, exog.values).fit()
+    with pytest.raises(TypeError):
+        res.plot_recursive_coefficient(variables=variables)
+
+
 def test_from_formula():
     mod = RecursiveLS.from_formula("cpi ~ m1", data=dta)
 

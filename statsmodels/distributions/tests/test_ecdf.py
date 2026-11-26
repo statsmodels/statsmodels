@@ -75,3 +75,38 @@ class TestDistributions:
 
         ECDF(testdata["values"])
         pd.testing.assert_frame_equal(orig_testadata, testdata)
+
+
+@pytest.mark.parametrize("convert", [list, pd.Series, np.asarray])
+def test_step_function_array_like(convert):
+    x = np.array([1.0, 2.0, 4.0])
+    y = np.array([10.0, 20.0, 40.0])
+    f = StepFunction(convert(x), convert(y))
+    # left-continuous steps: the value of the last x strictly below t
+    npt.assert_allclose(f([0.5, 1.5, 2.0, 3.0, 5.0]), [0, 10, 10, 20, 40])
+
+
+@pytest.mark.parametrize(
+    "x, y, name",
+    [
+        (np.arange(3.0)[:, None], np.arange(3.0)[:, None], "x"),
+        (np.arange(3.0)[None, :], np.arange(3.0)[None, :], "x"),
+        (np.zeros((2, 2)), np.zeros((2, 2)), "x"),
+        (1.0, 2.0, "x"),
+        (np.arange(3.0), np.arange(3.0)[:, None], "y"),
+    ],
+    ids=["column", "row", "2x2", "scalar", "y-column"],
+)
+def test_step_function_rejects_non_1d(x, y, name):
+    with pytest.raises(ValueError, match=f"{name} must have"):
+        StepFunction(x, y)
+
+
+def test_step_function_keeps_complex_values():
+    f = StepFunction([1.0, 2.0, 3.0], [1j, 2j, 3j])
+    npt.assert_allclose(f([0.5, 2.5, 3.5]), [0, 2j, 3j])
+
+
+def test_ecdf_rejects_2d():
+    with pytest.raises(ValueError, match="x must have"):
+        ECDF(np.ones((3, 2)))

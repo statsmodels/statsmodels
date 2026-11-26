@@ -172,14 +172,7 @@ def to_table(data, bins=None):
     instead of 2-dimensional.
     """
 
-    data = np.asarray(data)
-    if data.ndim != 2:
-        # without the 2-d check a 1-d table crashed with a bare
-        # "not enough values to unpack" from the shape assignment
-        raise ValueError(
-            f"data must be a 2-d array of subjects by raters, got a "
-            f"{data.ndim}-d array"
-        )
+    data = array_like(data, "data", dtype=None, shape=(None, None))
     n_rows, n_cols = data.shape
     if bins is None:
         # I could add int conversion (reverse_index) to np.unique
@@ -574,10 +567,8 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     >>> print(f"{cohens_kappa(table_rare, return_results=False):.4f}")
     0.0658
     '''
-    table = np.asarray(table, float)  # avoid integer division
-    if table.ndim != 2 or table.shape[0] != table.shape[1]:
-        # without this a 1-d table crashed with a raw AxisError from the
-        # diag/axis-1 operations below
+    table = array_like(table, "table", shape=(None, None))  # avoid integer division
+    if table.shape[0] != table.shape[1]:
         raise ValueError(
             f"table must be a square 2-d array, got shape {table.shape}"
         )

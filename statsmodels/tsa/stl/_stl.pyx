@@ -88,18 +88,15 @@ from libc.math cimport NAN, fabs, isnan, sqrt
 
 from statsmodels.compat.pandas import _infer_freq_returns_offset
 
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, is_int_like
 from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.tsatools import freq_to_period
 
 
 def _is_pos_int(x, odd):
-    valid = (isinstance(x, (int, np.integer))
-             and not isinstance(x, np.timedelta64))
-    valid = valid and not isinstance(x, (float, np.floating))
-    valid = valid and x > 0
+    valid = is_int_like(x) and int(x) > 0
     if valid and odd:
-        valid = valid & (x % 2) == 1
+        valid = int(x) % 2 == 1
     return valid
 
 
@@ -181,6 +178,14 @@ cdef class STL(object):
        list or tuple, and ``nobs`` and ``plot`` of the results raised an
        AttributeError.
 
+    .. versionchanged:: 0.15.1
+
+       A float with an integral value, such as 7.0, or a 0-d integer array
+       is accepted for ``period``, ``seasonal``, ``trend``, ``low_pass``,
+       ``seasonal_jump``, ``trend_jump`` and ``low_pass_jump``, as an int
+       is. They raised a ValueError. A bool raises a ValueError: True was a
+       jump of 1.
+
     See the notebook `Seasonal Decomposition
     <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
 
@@ -246,10 +251,11 @@ cdef class STL(object):
             period = freq_to_period(freq)
         if not _is_pos_int(period, False) or period < 2:
             raise ValueError('period must be a positive integer >= 2')
+        period = int(period)
         self._period = period  # np
         if not _is_pos_int(seasonal, True) or seasonal < 3:
             raise ValueError('seasonal must be an odd positive integer >= 3')
-        self.seasonal = seasonal  # ns
+        self.seasonal = int(seasonal)  # ns
         if trend is None:
             trend = int(np.ceil(1.5 * self._period / (1 - 1.5 / self.seasonal)))
             # ensure odd
@@ -257,7 +263,7 @@ cdef class STL(object):
         if not _is_pos_int(trend, True) or trend < 3 or trend <= period:
             raise ValueError('trend must be an odd positive integer '
                              '>= 3 where trend > period')
-        self.trend = trend  # nt
+        self.trend = int(trend)  # nt
         if low_pass is None:
             low_pass = self._period + 1
             low_pass += ((low_pass % 2) == 0)
@@ -265,7 +271,7 @@ cdef class STL(object):
                 low_pass < 3 or low_pass <= period:
             raise ValueError('low_pass must be an odd positive integer >= 3 '
                              'where low_pass > period')
-        self.low_pass = low_pass  # nl
+        self.low_pass = int(low_pass)  # nl
         self.seasonal_deg = seasonal_deg  # isdeg
         self.trend_deg = trend_deg  # itdeg
         self.low_pass_deg = low_pass_deg  # ildeg
@@ -276,9 +282,9 @@ cdef class STL(object):
             raise ValueError('seasonal_jump must be a positive integer')
         if not _is_pos_int(trend_jump, False):
             raise ValueError('trend_jump must be a positive integer')
-        self.low_pass_jump = low_pass_jump
-        self.seasonal_jump = seasonal_jump
-        self.trend_jump = trend_jump
+        self.low_pass_jump = int(low_pass_jump)
+        self.seasonal_jump = int(seasonal_jump)
+        self.trend_jump = int(trend_jump)
 
         self._use_rw = False
         self._trend = np.zeros(self.nobs)

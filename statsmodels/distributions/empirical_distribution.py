@@ -4,6 +4,8 @@ Empirical CDF Functions
 import numpy as np
 from scipy.interpolate import interp1d
 
+from statsmodels.tools.validation import array_like
+
 
 def _conf_set(F, alpha=.05):
     r"""
@@ -88,14 +90,11 @@ class StepFunction:
             raise ValueError(msg)
         self.side = side
 
-        _x = np.asarray(x)
-        _y = np.asarray(y)
+        _x = array_like(x, "x", dtype=None, mindim=0, shape=(None,))
+        _y = array_like(y, "y", dtype=None, mindim=0, shape=(None,))
 
         if _x.shape != _y.shape:
             msg = "x and y do not have the same shape"
-            raise ValueError(msg)
-        if len(_x.shape) != 1:
-            msg = "x and y must be 1-dimensional"
             raise ValueError(msg)
 
         self.x = np.r_[-np.inf, _x]

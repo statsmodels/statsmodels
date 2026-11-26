@@ -96,3 +96,48 @@ def test_deprecated_instance_passthrough_does_not_warn():
     with warnings_as_errors():
         assert check_random_state(rs, deprecated=True) is rs
         assert check_random_state(gen, deprecated=True) is gen
+
+
+def _draws(rng):
+    return rng.random(5) if isinstance(rng, np.random.Generator) else rng.random_sample(5)
+
+
+@pytest.mark.parametrize(
+    "seed", [np.int64(3), np.uint8(3), np.array(3)], ids=["int64", "uint8", "0-d"]
+)
+@pytest.mark.parametrize("deprecated", [False, True])
+def test_integer_like_seed(seed, deprecated):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)  # deprecated=True warns
+        rng = check_random_state(seed, deprecated=deprecated)
+        expected = check_random_state(3, deprecated=deprecated)
+    assert_equal(_draws(rng), _draws(expected))
+
+
+@pytest.mark.parametrize(
+    "seed, value",
+    [(3.0, 3), (2.5, 2), ("3", 3), (True, 1), (np.True_, 1), (np.float32(4.0), 4)],
+    ids=["float", "fraction", "str", "bool", "np.bool_", "float32"],
+)
+def test_non_integer_scalar_seed_deprecated(seed, value):
+    # int(seed) converted these silently; they now warn with the same result
+    match = (
+        rf"Passing seed of type {type(seed).__name__} is deprecated and will "
+        rf"raise a TypeError in statsmodels 0\.17\. Pass seed={value} as an int"
+    )
+    with pytest.warns(FutureWarning, match=match):
+        rng = check_random_state(seed)
+    assert_equal(_draws(rng), _draws(np.random.default_rng(value)))
+
+
+@pytest.mark.parametrize("seed", ["abc", 1 + 2j, np.array([1.5])])
+def test_seed_not_convertible_raises(seed):
+    with pytest.raises(TypeError, match="seed must either be an integer"):
+        check_random_state(seed)
+
+
+def test_one_element_array_seed_is_array_of_ints():
+    # a 1-element array is an array of ints, which seeds the same stream
+    assert_equal(
+        _draws(check_random_state(np.array([3]))), _draws(check_random_state(3))
+    )

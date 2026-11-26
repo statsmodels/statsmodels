@@ -14,6 +14,7 @@ from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.validation import is_int_like
 
 from . import (
     _cfa_simulation_smoother,
@@ -174,6 +175,12 @@ def companion_matrix(polynomial):
         of the companion matrix creation). A three-dimensional array holds the
         coefficient matrices along its first axis.
 
+        .. versionchanged:: 0.15.1
+
+           A float with an integral value, such as 3.0, or a 0-d integer
+           array is a size, as an int is. They raised a TypeError. A bool
+           raises a TypeError: True was the size 1.
+
     Returns
     -------
     companion_matrix : ndarray
@@ -228,7 +235,7 @@ def companion_matrix(polynomial):
     provided.
     """
     identity_matrix = False
-    if isinstance(polynomial, (int, np.integer)):
+    if is_int_like(polynomial):
         # GH 5570, allow numpy integer types, but coerce to python int
         n = int(polynomial)
         m = 1

@@ -3177,3 +3177,35 @@ def test_fit_flags_not_changed(flags):
     # complex-step differentiation, so approx_centered has no effect)
     desired = mod.fit(disp=0)
     assert_allclose(res.params, desired.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("method", ["forecast", "get_forecast"])
+@pytest.mark.parametrize(
+    "steps",
+    [3.0, 15.0, np.array(3), np.array(15)],
+    ids=["3.0", "15.0", "0d-3", "0d-15"],
+)
+def test_forecast_int_like_steps(method, steps):
+    # An integral float or a 0-d integer array `steps` is the number of
+    # steps, as an int is. It was used as the index of the last forecast,
+    # which raised for 3 and gave 5 forecasts for 15 (a 0-d array) or raised
+    # (a float). The forecasts of a zero-mean AR(1) are phi**h y_T.
+    endog = np.random.default_rng(2468).standard_normal(11)
+    phi = 0.5
+    res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([phi, 1.0])
+    desired = phi ** np.arange(1, int(steps) + 1) * endog[-1]
+    actual = getattr(res, method)(steps)
+    if method == "get_forecast":
+        actual = actual.predicted_mean
+    assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["forecast", "get_forecast"])
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(method, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises.
+    endog = np.random.default_rng(2468).standard_normal(11)
+    res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 1.0])
+    with pytest.raises(KeyError):
+        getattr(res, method)(steps)

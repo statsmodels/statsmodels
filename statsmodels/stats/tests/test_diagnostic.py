@@ -2133,15 +2133,34 @@ def test_reset_smoke(power, test_type, use_f, cov):
     smsdia.linear_reset(res, power=power, test_type=test_type, use_f=use_f, **cov)
 
 
-def test_reset_numpy_integer_power():
-    rs = np.random.RandomState(32320967)
-    x = add_constant(rs.standard_normal((200, 2)))
-    y = x @ np.ones(3) + x[:, 1] ** 2 + rs.standard_normal(200)
+@pytest.mark.parametrize(
+    "power",
+    [3, np.int64(3), np.int32(3), 3.0],
+    ids=["int", "int64", "int32", "float"],
+)
+def test_reset_int_like_power(power):
+    # A NumPy integer or an integral float is the maximum power. The list of
+    # powers, which takes the other branch, is the reference.
+    rng = np.random.default_rng(20261126)
+    x = add_constant(rng.standard_normal((200, 2)))
+    y = x @ np.ones(3) + x[:, 1] ** 2 + rng.standard_normal(200)
     res = OLS(y, x).fit()
-    expected = smsdia.linear_reset(res, power=3)
-    actual = smsdia.linear_reset(res, power=np.int64(3))
-    assert_allclose(actual.statistic, expected.statistic)
-    assert_allclose(actual.pvalue, expected.pvalue)
+    expected = smsdia.linear_reset(res, power=[2, 3])
+    actual = smsdia.linear_reset(res, power=power)
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+
+
+@pytest.mark.parametrize("power", [True, np.True_], ids=["True", "np.True_"])
+def test_reset_bool_power(power):
+    # A bool is not a power: True was rejected as a maximum power below 2,
+    # and is now rejected as a list of powers
+    rng = np.random.default_rng(20261126)
+    x = add_constant(rng.standard_normal((200, 2)))
+    y = x @ np.ones(3) + rng.standard_normal(200)
+    res = OLS(y, x).fit()
+    with pytest.raises(ValueError, match="distinct integers all >= 2"):
+        smsdia.linear_reset(res, power=power)
 
 
 @pytest.mark.smoke

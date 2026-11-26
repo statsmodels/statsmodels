@@ -2141,11 +2141,34 @@ def test_confint_proportions_paired_default_method(method):
     )
 
 
+@pytest.mark.parametrize("convert", [list, np.asarray, pd.DataFrame])
+def test_confint_proportions_paired_array_like(convert):
+    # the docstring example, verified against R (ratesci::moverpairci)
+    table = convert([[10, 5], [2, 20]])
+    assert_allclose(
+        smprop.confint_proportions_paired(table),
+        (-0.0643926050711, 0.2211160178958),
+        rtol=1e-11,
+    )
+
+
+@pytest.mark.parametrize(
+    "table, match",
+    [
+        ([1, 2, 3, 4], "table must have"),
+        (np.ones((2, 2, 1)), "table must have"),
+        (5, "table must have"),
+        ([[1, 2, 3], [4, 5, 6], [7, 8, 9]], "required to have shape"),
+        ([[1, 2, 3], [4, 5, 6]], "required to have shape"),
+    ],
+    ids=["1d", "2x2x1", "scalar", "3x3", "2x3"],
+)
+def test_confint_proportions_paired_rejects_non_2x2(table, match):
+    with pytest.raises(ValueError, match=match):
+        smprop.confint_proportions_paired(table)
+
+
 def test_confint_proportions_paired_invalid_inputs_raises():
-    with pytest.raises(ValueError, match="2x2 contingency table"):
-        smprop.confint_proportions_paired([1, 2, 3, 4])
-    with pytest.raises(ValueError, match="2x2 contingency table"):
-        smprop.confint_proportions_paired([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     with pytest.raises(ValueError, match="non-negative"):
         smprop.confint_proportions_paired([[1, -2], [3, 4]])
     with pytest.raises(ValueError, match="at least one observation"):

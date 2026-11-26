@@ -12,6 +12,8 @@ from urllib.request import urlopen
 import numpy as np
 from pandas import Index, read_csv, read_stata
 
+from statsmodels.tools.validation import is_int_like
+
 
 def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
     """
@@ -96,6 +98,11 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         The full dataset, with variables as columns.
     endog_idx : int or array_like, optional
         The column index (or indices) of the endogenous variable(s).
+
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer is a column position, as an int is. A bool is
+           not: True was the column at position 1.
     exog_idx : int or array_like, optional
         The column index (or indices) of the exogenous variable(s). If
         None, all columns other than `endog_idx` are used.
@@ -111,8 +118,8 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     """
     names = data.columns
 
-    if isinstance(endog_idx, int):
-        endog_name = names[endog_idx]
+    if is_int_like(endog_idx, strict=True):
+        endog_name = names[int(endog_idx)]
         endog = data[endog_name].copy()
         if exog_idx is None:
             exog = data.drop([endog_name], axis=1)
@@ -123,8 +130,8 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
-        elif isinstance(exog_idx, int):
-            exog = data[names[exog_idx]].copy()
+        elif is_int_like(exog_idx, strict=True):
+            exog = data[names[int(exog_idx)]].copy()
         else:
             exog = data[names[exog_idx]].copy()
 

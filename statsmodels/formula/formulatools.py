@@ -4,6 +4,7 @@ import numpy as np
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.data import _to_pandas
+from statsmodels.tools.validation import is_int_like
 
 __all__ = ["advance_eval_env", "formula_handler", "handle_formula_data"]
 
@@ -166,7 +167,7 @@ def advance_eval_env(kwargs):
         kwargs["eval_env"] = 2
     elif eval_env == -1:
         kwargs["eval_env"] = FormulaManager().get_empty_eval_env()
-    elif isinstance(eval_env, (int, np.integer)):
+    elif is_int_like(eval_env, strict=True):
         kwargs["eval_env"] = int(eval_env) + 1
 
 

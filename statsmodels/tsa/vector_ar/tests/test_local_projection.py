@@ -589,3 +589,29 @@ def test_against_r_with_exog():
     assert_allclose(res.irfs[:, :, 0], r_irfs, atol=1e-6)
     assert_allclose(res.stderr[1:, :, 0], r_stderr[1:], atol=1e-6)
     assert res.stderr[0, 0, 0] < 1e-8
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [np.int64(1), np.int32(1), np.array(1)],
+    ids=["int64", "int32", "0d-array"],
+)
+def test_int_like_shock_idx(shock_idx):
+    # A NumPy integer or a 0-d integer array is a column index, as an int
+    # is. A 0-d array raised a TypeError. The list form, which takes the
+    # other branch, is the reference.
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    res = LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2).fit()
+    expected = LocalProjections(y, shock_idx=[1], lags=1, horizons=2).fit()
+    assert res.model.shock_idx == [1]
+    assert_allclose(res.irfs, expected.irfs, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "shock_idx", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+def test_bool_float_shock_idx(shock_idx):
+    # A bool or a float is not a column index: True was column 1
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    with pytest.raises(TypeError):
+        LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)

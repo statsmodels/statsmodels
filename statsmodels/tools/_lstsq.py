@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from statsmodels.tools.validation import array_like
+
 __all__ = ["QRSVD", "default_rcond", "numerical_rank"]
 
 
@@ -108,9 +110,7 @@ class QRSVD:
     """
 
     def __init__(self, x):
-        x = np.asarray(x, dtype=float)
-        if x.ndim != 2:
-            raise ValueError("x must be 2-dimensional.")
+        x = array_like(x, "x", shape=(None, None))
         self.shape = x.shape
         self._q, r = np.linalg.qr(x)
         self._u, self.singular_values, self._vt = np.linalg.svd(r, full_matrices=False)

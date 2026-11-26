@@ -1,0 +1,5 @@
+- A seed (``seed=`` or ``rng=``) that is a scalar but not an integer, such as
+  a float (``2.5`` was the seed 2), a string such as ``"3"`` or a bool, is
+  deprecated. It gives the same random numbers as before with a
+  ``FutureWarning``, and will raise a ``TypeError`` in statsmodels 0.17.
+  :pr:`11249`

@@ -78,6 +78,7 @@ from statsmodels.tools.sm_exceptions import (
     SpecificationWarning,
     ValueWarning,
 )
+from statsmodels.tools.validation import is_float_like
 
 
 class ParameterConstraint:
@@ -1115,8 +1116,8 @@ class GEE(GLM):
                 ),
             ):
                 return 1.0
-        elif isinstance(self.scaletype, float):
-            return np.array(self.scaletype)
+        elif is_float_like(self.scaletype):
+            return np.array(float(self.scaletype))
 
         endog = self.endog_li
         cached_means = self.cached_means
