@@ -689,6 +689,13 @@ class RecursiveLSResults(MLEResults):
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
+
+            .. versionchanged:: 0.15.1
+
+               A list is no longer modified: names in it were replaced by
+               their positions. A tuple that holds a name, and an iterable
+               without a length such as a generator, work; they raised a
+               TypeError.
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
         legend_loc : str, optional
@@ -709,6 +716,8 @@ class RecursiveLSResults(MLEResults):
         # Get variables
         if isinstance(variables, (int, np.integer, str)):
             variables = [variables]
+        # A copy, since names are replaced by their positions below
+        variables = list(variables)
         k_variables = len(variables)
 
         # If a string was given for `variable`, try to get it from exog names
