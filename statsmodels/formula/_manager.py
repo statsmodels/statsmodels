@@ -151,18 +151,14 @@ class _FormulaOption:
     """
     Container for the global formula-related options.
 
-    Parameters
-    ----------
-    default_engine : {"patsy", "formulaic"}, optional
-        The initial formula engine to use. If None, the best available
-        engine is selected automatically.
+    The formula engine starts as the one selected when
+    ``statsmodels.formula`` is imported: the ``SM_FORMULA_ENGINE``
+    environment variable if it is set, otherwise patsy if it is installed,
+    otherwise formulaic.
     """
 
-    def __init__(self, default_engine: Literal["patsy", "formulaic"] | None = None):
-        if default_engine is None:
-            default_engine = DEFAULT_FORMULA_ENGINE
-
-        self._formula_engine = default_engine
+    def __init__(self):
+        self._formula_engine = DEFAULT_FORMULA_ENGINE
         self._allowed_options = tuple()
         if HAVE_PATSY:
             self._allowed_options += ("patsy",)
