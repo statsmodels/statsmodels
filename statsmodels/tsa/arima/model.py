@@ -492,7 +492,8 @@ class ARIMA(sarimax.SARIMAX):
                     )
             elif method == "innovations":
                 p, fit_details = innovations(
-                    endog, ma_order=order[2], demean=False, **method_kwargs
+                    endog, ar_order=order[0], ma_order=order[2], demean=False,
+                    **method_kwargs
                     )
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
