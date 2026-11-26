@@ -743,15 +743,17 @@ class FormulaManager:
 
         Returns
         -------
-        EvalEnvironment or dict
-            A formula-engine-dependent empty evaluation environment.
-        """
-        if self._using_patsy:
-            from patsy.eval import EvalEnvironment
+        dict
+            An empty dict, which ``get_matrices`` uses as an evaluation
+            environment that holds no variables.
 
-            return EvalEnvironment({})
-        else:
-            return {}
+            .. versionchanged:: 0.15.1
+
+               Also a dict with patsy. It was a patsy ``EvalEnvironment``,
+               which is deprecated as an evaluation environment, so using it
+               raised a FutureWarning.
+        """
+        return {}
 
     def remove_intercept(self, terms):
         """

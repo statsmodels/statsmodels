@@ -241,14 +241,17 @@ def test_get_empty_eval_patsy_errors(data):
     # Threaded use causes call stack depth issues
     mgr = FormulaManager(engine="patsy")
     fmla = "y ~ 1 + x + g(z)"
-    eval_env = mgr.get_empty_eval_env()
     with PATSY_ERROR_LOCK:
         with pytest.raises(patsy.PatsyError):
             mgr.get_matrices(fmla, data, eval_env=2)
 
         with pytest.raises(patsy.PatsyError):
             with pytest.warns(FutureWarning, match="EvalEnvironment is deprecate"):
-                mgr.get_matrices(fmla, data, eval_env=eval_env)
+                mgr.get_matrices(fmla, data, eval_env=patsy.eval.EvalEnvironment({}))
+
+        # The empty environment is not a deprecated EvalEnvironment
+        with pytest.raises(patsy.PatsyError):
+            mgr.get_matrices(fmla, data, eval_env=mgr.get_empty_eval_env())
 
 
 @require_formulaic
@@ -276,6 +279,43 @@ def test_get_empty_eval_formulaic(data):
     assert names == ["y"]
     names = mgr.get_column_names(output[1])
     assert names == ["Intercept", "x", "g(z)"]
+
+
+@pytest.mark.thread_unsafe(reason="changes the global formula engine")
+@pytest.mark.parametrize("model", ["ols", "gee", "mixedlm", "rolling_ols"])
+def test_eval_env_minus_one(engine, model, monkeypatch, recwarn):
+    # eval_env=-1 evaluates the formula in an empty namespace, without a
+    # deprecation warning
+    import statsmodels.formula.api as smf
+    from statsmodels.regression.rolling import RollingOLS
+
+    monkeypatch.setattr(statsmodels.formula.options, "formula_engine", engine)
+    rng = np.random.default_rng(1234)
+    frame = pd.DataFrame(
+        {
+            "y": rng.standard_normal(40),
+            "x": rng.standard_normal(40),
+            "g": np.repeat(np.arange(8), 5),
+        }
+    )
+    w = rng.standard_normal(40)  # noqa: F841
+
+    def design(rhs, **kwargs):
+        if model == "ols":
+            return smf.ols("y ~ " + rhs, frame, **kwargs).exog
+        if model == "gee":
+            return smf.gee("y ~ " + rhs, "g", frame, **kwargs).exog
+        if model == "mixedlm":
+            mod = smf.mixedlm("y ~ x", frame, groups="g", re_formula=rhs, **kwargs)
+            return mod.exog_re
+        return RollingOLS.from_formula("y ~ " + rhs, frame, window=20, **kwargs).exog
+
+    clean = design("1 + x", eval_env=-1)
+    with pytest.raises(FormulaManager().factor_evaluation_error):
+        design("1 + x + w", eval_env=-1)
+    future = [rec for rec in recwarn if issubclass(rec.category, FutureWarning)]
+    assert not future
+    np.testing.assert_allclose(clean, design("1 + x"))
 
 
 def test_has_intercept(engine, data):
