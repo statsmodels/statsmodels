@@ -1,7 +1,7 @@
 import warnings
 
 import numpy as np
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -13,9 +13,11 @@ from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import (
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import (
+    _innovations_arma,
     innovations,
     innovations_mle,
 )
+from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 from statsmodels.tsa.statespace import sarimax
 
@@ -103,6 +105,149 @@ def test_innovations_ma_invalid():
     endog = np.arange(10)
     with pytest.raises(ValueError):
         innovations(endog, ma_order=[1, 3])
+
+
+@pytest.mark.parametrize(
+    "ar_params, ma_params",
+    [
+        ([0.5], [0.4]),
+        ([0.5, -0.3], [0.4]),
+        ([0.7], [-0.4, 0.25]),
+        ([0.2, 0.3], []),
+        ([], [0.6, 0.2]),
+    ],
+)
+def test_innovations_arma_theoretical(ar_params, ma_params):
+    # For a causal and invertible ARMA process, the innovations algorithm
+    # applied to the autocovariances gives theta_{m,j} -> psi_j, the
+    # coefficients of the MA(infinity) representation, and v_m -> sigma2 as
+    # m grows. The equations of Brockwell and Davis (2016), section 5.1.3,
+    # then hold exactly, so with a large m the true parameters are
+    # recovered. The autocovariances are computed independently by
+    # arma_acovf.
+    ar_params = np.array(ar_params, dtype=float)
+    ma_params = np.array(ma_params, dtype=float)
+    acov = arma_acovf(np.r_[1, -ar_params], np.r_[1, ma_params], 300, sigma2=2.0)
+    p = _innovations_arma(acov, len(ar_params), len(ma_params), m=200)[-1]
+
+    assert_allclose(p.ar_params, ar_params, rtol=1e-10)
+    assert_allclose(p.ma_params, ma_params, rtol=1e-10)
+    assert_allclose(p.sigma2, 2.0, rtol=1e-10)
+
+
+def test_innovations_arma_theoretical_overfit():
+    # The autocovariances of an MA(1) process are zero beyond lag 1, so
+    # theta_{m,j} = 0 for j > 1, and an ARMA(1, 1) model has phi = 0
+    acov = arma_acovf([1], [1, 0.6], 50, sigma2=2.0)
+    p = _innovations_arma(acov, 1, 1, m=40)[-1]
+    assert_allclose(p.ar_params, [0], atol=1e-15)  # exact zero, see above
+    assert_allclose(p.ma_params, [0.6], rtol=1e-10)
+    assert_allclose(p.sigma2, 2.0, rtol=1e-10)
+
+
+def check_innovations_arma_itsmr(endog):
+    # Test against the coefficients theta_{m,j} of R itsmr::ia, with the ARMA
+    # step of Brockwell and Davis (2016), section 5.1.3, computed in R; see
+    # results/results_innovations_arma.R
+    p = innovations(endog, ar_order=1, ma_order=1).parameters
+    assert_allclose(p[1].ar_params, [0.7234364976])
+    assert_allclose(p[1].ma_params, [0.3596418057])
+    # The estimate of the variance is v_17, the same as for the MA(17) model
+    v17 = innovations(endog, ma_order=17).parameters[17].sigma2
+    assert_allclose(p[1].sigma2, v17)
+
+    # itsmr reports the mean of the squared standardized one-step prediction
+    # errors of the fitted model as the variance
+    u, v = arma_innovations(
+        np.asarray(endog) - np.mean(endog),
+        ar_params=p[1].ar_params,
+        ma_params=p[1].ma_params,
+        sigma2=1,
+    )
+    assert_allclose(np.mean(u**2 / v), 0.475680222)
+
+    p = innovations(endog, ar_order=2, ma_order=1, m=17).parameters
+    assert_allclose(
+        np.r_[p[1].ar_params, p[1].ma_params],
+        [0.75102521032, -0.02988073619, 0.33205309296],
+    )
+
+    # Pure MA model with a given recursion level: itsmr::ia(lake, 2, m = 17)
+    p = innovations(endog, ma_order=2, m=17).parameters
+    assert_allclose(p[2].ma_params, [1.0830783033, 0.7835383743])
+    assert_allclose(p[1].ma_params, p[2].ma_params[:1])
+    assert_allclose(p[2].sigma2, v17)
+
+
+def test_innovations_arma_itsmr():
+    endog = lake.copy()
+
+    check_innovations_arma_itsmr(endog)  # Pandas series
+    check_innovations_arma_itsmr(endog.values)  # Numpy array
+    check_innovations_arma_itsmr(endog.tolist())  # Python list
+
+
+@pytest.mark.low_precision("Test against Example 5.1.5 in Brockwell and Davis (2016)")
+def test_brockwell_davis_example_515_m():
+    # The MA(2) estimates from the m=17 computations, see
+    # test_brockwell_davis_example_515
+    endog = dowj.diff().iloc[1:]
+
+    p = innovations(endog, ma_order=2, m=17, demean=True).parameters
+    assert_allclose(p[2].ma_params, [0.4269, 0.2704], atol=1e-4)
+    assert_allclose(p[2].sigma2, 0.1122, atol=1e-4)
+
+
+def test_innovations_arma_orders():
+    # Element j holds the ARMA(p, j) estimates, all from the same MA(m) model
+    endog = lake.copy()
+    res = innovations(endog, ar_order=2, ma_order=2, m=17)
+    assert_equal(res.other_results.spec.order, (2, 0, 2))
+    assert_equal(len(res.parameters), 3)
+    for j, p in enumerate(res.parameters):
+        assert_equal(p.spec.order, (2, 0, j))
+        desired = innovations(endog, ar_order=2, ma_order=j, m=17).parameters
+        assert_allclose(p.params, desired[-1].params)
+
+    # The AR(1) estimate is theta_{m,1}
+    p = innovations(endog, ar_order=1, ma_order=0, m=5).parameters[0]
+    theta = innovations(endog, ma_order=1, m=5).parameters[1]
+    assert_allclose(p.ar_params, theta.ma_params)
+    assert_allclose(p.sigma2, theta.sigma2)
+
+
+def test_innovations_arma_default_m():
+    endog = lake.copy()
+    p = innovations(endog, ar_order=1, ma_order=1).parameters[-1]
+    desired = innovations(endog, ar_order=1, ma_order=1, m=17).parameters[-1]
+    assert_allclose(p.params, desired.params)
+
+    # More than 17 parameters
+    p = innovations(endog, ar_order=10, ma_order=8).parameters[-1]
+    desired = innovations(endog, ar_order=10, ma_order=8, m=18).parameters[-1]
+    assert_allclose(p.params, desired.params)
+
+    # Short series: m = nobs - 1
+    p = innovations(endog[:10], ar_order=1, ma_order=1).parameters[-1]
+    desired = innovations(endog[:10], ar_order=1, ma_order=1, m=9).parameters[-1]
+    assert_allclose(p.params, desired.params)
+
+
+def test_innovations_arma_invalid():
+    endog = lake.copy()
+    with pytest.raises(ValueError, match="non-consecutive AR"):
+        innovations(endog, ar_order=[1, 3], ma_order=1)
+    with pytest.raises(ValueError, match="2 <= m < 98; got 1"):
+        innovations(endog, ar_order=1, ma_order=1, m=1)
+    with pytest.raises(ValueError, match="2 <= m < 98; got 98"):
+        innovations(endog, ar_order=1, ma_order=1, m=98)
+    with pytest.raises(ValueError, match="2 <= m < 98; got 1"):
+        innovations(endog, ma_order=2, m=1)
+    with pytest.raises(TypeError, match="m must be integer_like"):
+        innovations(endog, ar_order=1, ma_order=1, m=1.5)
+    # Too short for the default m
+    with pytest.raises(ValueError, match="2 <= m < 2; got 1"):
+        innovations(endog[:2], ar_order=1, ma_order=1)
 
 
 @pytest.mark.low_precision("Test against Example 5.2.4 in Brockwell and Davis (2016)")

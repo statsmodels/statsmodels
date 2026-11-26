@@ -606,7 +606,6 @@ class SARIMAXSpecification:
                       "hannan_rissanen", "innovations_mle", "statespace"}
 
         # Properties
-        has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
         has_seasonal = self.seasonal_periods != 0
 
@@ -619,8 +618,9 @@ class SARIMAXSpecification:
                 (self.enforce_invertibility and self.max_ma_order > 0)):
             estimators.intersection_update(["innovations_mle", "statespace"])
 
-        # Innovations: no AR, non-consecutive MA, seasonal
-        if has_ar or not self.is_ma_consecutive or has_seasonal:
+        # Innovations: non-consecutive AR or MA, seasonal
+        if (not self.is_ar_consecutive or not self.is_ma_consecutive
+                or has_seasonal):
             estimators.discard("innovations")
         # Yule-Walker/Burg: no MA, non-consecutive AR, seasonal
         if has_ma or not self.is_ar_consecutive or has_seasonal:
@@ -676,10 +676,7 @@ class SARIMAXSpecification:
         >>> spec.validate_estimator('burg')
         ValueError: Burg estimator does not support moving average components.
 
-        >>> spec.validate_estimator('innovations')
-        ValueError: Innovations estimator does not support autoregressive
-                    components.
-
+        >>> spec.validate_estimator('innovations')      # returns None
         >>> spec.validate_estimator('hannan_rissanen')  # returns None
         >>> spec.validate_estimator('innovations_mle')  # returns None
         >>> spec.validate_estimator('statespace')       # returns None
@@ -701,7 +698,6 @@ class SARIMAXSpecification:
             ),
             lower=False,
         )
-        has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
         has_missing = self._has_missing
 
@@ -751,9 +747,9 @@ class SARIMAXSpecification:
             if not self.is_ma_consecutive:
                 raise ValueError("Innovations estimator does not support"
                                  " non-consecutive moving average lags.")
-            if has_ar:
+            if not self.is_ar_consecutive:
                 raise ValueError("Innovations estimator does not support"
-                                 " autoregressive components.")
+                                 " non-consecutive autoregressive lags.")
         elif estimator == "hannan_rissanen":
             if has_seasonal_ar_or_ma:
                 raise ValueError("Hannan-Rissanen estimator does not support"
