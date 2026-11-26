@@ -1,0 +1,16 @@
+- A float with an integral value such as ``3.0``, a NumPy integer and a 0-d
+  integer array are a number of steps in ``forecast`` of ``AutoReg``,
+  ``ARDL``, ``ETSModel``, ``STLForecast`` and the state space models, and in
+  ``get_forecast``; they raised or were used as the location of the last
+  forecast. :pr:`11253`
+- Integral floats and 0-d integer arrays are accepted as orders, lags,
+  periods, windows and sizes by ``ARDL``, ``UECM``, ``STL``, ``MSTL``,
+  ``DynamicFactorMQ``, ``companion_matrix`` and ``leybourne``, and a 0-d
+  integer array as a position by the ``start`` and ``end`` of prediction,
+  ``DeterministicProcess.range``, ``add_lag``, ``LocalProjections``,
+  ``impulse_responses``, ``Initialization.set`` and ``unset``, Markov
+  switching parameter keys and the VAR and VECM causality tests.
+  ``VARResults.get_eq_index``, ``IRAnalysis.plot`` and
+  ``seasonal_diagnostic_plot`` accept NumPy integers. :pr:`11253`
+- A NumPy integer ``revisions_details_start`` in ``news`` is a period counted
+  from the end of the previous dataset, as an int is. :pr:`11253`

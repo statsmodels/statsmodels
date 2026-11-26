@@ -1,0 +1,5 @@
+- The regression plots that take ``exog_idx`` or ``focus_exog``, and
+  ``added_variable_resids`` and ``ceres_resids``, accept NumPy integers and
+  0-d integer arrays as column positions instead of raising "x not in
+  list". ``plot_recursive_coefficient`` of ``RecursiveLSResults`` and
+  ``RollingRegressionResults`` accepts a 0-d integer array. :pr:`11253`
