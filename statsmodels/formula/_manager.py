@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tools.data import _to_pandas
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import is_int_like, string_like
 
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
@@ -418,8 +418,8 @@ class FormulaManager:
         """
         if isinstance(formula, (formulaic.Formula, formulaic.ModelSpec)):
             return formula
-        if isinstance(context, int):
-            context += 1
+        if is_int_like(context, strict=True):
+            context = int(context) + 1
         feature_flags = formulaic.parser.DefaultFormulaParser.FeatureFlags.TWOSIDED
         parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
         _formula = formulaic.Formula(formula, _parser=parser, _ordering="none")
@@ -536,7 +536,7 @@ class FormulaManager:
         data = _to_pandas(data)
         _check_data(data)
         data = _maybe_convert_data(data)
-        if isinstance(eval_env, (int, np.integer)):
+        if is_int_like(eval_env, strict=True):
             eval_env = int(eval_env) + 1
         if self._using_patsy:
             return_type = "dataframe" if pandas else "matrix"
@@ -551,6 +551,8 @@ class FormulaManager:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
                     warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
+                elif not is_int_like(eval_env, strict=True):
+                    raise TypeError("context (eval_env) must be an int or a dict.")
             if prediction and not isinstance(formula, patsy.design_info.DesignInfo):
                 # Only the right-hand side is evaluated when predicting
                 if not isinstance(formula, patsy.desc.ModelDesc):
@@ -612,7 +614,7 @@ class FormulaManager:
                     _eval_env = {}
                     for val in ns:
                         _eval_env.update(val)
-            if not isinstance(_eval_env, (int, dict)):
+            if not (isinstance(_eval_env, dict) or is_int_like(_eval_env, strict=True)):
                 raise TypeError("context (eval_env) must be an int or a dict.")
 
             _ordering = statsmodels.formula.options.ordering

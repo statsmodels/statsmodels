@@ -6,6 +6,7 @@ from urllib.error import HTTPError, URLError
 
 import numpy as np
 from numpy.testing import assert_, assert_array_equal
+import pandas as pd
 import pytest
 
 from statsmodels.datasets import check_internet, get_rdataset, utils, webuse
@@ -126,3 +127,36 @@ def test_clear_data_home_uses_default_when_none(tmp_path, monkeypatch):
     utils.clear_data_home(None)
 
     assert not Path(data_home).exists()
+
+
+def _process_pandas_data():
+    rng = np.random.default_rng(20261126)
+    return pd.DataFrame(rng.standard_normal((10, 4)), columns=["a", "b", "c", "d"])
+
+
+@pytest.mark.parametrize(
+    "endog_idx",
+    [1, np.int64(1), np.int32(1), np.array(1)],
+    ids=["int", "int64", "int32", "0d-array"],
+)
+@pytest.mark.parametrize(
+    "exog_idx, exog_names",
+    [(None, ["a", "c", "d"]), ([3, 0], ["d", "a"])],
+    ids=["exog-None", "exog-list"],
+)
+def test_process_pandas_int_like_endog_idx(endog_idx, exog_idx, exog_names):
+    # A NumPy integer is a column position, as a Python int is
+    data = _process_pandas_data()
+    dataset = utils.process_pandas(data, endog_idx=endog_idx, exog_idx=exog_idx)
+    assert dataset.endog_name == "b"
+    pd.testing.assert_series_equal(dataset.endog, data["b"])
+    assert dataset.exog_name == exog_names
+    pd.testing.assert_frame_equal(dataset.exog, data[exog_names])
+
+
+@pytest.mark.parametrize("endog_idx", [True, np.True_], ids=["True", "np.True_"])
+def test_process_pandas_bool_endog_idx(endog_idx):
+    # A bool is not a column position: True selected the column at position 1
+    data = _process_pandas_data()
+    with pytest.raises(KeyError):
+        utils.process_pandas(data, endog_idx=endog_idx)

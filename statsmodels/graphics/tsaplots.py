@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.graphics import utils
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, is_int_like
 from statsmodels.tsa.stattools import acf, ccf, pacf, pccf
 
 if TYPE_CHECKING:
@@ -1103,6 +1103,12 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
         from `range(period)`. If `subplots` is a list or ndarray of `int`, the
         periods with those indices will be selected for the subplots. By
         default, `subplots=period`.
+
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer or a float with an integral value is a number of
+           subplots, and an ndarray or a list of NumPy integers selects
+           periods. Bools raise a TypeError.
     labels : sequence of str, optional
         Labels for the displayed period subplots.
     nrows : int, optional
@@ -1182,12 +1188,13 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
     if subplots is None:
         subplots = period
 
-    if isinstance(subplots, int):
+    if is_int_like(subplots):
+        subplots = int(subplots)
         if subplots > period:
             raise ValueError("subplots cannot be larger than period.")
         p_to_plot = np.floor(np.arange(subplots) * period / subplots).astype(int)
     elif isinstance(subplots, (list, np.ndarray)) and all(
-        isinstance(i, int) for i in subplots
+        is_int_like(i, strict=True) for i in subplots
     ):
         p_to_plot = subplots
         subplots = len(p_to_plot)

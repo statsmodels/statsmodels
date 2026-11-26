@@ -125,6 +125,33 @@ def test_bsplines(x, df, degree):
     bspline.transform(x)
 
 
+@pytest.mark.parametrize(
+    "df, degree",
+    [(6, 3), (np.int64(6), np.int64(3)), (np.int32(6), np.int16(3)), (6.0, 3.0)],
+    ids=["int", "int64", "int32-int16", "float"],
+)
+def test_bsplines_int_like_df_degree(df, degree):
+    # NumPy integers and integral floats are integers. The sequence form,
+    # which takes the other branch, is the reference.
+    x = np.linspace(0, 1, 100)
+    expected = BSplines(x, [6], [3])
+    bspline = BSplines(x, df, degree)
+    assert_equal(bspline.dfs, [6])
+    assert_equal(bspline.degrees, [3])
+    assert_allclose(bspline.basis, expected.basis, rtol=1e-12)
+    x_new = np.linspace(0.1, 0.9, 7)
+    assert_allclose(bspline.transform(x_new), expected.transform(x_new), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", ["df", "degree"])
+def test_bsplines_bool_df_degree(name):
+    # A bool is not an integer: True was taken as 1
+    x = np.linspace(0, 1, 100)
+    kwargs = {"df": 6, "degree": 3, name: True}
+    with pytest.raises(TypeError):
+        BSplines(x, **kwargs)
+
+
 def test_cubic_splines_transform_not_shadowed():
     # GH: CubicSplines.__init__ stored its `transform` constructor argument
     # (a string like "domain") as `self.transform`, shadowing the inherited

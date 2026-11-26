@@ -1,7 +1,7 @@
 import warnings
 
 import numpy as np
-from numpy.testing import assert_array_less, assert_equal
+from numpy.testing import assert_allclose, assert_array_less, assert_equal
 from pandas import DataFrame, Series
 import pytest
 
@@ -10,6 +10,7 @@ from statsmodels.graphics.regressionplots import (
     PartRegressPlotResult,
     abline_plot,
     add_lowess,
+    added_variable_resids,
     influence_plot,
     plot_added_variable,
     plot_ccpr,
@@ -473,3 +474,40 @@ def test_add_ellipse_and_lowess(close_figures):
     # Test add_lowess with new signature (exog, endog passed explicitly)
     fig_out2 = add_lowess(ax, exog=x, endog=y)
     assert_equal(isinstance(fig_out2, plt.Figure), True)
+
+
+def _added_variable_data():
+    rng = np.random.default_rng(20261126)
+    exog = sm.add_constant(rng.standard_normal((50, 2)))
+    endog = exog @ np.array([1.0, 0.5, -0.5]) + rng.standard_normal(50)
+    return endog, exog
+
+
+@pytest.mark.parametrize(
+    "focus_exog",
+    [1, np.int64(1), np.int32(1), np.array(1), "x1"],
+    ids=["int", "int64", "int32", "0d-array", "name"],
+)
+def test_added_variable_resids_int_like_focus(focus_exog):
+    # A NumPy integer is a column position, as a Python int is
+    endog, exog = _added_variable_data()
+    res = sm.OLS(endog, exog).fit()
+    endog_resid, focus_resid = added_variable_resids(res, focus_exog)
+    # Closed form: the residuals of endog and of column 1 on the other columns
+    others = exog[:, [0, 2]]
+    beta_endog = np.linalg.lstsq(others, endog, rcond=None)[0]
+    beta_focus = np.linalg.lstsq(others, exog[:, 1], rcond=None)[0]
+    # The residuals are O(1); atol guards elements that are close to zero
+    assert_allclose(endog_resid, endog - others @ beta_endog, rtol=1e-8, atol=1e-10)
+    assert_allclose(
+        focus_resid, exog[:, 1] - others @ beta_focus, rtol=1e-8, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("focus_exog", [True, np.True_], ids=["True", "np.True_"])
+def test_added_variable_resids_bool_focus(focus_exog):
+    # A bool is not a column position: True selected column 1
+    endog, exog = _added_variable_data()
+    res = sm.OLS(endog, exog).fit()
+    with pytest.raises(ValueError, match="not in list"):
+        added_variable_resids(res, focus_exog)

@@ -97,12 +97,28 @@ def _above(case, **kwargs):
 @pytest.mark.parametrize("case", CASES)
 @pytest.mark.parametrize(
     "eval_env, expected",
-    [(None, CALLER), (1, CALLER), (np.int64(1), CALLER), (2, ABOVE)],
-    ids=["None", "1", "int64-1", "2"],
+    [
+        (None, CALLER),
+        (1, CALLER),
+        (np.int64(1), CALLER),
+        (2, ABOVE),
+        (np.int32(2), ABOVE),
+        (np.array(2), ABOVE),
+    ],
+    ids=["None", "1", "int64-1", "2", "int32-2", "0d-array-2"],
 )
 def test_eval_env_frames(engine, case, eval_env, expected):
     kwargs = {} if eval_env is None else {"eval_env": eval_env}
     np.testing.assert_allclose(_above(case, **kwargs), expected)
+
+
+@pytest.mark.thread_unsafe(reason="changes the global formula engine")
+@pytest.mark.parametrize("case", CASES)
+@pytest.mark.parametrize("eval_env", [True, np.True_], ids=["True", "np.True_"])
+def test_eval_env_bool(engine, case, eval_env):
+    # A bool is not a number of stack frames. True was taken as 1.
+    with pytest.raises(TypeError, match="must be an int or a dict"):
+        _above(case, eval_env=eval_env)
 
 
 @pytest.mark.thread_unsafe(reason="changes the global formula engine")

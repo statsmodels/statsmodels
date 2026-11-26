@@ -617,3 +617,47 @@ def test_sdp_invalid_subplots(close_figures):
     with pytest.raises(TypeError):
         sp = range(13)
         _ = seasonal_diagnostic_plot(res, period=12, subplots=sp)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "subplots, reference, periods",
+    [
+        (np.int64(4), 4, [0, 3, 6, 9]),
+        (4.0, 4, [0, 3, 6, 9]),
+        (np.array([0, 1, 2, 10]), [0, 1, 2, 10], [0, 1, 2, 10]),
+        ([np.int64(0), np.int32(1), 2, 10], [0, 1, 2, 10], [0, 1, 2, 10]),
+    ],
+    ids=["int64", "float", "ndarray", "numpy-scalars"],
+)
+def test_sdp_int_like_subplots(subplots, reference, periods, close_figures):
+    # A NumPy integer or an integral float is a number of subplots, and an
+    # ndarray or a list of NumPy integers selects periods, as Python ints do
+    res = get_elnino_stl()
+    fig = seasonal_diagnostic_plot(res, period=12, subplots=subplots)
+    expected = seasonal_diagnostic_plot(res, period=12, subplots=reference)
+    axes = fig.get_axes()
+    titles = [ax.get_title() for ax in axes]
+    assert titles == [f"Cycle-subseries {p + 1}" for p in periods]
+    for ax, ax_ref in zip(axes, expected.get_axes(), strict=True):
+        lines = ax.get_lines()
+        lines_ref = ax_ref.get_lines()
+        assert len(lines) == len(lines_ref) == 2
+        for line, line_ref in zip(lines, lines_ref, strict=True):
+            assert_allclose(line.get_ydata(), line_ref.get_ydata(), rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "subplots",
+    [True, np.True_, [True, False], np.array([True, False])],
+    ids=["True", "np.True_", "list", "ndarray"],
+)
+def test_sdp_bool_subplots(subplots, close_figures):
+    # Bools are not integers: True was one subplot and [True, False] selected
+    # periods 1 and 0
+    res = get_elnino_stl()
+    with pytest.raises(TypeError, match="subplots must be either"):
+        seasonal_diagnostic_plot(res, period=12, subplots=subplots)

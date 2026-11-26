@@ -33,7 +33,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import nan_dot, recipr
-from statsmodels.tools.validation import bool_like, float_like
+from statsmodels.tools.validation import bool_like, float_like, is_int_like
 
 ERROR_INIT_KWARGS = False
 
@@ -209,7 +209,9 @@ class Model:
                integer referred to one stack frame lower in models whose
                ``from_formula`` calls their parent's (for example GEE, PHReg
                and MixedLM, where 2 was the calling namespace) and one frame
-               higher in ``RollingOLS`` (where 0 was).
+               higher in ``RollingOLS`` (where 0 was). A bool raises a
+               TypeError (True was 1), and a 0-d integer array is the
+               integer it holds.
 
         Returns
         -------
@@ -232,7 +234,7 @@ class Model:
             eval_env = 2
         elif eval_env == -1:
             eval_env = mgr.get_empty_eval_env()
-        elif isinstance(eval_env, (int, np.integer)):
+        elif is_int_like(eval_env, strict=True):
             eval_env = int(eval_env) + 1  # we're going down the stack again
         missing = kwargs.get("missing", "drop")
         if missing == "none":  # with patsy it's drop or raise. let's raise.

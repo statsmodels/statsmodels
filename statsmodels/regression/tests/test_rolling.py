@@ -262,6 +262,46 @@ def test_plot(close_figures):
     res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables",
+    [2, np.int64(2), np.array(2), "x2", [np.int64(2)]],
+    ids=["int", "int64", "0d-array", "name", "list"],
+)
+def test_plot_int_like_variables(variables, close_figures):
+    # A 0-d integer array selects a variable, as the integer it holds does
+    y, x, _ = gen_data(250, 3, True)
+    res = RollingOLS(y, x, window=100).fit()
+    fig = res.plot_recursive_coefficient(variables=variables, alpha=None)
+    assert len(fig.axes) == 1
+    ax = fig.axes[0]
+    assert ax.get_title() == "x2"
+    params = np.asarray(res.params)[:, 2]
+    expected = params[~np.isnan(params)]
+    assert_allclose(ax.get_lines()[0].get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables, exception, match",
+    [
+        (True, TypeError, None),
+        (np.True_, TypeError, None),
+        ([True], ValueError, "variable True is not an integer"),
+        ([np.True_], ValueError, "variable True is not an integer"),
+    ],
+    ids=["True", "np.True_", "list-True", "list-np.True_"],
+)
+def test_plot_bool_variables(variables, exception, match, close_figures):
+    # A bool does not select a variable
+    y, x, _ = gen_data(250, 3, True)
+    res = RollingOLS(y, x, window=100).fit()
+    with pytest.raises(exception, match=match):
+        res.plot_recursive_coefficient(variables=variables)
+
+
 @pytest.mark.parametrize("params_only", [True, False])
 def test_methods(basic_data, params_only):
     y, x, _ = basic_data
