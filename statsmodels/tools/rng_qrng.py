@@ -1,7 +1,11 @@
 """Random number generator helpers"""
 
+import warnings
+
 import numpy as np
 from scipy import stats
+
+from statsmodels.tools.validation import is_int_like
 
 
 def check_random_state(seed=None, deprecated=False, warn=True):
@@ -33,25 +37,47 @@ def check_random_state(seed=None, deprecated=False, warn=True):
     -----
     `scipy.stats.qmc.QMCEngine` requires SciPy >=1.7. It also means that the
     generator only has the method ``random``.
+
+    .. versionchanged:: 0.15.1
+
+       An integer seed is checked with
+       :func:`~statsmodels.tools.validation.is_int_like` (``strict=True``).
+       Any other scalar that ``int`` converts, such as a float (``2.5`` was
+       the seed 2), a string such as ``"3"`` or a bool, is deprecated: it
+       gives the same generator as before with a ``FutureWarning`` and will
+       raise a ``TypeError`` in statsmodels 0.17.
     """
     if hasattr(stats, "qmc") and isinstance(seed, stats.qmc.QMCEngine):
         return seed
     elif isinstance(seed, (np.random.RandomState, np.random.Generator)):
         return seed
     elif seed is not None:
-        try:
+        msg = (
+            "When creating a random number generator from a value, the "
+            "seed must either be an integer or array-like of ints"
+        )
+        if is_int_like(seed, strict=True):
             seed = int(seed)
-        except (TypeError, ValueError):
+        elif np.ndim(seed) == 0:
+            # a scalar that is not an integer: int() used to convert it
+            try:
+                legacy = int(seed)
+            except (TypeError, ValueError):
+                raise TypeError(msg) from None
+            warnings.warn(
+                f"Passing seed of type {type(seed).__name__} is deprecated and "
+                f"will raise a TypeError in statsmodels 0.17. Pass seed={legacy} "
+                "as an int instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            seed = legacy
+        else:
             seed = np.asarray(seed)
             if not np.issubdtype(seed.dtype, np.integer):
-                raise TypeError(
-                    "When creating a random number generator from a value, the "
-                    "seed must either be an integer or array-like of ints"
-                ) from None
+                raise TypeError(msg)
         if deprecated:
             if warn:
-                import warnings
-
                 warnings.warn(
                     "After statsmodels 0.15 is released, passing an integer when "
                     "creating a random number generator will pass the value to "
