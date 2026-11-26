@@ -207,6 +207,36 @@ def test_two_arrays(engine, data):
     assert check_type(output[1], engine)
 
 
+@pytest.mark.parametrize("formula", ["y ~ 1 + x + c", "y ~ x + c - 1", "x + c"])
+@pytest.mark.parametrize("with_lhs_data", [True, False])
+def test_get_matrices_prediction_rhs_only(engine, data, formula, with_lhs_data):
+    # prediction=True evaluates only the right-hand side: the left-hand side
+    # need not be in the data, and only the design matrix is returned
+    mgr = FormulaManager(engine=engine)
+    fitted = mgr.get_matrices(formula, data)
+    rhs = fitted[1] if isinstance(fitted, tuple) else fitted
+    new = data.iloc[[5, 0, 2]]
+    if not with_lhs_data:
+        new = new.drop(columns="y")
+    out = mgr.get_matrices(formula, new, prediction=True)
+    assert check_type(out, engine)
+    assert list(out.columns) == list(rhs.columns)
+    np.testing.assert_allclose(
+        np.asarray(out, dtype=float), np.asarray(rhs.loc[new.index], dtype=float)
+    )
+
+
+@require_patsy
+def test_get_matrices_prediction_model_desc(data):
+    mgr = FormulaManager(engine="patsy")
+    _, rhs = mgr.get_matrices("y ~ x + c", data)
+    desc = patsy.ModelDesc.from_formula("y ~ x + c")
+    new = data.iloc[[5, 0, 2]].drop(columns="y")
+    out = mgr.get_matrices(desc, new, prediction=True)
+    assert list(out.columns) == list(rhs.columns)
+    np.testing.assert_allclose(np.asarray(out), np.asarray(rhs.loc[new.index]))
+
+
 def test_get_column_names(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"

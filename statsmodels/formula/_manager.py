@@ -424,18 +424,18 @@ class FormulaManager:
             return formula
         if isinstance(context, int):
             context += 1
-        mm = formulaic.model_matrix(formula, data, context=context)
         feature_flags = formulaic.parser.DefaultFormulaParser.FeatureFlags.TWOSIDED
         parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
         _formula = formulaic.Formula(formula, _parser=parser, _ordering="none")
-        if isinstance(mm, formulaic.ModelMatrices):
-            rhs = mm.rhs
+        if hasattr(_formula, "rhs"):
             rhs_formula = _formula.rhs
             lhs_formula = _formula.lhs
         else:
-            rhs = mm
             rhs_formula = _formula
             lhs_formula = None
+        # Only the right-hand side is materialized: the left-hand side does not
+        # affect the order, and it is not in the data when predicting
+        rhs = formulaic.model_matrix(rhs_formula, data, context=context)
         include_intercept = any(
             (term.degree == 0 and str(term) == "1") for term in rhs_formula
         )
@@ -496,25 +496,45 @@ class FormulaManager:
 
         Parameters
         ----------
-        formula : str, Formula
-            The formula to use.
-        data : DataFrame, dict, list, recarray
-            The data to use when evaluating the formula.
+        formula : str, Formula, ModelDesc, ModelSpec or DesignInfo
+            The formula, as a string or an engine-specific formula object, or
+            the model specification of an existing design (a formulaic
+            ``ModelSpec`` or a patsy ``DesignInfo``), which is applied to data.
+        data : DataFrame, dict or recarray
+            The data to use when evaluating the formula. A Polars DataFrame is
+            converted to pandas. Data structures other than a DataFrame are
+            deprecated.
         eval_env : int or dict, optional
-            Additional context to use when evaluating the formula.
+            Additional context to use when evaluating the formula: the number
+            of stack frames above the caller in which variables are looked
+            up, or a dict that maps names to values. A patsy
+            ``EvalEnvironment`` is accepted but deprecated.
         pandas : bool, optional
             Return a DataFrame if true, otherwise return a numpy array.
         na_action : NAAction or str, optional
             The action to take on missing values.
         prediction : bool, optional
             True if using the formula for prediction. In this case, only the
-            rhs is evaluated using data.
+            right-hand side is evaluated using data, and only its design
+            matrix is returned.
+
+            .. versionchanged:: 0.15.1
+
+               The left-hand side of a formula is no longer evaluated, so it
+               need not be in data. Previously, patsy evaluated it and
+               returned both matrices, and formulaic raised when it was
+               missing.
 
         Returns
         -------
-        tuple[DataFrame, ...], tuple[ndarray, ...], tuple[DesignMatrix, ...]
-            If pandas is True, returns one or more DataFrames. If False,
-            returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
+        DataFrame, ndarray, or tuple of DataFrame or ndarray
+            The design matrix of a one-sided formula or of a model
+            specification, or a tuple of the left-hand-side and
+            right-hand-side matrices of a two-sided formula (only the
+            right-hand side if prediction is True). DataFrames if pandas is
+            True, otherwise NumPy arrays: patsy returns a ``DesignMatrix``
+            (an ndarray subclass), and formulaic wraps either type in a
+            ``ModelMatrix``.
         """
         # Convert Polars objects to pandas
         data = _to_pandas(data)
@@ -535,6 +555,11 @@ class FormulaManager:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
                     warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
+            if prediction and not isinstance(formula, patsy.design_info.DesignInfo):
+                # Only the right-hand side is evaluated when predicting
+                if not isinstance(formula, patsy.desc.ModelDesc):
+                    formula = patsy.ModelDesc.from_formula(formula)
+                formula = patsy.ModelDesc([], formula.rhs_termlist)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
