@@ -2960,6 +2960,38 @@ def test_news_comparison_with_longer_exog_3d_raises(varx1_data, ncols):
         res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
 
 
+@pytest.mark.parametrize("form", ["ndarray", "column", "list", "series"])
+def test_news_univariate_comparison_with_longer_exog(form):
+    # The extended comparison dataset took its columns from endog_names, which
+    # is the str "y" for a univariate model, and pandas rejected it
+    nobs = 15
+    rng = np.random.default_rng(20261126)
+    endog = rng.standard_normal(nobs + 1)
+    exog = rng.standard_normal(nobs + 2)
+    beta, phi = 0.5, 0.5
+    mod = sarimax.SARIMAX(endog[:nobs], exog=exog[:nobs], order=(1, 0, 0))
+    res = mod.smooth([beta, phi, 1.0])
+    comparison = {
+        "ndarray": endog,
+        "column": endog[:, None],
+        "list": endog.tolist(),
+        "series": pd.Series(endog),
+    }[form]
+    news = res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
+    # Regression with AR(1) errors u = y - beta * x, forecast for nobs + 1
+    # from u[nobs] (updated) and from u[nobs - 1] (previous)
+    u = endog - beta * exog[: nobs + 1]
+    post = beta * exog[nobs + 1] + phi * u[nobs]
+    prev = beta * exog[nobs + 1] + phi**2 * u[nobs - 1]
+    assert_allclose(news.post_impacted_forecasts.to_numpy().ravel(), [post], rtol=1e-12)
+    assert_allclose(news.prev_impacted_forecasts.to_numpy().ravel(), [prev], rtol=1e-12)
+    assert_allclose(news.total_impacts.to_numpy().ravel(), [post - prev], rtol=1e-12)
+    # The same news as from the updated results object
+    updated = res.apply(np.r_[endog, np.nan], exog=exog[: nobs + 2])
+    expected = res.news(updated, impact_date=nobs + 1)
+    assert_allclose(news.news, expected.news, rtol=1e-12)
+
+
 def test_news_time_varying_extends_updated_multivariate(varx1_data):
     # A VARX(1) is time-varying through exog in the state intercept. The
     # impact date is beyond the updated sample, so that the updated results
