@@ -16,6 +16,7 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_float_like,
     is_int_like,
     required_int_like,
     string_like,
@@ -432,30 +433,6 @@ def test_string_deprecated_alias_removed_after():
     assert out == "new"
 
 
-@pytest.fixture(params=(1.0, 1.1, np.float32(1.2), np.array([1.2]), 1.2 + 0j))
-def floating(request):
-    return request.param
-
-
-@pytest.fixture(params=(np.empty(2), 1.2 + 1j, True, "3.2", None))
-def not_floating(request):
-    return request.param
-
-
-def test_float_like(floating):
-    assert isinstance(float_like(floating, "floating"), float)
-    assert isinstance(float_like(floating, "floating", optional=True), float)
-    assert float_like(None, "floating", optional=True) is None
-    if isinstance(floating, (int, np.integer, float, np.inexact)):
-        assert isinstance(float_like(floating, "floating", strict=True), float)
-        assert float_like(None, "floating", optional=True, strict=True) is None
-
-
-def test_not_float_like(not_floating):
-    with pytest.raises(TypeError):
-        float_like(not_floating, "floating")
-
-
 class Color(IntEnum):
     RED = 3
 
@@ -649,6 +626,133 @@ def test_array_like_mindim():
     y = [1, 2]
     arr = array_like(y, "y", mindim=2)
     assert arr.shape == (2, 1)
+
+
+# (id, value, its float value) for values that are real numbers even if strict
+STRICT_REALS = [
+    ("float", 1.5, 1.5),
+    ("negative float", -2.25, -2.25),
+    ("nan", np.nan, np.nan),
+    ("inf", np.inf, np.inf),
+    ("float64", np.float64(0.25), 0.25),
+    ("float32", np.float32(0.5), 0.5),
+    ("float16", np.float16(-0.5), -0.5),
+    ("int", 3, 3.0),
+    ("int64", np.int64(-3), -3.0),
+    ("IntEnum", Color.RED, 3.0),
+    ("0-d float array", np.array(0.75), 0.75),
+    ("0-d int array", np.array(2), 2.0),
+    ("__index__ only", IndexOnly(), 3.0),
+]
+# real numbers only if not strict
+NONSTRICT_REALS = [
+    ("Fraction", Fraction(1, 4), 0.25),
+]
+# never real numbers, not even under the old rules
+NOT_REALS = [
+    ("bool", True),
+    ("np.bool_", np.True_),
+    ("0-d bool array", np.array(False)),
+    ("bool Series", pd.Series([True])),
+    ("complex", 1.2 + 1j),
+    ("complex128", np.complex128(1 + 2j)),
+    ("complex Series", pd.Series([1 + 2j])),
+    ("str", "3.2"),
+    ("timedelta64", np.timedelta64(2, "s")),
+    ("datetime64", np.datetime64("2000-01-01")),
+    ("Timedelta", pd.Timedelta(3)),
+    ("Decimal", Decimal("0.5")),
+    ("list", [0.5]),
+    ("2 element array", np.empty(2)),
+    ("2 element Series", pd.Series([0.5, 1.5])),
+    ("NA", pd.NA),
+    ("object", object()),
+]
+# rejected by is_float_like, accepted by float_like with a FutureWarning
+DEPRECATED_REALS = [
+    ("1 element array", np.array([1.2]), 1.2, False),
+    ("1x1 int array", np.array([[3]]), 3.0, False),
+    ("1 element Series", pd.Series([1.2]), 1.2, True),
+    ("1x1 DataFrame", pd.DataFrame([[0.5]]), 0.5, True),
+    ("complex, zero imaginary part", 1.2 + 0j, 1.2, False),
+    ("complex128, zero imaginary part", np.complex128(2), 2.0, False),
+    ("0-d complex array", np.array(0.5 + 0j), 0.5, False),
+]
+
+
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize(
+    "name, value, expected", STRICT_REALS, ids=_ids(STRICT_REALS)
+)
+def test_is_float_like_reals(name, value, expected, strict):
+    assert is_float_like(value, strict=strict) is True
+    converted = float_like(value, "value", strict=strict)
+    assert type(converted) is float
+    np.testing.assert_equal(converted, expected)
+
+
+@pytest.mark.parametrize(
+    "name, value, expected", NONSTRICT_REALS, ids=_ids(NONSTRICT_REALS)
+)
+def test_is_float_like_nonstrict_reals(name, value, expected):
+    assert is_float_like(value) is True
+    converted = float_like(value, "value")
+    assert type(converted) is float
+    assert converted == expected
+    assert is_float_like(value, strict=True) is False
+    with pytest.raises(TypeError, match="value must be float_like"):
+        float_like(value, "value", strict=True)
+
+
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize("name, value", NOT_REALS, ids=_ids(NOT_REALS))
+def test_is_float_like_not_reals(name, value, strict):
+    assert is_float_like(value, strict=strict) is False
+    with pytest.raises(TypeError, match="value must be float_like"):
+        float_like(value, "value", strict=strict)
+    with pytest.raises(TypeError, match=r"value must be float_like.* or None"):
+        float_like(value, "value", optional=True, strict=strict)
+
+
+@pytest.mark.parametrize(
+    "name, value, expected, strict_too",
+    DEPRECATED_REALS,
+    ids=_ids(DEPRECATED_REALS),
+)
+def test_float_like_deprecated(name, value, expected, strict_too):
+    assert is_float_like(value) is False
+    assert is_float_like(value, strict=True) is False
+    match = (
+        rf"Passing alpha of type {type(value).__name__} is deprecated and will "
+        rf"raise a TypeError in statsmodels 0\.17\. Pass alpha={expected} as"
+    )
+    with pytest.warns(FutureWarning, match=match):
+        converted = float_like(value, "alpha")
+    assert type(converted) is float
+    assert converted == expected
+    if strict_too:
+        with pytest.warns(FutureWarning, match=match):
+            assert float_like(value, "alpha", strict=True) == expected
+    else:
+        with pytest.raises(TypeError, match="alpha must be float_like"):
+            float_like(value, "alpha", strict=True)
+
+
+def test_float_like_none():
+    assert float_like(None, "value", optional=True) is None
+    assert float_like(None, "value", optional=True, strict=True) is None
+    with pytest.raises(TypeError, match="value must be float_like"):
+        float_like(None, "value")
+    assert is_float_like(None) is False
+
+
+def test_float_like_error_message():
+    match = r"a must be float_like \(a real number such as a float, an int or a"
+    with pytest.raises(TypeError, match=match):
+        float_like("0.5", "a")
+    match = r"a must be float_like \(a float, an int or a NumPy real number, but"
+    with pytest.raises(TypeError, match=match):
+        float_like("0.5", "a", strict=True)
 
 
 class _Subclass(np.ndarray):

@@ -4806,3 +4806,39 @@ def test_endog_outside_support_binomial_counts():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         GLM(endog2, exog, family=sm.families.Binomial())
+
+
+@pytest.mark.parametrize(
+    "scale",
+    [2, np.int64(2), np.float32(2.0), np.array(2.0)],
+    ids=["int", "int64", "float32", "0-d array"],
+)
+def test_glm_fixed_scale_numeric_types(scale):
+    # Any real number is a fixed scale
+    rng = np.random.default_rng(20261126)
+    exog = add_constant(rng.standard_normal((80, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(80)
+    expected = GLM(endog, exog).fit(scale=2.0)
+    res = GLM(endog, exog).fit(scale=scale)
+    assert res.scale == 2.0
+    assert_allclose(res.bse, expected.bse, rtol=1e-12)
+    # the fixed scale multiplies the unscaled covariance
+    assert_allclose(res.cov_params(), 2.0 * res.normalized_cov_params, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "scale", [True, np.True_, 2 + 1j, np.array([2.0])],
+    ids=["bool", "np.bool_", "complex", "1 element array"],
+)
+def test_glm_fixed_scale_not_a_number(scale):
+    # float(scale) accepted a bool as the scale 1.0
+    rng = np.random.default_rng(20261127)
+    exog = add_constant(rng.standard_normal((30, 1)))
+    endog = exog @ [1.0, 0.5] + rng.standard_normal(30)
+    if isinstance(scale, np.ndarray):
+        with pytest.warns(FutureWarning, match="Passing scale of type ndarray"):
+            res = GLM(endog, exog).fit(scale=scale)
+        assert res.scale == 2.0
+        return
+    with pytest.raises(TypeError, match="scale must be float_like"):
+        GLM(endog, exog).fit(scale=scale)
