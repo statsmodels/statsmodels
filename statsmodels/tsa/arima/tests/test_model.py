@@ -18,15 +18,18 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
+from scipy.linalg import toeplitz
 
 from statsmodels.datasets import macrodata
 from statsmodels.iolib.summary import Summary
+from statsmodels.regression.linear_model import GLS
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
 from statsmodels.tsa.arima.estimators.statespace import statespace
 from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima_process import arma_acovf, arma_generate_sample
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
@@ -184,6 +187,104 @@ def test_innovations_arma():
     )
     res = mod.fit(method="innovations")
     assert_allclose(res.params, desired_p[-1].params)
+
+
+# (order, number of exog columns, trend, seed, m). The seeds are such that the
+# preliminary estimates are stationary and invertible, so that the default
+# enforce_stationarity and enforce_invertibility of ARIMA.fit accept them. A
+# value of m is passed through method_kwargs, None leaves the default.
+INNOVATIONS_ARMA_PATHS = {
+    "trend_c": ((1, 0, 1), 0, None, 0, None),
+    "trend_c_exog_ar2": ((2, 0, 1), 1, None, 0, None),
+    "exog_trend_n_m30": ((1, 0, 1), 2, "n", 0, 30),
+    "d1": ((1, 1, 1), 0, None, 0, None),
+    "d1_m30": ((1, 1, 1), 0, None, 0, 30),
+    "d1_exog": ((1, 1, 1), 2, None, 0, None),
+}
+
+
+@pytest.mark.parametrize(
+    "order, k_exog, trend, seed, m",
+    INNOVATIONS_ARMA_PATHS.values(),
+    ids=INNOVATIONS_ARMA_PATHS.keys(),
+)
+def test_innovations_arma_trend_diff_exog(order, k_exog, trend, seed, m):
+    # ARIMA.fit(method="innovations") with AR terms for the default constant,
+    # for integration and for exog. The ARMA estimates are those of
+    # innovations() on the data that the model hands to it, and the regression
+    # coefficients are the GLS estimates for the ARMA covariance matrix of the
+    # estimated parameters.
+    p, d, q = order
+    nobs = 200
+    ar = [0.6] if p == 1 else [0.7, -0.3]
+    ma = [0.3]
+    rng = np.random.default_rng(seed)
+    e = arma_generate_sample(
+        np.r_[1, -np.array(ar)], np.r_[1, ma], nobs, distrvs=rng.standard_normal
+    )
+    z = rng.standard_normal((nobs, k_exog))
+    w = z @ np.array([1.5, -0.7])[:k_exog] + e
+    # dep and reg are the data of the ARMA model with regression: what the
+    # model hands to the estimator after the differencing
+    if d == 0:
+        endog, exog = 2.0 + w, z
+        has_const = trend != "n"
+        dep = endog
+        reg = np.c_[np.ones(nobs), z] if has_const else z
+        names = ["const"] if has_const else []
+    else:
+        endog, exog = np.cumsum(w), np.cumsum(z, axis=0)
+        dep, reg = w[1:], z[1:]
+        names = []
+    names += [f"x{i + 1}" for i in range(k_exog)]
+    k_reg = len(names)
+    names += [f"ar.L{i + 1}" for i in range(p)] + ["ma.L1", "sigma2"]
+
+    mod = ARIMA(endog, order=order, exog=exog if k_exog else None, trend=trend)
+    assert mod.param_names == names
+    method_kwargs = None if m is None else {"m": m}
+    if d > 0:
+        with pytest.warns(UserWarning, match="differenced"):
+            res = mod.fit(method="innovations", method_kwargs=method_kwargs)
+    else:
+        res = mod.fit(method="innovations", method_kwargs=method_kwargs)
+    assert res.params.shape == (len(names),)
+    arma_params = res.params[k_reg:]
+    # The order of the parameters, independent of innovations(): the estimates
+    # are preliminary but within 0.13 of the true values for these seeds, while
+    # the AR and MA values differ by at least 0.3, so atol=0.2 separates them
+    assert_allclose(arma_params[:-1], ar + ma, atol=0.2)
+
+    if k_reg == 0:
+        # Differenced by the model, no regression part
+        desired = innovations(
+            np.diff(endog), ar_order=p, ma_order=q, demean=False, m=m
+        ).parameters[-1]
+        assert_allclose(arma_params, desired.params, rtol=1e-12)
+        return
+
+    # The last iteration of feasible GLS applies innovations() to the residuals
+    # of the regression of the previous iteration, so the match is exact up to
+    # rounding
+    previous = res.fit_details.params[-2].exog_params
+    desired = innovations(
+        dep - reg @ previous, ar_order=p, ma_order=q, demean=False, m=m
+    ).parameters[-1]
+    assert_allclose(arma_params, desired.params, rtol=1e-10)
+    # The iterations stop when the regression coefficients change by less than
+    # 1e-8, which bounds the difference to the estimates from the final residuals
+    desired = innovations(
+        dep - reg @ res.params[:k_reg], ar_order=p, ma_order=q, demean=False, m=m
+    ).parameters[-1]
+    assert_allclose(arma_params, desired.params, rtol=1e-6)
+
+    # GLS with the covariance matrix of the ARMA process, which does not depend
+    # on the scale. rtol allows for the conditioning of the Toeplitz matrix.
+    acov = arma_acovf(
+        np.r_[1, -arma_params[:p]], np.r_[1, arma_params[p:-1]], len(dep), sigma2=1
+    )
+    desired = GLS(dep, reg, sigma=toeplitz(acov)).fit()
+    assert_allclose(res.params[:k_reg], desired.params, rtol=1e-8)
 
 
 def test_innovations_mle():
