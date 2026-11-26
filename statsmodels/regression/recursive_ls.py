@@ -707,7 +707,7 @@ class RecursiveLSResults(MLEResults):
 
         """
         # Get variables
-        if isinstance(variables, (int, str)):
+        if isinstance(variables, (int, np.integer, str)):
             variables = [variables]
         k_variables = len(variables)
 

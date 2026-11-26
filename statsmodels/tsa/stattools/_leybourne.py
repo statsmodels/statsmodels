@@ -235,7 +235,7 @@ class LeybourneMcCabeStationarity:
         # determine AR order if not specified
         if arlags is None:
             arlags = self._autolag(x)
-        elif not isinstance(arlags, int) or arlags < 0 or arlags > int(len(x) / 2):
+        elif not isinstance(arlags, (int, np.integer)) or arlags < 0 or arlags > int(len(x) / 2):
             raise ValueError(
                 f"LM: arlags must be an integer in range [0..{int(len(x) / 2)!s}]"
             )

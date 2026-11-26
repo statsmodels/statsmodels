@@ -47,6 +47,13 @@ def test_return_pandas_series_when_input_pandas_and_len_periods_one(data_pd):
     assert isinstance(res.weights, pd.Series)
 
 
+def test_numpy_integer_periods_and_windows(data):
+    res = MSTL(endog=data, periods=5, windows=7).fit()
+    res_np = MSTL(endog=data, periods=np.int64(5), windows=np.int64(7)).fit()
+    assert_allclose(res_np.seasonal, res.seasonal)
+    assert_allclose(res_np.trend, res.trend)
+
+
 def test_seasonal_is_datafame_when_input_pandas_and_multiple_periods(data_pd):
     mod = MSTL(endog=data_pd, periods=(3, 5))
     res = mod.fit()

@@ -302,6 +302,10 @@ def test_plots(close_figures):
 
     # All variables
     res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
+
+    # NumPy integers select variables like Python integers
+    res.plot_recursive_coefficient(variables=np.int64(1))
+    res.plot_recursive_coefficient(variables=[np.int64(0), "m1"])
     plt.close("all")
     # Basic plot
     res.plot_cusum()

@@ -242,6 +242,8 @@ def test_plot(close_figures):
     res.plot_recursive_coefficient(variables=2, alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(variables="x0", alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(variables=[0, 2], alpha=None, figsize=(30, 7))
+    res.plot_recursive_coefficient(variables=np.int64(2), alpha=None)
+    res.plot_recursive_coefficient(variables=[np.int64(0), 2], alpha=None)
     plt.close("all")
     res.plot_recursive_coefficient(variables=["x0"], alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(

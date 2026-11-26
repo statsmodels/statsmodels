@@ -1873,7 +1873,7 @@ def linear_reset(
     )
     cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
-    if isinstance(power, int):
+    if isinstance(power, (int, np.integer)):
         if power < 2:
             raise ValueError("power must be >= 2")
         power = np.arange(2, power + 1, dtype=int)
