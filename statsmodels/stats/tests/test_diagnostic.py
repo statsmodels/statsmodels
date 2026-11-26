@@ -34,11 +34,11 @@ from statsmodels.discrete.discrete_model import (
     Poisson,
     Probit,
 )
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 import statsmodels.stats.sandwich_covariance as sw
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl import ARDL
@@ -2043,6 +2043,73 @@ def test_encompasing_error():
         smsdia.compare_encompassing(res1, 2)
     with pytest.raises(TypeError, match="results_x must come from a linear"):
         smsdia.compare_encompassing(4, 2)
+
+
+@pytest.mark.parametrize("model_class", [WLS, GLS])
+@pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+@pytest.mark.parametrize("use_f", [False, True])
+def test_reset_preserves_weighting(model_class, cov_type, use_f):
+    # The auxiliary regression must use the same whitening as the original fit.
+    rng = np.random.default_rng(8675309)
+    nobs = 100
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    weights = np.exp(rng.standard_normal(nobs))
+    weights_before = weights.copy()
+    if model_class is WLS:
+        model_kwds = {"weights": weights}
+    else:
+        model_kwds = {"sigma": 1 / weights}
+
+    res = model_class(y, exog, **model_kwds).fit()
+    actual = smsdia.linear_reset(res, power=2, use_f=use_f, cov_type=cov_type)
+
+    aug_exog = np.column_stack([exog, res.fittedvalues**2])
+    aux_res = model_class(y, aug_exog, **model_kwds).fit(cov_type=cov_type)
+    r_matrix = np.eye(1, aug_exog.shape[1], k=aug_exog.shape[1] - 1)
+    expected = aux_res.wald_test(r_matrix, use_f=use_f, scalar=True)
+
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+    assert actual.distribution == expected.distribution
+    assert_allclose(actual.dist_args, expected.dist_args, rtol=0, atol=0)
+    assert_array_equal(weights, weights_before)
+
+
+def test_reset_preserves_dense_gls_covariance():
+    rng = np.random.default_rng(8675310)
+    nobs = 80
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    distances = np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    sigma = 0.5**distances
+    sigma_before = sigma.copy()
+
+    res = GLS(y, exog, sigma=sigma).fit()
+    actual = smsdia.linear_reset(res, power=2, use_f=True, cov_type="HC0")
+
+    aug_exog = np.column_stack([exog, res.fittedvalues**2])
+    aux_res = GLS(y, aug_exog, sigma=sigma).fit(cov_type="HC0")
+    r_matrix = np.eye(1, aug_exog.shape[1], k=aug_exog.shape[1] - 1)
+    expected = aux_res.wald_test(r_matrix, use_f=True, scalar=True)
+
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+    assert actual.distribution == expected.distribution
+    assert_allclose(actual.dist_args, expected.dist_args, rtol=0, atol=0)
+    assert_array_equal(sigma, sigma_before)
+
+
+def test_reset_ols_does_not_pass_weights():
+    rng = np.random.default_rng(8675309)
+    x = add_constant(rng.standard_normal((100, 2)))
+    y = rng.standard_normal(100)
+    res = OLS(y, x).fit()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ValueWarning)
+        smsdia.linear_reset(res, power=2)
 
 
 @pytest.mark.smoke
