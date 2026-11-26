@@ -821,15 +821,16 @@ class FormulaManager:
             return formulaic.Formula(formula)
 
     def _ensure_spec(self, spec_or_frame):
-        if not isinstance(spec_or_frame, self.model_spec_type):
-            return self.get_model_spec(spec_or_frame)
-        if not isinstance(spec_or_frame, self.model_spec_type):
+        if isinstance(spec_or_frame, self.model_spec_type):
+            return spec_or_frame
+        spec = self.get_model_spec(spec_or_frame, optional=True)
+        if not isinstance(spec, self.model_spec_type):
+            name = self.model_spec_type.__name__
             raise TypeError(
-                "spec_or_frame must be a ModelSpec or a DesignInfo when not a "
-                f"DataFrame. Expected a {self.model_spec_type.__name__}, got a "
-                f"{type(spec_or_frame).__name__}."
+                f"spec_or_frame must be a {name} or a DataFrame with a {name} "
+                f"attached, got a {type(spec_or_frame).__name__}."
             )
-        return spec_or_frame
+        return spec
 
     def get_term_names(self, spec_or_frame):
         """
