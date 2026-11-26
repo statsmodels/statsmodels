@@ -686,7 +686,7 @@ class RecursiveLSResults(MLEResults):
 
         Parameters
         ----------
-        variables : {int, str, list[int], list[str]}, optional
+        variables : int, str, or iterable of int or str, optional
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
