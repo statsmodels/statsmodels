@@ -606,6 +606,45 @@ def test_pickle():
     assert type(res_unpickled) is type(res)
 
 
+@pytest.mark.parametrize(
+    "model, causing, statistic, df, pvalue",
+    [
+        ("var", ["lrm", "lry"], 9.912316048202, 4, 0.0419308947994),
+        ("var", [0, 2], 16.616263763054, 4, 0.0022944927874),
+        ("var", ["lrm"], 16.726178260626, 3, 0.000804549633518),
+        ("var", [0, 1, 2], 3.736943485999, 3, 0.291306347447),
+        ("var5", [0, 1], 13.894373834716, 6, 0.0308385811695),
+        ("vecm", [0, 1], 9.912316048202, 4, 0.0419308947994),
+    ],
+)
+def test_inst_causality_several_causing_and_caused(
+    model, causing, statistic, df, pvalue
+):
+    # All covariances between the causing and the caused variables are
+    # restricted (Lütkepohl 2005, Section 3.6.3). Reference values from the
+    # R package vars 1.6.1 (R 4.6.2) on the Danish data:
+    #   fit <- VAR(y, p = 2, type = "const")
+    #   causality(fit, cause = c("lrm", "lry"))$Instant
+    # "var5" adds the series sin(t / 3) + 0.01 t, t = 0, 1, ..., to the four
+    # variables and uses p = 1, so 2 causing variables face 3 caused ones.
+    # The VECM test uses the VAR(2) with a constant, as "var" does.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.vecm import VECM
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    if model == "var":
+        res = VAR(y).fit(2)
+    elif model == "var5":
+        t = np.arange(y.shape[0], dtype=float)
+        res = VAR(y.assign(x5=np.sin(t / 3.0) + 0.01 * t)).fit(1)
+    else:
+        res = VECM(y, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    result = res.test_inst_causality(causing)
+    assert_allclose(result.test_statistic, statistic, rtol=1e-9)
+    assert result.df == df
+    assert_allclose(result.pvalue, pvalue, rtol=1e-9)
+
+
 class E1_Results:
     """
     Results from Lütkepohl (2005) using E2 dataset
@@ -2268,3 +2307,130 @@ def test_is_stable_unit_root(diag, stable):
     coefs = np.diag(diag)[None, :, :]
     assert bool(var_model.is_stable(coefs)) is stable
     assert bool(VARProcess(coefs, None, np.eye(2)).is_stable()) is stable
+
+
+def test_forecast_interval_y_none():
+    # y=None forecasts from the last k_ar observations: the recursion
+    # y_{T+h} = nu + A_1 y_{T+h-1} + A_2 y_{T+h-2} and the bounds
+    # +/- z sqrt(diag(sum_{i<h} Phi_i Sigma_u Phi_i'))
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    a1, a2 = res.coefs
+    path = [y[-2], y[-1]]
+    phis = [np.eye(3), a1]
+    for _ in range(4):
+        path.append(res.intercept + a1 @ path[-1] + a2 @ path[-2])
+    for _ in range(2):
+        phis.append(a1 @ phis[-1] + a2 @ phis[-2])
+    point = np.array(path[2:])
+    mse = np.cumsum([phi @ res.sigma_u @ phi.T for phi in phis], axis=0)
+    half_width = stats.norm.ppf(0.95) * np.sqrt(np.diagonal(mse, axis1=1, axis2=2))
+    interval = res.forecast_interval(None, 4, alpha=0.1)
+    assert_allclose(interval.point_forecast, point, rtol=1e-12)
+    assert_allclose(interval.forc_lower, point - half_width, rtol=1e-12)
+    assert_allclose(interval.forc_upper, point + half_width, rtol=1e-12)
+
+
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_forecast_interval_y_none_exog(use_pandas):
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = np.random.default_rng(11).standard_normal((y.shape[0], 1))
+    exog_future = np.random.default_rng(12).standard_normal((3, 1))
+    endog = pd.DataFrame(y, columns=data.columns) if use_pandas else y
+    res = VAR(endog, exog=exog).fit(3, trend="ct")
+    interval = res.forecast_interval(None, 3, exog_future=exog_future)
+    expected = res.forecast_interval(y[-3:], 3, exog_future=exog_future)
+    for actual, desired in zip(interval, expected, strict=True):
+        assert_allclose(actual, desired, rtol=1e-14)
+
+
+def test_forecast_interval_y_none_process_raises():
+    process = VARProcess(np.array([[[0.5, 0.1], [0.2, 0.3]]]), None, np.eye(2))
+    with pytest.raises(ValueError, match="y is required"):
+        process.forecast_interval(None, 3)
+
+
+@pytest.mark.parametrize("intercept_form", ["2d", "1d", "none"])
+def test_varprocess_forecast_var1_closed_form(intercept_form):
+    # A VARProcess that is not estimation results forecasts with its
+    # intercept. For a VAR(1), y_T(h) = mu + A^h (y_T - mu) with
+    # mu = (I - A)^-1 c, and MSE(h) = sum_{i<h} A^i Sigma_u A^i'.
+    coefs = np.array([[[0.5, 0.1], [0.2, 0.3]]])
+    c = np.array([1.0, -1.0])
+    sigma_u = np.array([[1.0, 0.3], [0.3, 2.0]])
+    coefs_exog = {"2d": c[:, None], "1d": c, "none": None}[intercept_form]
+    if intercept_form == "none":
+        c = np.zeros(2)
+    process = VARProcess(coefs, coefs_exog, sigma_u)
+    y_last = np.array([[0.4, 2.5]])
+    a = coefs[0]
+    mu = np.linalg.solve(np.eye(2) - a, c)
+    expected = np.array(
+        [mu + np.linalg.matrix_power(a, h) @ (y_last[0] - mu) for h in range(1, 6)]
+    )
+    assert_allclose(process.forecast(y_last, 5), expected, rtol=1e-12)
+
+    mse = np.cumsum(
+        [
+            np.linalg.matrix_power(a, i) @ sigma_u @ np.linalg.matrix_power(a, i).T
+            for i in range(5)
+        ],
+        axis=0,
+    )
+    half_width = stats.norm.ppf(0.95) * np.sqrt(mse[:, [0, 1], [0, 1]])
+    interval = process.forecast_interval(y_last, 5, alpha=0.1)
+    assert_allclose(interval.point_forecast, expected, rtol=1e-12)
+    assert_allclose(interval.forc_lower, expected - half_width, rtol=1e-12)
+    assert_allclose(interval.forc_upper, expected + half_width, rtol=1e-12)
+
+
+def test_varprocess_forecast_matches_results():
+    # A VARProcess with the estimates of a VAR(2) with a constant forecasts
+    # as the results do, which is the recursion written out
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    process = VARProcess(res.coefs, res.coefs_exog, res.sigma_u)
+    expected = list(y[-2:])
+    for _ in range(4):
+        expected.append(
+            res.intercept + res.coefs[0] @ expected[-1] + res.coefs[1] @ expected[-2]
+        )
+    expected = np.array(expected[2:])
+    assert_allclose(process.forecast(y[-2:], 4), expected, rtol=1e-12)
+    assert_allclose(
+        process.forecast(y[-2:], 4), res.forecast(y[-2:], 4), rtol=1e-12
+    )
+    interval = process.forecast_interval(y[-2:], 4)
+    expected_interval = res.forecast_interval(y[-2:], 4)
+    for actual, desired in zip(interval, expected_interval, strict=True):
+        assert_allclose(actual, desired, rtol=1e-12)
+
+
+def test_varprocess_forecast_errors():
+    coefs = np.array([[[0.5, 0.1], [0.2, 0.3]]])
+    sigma_u = np.eye(2)
+    y_last = np.ones((1, 2))
+    msg = "A VARProcess can only forecast with an intercept"
+    # a constant and a time trend
+    process = VARProcess(coefs, np.ones((2, 2)), sigma_u)
+    with pytest.raises(ValueError, match=msg):
+        process.forecast(y_last, 3)
+    with pytest.raises(ValueError, match=msg):
+        process.forecast_interval(y_last, 3)
+    # a constant and one exog variable
+    process = VARProcess(
+        coefs, np.ones((2, 2)), sigma_u, _params_info={"k_exog_user": 1}
+    )
+    with pytest.raises(ValueError, match=msg):
+        process.forecast(y_last, 3)
+    process = VARProcess(coefs, np.ones((2, 1)), sigma_u)
+    with pytest.raises(ValueError, match=msg):
+        process.forecast(y_last, 3, exog_future=np.ones((3, 1)))
+    with pytest.raises(ValueError, match="steps must be non-negative"):
+        process.forecast(y_last, -1)
+    with pytest.raises(TypeError, match="steps must be integer_like"):
+        process.forecast(y_last, 2.5)

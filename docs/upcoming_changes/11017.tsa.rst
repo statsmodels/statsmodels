@@ -1,0 +1,5 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` raised a ``TypeError`` for a pandas ``endog`` without dates in
+  its index, such as a RangeIndex, even with ``start`` and ``freq``.
+  They use ``start`` and ``freq`` as documented, and raise the
+  ``ValueError`` of array_like input when either is missing.
+  :pr:`11017`

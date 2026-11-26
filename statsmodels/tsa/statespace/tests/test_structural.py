@@ -11,11 +11,13 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
+from scipy.stats import norm
 
 from statsmodels.datasets import macrodata
 import statsmodels.iolib.summary
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import OutputWarning, SpecificationWarning
 from statsmodels.tsa.statespace import structural
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.results import results_structural
 
@@ -867,3 +869,272 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
     res.remove_data()
     assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+
+
+# - Options and results of UnobservedComponents -------------------------------
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        (
+            {"freq_seasonal": [{"period": 4}], "stochastic_freq_seasonal": [1, 0]},
+            "Length of stochastic_freq_seasonal",
+        ),
+        ({"freq_seasonal": [{"period": 1}]}, "seasonal period of at least 2"),
+        (
+            {"freq_seasonal": [{"period": 4, "harmonics": 0}]},
+            "Model has no components specified",
+        ),
+    ],
+    ids=["stochastic_length", "period", "no_harmonics"],
+)
+def test_invalid_freq_seasonal(kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        UnobservedComponents(np.arange(20.0), **kwargs)
+
+
+@pytest.mark.parametrize(
+    "freq, bounds, start",
+    [
+        ("YS", (1.5, 12), None),
+        ("QS", (6, 48), 2 * np.pi / 12),
+        ("MS", (18, 144), 2 * np.pi / 36),
+        ("D", (2, np.inf), np.pi / 2),
+    ],
+    ids=["annual", "quarterly", "monthly", "daily"],
+)
+def test_cycle_frequency_bounds(freq, bounds, start):
+    # The default periods of the cycle are 1.5 to 12 years for annual,
+    # quarterly and monthly data, otherwise at least 2 periods. The cycle
+    # frequency starts at that of a three-year cycle, or in the middle of the
+    # bounds (the annual start is not checked: it depends on the pandas
+    # version)
+    rng = np.random.default_rng(20261123)
+    index = pd.date_range("2000-01-01", periods=60, freq=freq)
+    endog = pd.Series(rng.standard_normal(60), index=index)
+    mod = UnobservedComponents(endog, "llevel", cycle=True, stochastic_cycle=True)
+    assert_allclose(
+        mod.cycle_frequency_bound,
+        (2 * np.pi / bounds[1], 2 * np.pi / bounds[0]),
+        rtol=1e-12,
+    )
+    if start is not None:
+        start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+        assert_allclose(start_params["frequency.cycle"], start, rtol=1e-12)
+
+
+def test_undamped_cycle_transform():
+    # Variances are squared and the cycle frequency is a logistic function of
+    # the unconstrained parameter, scaled to the bounds (0, pi)
+    mod = UnobservedComponents(
+        np.arange(20.0), "llevel", cycle=True, stochastic_cycle=True
+    )
+    assert_equal(
+        mod.param_names,
+        ["sigma2.irregular", "sigma2.level", "sigma2.cycle", "frequency.cycle"],
+    )
+    unconstrained = np.array([1.0, 2.0, 0.5, 0.3])
+    constrained = mod.transform_params(unconstrained)
+    expected = [1.0, 4.0, 0.25, np.pi / (1 + np.exp(-0.3))]
+    assert_allclose(constrained, expected, rtol=1e-12)
+    assert_allclose(mod.untransform_params(constrained), unconstrained, rtol=1e-12)
+
+
+def test_autoregressive_only():
+    # Without level and irregular there is no trend specification: the model
+    # is the AR(1) of SARIMAX, and a clone has the same specification
+    rng = np.random.default_rng(20261124)
+    endog = rng.standard_normal(40)
+    mod = UnobservedComponents(endog, autoregressive=1)
+    assert mod.trend_specification is None
+    assert_equal(mod.param_names, ["sigma2.ar", "ar.L1"])
+    res = mod.smooth([2.0, 0.5])
+    res_sarimax = SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 2.0])
+    assert_allclose(res.llf, res_sarimax.llf, rtol=1e-12)
+    assert_allclose(mod.clone(endog).loglike([2.0, 0.5]), res.llf, rtol=1e-12)
+
+
+def test_initialize_default_approximate_diffuse_variance():
+    # Local level: the first observation has mean 0 and variance v + sigma2,
+    # where v is the given approximate diffuse variance of the level
+    rng = np.random.default_rng(20261125)
+    endog = rng.standard_normal(10).cumsum() + 1.0
+    mod = UnobservedComponents(endog, "llevel", loglikelihood_burn=0)
+    mod.initialize_default(approximate_diffuse_variance=10.0)
+    llf_obs = mod.loglikeobs([2.0, 1.0])
+    assert_allclose(llf_obs[0], norm.logpdf(endog[0], scale=np.sqrt(12.0)), rtol=1e-12)
+
+
+def test_start_params_missing():
+    # Starting parameters ignore missing observations
+    rng = np.random.default_rng(20261126)
+    endog = rng.standard_normal(40).cumsum()
+    endog[[5, 20]] = np.nan
+    mod = UnobservedComponents(endog, "lltrend")
+    mod_dropped = UnobservedComponents(endog[~np.isnan(endog)], "lltrend")
+    assert_allclose(mod.start_params, mod_dropped.start_params, rtol=1e-12)
+
+
+def test_deterministic_components():
+    # Deterministic seasonal, frequency domain seasonal and cycle components
+    # have no variance parameters, and the summary names them without
+    # "stochastic" (and an undamped cycle without "damped"). The cycle
+    # frequency starts in the middle of its bounds (0, pi).
+    rng = np.random.default_rng(20261127)
+    mod = UnobservedComponents(
+        rng.standard_normal(40),
+        "llevel",
+        seasonal=4,
+        stochastic_seasonal=False,
+        freq_seasonal=[{"period": 6}],
+        stochastic_freq_seasonal=[False],
+        cycle=True,
+    )
+    assert_equal(
+        mod.param_names, ["sigma2.irregular", "sigma2.level", "frequency.cycle"]
+    )
+    assert_allclose(mod.start_params[2], np.pi / 2, rtol=1e-12)
+    res = mod.smooth([1.0, 0.1, 0.5])
+    header = str(res.summary().tables[0])
+    for name in ["local level", "+ seasonal(4)", "+ freq_seasonal(6(3))", "+ cycle"]:
+        assert name in header
+    assert "stochastic" not in header
+    assert "damped" not in header
+
+
+def test_components():
+    # The components are taken from the state vector, ordered level, trend,
+    # seasonal (3 states), frequency domain seasonal (two harmonics, the sum
+    # of every other state), cycle (2 states), autoregressive and the
+    # regression coefficient; filter results have no smoothed estimates
+    rng = np.random.default_rng(20261128)
+    endog = rng.standard_normal(40)
+    exog = rng.standard_normal(40)
+    mod = UnobservedComponents(
+        endog,
+        "lltrend",
+        seasonal=4,
+        freq_seasonal=[{"period": 6, "harmonics": 2}],
+        cycle=True,
+        stochastic_cycle=True,
+        autoregressive=1,
+        exog=exog,
+        mle_regression=False,
+    )
+    assert_equal(mod.k_states, 13)
+    params = [1.0, 0.1, 0.01, 0.1, 0.1, 0.1, 0.5, 2 * np.pi / 10, 0.5]
+    offsets = {
+        "level": 0,
+        "trend": 1,
+        "seasonal": 2,
+        "cycle": 9,
+        "autoregressive": 11,
+    }
+    res_filtered = mod.filter(params)
+    res = mod.smooth(params)
+    for name, offset in offsets.items():
+        component = getattr(res_filtered, name)
+        assert_equal(component.offset, offset)
+        assert_allclose(component.filtered, res.filtered_state[offset], rtol=1e-12)
+        assert component.smoothed is None
+        component = getattr(res, name)
+        assert_allclose(component.smoothed, res.smoothed_state[offset], rtol=1e-12)
+        assert_allclose(
+            component.smoothed_cov,
+            res.smoothed_state_cov[offset, offset],
+            rtol=1e-12,
+        )
+    (freq_seasonal,) = res.freq_seasonal
+    assert_equal(freq_seasonal.offset, 5)
+    assert_allclose(
+        freq_seasonal.smoothed,
+        res.smoothed_state[5] + res.smoothed_state[7],
+        rtol=1e-12,
+    )
+    assert_allclose(
+        freq_seasonal.smoothed_cov,
+        res.smoothed_state_cov[5, 5] + res.smoothed_state_cov[7, 7],
+        rtol=1e-12,
+    )
+    assert res_filtered.freq_seasonal[0].smoothed is None
+    coefficients = res.regression_coefficients
+    assert_equal(coefficients.offset, 12)
+    assert_allclose(coefficients.smoothed, res.smoothed_state[12:], rtol=1e-12)
+    assert_allclose(
+        coefficients.smoothed_cov, res.smoothed_state_cov[12:, 12:], rtol=1e-12
+    )
+    assert res_filtered.regression_coefficients.smoothed is None
+    assert res_filtered.regression_coefficients.smoothed_cov is None
+
+
+def test_components_not_in_model():
+    # Components that are not in the model are None (an empty list for the
+    # frequency domain seasonals); coefficients estimated by maximum likelihood
+    # are not in the state vector
+    rng = np.random.default_rng(20261129)
+    mod = UnobservedComponents(
+        rng.standard_normal(40), "irregular", exog=rng.standard_normal(40)
+    )
+    res = mod.smooth([1.0, 0.5])
+    for name in ["level", "trend", "seasonal", "cycle", "autoregressive"]:
+        assert getattr(res, name) is None
+    assert_equal(res.freq_seasonal, [])
+    with pytest.warns(OutputWarning, match="estimated via maximum likelihood"):
+        assert res.regression_coefficients is None
+    # Without exog there are no coefficients, and no warning
+    res = UnobservedComponents(rng.standard_normal(40), "irregular").smooth([1.0])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert res.regression_coefficients is None
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("which", ["smoothed", "filtered"])
+def test_plot_components_without_observed(close_figures, which):
+    # Without the observed panel there is one panel per component; without
+    # dates the x values are the observation numbers after the burn-in
+    rng = np.random.default_rng(20261130)
+    endog = rng.standard_normal(30)
+    mod = UnobservedComponents(endog, "llevel", autoregressive=1)
+    res = mod.smooth([1.0, 0.1, 0.5, 0.5])
+    llb = res.loglikelihood_burn
+    assert_equal(llb, 1)
+    fig = res.plot_components(which=which, observed=False)
+    assert_equal(len(fig.axes), 2)
+    for ax, name in zip(fig.axes, ["level", "autoregressive"], strict=True):
+        assert_equal(ax.get_title(), f"{name.title()} component")
+        (line,) = ax.get_lines()
+        assert_equal(line.get_xdata(), np.arange(llb, 30))
+        expected = getattr(res, name)[which][llb:]
+        assert_allclose(line.get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs, params",
+    [(dict(seasonal=4), [1.5]), (dict(autoregressive=1), [1.5, 0.5])],
+    ids=["seasonal", "autoregressive"],
+)
+def test_fixed_slope_boolean_specification(kwargs, params):
+    # level=True and trend=True, neither stochastic, without an irregular is
+    # the "fixed slope" trend of the documentation (y_t = mu_t,
+    # mu_t = mu_{t-1} + beta), the same model as the string specification
+    rng = np.random.default_rng(20261201)
+    endog = rng.standard_normal(40)
+    mod = UnobservedComponents(endog, level=True, trend=True, **kwargs)
+    mod_str = UnobservedComponents(endog, "fixed slope", **kwargs)
+    assert_equal(mod.trend_mask, mod_str.trend_mask)
+    assert_equal(mod.param_names, mod_str.param_names)
+    res = mod.smooth(params)
+    assert_allclose(res.llf, mod_str.loglike(params), rtol=1e-12)
+    assert_equal(mod.trend_specification, "fixed slope")
+    assert_equal(res.specification.trend_specification, "fixed slope")
+    header = res.summary().tables[0].data
+    (model_row,) = [row for row in header if row[0].strip() == "Model:"]
+    assert_equal(model_row[1].strip(), "fixed slope")
+    # The clone uses the string specification, which gives the same model
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod_clone = mod.clone(endog)
+    assert_equal(mod_clone.trend_specification, "fixed slope")
+    assert_allclose(mod_clone.loglike(params), res.llf, rtol=1e-12)

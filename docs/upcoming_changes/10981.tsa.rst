@@ -1,0 +1,2 @@
+- ``fit(ic=...)`` of :class:`~statsmodels.tsa.vector_ar.svar_model.SVAR` always raised an ``AttributeError``. The lag
+  order is selected as in ``VAR.fit``. :pr:`10981`

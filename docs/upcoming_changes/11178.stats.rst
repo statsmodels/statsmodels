@@ -1,0 +1,9 @@
+- ``rvs`` of the transformed distributions in
+  ``statsmodels.sandbox.distributions.extras`` raised:
+  ``Transf_gen`` (``lognormalg``, ``invdnormalg``) "AttributeError:
+  'Transf_gen' object has no attribute '_size'", and
+  ``TransfTwo_gen`` (``squarenormalg``, ``squaretg``,
+  ``absnormalg``, ``negsquarenormalg``) "TypeError: _rvs() got an
+  unexpected keyword argument 'size'" with scipy >= 1.9 and an
+  AttributeError with scipy 1.8. ``Transf_gen`` also applied the
+  inverse of the transformation to the draws. :pr:`11178`

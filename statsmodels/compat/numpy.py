@@ -64,22 +64,31 @@ np_new_unique = np.unique
 
 def inplace_reshape(arr: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
     """
-    Reshape an array in place when possible, falling back to a copy
+    Reshape an array without copying its data
 
     Parameters
     ----------
     arr : ndarray
-        The array to reshape.
+        The array to reshape. It is not changed.
     shape : tuple[int, ...]
         The new shape.
 
     Returns
     -------
     ndarray
-        The reshaped array.
+        A view of `arr` with the new shape.
+
+    Raises
+    ------
+    ValueError, AttributeError
+        If the array cannot be reshaped without copying its data
+        (AttributeError on NumPy < 2.1).
     """
     try:
         return arr.reshape(shape, copy=False)
     except TypeError:
-        arr.shape = shape
-        return arr
+        # NumPy < 2.1 has no copy keyword. Setting the shape of a view, not
+        # of arr, leaves the caller's array unchanged, as reshape does
+        view = arr.view()
+        view.shape = shape
+        return view

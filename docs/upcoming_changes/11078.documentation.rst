@@ -1,0 +1,8 @@
+- Correct docstrings of ``NewsResults`` (the news of state space
+  models): ``groupby`` of ``get_impacts`` groups the updated variables
+  for each update date and cannot group the update dates, as its
+  example said; the columns of ``summary_news`` (with ``news``) and
+  the order of the columns and index levels of the details tables;
+  the selections of ``summary_details`` with ``source="revisions"``;
+  the tables of ``summary``; and docstrings for ``impacted_variable``
+  and ``tolerance``. :pr:`11078`
