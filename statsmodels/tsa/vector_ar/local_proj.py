@@ -245,7 +245,8 @@ class LocalProjections:
 
            A 0-d integer array is a column index, as an int is. It raised a
            TypeError. A bool raises a TypeError: True was the column index
-           1.
+           1. A sequence that holds a float, a bool or a str raises a
+           TypeError: [1.5], [True] and ["1"] were the column index 1.
     lags : int, optional
         Number of lagged values of *all* endog variables to include as
         controls.  Defaults to ``1``.
@@ -339,7 +340,15 @@ class LocalProjections:
         if is_int_like(shock_idx, strict=True):
             shock_idx_list = [int(shock_idx)]
         else:
-            shock_idx_list = [int(val) for val in shock_idx]
+            shock_idx_list = []
+            for val in shock_idx:
+                # int() would truncate 1.5 and accept True or "1"
+                if not is_int_like(val, strict=True):
+                    raise TypeError(
+                        "shock_idx must be an int or a sequence of int, but it "
+                        f"contains {val!r}"
+                    )
+                shock_idx_list.append(int(val))
         for idx in shock_idx_list:
             if not (0 <= idx < n):
                 raise ValueError(

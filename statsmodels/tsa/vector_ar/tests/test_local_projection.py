@@ -615,3 +615,31 @@ def test_bool_float_shock_idx(shock_idx):
     y = np.random.default_rng(20261126).standard_normal((80, 3))
     with pytest.raises(TypeError):
         LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [np.array([0, 2]), [np.int64(0), np.int32(2)], [np.array(0), 2], range(0, 3, 2)],
+    ids=["array", "numpy-ints", "0d-array", "range"],
+)
+def test_shock_idx_sequence_int_like(shock_idx):
+    # Integers in any sequence are column indices. The list of ints is the
+    # reference.
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    res = LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2).fit()
+    expected = LocalProjections(y, shock_idx=[0, 2], lags=1, horizons=2).fit()
+    assert res.model.shock_idx == [0, 2]
+    assert_allclose(res.irfs, expected.irfs, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [[1.5], [1.0], np.array([0.0, 1.0]), [True], [0, np.True_], ["1"]],
+    ids=["1.5", "1.0", "float-array", "True", "np.True_", "str"],
+)
+def test_shock_idx_sequence_not_int(shock_idx):
+    # The values were passed to int(), so [1.5], [True] and ["1"] were all
+    # the column index 1
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    with pytest.raises(TypeError, match="shock_idx must be an int or a sequence"):
+        LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
