@@ -15,6 +15,7 @@ Author: Josef-pktd
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
+import warnings
 
 import numpy as np
 from scipy import signal
@@ -48,6 +49,8 @@ class CycleTrendResult(NamedTuple):
 
 
 def _pad_nans(x, head=None, tail=None):
+    # convolution_filter, the only caller, passes 1-d or 2-d x, and a head
+    # and a tail that are both positive when both are given
     if np.ndim(x) == 1:
         if head is None and tail is None:
             return x
@@ -55,20 +58,18 @@ def _pad_nans(x, head=None, tail=None):
             return np.r_[[np.nan] * head, x, [np.nan] * tail]
         elif tail is None:
             return np.r_[[np.nan] * head, x]
-        elif head is None:
+        else:  # head is None
             return np.r_[x, [np.nan] * tail]
-    elif np.ndim(x) == 2:
-        if head is None and tail is None:
-            return x
-        elif head and tail:
-            return np.r_[[[np.nan] * x.shape[1]] * head, x,
-                         [[np.nan] * x.shape[1]] * tail]
-        elif tail is None:
-            return np.r_[[[np.nan] * x.shape[1]] * head, x]
-        elif head is None:
-            return np.r_[x, [[np.nan] * x.shape[1]] * tail]
-    else:
-        raise ValueError("Nan-padding for ndim > 2 not implemented")
+    # x is 2-d
+    if head is None and tail is None:
+        return x
+    elif head and tail:
+        return np.r_[[[np.nan] * x.shape[1]] * head, x,
+                     [[np.nan] * x.shape[1]] * tail]
+    elif tail is None:
+        return np.r_[[[np.nan] * x.shape[1]] * head, x]
+    else:  # head is None
+        return np.r_[x, [[np.nan] * x.shape[1]] * tail]
 
 # original changes and examples in sandbox.tsa.try_var_convolve
 
@@ -230,18 +231,61 @@ def recursive_filter(x, ar_coeff, init=None):
     Parameters
     ----------
     x : array_like
-        Time-series data. Should be 1d or n x 1.
+        Time-series data, either 1-D with shape (n,) or a single column with
+        shape (n, 1), such as a one-column DataFrame. Both are filtered along
+        the n observations. An array with shape (1, ..., 1) is a single
+        observation.
+
+        .. versionchanged:: 0.15.1
+
+           An (n, 1) column is now filtered along its rows, the same as 1-D
+           input. Previously no recursion was applied, so the column was
+           returned unchanged. ``init`` now works with an (n, 1) column, a
+           row and a single observation, where it raised a ValueError. Other
+           input with more than one column or more than two dimensions now
+           raises a ValueError.
+
+        .. deprecated:: 0.15.1
+
+           A row, an array with shape (1, n) or (1, ..., 1, n) with n > 1, is
+           filtered along its last axis, as a 1-D series of n observations,
+           and returned with the shape of ``x``. ``x`` must have the correct
+           shape, 1-D or an (n, 1) column, so a row now warns and will raise
+           a ValueError in statsmodels 0.17.0. Pass the row as a 1-D array
+           instead.
     ar_coeff : array_like
         AR coefficients in reverse time order. See Notes for details.
     init : array_like, optional
         Initial values of the time-series prior to the first value of y.
         The default is zero.
 
+        .. versionchanged:: 0.15.1
+
+           ``ar_coeff`` and ``init`` can be (n_coeff, 1) columns, which
+           raised a ValueError from NumPy or SciPy. Other 2-d input raises a
+           ValueError that names the argument.
+
     Returns
     -------
-    ndarray or Series
-        Filtered array, number of columns determined by x and ar_coeff. If x
-        is a pandas object than a Series is returned.
+    ndarray, Series or DataFrame
+        The filtered series, with the same shape as ``x``. A Series input
+        returns a Series and a DataFrame returns a DataFrame, each with the
+        index and name or columns of ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` is not 1-D, an (n, 1) column, a row with shape (1, n) or
+        (1, ..., 1, n), or a single observation with shape (1, ..., 1), if
+        ``ar_coeff`` or ``init`` is not 1-D or an (n_coeff, 1) column, or if
+        ``init`` and ``ar_coeff`` have different lengths.
+
+    Warns
+    -----
+    FutureWarning
+        If ``x`` is a row with shape (1, n) or (1, ..., 1, n), which is
+        deprecated. A (1, 1) or (1, ..., 1) array is a single observation and
+        does not warn.
 
     Notes
     -----
@@ -250,14 +294,41 @@ def recursive_filter(x, ar_coeff, init=None):
         y[n] = ar_coeff[0] * y[n-1] + ...
                 + ar_coeff[n_coeff - 1] * y[n - n_coeff] + x[n]
 
-    where n_coeff = len(ar_coeff).
+    where n_coeff = len(ar_coeff). The values before the first observation
+    are ``init`` in reverse time order, ``y[-1] = init[0]``, ...,
+    ``y[-n_coeff] = init[n_coeff - 1]``, or zero if ``init`` is None. This is
+    the recursive filter of ``stats::filter`` in R. For example, with
+    ``ar_coeff=[0.5, 0.25]``, ``init=[1, 2]`` and ``x`` zero, y starts
+    ``1, 0.75, 0.625``.
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x")
-    ar_coeff = array_like(ar_coeff, "ar_coeff")
+    shape = x.shape
+    if x.ndim > 1:
+        # an (n, 1) column, or a single observation with shape (1, ..., 1)
+        is_column = (x.ndim == 2 and shape[1] == 1) or x.size == 1
+        if not is_column:
+            if any(nobs != 1 for nobs in shape[:-1]):
+                raise ValueError(
+                    f"x must be 1-D or an (n, 1) column, but has shape {shape}. "
+                    "Filter each series separately."
+                )
+            warnings.warn(
+                f"x must be 1-D or an (n, 1) column, but has shape {shape}. "
+                "A row with shape (1, n) or (1, ..., 1, n) is filtered as a "
+                "1-D series of n observations, but this is deprecated and "
+                "will raise a ValueError in statsmodels 0.17.0. Pass the row "
+                "as a 1-D array instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        # lfilter works along the last axis, so filter x as 1-D and give the
+        # result the shape of x
+        x = x.ravel()
+    ar_coeff = array_like(ar_coeff, "ar_coeff", ndim=1)
 
     if init is not None:  # integer init are treated differently in lfiltic
-        init = array_like(init, "init")
+        init = array_like(init, "init", ndim=1)
         if len(init) != len(ar_coeff):
             raise ValueError("ar_coeff must be the same length as init")
 
@@ -273,7 +344,7 @@ def recursive_filter(x, ar_coeff, init=None):
     else:
         result = y
 
-    return pw.wrap(result)
+    return pw.wrap(result.reshape(shape))
 
 
 def convolution_filter(x, filt, nsides=2):
@@ -294,27 +365,38 @@ def convolution_filter(x, filt, nsides=2):
         coefficients. If 1, the filter coefficients are for past values only.
         Both methods use scipy.signal.convolve.
 
+        .. versionchanged:: 0.15.1
+
+           nsides=1 works with a 2d filter, and with 2d x and a filter of
+           length one, where it raised a ValueError.
+
     Returns
     -------
-    y : ndarray, 2d
-        Filtered array, number of columns determined by x and filt. If a
-        pandas object is given, a pandas object is returned. The index of
-        the return is the exact same as the time period in ``x``
+    ndarray, Series or DataFrame
+        The filtered array, with the number of observations of ``x``. It is
+        1d if ``x`` is 1d, and otherwise has one column per column of ``x``.
+        The values that the filter cannot compute at the ends are NaN. A
+        Series or DataFrame ``x`` returns a Series or DataFrame with the
+        index and the name or columns of ``x``.
 
     Notes
     -----
-    In nsides == 1, x is filtered ::
+    The filters are the convolution filters of ``stats::filter`` in R.
 
-        y[n] = filt[0]*x[n-1] + ... + filt[n_filt-1]*x[n-n_filt]
+    If nsides == 1, x is filtered with its current and past values ::
 
-    where n_filt is len(filt).
+        y[n] = filt[0]*x[n] + filt[1]*x[n-1] + ...
+               + filt[n_filt-1]*x[n-n_filt+1]
+
+    where n_filt is len(filt). The first n_filt - 1 values are NaN.
 
     If nsides == 2, x is filtered around lag 0 ::
 
-        y[n] = filt[0]*x[n - n_filt/2] + ... + filt[n_filt / 2] * x[n]
-               + ... + x[n + n_filt/2]
+        y[n] = filt[0]*x[n+m] + ... + filt[m]*x[n] + ...
+               + filt[n_filt-1]*x[n+m-n_filt+1]
 
-    where n_filt is len(filt). If n_filt is even, then more of the filter
+    where n_filt is len(filt) and m = n_filt // 2. The first n_filt - 1 - m
+    and the last m values are NaN. If n_filt is even, then more of the filter
     is forward in time than backward.
 
     If filt is 1d or (nlags,1) one lag polynomial is applied to all
@@ -329,7 +411,7 @@ def convolution_filter(x, filt, nsides=2):
     # for nsides shift the index instead of using 0 for 0 lag this
     # allows correct handling of NaNs
     if nsides == 1:
-        trim_head = len(filt) - 1
+        trim_head = len(filt) - 1 or None
         trim_tail = None
     elif nsides == 2:
         trim_head = int(np.ceil(len(filt)/2.) - 1) or None
@@ -347,15 +429,10 @@ def convolution_filter(x, filt, nsides=2):
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
-        if nsides == 2:
-            for i in range(nvar):
-                # could also use np.convolve, but easier for swiching to fft
-                result[:, i] = signal.convolve(x[:, i], filt[:, i],
-                                               mode="valid")
-        elif nsides == 1:
-            for i in range(nvar):
-                result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
-                                               mode="valid")
+        # nsides only sets the NaN padding, as for a 1d filter
+        for i in range(nvar):
+            # could also use np.convolve, but easier for swiching to fft
+            result[:, i] = signal.convolve(x[:, i], filt[:, i], mode="valid")
     result = _pad_nans(result, trim_head, trim_tail)
     return pw.wrap(result)
 
@@ -373,16 +450,26 @@ def miso_lfilter(ar, ma, x, useic=False):
         The coefficients of autoregressive lag polynomial including lag zero,
         ar(L) in the expression ar(L)y_t.
     ma : array_like
-        The coefficient of the moving average lag polynomial, ma(L) in
-        ma(L)x_t. Must have the same number of dimensions as ``x``;
-        currently only 2d is supported.
+        The coefficients of the moving average lag polynomial, ma(L) in
+        ma(L)x_t, with one row per lag and one column per column of ``x``.
+        A 1-d ``ma`` is a single column.
     x : array_like
-        The 2-d input data series, time in rows, variables in columns.
+        The input data series, time in rows, variables in columns. A 1-d
+        ``x`` is a single variable.
+
+        .. versionchanged:: 0.15.1
+
+           ``x``, ``ar`` and ``ma`` are converted with ``array_like``, so a
+           list or tuple ``x``, a column ``ar`` and a 1-d ``x`` or ``ma``
+           work where they raised, and ``useic`` can be an ndarray. A 2-d
+           ``ma`` without one column per column of a 2-d ``x`` is
+           deprecated.
     useic : array_like or bool, optional
         Initial conditions for the AR filter, as accepted by
-        ``scipy.signal.lfiltic`` (i.e. an array_like of the initial values
-        of the filtered series, of length ``ar.shape[0] - 1``). Use the
-        default, False, for zero initial conditions.
+        ``scipy.signal.lfiltic``: the values of the filtered series before
+        the first observation in reverse time order (``useic[0]`` is
+        ``y[-1]``), of length ``ar.shape[0] - 1``. Use the default, False,
+        for zero initial conditions.
 
     Returns
     -------
@@ -391,9 +478,23 @@ def miso_lfilter(ar, ma, x, useic=False):
     inp : ndarray, 1d
         The combined input series.
 
+    Raises
+    ------
+    ValueError
+        If ``ma`` or ``x`` is 1-d and ``ma`` does not have one column per
+        column of ``x``.
+
+    Warns
+    -----
+    FutureWarning
+        If ``ma`` and ``x`` are 2-d and ``ma`` does not have one column per
+        column of ``x``. The result does not filter each column of ``x`` with
+        its own column of ``ma``. This is deprecated and will raise a
+        ValueError in statsmodels 0.17.0.
+
     Notes
     -----
-    currently for 2d inputs only, no choice of axis
+    x is filtered along its rows, there is no choice of axis
     Use of signal.lfilter requires that ar lag polynomial contains
     floating point numbers
     does not cut off invalid starting and final values
@@ -405,8 +506,27 @@ def miso_lfilter(ar, ma, x, useic=False):
     with shapes y (nobs,), x (nobs, nvars), ar (narlags,), and
     ma (narlags, nvars).
     """
-    ma = array_like(ma, "ma")
-    ar = array_like(ar, "ar")
+    # a 2-d ma and x with different numbers of columns ran before, so they
+    # are deprecated rather than rejected
+    both_2d = np.ndim(ma) == 2 and np.ndim(x) == 2
+    ma = array_like(ma, "ma", ndim=2)
+    ar = array_like(ar, "ar", ndim=1)
+    # dtype=None keeps complex x complex, as before
+    x = array_like(x, "x", ndim=2, dtype=None)
+    if ma.shape[1] != x.shape[1]:
+        msg = (
+            "ma must have one column per column of x, but ma has "
+            f"{ma.shape[1]} columns and x has {x.shape[1]}"
+        )
+        if not both_2d:
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. The result does not filter each column of x with its "
+            "own column of ma. This is deprecated and will raise a "
+            "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
     inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
     #  inp2 = signal.convolve(x, ma[:,::-1])[:, x.shape[1]-1]
@@ -415,7 +535,8 @@ def miso_lfilter(ar, ma, x, useic=False):
     # cut of extra values at end
 
     # TODO: initialize also x for correlate
-    if useic:
+    # useic can be an ndarray; all-zero values are the default zero values
+    if np.any(useic):
         return signal.lfilter([1], ar, inp,
                               zi=signal.lfiltic(np.array([1., 0.]), ar,
                                                 useic))[0][:nobs], inp[:nobs]

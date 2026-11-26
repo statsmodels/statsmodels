@@ -1,0 +1,3 @@
+- Keyword arguments of :func:`~statsmodels.tsa.interp.denton.dentonm` other
+  than ``k`` were ignored. They warn with a ``FutureWarning`` and will raise a
+  ``TypeError`` after statsmodels 0.17. :pr:`10891`

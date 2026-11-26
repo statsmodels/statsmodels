@@ -1,0 +1,3 @@
+- ``statsmodels.tsa.innovations.arma_innovations`` raised "Buffer dtype
+  mismatch" for ``prefix`` ``"s"``, ``"c"`` or ``"z"`` with double-precision
+  parameters, and for float32 data. :pr:`10889`

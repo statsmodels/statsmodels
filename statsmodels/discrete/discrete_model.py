@@ -1053,7 +1053,7 @@ class MultinomialModel(BinaryModel):
         margeff = np.transpose(margeff, (1, 2, 0))
 
         if "ex" in transform:
-            margeff *= exog
+            margeff *= exog[:, :, None]
         if "ey" in transform:
             margeff /= self.predict(params, exog)[:, None, :]
 
@@ -2566,8 +2566,8 @@ class GeneralizedPoisson(CountModel):
 
         if exposure is None:
             exposure = getattr(self, "exposure", 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
+        else:
+            exposure = np.log(np.asarray(exposure))
 
         if offset is None:
             offset = getattr(self, "offset", 0)
@@ -2588,9 +2588,7 @@ class GeneralizedPoisson(CountModel):
         elif which == "prob":
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog) + 1))
-            mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)[
-                :, None
-            ]
+            mu = np.exp(linpred)[:, None]
             return genpoisson_p.pmf(y_values, mu, params[-1], self.parameterization + 1)
         else:
             raise ValueError("keyword 'which' not recognized")
@@ -3832,6 +3830,9 @@ class NegativeBinomial(CountModel):
             **kwargs,
         )
         self.loglike_method = loglike_method
+        # params hold alpha, not log(alpha); fit switches this on while it
+        # optimizes over log(alpha) and off again before it returns
+        self._transparams = False
         self._initialize()
         if loglike_method in ["nb2", "nb1"]:
             self.exog_names.append("alpha")
@@ -3847,12 +3848,10 @@ class NegativeBinomial(CountModel):
             self.hessian = self._hessian_nb2
             self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
-            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == "nb1":
             self.hessian = self._hessian_nb1
             self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
-            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == "geometric":
             self.hessian = self._hessian_geom
             self.score = self._score_geom
@@ -4406,7 +4405,7 @@ _nbo_fit_params = _lm_fit_docstring.extract_parameters(
 
 
 class NegativeBinomialP(CountModel):
-    __doc__ = """
+    __doc__ = r"""
     Generalized Negative Binomial (NB-P) Model
 
     {params}
@@ -4418,11 +4417,20 @@ class NegativeBinomialP(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
+
+    Notes
+    -----
+    The final element of the parameter vector is the dispersion parameter
+    :math:`\alpha`. For conditional mean :math:`\mu`, the conditional variance
+    is :math:`\mu + \alpha \mu^p`. Thus NB-1 (``p=1``) has variance
+    :math:`\mu (1 + \alpha)` and NB-2 (``p=2``) has variance
+    :math:`\mu + \alpha \mu^2`. Values of ``p`` other than 1 and 2 are
+    allowed, the model does not restrict ``p`` to a range.
     """.format(
         params=base._model_params_doc,
-        extra_params="""p : int, optional
+        extra_params="""p : float, optional
         P denotes parameterizations for NB regression. p=1 for NB-1 and
-        p=2 for NB-2. Default is p=2.
+        p=2 for NB-2. Other values of p are allowed. Default is p=2.
     offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like, optional
@@ -4642,6 +4650,15 @@ class NegativeBinomialP(CountModel):
         -------
         hessian : ndarray, 2-D
             The hessian matrix of the model.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           The cross derivatives of the regression parameters and ``alpha``
+           were incorrect if ``p`` is not 1 or 2, so that the Hessian, and
+           the results that are based on it, changed for these values of
+           ``p``.
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -4693,7 +4710,7 @@ class NegativeBinomialP(CountModel):
             * (
                 (1 + a4) * (1 - a3 / a2) / a2
                 - p * (lprob + dgpart + 2) / mu
-                + p / mu * (a3 + p * a1) / a2
+                + (p * a3 / mu + a4) / a2
                 - a4 * pgpart
             )
             / alpha
@@ -4722,7 +4739,7 @@ class NegativeBinomialP(CountModel):
 
     def hessian_factor(self, params):
         """
-        Generalized Negative Binomial (NB-P) model Hessian matrix of the log-likelihood.
+        Generalized Negative Binomial (NB-P) model Hessian factors of the log-likelihood.
 
         Parameters
         ----------
@@ -4731,8 +4748,25 @@ class NegativeBinomialP(CountModel):
 
         Returns
         -------
-        hessian : ndarray, 2-D
-            The hessian matrix of the model.
+        hfbb : ndarray, 1-D
+            The factor for the block of the regression parameters, one value
+            for each observation. The block of the Hessian is
+            ``(exog.T * hfbb) @ exog``.
+        hfba : ndarray, 1-D
+            The factor for the cross derivatives of the regression parameters
+            and ``alpha``, one value for each observation. The cross block of
+            the Hessian is ``hfba @ exog``.
+        hfaa : ndarray, 1-D
+            The second derivative with respect to ``alpha`` of the
+            log-likelihood of each observation. The corresponding element of
+            the Hessian is ``hfaa.sum()``.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           The factor ``hfba`` was incorrect if ``p`` is not 1 or 2, so that
+           the cross block of the Hessian changed for these values of ``p``.
         """
         params = np.asarray(params)
         if self._transparams:
@@ -4780,7 +4814,7 @@ class NegativeBinomialP(CountModel):
             * (
                 (1 + a4) * (1 - a3 / a2) / a2
                 - p * (np.log(a1 / a2) + dgpart + 2) / mu
-                + p * (a3 / mu + a4) / a2
+                + (p * a3 / mu + a4) / a2
                 + a4 * (polygamma(1, a1) - polygamma(1, a3))
             )
             / alpha
@@ -5006,8 +5040,8 @@ class NegativeBinomialP(CountModel):
 
         if exposure is None:
             exposure = getattr(self, "exposure", 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
+        else:
+            exposure = np.log(np.asarray(exposure))
 
         if offset is None:
             offset = getattr(self, "offset", 0)
@@ -5029,7 +5063,7 @@ class NegativeBinomialP(CountModel):
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog) + 1))
 
-            mu = self.predict(params, exog, exposure, offset)
+            mu = np.exp(linpred)
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(y_values, size[:, None], prob[:, None])
         else:
@@ -5294,7 +5328,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         Pearson residuals defined as response residuals divided by standard
         deviation implied by the model.
         """
-        var_ = self.predict(which="var")
+        var_ = np.asarray(self.predict(which="var"))
         return self.resid_response / np.sqrt(var_)
 
     @cache_readonly
@@ -5463,6 +5497,18 @@ class DiscreteResults(base.LikelihoodModelResults):
         Notes
         -----
         Status: new in 0.14, experimental
+
+        The confidence intervals use the t distribution if ``use_t`` is True,
+        with ``df_resid_inference`` degrees of freedom if the results have it
+        (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+        ``df_resid`` otherwise. They use the normal distribution if ``use_t``
+        is False, if ``average`` is True and if ``which`` is not "mean" or
+        "linear".
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
         """
         pred_kwds = kwargs
         # y_values is explicit so we can add it to the docstring
@@ -6258,7 +6304,8 @@ class MultinomialResults(DiscreteResults):
         # these are the actual, predicted indices
         # idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
-        return np.histogram2d(self.model.endog, self.predict().argmax(1), bins=bins)[0]
+        pred = np.asarray(self.predict()).argmax(1)
+        return np.histogram2d(self.model.endog, pred, bins=bins)[0]
 
     @cache_readonly
     def bse(self):
@@ -6291,11 +6338,17 @@ class MultinomialResults(DiscreteResults):
         Returns
         -------
         ndarray or DataFrame
-            An ndarray of shape (nobs, J) is returned if ``exog`` is not
-            given or is not a pandas object. If ``exog`` is a DataFrame, or
+            An ndarray of shape (nobs, J) is returned for explicitly supplied
+            ``exog`` that is not a pandas object. If ``exog`` is a DataFrame, or
             if the model was fit using a formula and ``exog`` is a DataFrame
             or a dict, a DataFrame with the row index of ``exog`` is
-            returned. The columns of the DataFrame are the categories of the
+            returned. If ``exog`` is omitted and the model was fit with pandas
+            data (``endog`` or ``exog``) or with a formula, a DataFrame with
+            the training row index is returned (0, 1, ..., nobs - 1 if the
+            formula was used with a dict or a recarray). If ``exog`` is
+            omitted and the model was fit with NumPy data and no formula, an
+            ndarray is returned.
+            The columns of the DataFrame are the categories of the
             endogenous variable in the order of the columns of ``wendog`` and
             of ``names``, so that the first column is the reference category.
 
@@ -6313,8 +6366,16 @@ class MultinomialResults(DiscreteResults):
 
            The columns of the returned DataFrame are the categories of
            ``endog``. In previous versions they were 0, 1, ..., J - 1.
+           In-sample predictions from models fit with pandas data or a
+           formula return a DataFrame instead of an ndarray.
         """
         pred = super().predict(exog, transform, *args, **kwargs)
+        if exog is None:
+            index = self.model.data.row_labels
+            if index is not None:
+                if len(index) != len(pred):
+                    index = index.delete(self.model.data.missing_row_idx)
+                pred = DataFrame(pred, index=index)
         categories = getattr(self.model, "_endog_categories", None)
         if isinstance(pred, DataFrame) and categories is not None:
             # label the columns with the endog categories, see GH 4804
@@ -6344,7 +6405,7 @@ class MultinomialResults(DiscreteResults):
         # `endog` holds the 1-dim category codes for the multinomial models,
         # so the base class version does not conform with `predict`. `wendog`
         # is the indicator matrix of the observed categories, which does.
-        return self.model.wendog - self.predict()
+        return self.model.wendog - np.asarray(self.predict())
 
     @cache_readonly
     def resid_misclassified(self):
@@ -6363,7 +6424,8 @@ class MultinomialResults(DiscreteResults):
         and 1 otherwise.
         """
         # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
-        return (self.model.wendog.argmax(1) != self.predict().argmax(1)).astype(float)
+        pred = np.asarray(self.predict()).argmax(1)
+        return (self.model.wendog.argmax(1) != pred).astype(float)
 
     def summary2(self, alpha=0.05, float_format="%.4f"):
         """

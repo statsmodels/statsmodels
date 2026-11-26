@@ -13,6 +13,7 @@ from statsmodels.compat.python import lrange
 
 from collections import defaultdict
 from io import StringIO
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -22,9 +23,10 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._lstsq import default_rcond
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.sm_exceptions import OutputWarning
+from statsmodels.tools.sm_exceptions import OutputWarning, SingularMatrixWarning
 from statsmodels.tools.validation import array_like, float_like, int_like, string_like
 from statsmodels.tsa._lagselect import nested_lag_ols
 from statsmodels.tsa.base.tsa_model import (
@@ -103,6 +105,13 @@ def is_stable(coefs, verbose=False):
     Returns
     -------
     is_stable : bool
+        True if all eigenvalues of the VAR(1) representation are inside the
+        unit circle.
+
+        .. versionchanged:: 0.15.1
+
+           An eigenvalue on the unit circle (a unit root) makes the process
+           not stable. It counted as stable.
     """
     A_var1 = util.comp_matrix(coefs)
     eigs = np.linalg.eigvals(A_var1)
@@ -112,7 +121,7 @@ def is_stable(coefs, verbose=False):
         for val in np.abs(eigs):
             print(val)
 
-    return (np.abs(eigs) <= 1).all()
+    return (np.abs(eigs) < 1).all()
 
 
 def var_acf(coefs, sig_u, nlags=None):
@@ -359,6 +368,13 @@ def var_loglike(resid, omega, nobs):
     Parameters
     ----------
     resid : ndarray (T x K)
+        Not used.
+
+        .. deprecated:: 0.15.1
+
+           ``resid`` has no effect and will be removed after statsmodels
+           0.17 is released. Passing any value other than None issues a
+           FutureWarning.
     omega : ndarray
         Sigma hat matrix.  Each element i,j is the average product of the
         OLS residual for variable i and the OLS residual for variable j or
@@ -380,6 +396,13 @@ def var_loglike(resid, omega, nobs):
         -\left(\frac{T}{2}\right)
         \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
     """
+    if resid is not None:
+        warnings.warn(
+            "resid has no effect and will be removed after statsmodels 0.17 "
+            "is released. Pass resid=None to silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     logdet = logdet_symm(np.asarray(omega))
     neqs = len(omega)
     part1 = -(nobs * neqs / 2) * np.log(2 * np.pi)
@@ -405,12 +428,13 @@ def _reordered(self, order):
     names_new = []
 
     # Rearrange elements and fill in new arrays
-    k = self.k_trend
+    # The deterministic terms, trend and exog, come first
+    k = self.k_exog
     for i, c in enumerate(order):
         endog_new[:, i] = self.endog[:, c]
         if k > 0:
-            params_new_inc[0, i] = params[0, i]
-            endog_lagged_new[:, 0] = endog_lagged[:, 0]
+            params_new_inc[:k, i] = params[:k, i]
+            endog_lagged_new[:, :k] = endog_lagged[:, :k]
         for j in range(k_ar):
             params_new_inc[i + j * num_end + k, :] = self.params[c + j * num_end + k, :]
             endog_lagged_new[:, i + j * num_end + k] = endog_lagged[
@@ -429,9 +453,10 @@ def _reordered(self, order):
         sigma_u=sigma_u_new,
         lag_order=self.k_ar,
         model=self.model,
-        trend="c",
+        trend=self.trend,
         names=names_new,
         dates=self.dates,
+        exog=self.exog,
     )
 
 
@@ -684,6 +709,14 @@ class VAR(TimeSeriesModel):
     missing : str, optional
         See :class:`statsmodels.base.model.Model` for more information.
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       With ``missing="drop"``, the number of observations is that after
+       dropping. It was the number before, so ``nobs`` was too large and a
+       model with exog could not be fit.
+
     References
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
@@ -694,7 +727,7 @@ class VAR(TimeSeriesModel):
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
-        self.n_totobs = len(endog)
+        self.n_totobs = self.endog.shape[0]
         # Set by fit()/_estimate_var(), once the lag order is known
         self.nobs = None
         self.k_trend = None
@@ -815,6 +848,15 @@ class VAR(TimeSeriesModel):
         VARResults
             Estimation results
 
+        Warns
+        -----
+        SingularMatrixWarning
+            If the lagged regressors are collinear so that the design
+            matrix is rank-deficient, the fitted parameters are not
+            uniquely determined. This also happens if a column of ``exog``
+            duplicates the constant that ``trend`` adds. With ``ic`` the
+            warning is raised for the selected lag order only.
+
         Notes
         -----
         See Lütkepohl pp. 146-153 for implementation details.
@@ -833,7 +875,14 @@ class VAR(TimeSeriesModel):
                 )
 
         if ic is not None:
-            selections = self.select_order(maxlags=maxlags)
+            # The final _estimate_var call below already warns if the
+            # chosen lag order is singular, so do not also warn here for
+            # the other lag orders select_order considers internally.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=SingularMatrixWarning
+                )
+                selections = self.select_order(maxlags=maxlags, trend=trend)
             if not hasattr(selections, ic):
                 raise ValueError(
                     f"{ic} not recognized, must be among {sorted(selections.ics)}"
@@ -865,7 +914,7 @@ class VAR(TimeSeriesModel):
         )
         return self._estimate_var(lags, trend=trend)
 
-    def _estimate_var(self, lags, offset=0, trend="c"):
+    def _estimate_var(self, lags, offset=0, trend="c", warn_singular=True):
         """
         Estimate a VAR model with a given number of lags
 
@@ -878,6 +927,12 @@ class VAR(TimeSeriesModel):
             apples-to-apples comparison
         trend : {"n", "c", "ct", "ctt"}, optional
             As per above
+        warn_singular : bool, optional
+            Whether to warn immediately if the design matrix is
+            rank-deficient. Callers that estimate many lag orders in a loop
+            (e.g. ``select_order``) should pass False and instead check
+            ``result._rank_deficient`` once per call, so that a single
+            warning can be raised for the whole loop instead of one per lag.
         """
         # have to do this again because select_order does not call fit
         self.k_trend = k_trend = util.get_trendorder(trend)
@@ -911,8 +966,20 @@ class VAR(TimeSeriesModel):
                 z[:, i] = (np.sqrt(z[:, i]) + lags) ** 2
 
         y_sample = endog[lags:]
-        # Lütkepohl p75, about 5x faster than stated formula
-        params = np.linalg.lstsq(z, y_sample, rcond=1e-15)[0]
+        # Lütkepohl p75, about 5x faster than stated formula. Same rank
+        # rule as OLS (statsmodels.tools._lstsq): rcond scales with nobs,
+        # not just the number of columns, or the cutoff misses designs
+        # that are exactly rank-deficient at a few thousand observations.
+        rcond = default_rcond(*z.shape)
+        params, _, rank, _ = np.linalg.lstsq(z, y_sample, rcond=rcond)
+        rank_deficient = rank < z.shape[1]
+        if rank_deficient and warn_singular:
+            warnings.warn(
+                "The design matrix is rank-deficient. "
+                "The VAR parameters are not uniquely determined.",
+                SingularMatrixWarning,
+                stacklevel=3,
+            )
         resid = y_sample - np.dot(z, params)
 
         # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
@@ -946,6 +1013,7 @@ class VAR(TimeSeriesModel):
             model=self,
             exog=self.exog,
         )
+        varfit._rank_deficient = rank_deficient
         return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, trend="c"):
@@ -956,7 +1024,13 @@ class VAR(TimeSeriesModel):
         Parameters
         ----------
         maxlags : int, optional
-            if None, defaults to 12 * (nobs/100.)**(1./4)
+            if None, defaults to 12 * (nobs/100.)**(1./4). Must be at least
+            1 with trend "n" and no exog, otherwise a ValueError is raised.
+
+            .. versionchanged:: 0.15.1
+
+               maxlags=0 with trend "n" and no exog raises a ValueError. It
+               raised a KeyError.
         trend : {"n", "c", "ct", "ctt"}, optional
             * "n" - no deterministic terms
             * "c" - constant term
@@ -966,6 +1040,13 @@ class VAR(TimeSeriesModel):
         Returns
         -------
         selections : LagOrderResults
+
+        Warns
+        -----
+        SingularMatrixWarning
+            If the design matrix is rank-deficient for at least one of the
+            lag orders considered, at most one warning is raised for the
+            whole call, rather than one per affected lag order.
         """
         ntrend = len(trend) if trend.startswith("c") else 0
         max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
@@ -987,6 +1068,12 @@ class VAR(TimeSeriesModel):
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
+        if maxlags < p_min:
+            # VAR(0) without deterministic terms or exog has no parameters
+            raise ValueError(
+                'maxlags must be at least 1 with trend="n" and no exog, got '
+                f"{maxlags}"
+            )
         fast_ics = None
         if trend in ("n", "c", "ct", "ctt"):
             fast_ics = _var_order_ics(self.endog, self.exog, maxlags, trend, p_min)
@@ -995,13 +1082,27 @@ class VAR(TimeSeriesModel):
             for k, v in fast_ics.items():
                 ics[k].extend(v)
         else:
+            singular = False
             for p in range(p_min, maxlags + 1):
                 # exclude some periods to same amount of data used for each
                 # lag order
-                result = self._estimate_var(p, offset=maxlags - p, trend=trend)
+                result = self._estimate_var(
+                    p, offset=maxlags - p, trend=trend, warn_singular=False
+                )
+                singular = singular or result._rank_deficient
 
                 for k, v in result.info_criteria.items():
                     ics[k].append(v)
+
+            if singular:
+                warnings.warn(
+                    "The design matrix is rank-deficient for at least one "
+                    "lag order considered by select_order. The VAR "
+                    "parameters are not uniquely determined for those "
+                    "models.",
+                    SingularMatrixWarning,
+                    stacklevel=2,
+                )
 
         selected_orders = {k: np.array(v).argmin() + p_min for k, v in ics.items()}
 
@@ -1174,7 +1275,7 @@ class VARProcess:
                 steps = steps_
         elif steps_ is not None and steps != steps_:
             raise ValueError(
-                "if exog or offset are used, then steps must"
+                "if exog or offset are used, then steps must "
                 "be equal to their length or None"
             )
         rng = check_random_state(rng, deprecated=True)
@@ -1348,7 +1449,24 @@ class VARProcess:
         Notes
         -----
         Lütkepohl pp 37-38
+
+        A VARProcess that is not estimation results has no values of the
+        trend or exog in the forecast period. Its only deterministic term
+        can be the intercept, and `exog_future` must be None.
+
+        .. versionchanged:: 0.15.1
+
+           Forecasts of a VARProcess with at most an intercept work. They
+           raised an AttributeError.
         """
+        if not isinstance(self, VARResults):
+            if exog_future is not None or self.k_trend > 1 or self.k_exog_user:
+                raise ValueError(
+                    "A VARProcess can only forecast with an intercept as the "
+                    "only deterministic term and exog_future=None."
+                )
+            # The intercept is zero without a constant
+            return forecast(y, self.coefs, self.intercept, steps)
         if self.exog is None and exog_future is not None:
             raise ValueError(
                 "No exog in model, so no exog_future supported in forecast method."
@@ -1438,7 +1556,12 @@ steps ({steps}) observations.
         y : ndarray or None
             The initial values to use for the forecasts. If None,
             the last k_ar values of the original endogenous variables are
-            used.
+            used. A VARProcess that is not estimation results needs y.
+
+            .. versionchanged:: 0.15.1
+
+               None uses the last k_ar observations. It raised an
+               AttributeError.
         steps : int
             Number of steps ahead to forecast
         alpha : float, optional
@@ -1467,6 +1590,13 @@ steps ({steps}) observations.
         if not 0 < alpha < 1:
             raise ValueError("alpha must be between 0 and 1")
         q = util.norm_signif_level(alpha)
+        if y is None:
+            if getattr(self, "endog", None) is None:
+                raise ValueError(
+                    "y is required, since a VARProcess that is not estimation "
+                    "results has no observations."
+                )
+            y = self.endog[-self.k_ar :]
 
         point_forecast = self.forecast(y, steps, exog_future=exog_future)
         sigma = np.sqrt(self._forecast_vars(steps))
@@ -1807,7 +1937,7 @@ class VARResults(VARProcess):
     @cache_readonly
     def llf(self):
         "Compute VAR(p) loglikelihood"
-        return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
+        return var_loglike(None, self.sigma_u_mle, self.nobs)
 
     @cache_readonly
     def stderr(self):
@@ -1898,8 +2028,8 @@ class VARResults(VARProcess):
         fig = plotting.plot_var_forc(
             self.endog,
             mid,
-            lower,
             upper,
+            lower,
             names=self.names,
             plot_stderr=plot_stderr,
         )
@@ -1941,7 +2071,7 @@ class VARResults(VARProcess):
                 import warnings
 
                 warnings.warn(
-                    "forecast cov takes parameter uncertainty intoaccount",
+                    "forecast cov takes parameter uncertainty into account",
                     OutputWarning,
                     stacklevel=2,
                 )
@@ -2223,6 +2353,15 @@ class VARResults(VARProcess):
         -------
         VARResults
             A new results instance with the variables reordered.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           Results with any trend and with exog can be reordered. With
+           ``trend="n"`` and one exog variable the coefficients of the
+           reordered results were wrong; other trends than "c", and exog,
+           raised an error.
         """
         if len(order) != len(self.params[0, :]):
             raise ValueError(
@@ -2262,6 +2401,12 @@ class VARResults(VARProcess):
             variables are Granger-causing the variable(s) specified by
             `caused`.
             If None, `causing` is assumed to be the complement of `caused`.
+
+            .. versionchanged:: 0.15.1
+
+               With None, the results name the complement of `caused` as
+               `causing`; they named `caused`. Unless `caused` held half of
+               the variables, the test raised an error.
         kind : {'f', 'wald'}, optional
             Perform F-test or Wald (chi-sq) test
         signif : float, optional
@@ -2318,7 +2463,7 @@ class VARResults(VARProcess):
             causing_ind = [util.get_index(self.names, c) for c in causing]
         else:
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
-            causing = [self.names[c] for c in caused_ind]
+            causing = [self.names[c] for c in causing_ind]
 
         k, p = self.neqs, self.k_ar
         if p == 0:
@@ -2459,8 +2604,8 @@ class VARResults(VARProcess):
         sig_mask = np.zeros(sigma_u.shape)
         # set =1 twice to ensure, that all the ones needed are below the main
         # diagonal:
-        sig_mask[causing_ind, caused_ind] = 1
-        sig_mask[caused_ind, causing_ind] = 1
+        sig_mask[np.ix_(causing_ind, caused_ind)] = 1
+        sig_mask[np.ix_(caused_ind, causing_ind)] = 1
         vech_sig_mask = util.vech(sig_mask)
         inds = np.nonzero(vech_sig_mask)[0]
 

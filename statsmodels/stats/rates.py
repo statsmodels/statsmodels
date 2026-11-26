@@ -1767,14 +1767,20 @@ def confint_poisson_2indep(
 
         - 'wald': NOT YET, method W1A, wald test, variance based on observed
           rates
-        - 'waldcc' :
+        - 'waldcc' : like 'wald-log' with 0.5 added to both counts
         - 'score': method W2A, score test, variance based on estimate under
           the Null hypothesis
         - 'wald-log': W3A, uses log-ratio, variance based on observed rates
         - 'score-log': W4A, uses log-ratio, variance based on estimate under
           the Null hypothesis
         - 'sqrt': W5A, based on variance stabilizing square root transformation
-        - 'sqrtcc' :
+        - 'sqrtcc' : Fieller interval for the square root of the ratio of the
+          expected counts, based on the square roots of the counts plus 0.5
+          [1]_. The upper limit is infinite if ``count2 + 0.5`` is not larger
+          than ``crit**2 / 4``, where ``crit`` is the critical value of the
+          standard normal distribution (this is ``count2 = 0`` at the default
+          ``alpha``). Likewise the lower limit is 0 if ``count1 + 0.5`` is not
+          larger than ``crit**2 / 4``.
         - 'exact-cond': NOT YET, exact conditional test based on binomial
           distribution
           This uses ``binom_test`` which is minlike in the two-sided case.
@@ -1810,6 +1816,12 @@ def confint_poisson_2indep(
     ------
     ValueError
         If a count is negative or an exposure is not positive.
+
+    References
+    ----------
+    .. [1] Price, Robert M., and Douglas G. Bonett. 2000. "Estimating the
+       Ratio of Two Poisson Rates." Computational Statistics & Data Analysis
+       34 (3): 345-356. https://doi.org/10.1016/S0167-9473(99)00100-0.
     """
 
     # shortcut names
@@ -1869,15 +1881,28 @@ def confint_poisson_2indep(
 
         elif method == "sqrtcc":
             # coded based on Price, Bonett 2000 equ (2.4)
+            # Fieller interval for sqrt(mu1 / mu2) of the expected counts,
+            # the bounds are then rescaled from counts to rates by n2 / n1
+            # With a = sqrt(y1 + 0.5), b = sqrt(y2 + 0.5) and th = sqrt(mu1 / mu2),
+            # the interval is the set of th >= 0 with
+            # (a - th * b)**2 <= crit**2 / 4 * (1 + th**2), a quadratic in th
+            # with leading coefficient denom = b**2 - crit**2 / 4.
             crit = stats.norm.isf(alpha)
-            center = np.sqrt((count1 + 0.5) * (count2 + 0.5))
-            std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit)
-            denom = count2 + 0.5 - 0.25 * crit**2
+            c1, c2 = y1 + 0.5, y2 + 0.5
+            center = np.sqrt(c1 * c2)
+            # the radicand is negative only if both counts are 0 and alpha is small
+            std = 0.5 * np.sqrt(np.maximum(c1 + c2 - 0.25 * crit**2, 0))
+            denom = c2 - 0.25 * crit**2
 
-            low_sqrt = (center - crit * std) / denom
-            upp_sqrt = (center + crit * std) / denom
+            # (center - crit * std) / denom, without the division by denom. It
+            # is negative if c1 < crit**2 / 4, and th is not negative.
+            low_sqrt = np.maximum((c1 - 0.25 * crit**2) / (center + crit * std), 0)
+            # If denom <= 0 the set is unbounded above.
+            with np.errstate(divide="ignore", invalid="ignore"):
+                upp_sqrt = (center + crit * std) / denom
+            upp_sqrt = np.where(denom > 0, upp_sqrt, np.inf)[()]
 
-            ci = (low_sqrt**2, upp_sqrt**2)
+            ci = (low_sqrt**2 * n2 / n1, upp_sqrt**2 * n2 / n1)
 
         elif method == "mover":
             method_p = method_mover

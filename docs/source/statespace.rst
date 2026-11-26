@@ -725,9 +725,9 @@ the example below, we use the `extend` method.
 Understanding the Impact of Data Revisions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Statespace model results expose a :meth:`~mlemodel.MLEModel.news` method that
-can be used to understand the impact of data revisions -- news -- on model
-parameters.
+Statespace model results expose a :meth:`~mlemodel.MLEResults.news` method that
+can be used to understand the impact of news (the unexpected component of new
+observations) and data revisions on the estimates of variables of interest.
 
 .. autosummary::
    :toctree: generated/
@@ -817,7 +817,10 @@ The `Initialization` class specifies how the initial state distribution
 (mean and covariance) is constructed for a `Representation`, and it supports
 combining different initialization types (`known`, `diffuse`,
 `approximate_diffuse`, or `stationary`) across different blocks of the state
-vector.
+vector. The `stationary` initialization needs a transition matrix without a
+unit root. At a unit root the filter raises a ``LinAlgError`` and
+``MLEModel.loglike`` returns ``-inf``; use `approximate_diffuse` or `diffuse`
+for such models.
 
 .. autosummary::
    :toctree: generated/
@@ -837,9 +840,11 @@ dimensions, etc.) but it also holds the filtering output, including the
 loglikelihood (see the class documentation for the full list of available
 results). It also provides a
 :py:meth:`predict <kalman_filter.FilterResults.predict>` method, which allows
-in-sample prediction or out-of-sample forecasting. A similar method,
-:py:meth:`predict <kalman_filter.FilterResults.get_prediction>`, provides
-additional prediction or forecasting results, including confidence intervals.
+in-sample prediction or out-of-sample forecasting. The results of a fitted
+model (`MLEResults`) provide a similar method,
+:py:meth:`get_prediction <mlemodel.MLEResults.get_prediction>`, which also
+gives additional prediction or forecasting results, including confidence
+intervals.
 
 .. autosummary::
    :toctree: generated/

@@ -105,3 +105,14 @@ def test_validate_basic():
         validate_basic(-np.inf, 1)
     with pytest.raises(ValueError):
         validate_basic([1, 2], 1)
+
+
+def test_standardize_lag_order_duplicates():
+    with pytest.raises(ValueError, match="Cannot have duplicate elements"):
+        standardize_lag_order([1, 3, 3], title="test")
+
+
+def test_validate_basic_invalid_type():
+    # Values that cannot be converted to a number raise a ValueError
+    with pytest.raises(ValueError, match="for test includes invalid values"):
+        validate_basic([{}], 1, title="test")

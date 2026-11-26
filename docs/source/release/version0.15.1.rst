@@ -1,10 +1,16 @@
 :orphan:
 
+..
+   New release-note bullets are added as fragments in docs/upcoming_changes/
+   and moved into this file at release time with
+   tools/releasing/collect_release_notes.py.
+
 ==============
 Release 0.15.1
 ==============
 
 Release summary
+===============
 
 Release 0.15.1 is a maintenance release of statsmodels 0.15. It collects the
 bug fixes, stricter checks of function arguments and smaller enhancements that
@@ -25,6 +31,7 @@ Release Statistics
 - **Time span**: 2026-08-27 through 2026-10-24
 
 Breaking Changes and Deprecations
+=================================
 
 Deprecations
 ------------
@@ -45,10 +52,52 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- Passing a row, an array with shape (1, n) or (1, ..., 1, n) with n > 1, as
+  ``x`` to :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` is
+  deprecated, since ``x`` must be 1-D or an (n, 1) column. The row is still
+  filtered as a 1-D series of n observations and returned with the shape of
+  ``x``, and ``init`` now works with it instead of raising a ``ValueError``.
+  Passing a row now raises a ``FutureWarning``, and it will raise a
+  ``ValueError`` in statsmodels 0.17.0. Pass a 1-D array or an (n, 1) column
+  instead. :pr:`10810`
+- ``statsmodels.tsa.statespace.tools.set_mode``,
+  ``statsmodels.tsa.tsatools.unintegrate`` and ``unintegrate_levels``, and
+  ``statsmodels.tsa.vector_ar.output.normality_summary`` and
+  ``hypothesis_test_table`` are deprecated. Nothing in statsmodels uses them
+  and they are neither exported nor documented. Calling them now raises a
+  ``FutureWarning``, and they will be removed after statsmodels 0.17.
+  :pr:`10828`
+- The ``statsmodels.tsa.arima_model`` module, whose ``ARMA`` and ``ARIMA``
+  classes were removed in statsmodels 0.13 and only raise
+  ``NotImplementedError``, will be removed after statsmodels 0.16. Use
+  ``statsmodels.tsa.arima.model.ARIMA`` or
+  ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- ``distance_indicators`` with ``x`` of more than one dimension issues a
+  ``FutureWarning`` and returns the same result as before. After statsmodels
+  0.17, a column will give the result of the 1-D series and other input will
+  raise. :pr:`10858`
+- A bool ``p`` in ``c_sja`` and ``c_sjt``, and so ``det_order=True`` in
+  :func:`~statsmodels.tsa.vector_ar.vecm.coint_johansen`, is deprecated. It is
+  still used as 0 or 1, with a ``FutureWarning``, and will raise after
+  statsmodels 0.17. :pr:`10859`
+- The ``return_results`` argument of :func:`~statsmodels.tsa.stattools.coint`
+  is deprecated. It has no effect, issues a ``FutureWarning`` when it is not
+  ``None``, and will be removed after statsmodels 0.17 is released.
+  :pr:`10848`
+- 2-D lag polynomials that the functions of ``statsmodels.tsa.arima_process``
+  accepted, for example a column in ``arma_periodogram`` or a row in
+  ``index2lpol``, are deprecated. They give the same result as before with a
+  ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- ``arma_periodogram`` and ``ArmaProcess.periodogram`` divide by
+  ``sqrt(2 * pi)`` instead of ``2 * pi``. A new ``normalization`` argument
+  selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
+  result). Without it, a ``FutureWarning`` is issued, and the default will
+  change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
 
 Behavior changes
 ----------------
 
+- ``MixedLM.score_sqrt`` is private. :pr:`10700`
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -134,6 +183,11 @@ Behavior changes
   such data changes. Curves are not interpolated, so only the sampled values
   matter. ``data`` can be any array_like, for example a ``DataFrame``.
   :issue:`7105`, :pr:`10513`, :pr:`10638`
+- :func:`~statsmodels.graphics.functional.banddepth` with ``method="MBD"``
+  counts values equal to a band boundary as inside. Previously, tied values
+  were assigned arbitrary ranks, so depths could depend on the input row order.
+  The depths of data with tied values change.
+  :pr:`10691`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
@@ -146,8 +200,193 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- ``filter``, ``smooth`` and ``fit`` of state space models with a stationary
+  initialization raise a ``LinAlgError`` if a parameter is fixed at a unit
+  root, for example with ``fix_params``, instead of returning results with an
+  ``llf`` of 0.0 that were computed from an initial state covariance with
+  negative variances. Loglikelihoods at parameters with a valid stationary
+  covariance are unchanged, but the fit of a very ill-conditioned model, whose
+  optimizer used to survive negative covariances along its path, can end at a
+  different optimum. For example, a ``SARIMAX`` model with ``order=(15, 0, 0)``
+  and ``trend="c"`` for ``np.linspace(0, 2 * np.pi, 1000)`` ends at an ``llf``
+  of 1667.85 instead of 6835.06.
+  :issue:`5459`, :pr:`10747`
+- ``powerdiscrepancy`` with ``lambd=0`` (``"loglikeratio"``, the default, which
+  is the G-test) returns valid test statistics when observed counts contain
+  zeros, evaluating :math:`x \ln(x)` to 0, instead of returning
+  ``(nan, nan)``. :issue:`10703`, :pr:`10704`
+- In-sample ``MNLogit`` results predictions with ``exog`` omitted return a
+  ``DataFrame`` with the training row index and response categories as columns
+  when the model was fit with pandas data (``endog`` or ``exog``) or with a
+  formula, including a formula on a dict or a recarray (the index is then
+  0, 1, ..., nobs - 1). Previously, these predictions were ndarrays. Models
+  fit with NumPy data and no formula, and predictions with explicit NumPy
+  ``exog``, still return ndarrays. Use ``np.asarray`` on the predictions if an
+  ndarray is needed. :issue:`4541`, :pr:`10735`
+- ``powerdiscrepancy`` (and the G-test) with ``lambd=0`` returns valid test
+  statistics when observed counts contain zeros, evaluating :math:`x \ln(x)`
+  to 0, instead of returning ``(nan, nan)``. :issue:`10703`, :pr:`10704`
+- The bias correction (third) step of
+  :func:`~statsmodels.tsa.arima.estimators.hannan_rissanen.hannan_rissanen`
+  filters the second-step residuals with the inverse of the MA polynomial,
+  :math:`\theta(B) W_t = Z_t`, as in Brockwell and Davis (2016), section
+  5.1.4. Previously :math:`W_t` was a first-order approximation of this
+  filter. **This changes the estimated coefficients** whenever the third step
+  is applied, which is the default (``unbiased=None``) if the second-step
+  estimates are stationary and invertible. The estimates are closer to the
+  maximum likelihood estimates: for 50 simulated ARMA(2, 1) series with 1000
+  observations the median distance to the estimates of
+  ``ARIMA(..., trend="n").fit()`` fell from 0.083 to 0.020. This also changes
+  the final estimates of ``ARIMA.fit(method="hannan_rissanen")`` and of
+  :func:`~statsmodels.tsa.arima.estimators.gls.gls` with
+  ``arma_estimator="hannan_rissanen"``. It changes the starting parameters of
+  ``arma_estimator="innovations_mle"`` (``ARIMA.fit(method="innovations_mle")``
+  and the default of ``gls``), but not their final estimates, which agree up
+  to the tolerance of the optimizer. If the corrected parameters are
+  non-stationary or non-invertible, the second-step estimates are returned
+  with an ``EstimationWarning``. :issue:`6159`, :pr:`10712`
+- :func:`~statsmodels.tsa.stattools.diebold_mariano_test` raises a
+  ``ValueError`` for inputs for which it returned a meaningless result or
+  raised another exception before. This is the case if the loss differential
+  is constant up to rounding error, for example if the two forecasts are
+  identical (``nan`` before, or a huge statistic with a p-value of 0 if the
+  forecast errors are constant); if ``lags`` is not smaller than the number
+  of observations, or ``horizon`` is not smaller than it when ``lags`` is
+  not given or ``harvey_adj=True`` (a statistic that is not meaningful
+  before, which is 0 with ``harvey_adj=True`` if ``horizon`` is the number of
+  observations or one more); and if ``criterion`` does not return one loss
+  per observation (a ``TypeError`` before for a scalar, otherwise a
+  statistic from a loss series of the wrong length). The results that were
+  returned for other input are unchanged. :issue:`10753`, :pr:`10755`
+- :func:`~statsmodels.tsa.stattools.acf` and
+  :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
+  lags 1 and higher when the input series is constant, for every method of
+  ``pacf``. Before, ``acf`` returned ``nan`` at all lags if the mean of the
+  series is exactly representable, and otherwise autocorrelations close to 1
+  caused by the rounding error of the mean, for example 0.99 at lag 1 for 100
+  observations of 101.37. ``pacf`` returned numbers or ``nan`` depending on
+  the method and the constant. :func:`~statsmodels.tsa.stattools.ccf` returns
+  ``nan`` for all lags when either series is constant. The ``qstat`` and
+  ``pvalues`` of ``acf(..., qstat=True)`` and the statistics and p-values of
+  :func:`~statsmodels.stats.diagnostic.acorr_ljungbox` are ``nan`` for a
+  constant series. :issue:`10647`, :pr:`10701`
+- Newton's method (``method="newton"``, which is the default of the
+  discrete models and ``PHReg``) shortens a step that gives a
+  log-likelihood that is not finite or lower. Fits that did not take such a
+  step are unchanged. Fits from starting values for which the full steps
+  diverge or need many iterations, for example ``Poisson`` with a large
+  ``exog`` and zeros as starting values, now converge. If no step is found,
+  the fit stops at the last parameters with ``converged`` ``False`` and a
+  ``ConvergenceWarning``, where the parameters were ``nan`` and
+  ``converged`` was ``True``. A step that is not a direction of descent, for
+  example because the Hessian is not positive definite, is only taken if it
+  decreases the log-likelihood, and the iteration stops if the change of the
+  parameters of the full Newton step, not that of a shortened step, is at
+  most ``tol``. ``GLM.fit`` with ``method="newton"`` shortens only a step
+  that is not finite if the link is not the canonical link of the family.
+  :pr:`10605`
+- ``GLM.fit_regularized`` scaled the log-likelihood by the number of rows
+  instead of the sum of the ``freq_weights``, for ``method="elastic_net"``,
+  ``method="l1_slsqp"`` and the ridge fit with ``L1_wt=0``. With frequency
+  weights this changed the effective penalty, so the estimates and the
+  selected variables differed from the fit on the data with each row
+  repeated according to its weight. The estimates of existing fits with
+  ``freq_weights`` change. The estimates of fits without ``freq_weights`` are
+  unchanged. :pr:`10705`
+- ``GLM.fit_regularized`` with ``L1_wt=0`` (the ridge fit) used the scale
+  estimated at the current parameters in the log-likelihood and the score,
+  where the fits with ``L1_wt`` greater than 0 and ``method="l1_slsqp"`` use a
+  scale of 1. For families with an estimated scale, for example ``Gaussian``,
+  ``Gamma`` and ``Tweedie``, the estimates differed from the solution of the
+  penalized problem, for example from the closed-form ridge estimate of the
+  linear model, and the fit often warned that the optimization may have
+  failed. The ridge fit now uses a scale of 1, so that its estimates change
+  for these families, by much if the estimated scale is far from 1. The
+  estimates of ``Binomial``, ``Poisson`` and ``NegativeBinomial``, which have
+  a fixed scale, are unchanged. Multiplying ``alpha`` by the scale estimated
+  at the estimates gives the penalty of earlier versions, where that fit
+  converged; the example of ``GLM.fit_regularized`` shows how. :pr:`10776`
+- The marginal effects of ``GEE`` results fit with ``use_t=True`` use the t
+  distribution with ``df_resid_inference`` degrees of freedom, as the
+  parameters do. Their p-values and confidence intervals change, and the
+  ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
+  ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
+  :pr:`10792`
+- ``ExponentialSmoothing`` in ``statsmodels.tsa.holtwinters`` with
+  ``trend="mul"``, ``damped_trend=True`` and ``seasonal="add"`` estimated its
+  parameters by minimizing residuals computed with ``l * phi * b`` instead of
+  ``l * b**phi``, while the fitted values, the reported ``sse`` and the
+  forecasts use ``l * b**phi``. The estimates of this model now minimize the
+  reported ``sse``, so its parameters, fitted values and forecasts change, for
+  example the ``sse`` of a fit to the first 240 months of the co2 data falls
+  from 590.8 to 27.0. Results of all other trend, damping and seasonal
+  combinations are unchanged. :pr:`10829`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` filters an
+  (n, 1) column, such as a one-column ``DataFrame``, along its rows and
+  returns the values of the 1-D series. Before, no recursion was applied to a
+  column, which was returned unchanged without an error, and ``init`` raised a
+  ``ValueError``. Input with more than one row and more than one column, which
+  was filtered across the columns of each row, now raises a ``ValueError``. So
+  does input with more than two dimensions that is neither a row with shape
+  (1, ..., 1, n) nor a single observation with shape (1, ..., 1), such as an
+  (n, 1, 1) array, which was returned unchanged. Results for 1-D input are
+  unchanged. :pr:`10810`
+- The ``lags`` arguments of the ``ArmaProcess`` methods ``acovf``, ``acf``,
+  ``pacf``, ``periodogram``, ``impulse_response``, ``arma2ma`` and
+  ``arma2ar`` raise a ``ValueError`` for values below 1. Before, ``lags=0``
+  was taken as the default and returned ``nobs`` values, and a negative
+  value gave a numpy error or an empty result. An integral float is now
+  accepted by all of them. :pr:`10835`
+- ``pacf_burg`` (and ``pacf`` with ``method="burg"``), ``kpss`` with
+  ``regression="c"``, ``range_unit_root_test``, ``pccf`` and ``q_stat`` treat
+  an (nobs, 1) column, such as a one-column ``DataFrame``, as the 1-D series
+  instead of raising, and raise a ``ValueError`` for input with more than one
+  column. ``q_stat`` silently took a (1, k) row as k values at lag 1 and gave
+  wrong statistics; it now raises. Results for 1-D input are unchanged.
+  :pr:`10837`
+- :func:`~statsmodels.tsa.stattools.ccf` and
+  :func:`~statsmodels.tsa.stattools.ccovf` treat an (nobs, 1) column, such as
+  a one-column ``DataFrame``, as the 1-D series. Before, two columns gave a
+  meaningless 2-D result without an error, for example an (nlags, nobs) array
+  from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
+  Input with more than one column now raises a ``ValueError``. Results for
+  1-D input are unchanged. :pr:`10811`
+- :func:`~statsmodels.tsa.stattools.pccf` with ``method="yw"`` or ``"ywm"``
+  (the default) no longer depends on the scales of ``x`` and ``y``: rescaling
+  one series, for example by ``1e8``, made every lag ``nan``. Series that are
+  collinear to working precision give ``nan`` for every lag, as exactly
+  collinear series did, instead of inaccurate values. When the recursion
+  reaches a singular prediction error covariance matrix, the later lags are
+  ``nan`` on every platform; before, they depended on rounding, and the lag
+  computed just before could be dropped. Results for other input change only
+  by rounding. :pr:`10843`
+- When ``den`` is longer than ``num``, ``deconvolve`` returns an empty ndarray
+  instead of a list as the quotient, and a float (or complex) copy of ``num``
+  as the remainder instead of ``num`` itself. The values are unchanged.
+  :pr:`10864`
+- ``arma_pacf``, ``arma_impulse_response``, ``arma2ma`` and ``arma2ar`` raise
+  a ``ValueError`` for ``lags`` below 1, as the ``ArmaProcess`` methods do since
+  :pr:`10835`, instead of NumPy errors, and ``arma_periodogram`` raises for an
+  integer ``worN`` below 1 instead of returning empty arrays.
+  ``ArmaProcess.from_estimation`` no longer replaces ``nobs=0`` with the number
+  of observations of the results. :pr:`10860`
+- ``ArmaProcess.generate_sample`` uses the ``nobs`` of the process as the
+  default sample size, as documented, instead of 100. Processes created with
+  another ``nobs``, including those from ``ArmaProcess.from_estimation``, now
+  generate ``nobs`` values when ``nsample`` is not given. :pr:`10862`
+- ``levinson_durbin`` with ``isacov=True`` and
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test` treat an (nobs, 1)
+  column, such as a one-column ``DataFrame``, as the 1-D series instead of
+  raising, and raise a ``ValueError`` for input with more than one column.
+  Results for 1-D input are unchanged. :pr:`10849`
+- The default ``nlags`` of :func:`~statsmodels.tsa.stattools.acf` with
+  ``missing="drop"`` or ``"conservative"`` counts only the non-missing
+  observations. It counted the NaNs, so it could return more lags, or raise
+  when ``nlags`` was not given. The values at each lag are unchanged.
+  :pr:`10847`
 
 New Features and Enhancements
+=============================
 
 New functions and methods
 -------------------------
@@ -187,6 +426,12 @@ New functions and methods
   :pr:`10401`, :pr:`10528`, :pr:`10542`
 - ``statsmodels.tsa.tsatools.add_lag`` accepts the label of a column of a
   pandas ``DataFrame`` as ``col``. :pr:`10302`
+- Add ``MultiComparison.dunnett_t3`` for Dunnett's T3 test of all pairwise
+  comparisons of means with unequal variances. The p-values and the
+  simultaneous confidence intervals use the studentized maximum modulus
+  distribution with the Welch degrees of freedom of each pair. The
+  ``plot_simultaneous`` method of the results raises ``NotImplementedError``.
+  :issue:`9472`, :pr:`10469`
 - Add the ``one_sided`` argument to
   :func:`~statsmodels.tsa.filters.hp_filter.hpfilter`. With
   ``one_sided=True``, the trend at time t only depends on the observations up
@@ -203,6 +448,50 @@ New functions and methods
   1000 observations, about 300 times faster for 60 variables, and returns a
   ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
   :pr:`10623`
+- Add :func:`~statsmodels.stats.inter_rater.krippendorff_alpha`, Krippendorff's
+  alpha for the agreement of any number of raters, with missing ratings, for
+  nominal, ordinal, interval and ratio data. It is available from
+  ``statsmodels.stats.api``. :pr:`10738`
+- Add the arguments ``alternative`` and ``kernel`` to
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test`. ``alternative``
+  selects a one-sided test, ``"larger"`` if ``forecast_b`` is more accurate
+  or ``"smaller"`` if ``forecast_a`` is. ``kernel="uniform"`` estimates the
+  long-run variance with equal weights up to ``lags``, as in Diebold and
+  Mariano (1995) and Harvey et al. (1997), and uses ``horizon - 1`` lags by
+  default; a ``ValueError`` is raised if its estimate of the variance is not
+  positive. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
+  the R package forecast. The results of the default arguments are
+  unchanged.
+  :issue:`10753`, :pr:`10755`
+- Add :func:`~statsmodels.tsa.stattools.clark_west_test`, the test of Clark
+  and West (2007) of equal predictive accuracy of nested models, and its
+  result class ``ClarkWestResult``. It adjusts the mean squared prediction
+  error of the larger model for the noise from estimating parameters that
+  are zero under the null, which biases the comparison of the unadjusted
+  errors, for example with ``diebold_mariano_test``, against the larger
+  model. The function is available from ``statsmodels.tsa.api``.
+  :issue:`10754`, :pr:`10756`
+- Add the option ``step_halving`` to ``fit(method="newton")``. It is
+  ``True`` to halve a step, up to 30 times, that gives a log-likelihood
+  that is not finite or lower, ``"finite"`` to halve only a step that is
+  not finite, and ``False`` for the full Newton step. The default is
+  ``True``, and ``GLM`` uses ``"finite"`` if the link is not the canonical
+  link of the family. :pr:`10605`
+- Add the option ``use_t`` to ``GEE.fit``, ``OrdinalGEE.fit`` and
+  ``NominalGEE.fit``. With ``use_t=True``, p-values, confidence intervals,
+  ``t_test`` and ``f_test`` use the t distribution with the number of groups
+  minus the number of parameters as degrees of freedom. :issue:`8610`,
+  :pr:`10781`
+- Add ``cov_type="kauermann_carroll"`` to ``GEE.fit``, the Kauermann-Carroll
+  small-sample correction of the robust covariance. It scales the residuals
+  of each group by the inverse square root of one minus the leverage, where
+  ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
+  :pr:`10781`
+- Add ``cov_type="fay_graubard"`` and ``cov_type="morel_bokossa_neerchal"``
+  to ``GEE.fit``, the small-sample corrections of the robust covariance of
+  Fay and Graubard (2001) and Morel, Bokossa and Neerchal (2003), with the
+  constants ``b = 0.75``, ``d = 2`` and ``r = 1``. :issue:`1183`,
+  :pr:`10794`
 
 Performance
 -----------
@@ -225,8 +514,9 @@ Performance
   :pr:`10244`
 - ``KDEMultivariateConditional.cdf`` and ``KDEMultivariateConditional.imse``
   evaluate the kernel of the exogenous variables only once for each
-  observation. The bandwidth selection with ``bw="cv_ls"`` is about 3 times
-  faster for continuous exogenous variables, and ``cdf`` about 1.5 times
+  observation. The bandwidth selection with ``bw="cv_ls"`` is about 2 times
+  faster with one continuous exogenous variable and about 3.5 to 4 times
+  faster with two exogenous variables, and ``cdf`` is about 1.5 to 2 times
   faster. :issue:`6076`, :pr:`10626`
 - Lag order selection fits the nested sequence of models from a single
   blocked QR decomposition, shared by a new private helper. This applies to
@@ -246,17 +536,66 @@ Performance
   regressors are close to collinear, so for such series the statistic can
   change in the later digits. The new values agree with R (urca) and with
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
+- ``OLS``, ``WLS`` and ``GLS`` have the new fit option ``method="chol"``,
+  which solves the normal equations with a Cholesky factorization of the
+  k x k cross product matrix of the whitened regressors instead of computing
+  the pseudoinverse or the QR factorization of the n x k design matrix. For
+  3,000,000 observations and 10 regressors, ``fit`` is about 20 times faster
+  than with the default ``method="pinv"``, and creating and fitting the model
+  needs more than 10 times less peak memory: the fit itself allocates no
+  array of the size of the design matrix, while ``"pinv"`` and ``"qr"`` need
+  about three times its size. The method squares the condition number of
+  the design with unit-norm columns and is less accurate than ``"pinv"`` and
+  ``"qr"`` on ill-conditioned designs, for example with an uncentered
+  regressor with a large mean next to the constant; it should only be used
+  when speed and memory usage matter more than numerical accuracy, see the
+  Notes of ``fit``. Collinear regressors by the tolerance of R's ``lm`` fall
+  back to the pseudoinverse with a ``SingularMatrixWarning``. The
+  pseudoinverse ``pinv_wexog`` is only computed when a covariance estimator
+  or an influence measure needs it.
+  :issue:`9317`, :pr:`10679`
+- ``get_margeff`` with the default ``at="overall"`` computes the delta method
+  Jacobian of the average marginal effects directly instead of averaging the
+  Jacobian at each observation. Memory use no longer grows with the number of
+  observations times the number of marginal effects times the number of
+  parameters. For ``MNLogit`` with 4 categories, 28 regressors and 20,000
+  observations the peak memory drops from 3 GB to 0.09 GB. This also applies
+  to ``get_margeff`` of ``GLM`` and ``GEE``. :issue:`4158`, :pr:`10722`
 
 Bug Fixes
+=========
 
 Regression and linear models
 ----------------------------
 
+- ``OLS.fit`` did not detect an exactly rank-deficient design, for example a
+  duplicated constant, from about 1,000 observations on. The smallest singular
+  value of such a design is a few multiples of the machine precision times the
+  largest, independent of the number of observations, and was above the fixed
+  cutoff. No ``SingularMatrixWarning`` was issued and the parameters were of
+  the order of 1e12. The rank is now the number of singular values above
+  ``max(nobs, k) * eps`` times the largest, the rule of
+  ``numpy.linalg.matrix_rank``. This is used for the rank and for the
+  pseudoinverse in both ``method="pinv"`` and ``method="qr"``. Designs with a
+  condition number above about ``1 / (nobs * eps)`` are now treated as
+  rank-deficient and the minimum-norm solution is returned. :pr:`10714`
+- ``OLS.fit(method="qr")`` computed the covariance of the parameters as
+  ``inv(R'R)``, which squares the condition number of the design, and solved
+  ``R b = Q'y``, which has no solution for a rank-deficient design. It now uses
+  the SVD of ``R``, so the covariance has the accuracy of the default
+  ``method="pinv"`` and a rank-deficient design returns the minimum-norm
+  solution with a ``SingularMatrixWarning``. The ``pinv_wexog`` attribute is
+  computed from the same factorization instead of a second SVD. :pr:`10714`
 - ``OLS.hessian(params, scale=None)``, the Hessian of the profile
   (concentrated) log-likelihood, was missing a factor of 2 in the term that
   involves ``X'X``. The results of ``OLS.fit_regularized`` with
   ``profile_scale=True`` change because they use this Hessian.
   :issue:`9469`, :pr:`10473`, :pr:`10556`
+- ``GLSAR.hessian_factor`` raises a ``NotImplementedError``. It inherited
+  ``GLS.hessian_factor``, which returned one value for each of the ``nobs``
+  observations, but the whitened design of ``GLSAR`` has ``nobs - order`` rows
+  that mix neighboring observations, so the values did not reproduce its
+  cross-product. :pr:`10675`
 - ``OLSInfluence`` for the results of a ``WLS`` model used the unweighted
   design matrix and residuals for the hat matrix, the studentized residuals,
   Cook's distance, ``dffits`` and the leave-one-observation-out measures.
@@ -296,6 +635,10 @@ Regression and linear models
   :issue:`9018`, :pr:`10279`
 - ``RecursiveLS`` with constraints and a NumPy ``endog`` either raised an
   exception or silently dropped the constraints. :pr:`10282`
+- ``forecast``, ``get_forecast``, ``predict`` and ``get_prediction`` of the
+  ``RecursiveLS`` results accept the ``exog`` values of the new periods for
+  out-of-sample predictions. Before, they raised a ``ValueError`` unless a
+  3-dimensional ``design`` matrix was given. :issue:`9708`, :pr:`10651`
 - ``recursive_olsresiduals`` no longer raises if the initial window is rank
   deficient, for example because of a duplicated row. The recursion starts
   from the pseudo-inverse. :issue:`8446`, :pr:`10493`
@@ -313,6 +656,16 @@ Regression and linear models
   :pr:`10402`, :pr:`10495`
 - ``yule_walker`` raises a ``ValueError`` for a negative ``order`` instead of
   an ``IndexError``. :pr:`10346`
+- ``get_prediction`` of regression, GLM and discrete results with
+  ``use_t=True`` and ``cov_type="cluster"`` (also two-way clustering),
+  ``"hac-panel"`` or ``"hac-groupsum"``, and for linear models
+  ``"cluster-crv3"`` or ``"cluster-jk"``, used the t distribution with
+  ``df_resid`` degrees of freedom instead of ``n_groups - 1`` (the smaller
+  number of groups minus one for two-way clustering) as in ``conf_int`` and
+  ``t_test``, so the confidence interval of the mean was too narrow. Nothing
+  changes with ``df_correction=False`` or ``use_t=False``. The prediction
+  interval for a new observation (``obs_ci``) now uses the same degrees of
+  freedom, which is conservative. :issue:`10743`, :pr:`10744`
 
 Generalized linear models and discrete models
 ---------------------------------------------
@@ -321,12 +674,34 @@ Generalized linear models and discrete models
   models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
   one-dimensional ``exog_extra`` is a single additional variable, as before.
   :pr:`10609`
+- ``score_test`` with ``exog_extra`` used the number of columns of
+  ``exog_extra`` as the number of constraints. If some of the columns are
+  linear combinations of other columns or of the model's ``exog``, for
+  example the linear term that a spline basis contains, the degrees of
+  freedom were too large, so the p-value was too large and the test
+  conservative, or the test raised a ``LinAlgError`` for exactly redundant
+  columns. The number of constraints is now the rank of ``exog_extra``
+  after projecting out ``exog``, and the statistic is computed from a basis
+  of the independent part. If all columns of ``exog_extra`` are in the span
+  of ``exog``, a ``ValueError`` is raised. An ``exog_extra`` with ``nan`` or
+  infinite values or with a different number of rows than the model's
+  ``exog`` also raises a ``ValueError``. This applies to
+  ``GLM.score_test``, the ``score_test`` method of ``GLM`` results and of
+  the discrete models. :issue:`5364`, :pr:`10680`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
   ``OrderedModel`` and ``MNLogit``. Previously, multiple observations raised
   an index length error and a single observation received an incorrect label.
   :pr:`10590`
+- The analytic ``hessian`` of ``ZeroInflatedPoisson`` with logit inflation,
+  the default, set the cross derivatives between the inflation and the count
+  parameters to zero, and the formula for them was also incorrect. The
+  standard errors were too small by about 10% for the two intercepts in
+  a simulated example with 3000 observations, and by up to 0.6% for the
+  RandHIE data. ``bse``, ``cov_params``, ``conf_int`` and the p-values of the
+  results change accordingly, and ``bse`` now agrees with the standard errors
+  from a numerical Hessian. :pr:`10723`
 - ``GEE`` used the number of columns of ``exog`` for ``df_model``,
   ``df_resid`` and the default ``ddof_scale``. These are now based on the rank
   of ``exog`` as in the other models, so that a singular design can no longer
@@ -363,6 +738,105 @@ Generalized linear models and discrete models
   minimum was exactly at a point of the search. The estimate is now found for
   values up to within about 1e-6 of one. A larger estimate still raises the
   ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
+- The Cox-Snell ``GLMResults.pseudo_rsquared``, which is also shown in
+  ``summary``, used the number of rows instead of the sum of the
+  ``freq_weights``. With frequency weights the value differed from the value
+  for the data with each row repeated according to its weight. :pr:`10684`
+- The ``score`` of ``TruncatedLFGeneralizedPoisson`` and
+  ``TruncatedLFNegativeBinomialP`` was incorrect for every ``p`` except
+  ``p=1`` of the generalized Poisson and ``p=2`` of the negative binomial
+  model. The part of the score that comes from the probability of the
+  truncated counts used the default ``p`` of the untruncated model. This
+  includes the default ``p=2`` of ``TruncatedLFGeneralizedPoisson`` and
+  ``HurdleCountModel`` with ``dist="negbin"`` and ``p`` other than 2.
+  ``fit`` stopped before reaching the maximum of the log-likelihood with a
+  ``ConvergenceWarning``, so the fitted ``params``, ``bse`` and ``llf`` of
+  these models change for valid input. For example, the ``alpha`` of the
+  default ``TruncatedLFGeneralizedPoisson`` changes from 0.099 to 0.219 and
+  ``llf`` from -3582.06 to -3554.15 for 3000 simulated negative binomial
+  counts. The results are unchanged for ``p=1`` of the generalized Poisson
+  and ``p=2`` of the negative binomial model, and they change for every
+  other ``p``. :pr:`10736`
+- The ``hessian`` and ``hessian_factor`` of ``NegativeBinomialP`` had an
+  incorrect cross derivative of the regression parameters and ``alpha`` if
+  ``p`` is not 1 or 2. ``bse``, ``cov_params``, ``conf_int``, the p-values and
+  the robust (``cov_type="HC0"``) covariance of the results change for these
+  values of ``p``, and ``bse`` now agrees with the standard errors from a
+  numerical Hessian. In 20 simulated samples of 3000 counts, the standard
+  errors of the constant and of ``alpha`` were too large by a factor of 1.2 to
+  2.2 for ``p=1.5`` and by 1.1 to 1.3 for ``p=1.8``, while they were within 8%
+  for ``p=1.2``. ``bse`` was ``nan`` for ``p=2.5`` and ``p=3``.
+  ``fit(method="newton")``, which uses the Hessian, now converges for these
+  values of ``p``. In one sample of 1000 counts it stopped after 100
+  iterations without convergence for ``p=1.5``, ``2.5`` and ``3``, and it had
+  a ``nan`` log-likelihood for ``p=1.8``. ``score_test`` with a tuple
+  ``exog_extra`` also changes. The results for ``p=1`` and ``p=2`` are not
+  changed. :pr:`10737`
+- ``loglike``, ``loglikeobs``, ``score`` and ``hessian`` of
+  ``NegativeBinomial`` with ``loglike_method="nb2"`` or ``"nb1"`` used the
+  last element of ``params`` as ``log(alpha)`` instead of ``alpha`` in a model
+  instance that was not fit, and in the model of results that were pickled
+  and unpickled. For example, ``NegativeBinomial(endog, exog).loglike(params)``
+  differed from ``llf`` of the results with these ``params``, -260.73 instead
+  of -249.90 for 150 simulated counts, and ``score`` was not zero at the
+  maximum likelihood estimate. Results that were pickled before ``llf`` was
+  first used computed it from the unpickled model, so ``llf``, ``aic``,
+  ``bic``, ``llr``, ``prsquared`` and ``summary`` were incorrect after
+  unpickling; in the example, ``llr`` was -9.99 instead of 11.65. ``fit``
+  and the results computed by ``fit`` are not changed.
+- ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
+  a ``ValueError`` (array broadcasting) if ``at`` is ``"overall"`` or
+  ``"all"``, and whenever the number of regressors differs from the number of
+  outcome categories. If the two numbers are equal and ``at`` is ``"mean"``,
+  ``"median"`` or ``"zero"``, it returned incorrect marginal effects and
+  standard errors. :pr:`10746`
+- The IRLS fit of ``GLM`` from ``start_params`` or starting values of the
+  mean for which the first step overflows raised a ``ValueError`` about the
+  weights. A step that gives a mean, weights or a deviance that is not
+  finite is now halved towards the last parameters, up to 30 times, and for
+  the canonical link of the family a step that increases the deviance is
+  halved as well. A ``ValueError`` that names ``start_params`` is raised if
+  the mean or the weights at ``start_params`` are not finite. A Newton fit
+  from such starting values returned ``nan`` parameters with ``converged``
+  ``True``. :issue:`5394`, :pr:`10605`
+- ``GLMGamResults.predict`` and ``get_prediction`` no longer apply the
+  model's formula a second time when ``exog`` is a design matrix created from
+  the fitted model's ``design_info`` or model specification. Before, the fitted
+  exog frame could not be reused for any linear term that is not a plain
+  column, for example ``np.log(x1)``, ``I(x1**2)``, an interaction with a
+  factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
+  design used to be re-evaluated by the formula and now raises a
+  ``ValueError``. :issue:`9562` :pr:`10752`
+- ``cov_type`` of ``GEE.fit``, ``OrdinalGEE.fit`` and ``NominalGEE.fit`` is
+  case-insensitive. A value such as ``"Bias_Reduced"`` raised an
+  ``UnboundLocalError``. If the expansion of the ``"bias_reduced"`` or
+  ``"kauermann_carroll"`` covariance of a constrained fit fails, ``fit`` now
+  returns ``None`` with a ``ConvergenceWarning``. It used to return results
+  without that covariance, which raised a ``ValueError`` when it was used.
+  :pr:`10791`
+- ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
+  raises a ``ValueError`` that names the group if a group has leverage 1, for
+  example a single observation with its own dummy variable. It raised a bare
+  ``LinAlgError``, or for some families returned a meaningless covariance.
+  The same ``ValueError`` is raised if the covariance of the parameters is not
+  finite, where the standard errors were ``NaN`` or a ``LinAlgError`` was
+  raised. :pr:`10792`
+- ``summary`` of the marginal effects of ``GEE`` results raised a
+  ``ValueError``. :pr:`10792`
+- ``exposure`` is used correctly in ``TruncatedLFPoisson``,
+  ``TruncatedLFNegativeBinomialP`` and ``TruncatedLFGeneralizedPoisson``, and
+  in ``predict(which="prob")`` of ``ZeroInflatedPoisson``,
+  ``ZeroInflatedNegativeBinomialP`` and ``ZeroInflatedGeneralizedPoisson``.
+  The log of the exposure was taken twice, which gave a ``nan``
+  log-likelihood or wrong parameters if an exposure is smaller than 1 and
+  raised a ``ValueError`` for an array exposure in the negative binomial and
+  generalized Poisson versions. ``ZeroInflatedPoisson`` ignored the exposure
+  in ``predict(which="prob")``. A model with ``exposure=e`` now gives the
+  same results as with ``offset=np.log(e)``.
+  ``predict`` of ``NegativeBinomialP`` and ``GeneralizedPoisson`` always takes
+  the log of an ``exposure`` that is passed, as ``Poisson`` does, so an
+  explicit ``exposure=0`` now gives ``log(0)`` instead of being treated as no
+  exposure. :issue:`8842`, :pr:`10505`
 
 Mixed models and imputation
 ---------------------------
@@ -385,6 +859,18 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
+- ``MixedLM.fit`` could stop below the maximum of the log-likelihood, report that
+  it had not converged, or end at a variance of 0, because ``MixedLM.score``
+  dropped the signs of the packed square-root parameters and so was not the
+  derivative at the vector that the optimizer holds. These fits now reach the
+  maximum, so estimates, standard errors and log-likelihoods of existing
+  models can change. ``MixedLM.score`` with a packed vector that has negative
+  entries now returns the derivative at that vector. In 72 simulated models
+  fitted with the default options, 16 ended more than 1e-4 below the maximum
+  found by lme4 and 12 reported no convergence, and none does now.
+  :pr:`10700`
+- ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
+  components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
   ``_results`` attribute, for example those of ``PHReg``. :issue:`9136`,
   :pr:`10479`, :pr:`10557`
@@ -394,10 +880,28 @@ Mixed models and imputation
   imputed values can be matched to the rows of the input. Rows in which all
   variables are missing are still dropped before imputation.
   :issue:`6532`, :pr:`10499`, :pr:`10629`
+- ``MICEData`` issues a ``ValueWarning`` when it drops rows in which all
+  variables are missing. These rows were dropped without a warning.
+  :issue:`6532`, :pr:`10777`
 
 Time series analysis
 --------------------
 
+- The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
+  when whitening the regression data. Seasonal terms were previously
+  omitted, and nonconsecutive lags were treated as consecutive, producing
+  incorrect regression coefficient estimates. This affects
+  ``statsmodels.tsa.arima.estimators.gls.gls`` and ``ARIMA.fit`` for a model
+  with ``exog`` or a trend that is estimated with a ``method`` other than
+  ``"statespace"``, or with ``method="statespace"`` and ``gls=True``. The
+  estimates of such models with seasonal terms or nonconsecutive lags change.
+  :pr:`10713`
+- ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
+  returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
+  terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
+  between the end of the sample and ``start`` are now computed first.
+  ``ARDLResults.get_prediction`` raised a ``ValueError`` for such a ``start``.
+  :issue:`9699`, :pr:`10664`, :pr:`10665`
 - ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
   if the states are initialized as stationary and the transition matrix has a
   unit root, so that the stationary covariance of the initial state does not
@@ -414,6 +918,12 @@ Time series analysis
 - ``zivot_andrews`` with ``maxlag=0`` and ``autolag=None`` used the default
   number of lags, 12 * (nobs / 100) ** 0.25, instead of no lagged differences.
   A negative ``maxlag`` raises a ``ValueError``. :pr:`10627`
+- ``AutoReg.predict`` with ``dynamic`` raised an ``IndexError`` if ``start``
+  was after the first out-of-sample observation. If ``dynamic`` was after the
+  end of the sample, the lags were ignored in the forecasts before it.
+  ``AutoRegResults.get_prediction`` raised a ``ValueError`` if ``start`` was
+  after the first out-of-sample observation. The forecasts between the end of
+  the sample and ``start`` are now computed first. :pr:`10666`
 - ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
   differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
@@ -472,6 +982,33 @@ Time series analysis
 - ``ExponentialSmoothing`` accepts ``use_boxcox="log"`` in the constructor.
   The value was documented but raised a ``TypeError``. :issue:`9135`,
   :pr:`10361`
+- ``ETSModel`` with ``initialization_method="estimated"`` (the default) and a
+  seasonal component estimates ``seasonal_periods - 1`` initial seasonal
+  states and computes the last one so that the initial seasonals sum to 0
+  (additive seasonality) or to ``seasonal_periods`` (multiplicative
+  seasonality), as R's ``forecast::ets`` does. Before, the last initial
+  seasonal was fixed to 0 or 1 and the heuristic start values were shifted or
+  divided by it. With multiplicative seasonality and a small last heuristic
+  seasonal this moved the start far from the heuristic initial states, and the
+  fit ended in a much worse optimum than ``initialization_method="heuristic"``
+  with negative forecasts for a positive series. ``start_params`` also changed
+  the ``initial_seasonal`` attribute of the model in place. The results of
+  seasonal fits with estimated initial states change: the optimum, the
+  ``initial_level`` and the initial seasonals. For example, the damped
+  additive model of the ``austourists`` data in the ETS example notebook has
+  an initial level of 24.23 instead of 29.45 (R: 24.01). ``aic``, ``aicc``
+  and ``bic`` of a given fit are computed as before, because ``df_model``
+  still counts all initial seasonals. The covariance of the parameters is
+  computed for the free initial seasonals and mapped to the computed one.
+  Before, the Hessian of all initial states was singular, so the standard
+  errors of the initial level and the initial seasonals were ``nan`` or
+  arbitrarily large, for example in the summary of the notebook example. If
+  ``initial_seasonal.<m-1>`` is fixed or bounded, all initial seasonals are
+  free parameters, as before. A fixed ``initial_level`` is a restriction, as
+  the initial seasonals still sum to 0 or m, while before the last one was
+  fixed to 0 or 1. For example, with ``fix_params({"initial_level": 30})``
+  the additive model with an additive trend of the ``austourists`` data has
+  a log-likelihood of -155.84 instead of -150.51. :issue:`8551`, :pr:`10710`
 - ``MSTL.fit`` consumed the ``inner_iter`` and ``outer_iter`` entries of
   ``stl_kwargs``, so that a second call of ``fit`` used different settings.
   :pr:`10292`
@@ -519,6 +1056,10 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` remove the output files
+  written by X-12/X-13 from the temporary directory. Before, each call left
+  files such as ``.out``, ``.err``, ``.log``, ``.d11``, ``.d12`` and ``.d13``
+  behind. :issue:`8277`, :pr:`10674`
 - ``coint_johansen``, ``select_coint_rank`` and the error bands of the
   impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
   with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
@@ -548,6 +1089,182 @@ Time series analysis
   show one ``ConvergenceWarning`` with the number of replications whose
   maximum likelihood fit did not converge, instead of one warning for each of
   them. :pr:`10613`
+- At a unit root the stationary initialization could return an initial state
+  covariance with negative variances instead of raising, for example
+  ``-4.99e291`` for ``SARIMAX(np.zeros(10)).filter([1, 1])``. The filter then
+  reported a loglikelihood of exactly 0, above that of any stationary model.
+  This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
+  model is not stationary to numerical precision, and ``MLEModel.loglike``
+  returns ``-inf``, as for the unit roots that already raised (:pr:`10611`).
+  Unit roots of this kind are rejected, and explosive roots farther from the
+  unit circle are not changed: for an AR(1) model the check applies up to a
+  coefficient of about ``1 + 6e-5``, while coefficients of ``1 + 1e-4`` or
+  ``1.2`` still give a negative initial variance and an ``llf`` of 0.0.
+  :issue:`5459`, :pr:`10747`
+- ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` ignored the
+  argument ``plot_params``. It is now applied to the response curves, so that
+  their color, line width and other Matplotlib ``Line2D`` properties can be
+  set. Error bands and horizontal reference lines keep their default styles.
+  A key of ``plot_params`` that is not a ``Line2D`` property, for example
+  ``"fontsize"``, was ignored before and now raises an ``AttributeError``.
+  :issue:`380`, :pr:`10720`
+- ``KalmanFilter.loglike`` of a state space model with exact diffuse
+  initialization and a concentrated scale (``filter_concentrated``) is now
+  equal to ``loglikeobs().sum()``, to ``llf`` and to the value with
+  ``fixed_scale``, and it no longer depends on ``conserve_memory``. The
+  concentrated log-likelihood left out the finite innovations of the diffuse
+  periods, and with ``conserve_memory`` options that discard the
+  log-likelihood it ignored ``loglikelihood_burn`` in exact diffuse models. The
+  value of ``loglike``, which is the objective of ``fit``, and so the fitted
+  parameters change for models in which the diffuse periods contain finite
+  innovations, for example several observed series with fewer diffuse states,
+  also if some observations are missing, or a diffuse state that is observed
+  only later in the sample. Models without such innovations, for example a
+  single series with a local level or local linear trend, also with missing
+  values, and ``SARIMAX`` with ``concentrate_scale=True`` and exact diffuse
+  initialization, are unchanged. :issue:`10741`, :pr:`10742`
+- ``MarkovRegression``, ``MarkovAutoregression`` and ``MarkovSwitching`` now
+  raise a ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf. Before,
+  such values were accepted and ``fit`` returned a log-likelihood of NaN
+  without an error. The ``missing`` option does not apply to ``exog_tvtp``.
+  :pr:`10766`
+- ``ETSModel.loglike``, ``ETSModel.smooth`` and ``ETSModel.fit`` with
+  ``start_params`` raised an error for parameters that are not float64 in
+  native byte order, for example a big-endian, ``float32`` or integer array.
+  :issue:`10770`, :pr:`10795`
+- ``VARMAX.start_params``, and so ``VARMAX.fit``, raised a ``ValueError`` for
+  big-endian ``endog``. :issue:`10770`, :pr:`10795`
+- ``reorder_missing_matrix``, ``reorder_missing_vector``,
+  ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
+  ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
+  ``ValueError`` for big-endian arrays when ``inplace=False``, and for a
+  ``missing`` or ``index`` mask of ``bool`` or ``int64`` dtype although the
+  masks are documented as bool. They now accept big-endian arrays, and masks of
+  bool or any integer dtype, where a nonzero value counts as True. With
+  ``inplace=True`` a big-endian array that is changed in place still raises a
+  ``ValueError``. :issue:`10770`, :pr:`10795`
+- ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
+  are perfectly collinear, matching the warning already raised by ``OLS`` for
+  a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
+  (:pr:`10714`). The same cutoff now chooses the minimum-norm solution, so
+  the coefficients of such a design are no longer of the order of 1e11, as
+  they could be with the earlier cutoff of 1e-15.
+  ``VAR.select_order`` collects this check across all lag
+  orders it evaluates internally and raises at most one warning per call
+  instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``MLEModel.score`` with ``transformed=False``, which ``fit`` uses, applied
+  the Jacobian of the parameter transformation instead of its transpose, and
+  did not zero the rows of fixed parameters. For models whose Jacobian is not
+  symmetric, such as SARIMAX with an AR order of two or more and VARMAX, the
+  solvers that use the score (``bfgs``, ``lbfgs`` with ``optim_score``,
+  ``basinhopping``, ``minimize`` with a gradient method) got a wrong gradient
+  away from the optimum and often stopped short of it, for example with a
+  ``ConvergenceWarning``. :pr:`10818`
+- ``fit(method="newton")`` of state space models and of Markov switching
+  models used the score and the Hessian with respect to the constrained
+  parameters, evaluated at the values of the unconstrained ones, and for
+  state space models a Newton step that was ``nobs`` times too long, so that
+  it often stopped with a ``ConvergenceWarning`` short of the optimum.
+  Newton's method passes its extra arguments to the score and the Hessian,
+  and ``MLEModel.hessian`` with ``transformed=False`` gives the Hessian with
+  respect to the unconstrained parameters (by the chain rule) instead of
+  raising or returning derivatives with respect to the constrained ones.
+  ``MLEModel.hessian`` has a new keyword-only argument ``average``.
+  ``fit(method="ncg")`` of state space models no longer raises. :pr:`10817`
+- ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
+  levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
+  the trace and maximum eigenvalue statistics and the eigenvectors were wrong
+  and the selected cointegration rank could change. With ``det_order=0``, on
+  the log of real GDP, consumption and investment in ``macrodata`` the trace
+  statistic for rank 0 was 39.4 instead of 29.6, which selected rank 1 instead
+  of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
+  likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
+  more do not change. :issue:`7459`, :pr:`10807`
+- ``DeterministicProcess.out_of_sample`` without any deterministic terms
+  returned the in-sample rows on the in-sample index instead of ``steps``
+  rows on the forecast index, and ``DeterministicProcess.range`` beyond the
+  sample returned the wrong rows in that case. :pr:`10834`
+- ``arma_order_select_ic`` accepts ``ic`` as any sequence of str, such as an
+  ndarray or an ``Index``, as documented, instead of only a list or tuple.
+  :pr:`10840`
+- ``grangercausalitytests`` with an empty ``maxlag`` raised a NumPy error
+  instead of its own ``ValueError``. :pr:`10839`
+- ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
+  ``subset_length`` that is a NumPy integer or a whole-number float, such as
+  ``np.int64(40)`` or ``40.0``, and for invalid values. It accepts every
+  numeric type and raises a ``ValueError`` for invalid values. :pr:`10838`
+- ``add_trend`` with ``trend="n"`` returned a list unchanged and raised an
+  ``AttributeError`` for a tuple. It returns an ndarray, like the other
+  trends. :pr:`10833`
+- ``_Var.predict`` (deprecated) returned neither the fitted values nor the
+  residuals, with the wrong number of rows unless there was one lag, and kept
+  returning the first result after a refit. It returns the fitted values.
+  :pr:`10822`
+- ``varfilter`` in ``statsmodels.tsa.varma_process`` with 3-d lag matrices
+  used the variables in reverse order and returned the wrong number of rows
+  unless there were two lags, and a 2-d filter with one lag and several
+  variables was taken as a single lag polynomial and returned one column. It
+  now computes the documented filter. :pr:`10824`
+- ``TsaDescriptive.periodogram`` and ``TsaDescriptive.plot4`` (deprecated)
+  raised an ``AttributeError`` since 0.12.0, because they called a function
+  that was removed then. They compute the periodogram again, as before 0.12.0.
+  :pr:`10821`
+- ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
+  the residual sum of squares instead of the residual variance, so it was too
+  large by the residual degrees of freedom. :pr:`10823`
+- A state space model that was pickled or deep-copied after it had been used
+  ignored new parameters once restored: ``loglike``, ``filter``, ``smooth``
+  and ``fit`` used the system matrices of the last evaluation before
+  pickling. This also affected results saved with ``save`` and read with
+  ``load``, whose ``model.loglike`` returned the fitted log-likelihood for
+  any parameters and whose model, refit, returned the starting parameters.
+  Pickles written by earlier versions load correctly. :issue:`3290`,
+  :pr:`10816`
+- ``grangercausalitytests`` with a one-element ndarray or ``Series`` ``maxlag``,
+  such as ``np.array([3])``, ran the tests for every lag up to that value
+  instead of only that lag, as a list does. The "Insufficient observations"
+  error gave a maximum allowable lag that was one too small in most cases, and
+  ``x`` without exactly two columns raised an unrelated error; it now raises a
+  ``ValueError`` that says so. :pr:`10846`
+- ``constrain_stationary_multivariate`` with float32 or complex64 input and
+  ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
+  NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
+  array was promoted to double precision. :pr:`10857`
+- ``fit(method="cg")`` did not pass its extra arguments to the objective and
+  the score. State space models and Markov switching models pass
+  ``transformed=False`` this way, so the conjugate gradient solver
+  optimized the log-likelihood with the parameters taken as constrained and
+  stopped far from the optimum, often reporting convergence, for example
+  after one iteration at an llf of -698.8 where the optimum is -456.0.
+  Results of models that do not use extra arguments are unchanged.
+  :pr:`10819`
+- ``index2lpol`` raised an ``IndexError`` for a tuple ``index``, and ``ar2arma``
+  raised a ``TypeError`` for a tuple ``ar_des``. :pr:`10858`
+- ``c_sja`` and ``c_sjt`` raised unrelated errors for a non-integer ``p`` and
+  returned a view of their table, so changing a result changed later calls.
+  A non-integer ``p`` raises a ``ValueError``, and a copy is returned.
+  :pr:`10859`
+- ``CalendarTimeTrend`` returned its terms on a ``PeriodIndex`` for a
+  ``DatetimeIndex``, so a ``DeterministicProcess`` that combined it with other
+  terms gave misaligned frames with NaN, and on a ``PeriodIndex`` with a
+  frequency other than ``freq`` it counted time in the wrong unit.
+  :pr:`10853`
+- ``DeterministicProcess.range`` ignored the step of a ``RangeIndex`` whose
+  step is not 1, so it returned the wrong rows or raised a ``KeyError``.
+  :pr:`10852`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is an
+  ndarray of NaN values, as for the other trends. :pr:`10848`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is now
+  an ndarray, as it is for the other trends. :pr:`10848`
+- Lag polynomials with more than one dimension in the functions of
+  ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
+  SciPy errors that did not name the argument. They raise a ``ValueError``
+  that does. :pr:`10861`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` raised NumPy or
+  SciPy errors for an ``ar_coeff`` or ``init`` given as an (n, 1) column, and
+  a misleading length error for a row ``init``. A column is accepted, and
+  other 2-d input raises a ``ValueError`` that names the argument.
+  :pr:`10872`
 
 Statistics and tests
 --------------------
@@ -602,6 +1319,14 @@ Statistics and tests
   score test also returned ``nan`` for symmetric tables. The root finding for
   the confidence interval of the difference could start outside of the
   parameter space. :issue:`10269`, :pr:`10270`, :pr:`10366`
+- The score confidence interval of the risk ratio
+  (``method="score"`` and ``compare="ratio"`` in
+  :func:`~statsmodels.stats.proportion.confint_proportions_2indep`) was wrong,
+  and sometimes complex, if a count is equal to ``nobs``, for example 10 of 10
+  events in one sample. The interval often did not contain the estimate. The
+  limits are now found by inverting the score test, with a bracket that also
+  works for ``alpha`` of 0.5 and larger. If both counts are equal to ``nobs``
+  the limits have a closed form. :issue:`10538`, :pr:`10539`, :pr:`10640`
 - ``power_equivalence_poisson_2indep`` and
   ``power_equivalence_neginb_2indep`` returned wrong results if ``nobs_ratio``
   is not 1. The ``ftotal`` null variance of
@@ -674,6 +1399,33 @@ Statistics and tests
   limits are now ``0`` and ``-log(alpha) / nobs``. The numerical inversion
   checks that ``count`` and ``nobs`` have a single element, and raises a
   ``ValueError`` otherwise. :issue:`10536`, :pr:`10537`, :pr:`10633`
+- ``confint_poisson_2indep`` with ``method="sqrtcc"`` and ``compare="ratio"``
+  ignored ``exposure1`` and ``exposure2`` and returned an interval for the ratio
+  of the counts instead of the ratio of the rates. It also used the critical
+  value instead of its square in the Fieller discriminant. The bounds are now
+  rescaled by ``exposure2 / exposure1`` and use the squared critical value. For
+  small counts the upper limit was the square of a negative root instead of
+  ``inf`` and the lower limit was positive instead of 0. :pr:`10660`
+- ``mcnemar`` with ``exact=False`` and ``correction=True`` applied the
+  continuity correction also when the two discordant counts are equal, which
+  gave a positive statistic, and ``inf`` with a p-value of 0 if both counts
+  are 0. As in R's ``mcnemar.test``, the correction is now only applied if the
+  counts differ, so the statistic and the p-value are ``nan`` if both counts
+  are 0. :issue:`10670`, :pr:`10671`
+- ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
+  from SciPy if no ratio attains the requested power. It returns ``nan`` with
+  a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``cohens_kappa`` returns the same results for all tables in which a rater
+  uses a single category: kappa is 0, its standard errors and confidence
+  limits are 0, and the z statistic and the p-values are nan. If both raters
+  use the same single category, all statistics are nan. Before, the results
+  depended on rounding errors, and NumPy emitted a ``RuntimeWarning``.
+  :issue:`5530`, :pr:`10709`
+- ``eval_measures.iqr`` returned 0 if ``x1`` had length 1 along ``axis`` and
+  was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
+  ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
+  different shapes. The quartiles are now those of the broadcast difference.
+  :issue:`10757`, :pr:`10758`
 
 Treatment effects
 -----------------
@@ -769,10 +1521,9 @@ Nonparametric
 - ``fast_linbin``, used by ``KDEUnivariate.fit(fft=True)``, wrote outside of
   its array for some inputs and dropped observations at the upper end of the
   grid. :issue:`9556`, :pr:`10232`
-- KDEUnivariate centers and scales quadrature for unbounded-kernel entropy,
-  and uses intervals around the observations to locate shifted, narrow or
-  separated kernel components without truncating the infinite tails.
-  :issue:`1313`
+- ``kdensityfft`` raised a ``ValueError`` for data that is not float64 in
+  native byte order, for example a big-endian, ``float32`` or integer array.
+  :issue:`10770`, :pr:`10795`
 
 Duration models
 ---------------
@@ -790,6 +1541,23 @@ Duration models
   integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
   and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
   :pr:`10613`
+- ``SurvfuncRight.quantile`` no longer depends on floating point rounding when
+  the estimated survival probability equals ``1 - p``. For example, the median
+  of the 12 distinct uncensored times 1, ..., 12 is 7 instead of 6. At such a
+  tie the next event time is returned, unlike R, which returns the midpoint of
+  the two event times. :pr:`10648`
+- ``SurvfuncRight.simultaneous_cb`` used the number at risk at each time
+  instead of the total sample size ``n`` in the Hall-Wellner band of Hall and
+  Wellner (1980) and Klein and Moeschberger (2003), eqs. 4.4.4-4.4.5, and with
+  ``freq_weights`` it used Tsiatis' variance instead of the Greenwood
+  variance. The band was too wide at early times and too narrow in the tail.
+  All limits change. They agree with the R package ``km.ci`` at
+  ``k = 1.3581``, and with ``freq_weights`` they equal the band of the data
+  with each row repeated by its weight. :pr:`10649`
+- ``PHReg`` warns with a ``ValueWarning`` for unknown keyword arguments. Before, they
+  were ignored silently, for example ``weights``, which ``PHReg`` does not support,
+  and ``event``, which is the name of ``status`` in ``lifelines``. :issue:`7741`,
+  :pr:`10650`
 
 Other
 -----
@@ -798,8 +1566,59 @@ Other
   1-dimensional". :issue:`5445`, :pr:`10477`
 - ``ExpandedNormal`` no longer modifies the array of cumulants that is passed
   in. :pr:`10281`
+- ``DistributedModel`` failed with ``GEE`` because the model for the results
+  was created without ``groups``. The default debiased estimation method needs
+  ``fit_regularized`` with ``alpha``, which ``GEE`` does not have, and now
+  raises a ``NotImplementedError`` before any data is fit. :issue:`10778`,
+  :pr:`10780`
+- ``zipoisson.ppf`` and ``zinegbin.ppf`` returned -1 when ``q`` equals the
+  zero inflation ``w``. They return 0. :issue:`10841`, :pr:`10842`
+
+Documentation
+=============
+
+- Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
+  returns unscaled least-squares weights and ignores its compatibility
+  arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
+- The ``news`` docstrings of ``MLEResults`` and ``DynamicFactorMQResults``
+  say that two of ``start``, ``end`` and ``periods`` must be given, and that
+  the default impact date is the last observation of the previous dataset.
+  :issue:`10692`, :pr:`10693`
+- Clarify how the ARIMA GLS estimator handles constants, deterministic
+  regressors, and trends in integrated models. Numerical behavior is
+  unchanged. :issue:`6159`, :pr:`10711`
+- Clarify that ``mu0`` of ``sign_test`` is the median under the null
+  hypothesis, and that the sample median is not a useful value for it when
+  the data have no ties. Numerical behavior is unchanged. :issue:`4101`,
+  :pr:`10721`
+- Fix typos in the "``endog``, ``exog``, what's that?", "Generalized
+  Estimating Equations" and "Getting started" pages.
+- Add an example to ``cohens_kappa`` showing that kappa depends on class
+  prevalence: with the same rater accuracy and raw agreement, kappa is much
+  smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.stattools``: the default ``nlags``
+  and result shape of ``pacf_ols``, the result shape of ``pacf_yw``, the
+  ``"legacy"`` lags of ``kpss``, the default ``maxlag`` and ``icbest`` of
+  ``adfuller``, the default ``maxlag`` of ``zivot_andrews``, the unused
+  ``return_results`` of ``coint`` and its critical values for ``trend="n"``,
+  the two columns of ``x`` and ``addconst`` in ``grangercausalitytests``, and
+  the fit advice of ``arma_order_select_ic``, which suggested a method that
+  makes every fit fail. :pr:`10836`
+- Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
+  ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
+  pandas input, the parameters of ``DeterministicProcess.in_sample`` and
+  ``out_of_sample`` (which listed a non-existent ``index``), the order
+  constraint of ``Fourier`` and ``CalendarFourier``, return types of
+  ``bds``, ``distance_indicators`` and ``correlation_sums``, and examples
+  that failed on pandas 3. :pr:`10832`
+- Correct the docstrings of the deprecated ``TsaDescriptive``,
+  ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
+  ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
+  ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
+  that used undefined names. :pr:`10815`
 
 Stricter Input Validation
+=========================
 
 The following functions and methods now raise a ``ValueError`` for arguments
 that are outside of their valid range. Depending on the function, invalid
@@ -949,3 +1768,5 @@ Time series
   :pr:`10309`, :pr:`10359`, :pr:`10323`, :pr:`10305`, :pr:`10304`
 - The smoothing and damping parameters of ``ExponentialSmoothing.fit`` have to
   be in [0, 1]. :pr:`10387`
+
+.. include:: _upcoming_changes.rst

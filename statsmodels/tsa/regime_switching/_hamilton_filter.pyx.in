@@ -137,13 +137,14 @@ cdef void {{prefix}}hamilton_filter_log_iteration(int t, int k_regimes, int orde
     else:
         curr_predicted_joint_probabilities[:] = 0
         for i in range(k_regimes):
-            # Again, this is logsumexp, so we use the maximum trick
+            # Again, this is logsumexp, so we use the maximum trick (starting
+            # from the first term, as for the weighted likelihoods below)
             tmp_max_real = 0
             tmp_max = 0
             for j in range(k_regimes):
                 tmp_predicted_joint_probabilities[j] = (
                     prev_filtered_joint_probabilities[j] + regime_transition[i, j])
-                if tmp_predicted_joint_probabilities[j]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
+                if j == 0 or tmp_predicted_joint_probabilities[j]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
                     tmp_max_real = tmp_predicted_joint_probabilities[j]{{if combined_prefix == 'z'}}.real{{endif}}
                     tmp_max = tmp_predicted_joint_probabilities[j]
 
@@ -165,8 +166,9 @@ cdef void {{prefix}}hamilton_filter_log_iteration(int t, int k_regimes, int orde
             curr_predicted_joint_probabilities[i] +
             conditional_likelihoods[i])
 
-        # Compute the maximum for use below in logsumexp
-        if weighted_likelihoods[i]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
+        # Compute the maximum for use below in logsumexp, starting from the
+        # first term (all terms are far below zero for an extreme observation)
+        if i == 0 or weighted_likelihoods[i]{{if combined_prefix == 'z'}}.real{{endif}} > tmp_max_real:
             tmp_max_real = weighted_likelihoods[i]{{if combined_prefix == 'z'}}.real{{endif}}
             tmp_max = weighted_likelihoods[i]
 

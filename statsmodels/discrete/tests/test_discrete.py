@@ -12,6 +12,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 # pylint: disable-msg=E1101
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -48,6 +49,7 @@ from statsmodels.discrete.discrete_model import (
 )
 from statsmodels.discrete.truncated_model import TruncatedLFPoisson
 import statsmodels.formula.api as smf
+from statsmodels.genmod.tests.results import results_poisson_large_exog as large_exog
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
@@ -2621,6 +2623,170 @@ def test_mnlogit_predict_columns_formula():
     assert pred.columns.dtype.kind == "i"
 
 
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+@pytest.mark.parametrize("kind", ["categorical", "string", "numeric"])
+def test_mnlogit_predict_in_sample_pandas(kind, which):
+    # GH 4541: omitting exog preserves the training index and categories.
+    endog = _mnlogit_names_endog(kind)
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    exog.index = index
+    if isinstance(endog, pd.Series):
+        endog.index = index
+    res = MNLogit(endog, exog).fit(disp=0)
+
+    pred = res.predict(which=which)
+    pd.testing.assert_frame_equal(pred, res.predict(exog, which=which))
+    assert_index_equal(pred.index, index)
+    expected_columns = {
+        "categorical": ["train", "car", "bus"],
+        "string": ["a", "b", "c"],
+        "numeric": [1, 2, 3],
+    }
+    assert pred.columns.tolist() == expected_columns[kind]
+    expected = res.model.predict(np.asarray(res.params), which=which)
+    assert_allclose(pred, expected)
+
+
+@pytest.mark.parametrize("pandas_endog", [False, True])
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_predict_in_sample_input_types(pandas_endog, pandas_exog):
+    endog = _mnlogit_names_endog("numeric")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog)) * 3 + 7, name="obs")
+    exog.index = index
+    if pandas_endog:
+        endog = pd.Series(endog, index=index)
+    model = MNLogit(endog, exog if pandas_exog else exog.to_numpy())
+    res = model.fit(disp=0)
+
+    pred = res.predict()
+    expected = model.predict(np.asarray(res.params))
+    if pandas_endog or pandas_exog:
+        assert isinstance(pred, pd.DataFrame)
+        assert_index_equal(pred.index, index)
+        assert pred.columns.tolist() == [1, 2, 3]
+    else:
+        assert isinstance(pred, np.ndarray)
+    assert_allclose(pred, expected)
+    assert isinstance(res.predict(exog.to_numpy()), np.ndarray)
+
+
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_predict_in_sample_pandas_missing(which, pandas_exog):
+    # The NaN are only in exog. A NaN in a categorical endog is not dropped
+    # by MNLogit (not changed by GH 4541), so it is not tested here.
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    exog.iloc[[3, 8], 0] = np.nan
+    model_exog = exog if pandas_exog else exog.to_numpy()
+    res = MNLogit(endog, model_exog, missing="drop").fit(disp=0)
+
+    pred = res.predict(which=which)
+    retained = exog.dropna()
+    pd.testing.assert_frame_equal(pred, res.predict(retained, which=which))
+    assert_index_equal(pred.index, retained.index)
+    assert pred.columns.tolist() == ["train", "car", "bus"]
+    expected = res.model.predict(
+        np.asarray(res.params), retained.to_numpy(), which=which
+    )
+    assert_allclose(pred, expected)
+
+
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_in_sample_pandas_missing_diagnostics(pandas_exog):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    exog.iloc[[3, 8], 0] = np.nan
+    model_exog = exog if pandas_exog else exog.to_numpy()
+    res = MNLogit(endog, model_exog, missing="drop").fit(disp=0)
+    keep = exog.notna().all(axis=1).to_numpy()
+    expected = MNLogit(endog.iloc[keep], exog.iloc[keep].to_numpy()).fit(disp=0)
+
+    for name in ("resid_response", "resid_pearson", "resid_misclassified"):
+        actual = getattr(res._results, name)
+        assert isinstance(actual, np.ndarray)
+        assert_allclose(actual, getattr(expected._results, name))
+    assert_array_equal(res.pred_table(), expected.pred_table())
+
+
+def test_mnlogit_predict_in_sample_formula_missing():
+    rng = np.random.default_rng(4541)
+    df = pd.DataFrame({"y": np.tile([-1, 0, 1], 10), "x": rng.standard_normal(30)})
+    df.index = pd.Index(np.arange(len(df)) * 3 + 7, name="obs")
+    df.loc[df.index[3], "x"] = np.nan
+    res = smf.mnlogit("y ~ x", data=df).fit(disp=0)
+
+    pred = res.predict()
+    pd.testing.assert_frame_equal(pred, res.predict(df.dropna()))
+    assert_index_equal(pred.index, df.dropna().index)
+    assert pred.columns.tolist() == [-1, 0, 1]
+
+
+def test_mnlogit_in_sample_pandas_diagnostics():
+    # GH 4541: this test passes without the change of ``predict`` (the
+    # diagnostics were ndarrays before it) and pins that they stay ndarrays
+    # that equal those of a NumPy fit now that ``predict()`` returns a
+    # DataFrame. The attributes are read from ``_results`` to get the raw
+    # values, as the results wrapper converts some of them (for example
+    # ``resid_misclassified`` becomes a Series).
+    endog = _mnlogit_names_endog("numeric")
+    exog = _mnlogit_predict_data(endog)
+    res = MNLogit(endog, exog).fit(disp=0)
+    expected = MNLogit(endog, exog.to_numpy()).fit(disp=0)
+
+    for name in ("resid_response", "resid_pearson", "resid_misclassified"):
+        actual = getattr(res._results, name)
+        assert isinstance(actual, np.ndarray)
+        assert_allclose(actual, getattr(expected, name))
+    assert_array_equal(res.pred_table(), expected.pred_table())
+
+
+def _mnlogit_pandas_fit(regularized):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    model = MNLogit(endog, exog)
+    if regularized:
+        # a mild penalty, so that the fit is regular and fast
+        res = model.fit_regularized(
+            method="l1", alpha=0.1, disp=0, acc=1e-10, maxiter=1000
+        )
+    else:
+        res = model.fit(disp=0)
+    return res, exog, index
+
+
+# pandas GH 62820: a Categorical cannot be unpickled with pandas 2.3.3 on WASM
+PICKLED = [False] if PYTHON_IMPL_WASM else [False, True]
+PICKLED_IDS = ["fitted"] if PYTHON_IMPL_WASM else ["fitted", "pickled"]
+
+
+@pytest.mark.parametrize("regularized", [False, True], ids=["fit", "fit_regularized"])
+@pytest.mark.parametrize("pickled", PICKLED, ids=PICKLED_IDS)
+def test_mnlogit_predict_in_sample_fit_methods(regularized, pickled):
+    # GH 4541: the in-sample DataFrame is kept by the results of
+    # fit_regularized and by results that are pickled and unpickled
+    res, exog, index = _mnlogit_pandas_fit(regularized)
+    if pickled:
+        res = pickle.loads(pickle.dumps(res))
+
+    pred = res.predict()
+    assert isinstance(pred, pd.DataFrame)
+    assert_index_equal(pred.index, index)
+    assert pred.columns.tolist() == ["train", "car", "bus"]
+    assert_allclose(pred.sum(axis=1), 1.0, rtol=1e-12)
+    expected = res.model.predict(np.asarray(res.params), np.asarray(exog))
+    assert_allclose(pred, expected)
+    pd.testing.assert_frame_equal(pred, res.predict(exog))
+
+
 def _mnlogit_predict_data(endog, seed=4804):
     rng = np.random.default_rng(seed)
     exog = pd.DataFrame(
@@ -2649,12 +2815,12 @@ def test_mnlogit_predict_columns_index_and_types():
     assert_index_equal(pred_row.index, exog.index[[3]])
     assert_allclose(pred_row, expected[[3]])
 
-    # exog that is not a pandas object and predict without exog are arrays
+    # Explicit numpy exog returns arrays even for a model fit with pandas.
     for pred_arr in (res.predict(np.asarray(exog)), res.predict(exog.to_numpy())):
         assert isinstance(pred_arr, np.ndarray)
         assert_allclose(pred_arr, expected)
     pred_none = res.predict()
-    assert isinstance(pred_none, np.ndarray)
+    pd.testing.assert_frame_equal(pred_none, pred)
     assert_allclose(pred_none, expected)
 
 
@@ -2872,11 +3038,13 @@ def test_poisson_newton():
     x = sm.add_constant(x, prepend=True)
     y_count = rs.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
-    # this is not thread-safe
-    with pytest.warns(ConvergenceWarning):
-        res = mod.fit(start_params=-np.ones(4), method="newton", disp=0)
-
-    assert_(not res.mle_retvals["converged"])
+    res = mod.fit(start_params=-np.ones(4), method="newton", disp=0)
+    # Newton used to diverge from these starting values, the first step is
+    # now shortened if it increases the negative log-likelihood
+    assert res.mle_retvals["converged"]
+    # compare with the fit from the default starting values
+    res_default = mod.fit(method="newton", disp=0)
+    assert_allclose(res.params, res_default.params, rtol=1e-6)
 
 
 def test_l1_regularized_respects_warning_filters():
@@ -3896,6 +4064,94 @@ def test_optim_kwds_prelim():
     assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
 
+@pytest.mark.parametrize("p", [0.5, 1, 1.2, 1.5, 1.8, 2, 2.5, 3])
+def test_negbinp_hessian_numdiff(p):
+    # the cross derivative of params and alpha was only correct for p=1, 2
+    from statsmodels.tools.numdiff import approx_hess
+
+    rng = np.random.default_rng(7461)
+    nobs = 500
+    exog = sm.add_constant(0.4 * rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.6, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    offset = 0.3 * rng.normal(size=nobs)
+    model = NegativeBinomialP(endog, exog, offset=offset, p=p)
+    params = np.array([0.5, 0.2, -0.1, 0.6])
+
+    hess = model.hessian(params)
+    hess_num = approx_hess(params, model.loglike)
+    # approx_hess has an error of up to 5e-7 times the largest entry of the
+    # Hessian (measured for these p), while the smallest entries are 4e-4 to
+    # 1e-2 times the largest, so rtol alone is too tight for them: atol is
+    # 1e-5 times the largest entry, a margin of about 20 over the error.
+    assert_allclose(hess, hess_num, rtol=1e-4, atol=1e-5 * np.abs(hess_num).max())
+
+    # the hessian factors are the observation-wise blocks of the hessian
+    hf0, hf1, hf2 = model.hessian_factor(params)
+    assert_allclose((hf0 * exog.T) @ exog, hess[:-1, :-1], rtol=1e-10)
+    assert_allclose(hf1 @ exog, hess[-1, :-1], rtol=1e-10)
+    assert_allclose(hf2.sum(), hess[-1, -1], rtol=1e-10)
+
+
+@pytest.mark.parametrize("p", [1.5, 2.5])
+def test_negbinp_bse_p15(p):
+    # bse is nan for p=2.5 and the newton fit does not converge for p=1.5
+    # if the cross derivative of params and alpha is wrong
+    from statsmodels.tools.numdiff import approx_hess
+
+    rng = np.random.default_rng(7461)
+    nobs = 1000
+    exog = sm.add_constant(0.4 * rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.6, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    model = NegativeBinomialP(endog, exog, p=p)
+    res = model.fit(method="newton", disp=0)
+    assert res.mle_retvals["converged"]
+    hess_num = approx_hess(res.params, model.loglike)
+    bse_num = np.sqrt(np.diag(np.linalg.inv(-hess_num)))
+    assert np.all(np.isfinite(res.bse))
+    assert_allclose(res.bse, bse_num, rtol=1e-5)
+
+
+@pytest.mark.parametrize("loglike_method", ["nb1", "nb2"])
+@pytest.mark.parametrize("state", ["new", "unpickled"])
+def test_negbin_alpha_outside_fit(loglike_method, state):
+    # outside of fit, the last parameter is alpha, not log(alpha), both in a
+    # new model instance and in the model of unpickled results
+    rng = np.random.default_rng(3214)
+    nobs = 200
+    exog = sm.add_constant(rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.5, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    res = NegativeBinomial(endog, exog, loglike_method=loglike_method).fit(disp=0)
+    if state == "new":
+        model = NegativeBinomial(endog, exog, loglike_method=loglike_method)
+    else:
+        # pickled before llf is computed and cached
+        res_unpickled = pickle.loads(pickle.dumps(res))
+        model = res_unpickled.model
+
+    params = res.params
+    alpha = params[-1]
+    mu = np.exp(exog @ params[:-1])
+    if loglike_method == "nb2":
+        size = 1 / alpha
+        model_p = NegativeBinomialP(endog, exog, p=2)
+    else:
+        size = mu / alpha
+        model_p = NegativeBinomialP(endog, exog, p=1)
+    llf_scipy = nbinom.logpmf(endog, size, size / (size + mu)).sum()
+
+    assert_allclose(model.loglike(params), llf_scipy, rtol=1e-12)
+    assert_allclose(model.loglike(params), res.llf, rtol=1e-12)
+    assert_allclose(model.score(params), model_p.score(params), atol=1e-8)
+    assert_allclose(model.hessian(params), model_p.hessian(params), rtol=1e-8)
+    if state == "unpickled":
+        assert_allclose(res_unpickled.llf, llf_scipy, rtol=1e-12)
+        assert_allclose(res_unpickled.aic, res.aic, rtol=1e-12)
+        assert_allclose(res_unpickled.llr, res.llr, rtol=1e-10)
+
+
 def test_unchanging_degrees_of_freedom():
     data = load_randhie()
     # see GH3734
@@ -4122,6 +4378,70 @@ def test_mnlogit_margeff_dummy_and_count_together(k_choices):
     assert_allclose(marg.margeff[1:4].ravel(), expected, rtol=1e-8)
     assert_allclose(marg.margeff_se[1:4].ravel(), se, rtol=1e-5)
     assert np.abs(expected).max() > 0.01
+
+
+@pytest.mark.parametrize(
+    "k_exog, k_choices",
+    [(2, 3), (2, 4), (3, 3)],
+    ids=["K3-J3", "K3-J4", "K4-J3"],
+)
+@pytest.mark.parametrize("at", ["overall", "all", "mean", "median"])
+@pytest.mark.parametrize("method", ["eyex", "dyex"])
+def test_mnlogit_margeff_elasticity(method, at, k_exog, k_choices):
+    # get_margeff with eyex or dyex raised a broadcasting error in
+    # _derivative_exog, or was incorrect if K = J and at is not "overall".
+    # K is the number of columns of exog with the constant and J is the
+    # number of choices, K = J, K < J and K > J are covered
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(1055 + 10 * k_exog + k_choices)
+    nobs = 1000
+    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, k_exog)))
+    beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
+    prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
+    prob /= prob.sum(1, keepdims=True)
+    endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K == k_exog + 1
+    assert mod.J == k_choices
+    if at in ("overall", "all"):
+        exog_at = exog
+    elif at == "mean":
+        exog_at = exog.mean(0, keepdims=True)
+    else:
+        exog_at = np.median(exog, axis=0, keepdims=True)
+
+    def effects(params):
+        # complex step derivative of predict with respect to each regressor
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        pred = mod.predict(params, exog_at)
+        out = []
+        for col in range(1, exog.shape[1]):
+            exog_c = exog_at.astype(complex)
+            exog_c[:, col] += 1e-20j
+            deriv = mod.predict(params, exog_c).imag / 1e-20
+            deriv *= exog_at[:, col : col + 1]
+            if method == "eyex":
+                deriv /= pred
+            out.append(deriv)
+        if at == "all":
+            # one row of elasticities per observation, shape (nobs, K - 1, J)
+            return np.stack(out, axis=1)
+        return np.concatenate([deriv.mean(0) for deriv in out])
+
+    marg = res.get_margeff(at=at, method=method)
+    params = res.params.ravel(order="F")
+    expected = effects(params)
+    if at == "all":
+        # the delta method standard errors are not available for at="all"
+        assert marg.margeff.shape == (nobs, k_exog, k_choices)
+        assert_allclose(marg.margeff, expected, rtol=1e-10)
+        return
+    jac = approx_fprime(params, effects, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    assert_allclose(marg.margeff.ravel(), expected, rtol=1e-10)
+    assert_allclose(marg.margeff_se.ravel(), se, rtol=1e-6)
 
 
 def _fit_logit_for_summary():
@@ -4870,3 +5190,58 @@ def test_negativebinomial_rejects_alpha_kwarg():
     # the estimator itself keeps working
     mod = NegativeBinomial(y, x, loglike_method="nb1")
     assert mod.k_extra == 1
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_poisson_newton_large_exog_starting_values(start):
+    # The full Newton steps from these starting values need 96 and 36
+    # iterations, the limit is far below that.
+    exog = sm.add_constant(large_exog.x_large)
+    res = Poisson(large_exog.y_large, exog).fit(
+        start_params=start, method="newton", disp=0, maxiter=20
+    )
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, large_exog.params_large, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_large, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_large, rtol=1e-10)
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_poisson_newton_overflow_starting_values(start):
+    # Newton from zeros overflowed in the first step and returned nan params
+    # with converged True. From [1, 0] it did not converge in 100 iterations.
+    exog = sm.add_constant(large_exog.x_overflow)
+    res = Poisson(large_exog.y_overflow, exog).fit(
+        start_params=start, method="newton", disp=0, maxiter=100
+    )
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, large_exog.params_overflow, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_overflow, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_overflow, rtol=1e-10)
+
+
+def test_newton_nonfinite_start_reports_nonconvergence():
+    # exp overflows at the start and at every step. The fit reports that it did
+    # not converge, with finite parameters, and the overflow is not reported
+    # for the parameters at which the fit stops.
+    exog = sm.add_constant(large_exog.x_large)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        res = Poisson(large_exog.y_large, exog).fit(
+            start_params=[1000.0, 1000.0], method="newton", disp=0
+        )
+    assert any(issubclass(w.category, ConvergenceWarning) for w in caught)
+    assert not any(issubclass(w.category, RuntimeWarning) for w in caught)
+    assert not res.mle_retvals["converged"]
+    assert res.mle_retvals["warnflag"] == 2
+    assert np.all(np.isfinite(res.params))
+
+
+@pytest.mark.parametrize("value", ["False", 1, None])
+def test_newton_step_halving_invalid(value):
+    exog = sm.add_constant(large_exog.x_large)
+    exception = ValueError if isinstance(value, str) else TypeError
+    with pytest.raises(exception, match="step_halving"):
+        Poisson(large_exog.y_large, exog).fit(
+            method="newton", disp=0, step_halving=value
+        )

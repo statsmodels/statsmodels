@@ -834,6 +834,7 @@ class MixedLM(base.LikelihoodModel):
             self.data.param_names = self.exog_names + names
             self.data.exog_re_names = names
             self.data.exog_re_names_full = names
+            self.data.variance_param_names = names
 
         elif exog_re is not None:
             # Process exog_re the same way that exog is handled
@@ -857,12 +858,16 @@ class MixedLM(base.LikelihoodModel):
         if not self.data._param_names:
             # HACK: could have been set in from_formula already
             # needs refactor
-            param_names, exog_re_names, exog_re_names_full = self._make_param_names(
-                exog_re
-            )
+            (
+                param_names,
+                exog_re_names,
+                exog_re_names_full,
+                variance_param_names,
+            ) = self._make_param_names(exog_re)
             self.data.param_names = param_names
             self.data.exog_re_names = exog_re_names
             self.data.exog_re_names_full = exog_re_names_full
+            self.data.variance_param_names = variance_param_names
 
         self.k_params = self.k_fe + self.k_re2
 
@@ -932,9 +937,12 @@ class MixedLM(base.LikelihoodModel):
 
     def _make_param_names(self, exog_re):
         """
-        Return the full parameter names list, just the exogenous random
-        effects variables, and the exogenous random effects variables with
-        the interaction terms
+        Return the parameter names of the model and their subsets
+
+        The names are the full list of parameter names, the names of the
+        random effects covariates, the names of the random effects
+        covariance parameters, and the names of the covariance parameters
+        followed by the variance components.
 
         Parameters
         ----------
@@ -944,33 +952,38 @@ class MixedLM(base.LikelihoodModel):
 
         Returns
         -------
-        param_names : list[str]
+        param_names : list of str
             The full list of parameter names (fixed effects, random
             effects covariance terms, and variance components).
-        exog_re_names : list[str]
+        exog_re_names : list of str
             The names of the random effects covariates.
-        param_names_re : list[str]
+        cov_re_names : list of str
             The names of the random effects covariance parameters
             (excluding fixed effects and variance components).
+        variance_param_names : list of str
+            `cov_re_names` followed by the variance component names.
         """
         exog_names = list(self.exog_names)
         exog_re_names = _get_exog_re_names(self, exog_re)
-        param_names = []
+        cov_re_names = []
 
-        jj = self.k_fe
         for i in range(len(exog_re_names)):
             for j in range(i + 1):
                 if i == j:
-                    param_names.append(exog_re_names[i] + " Var")
+                    cov_re_names.append(exog_re_names[i] + " Var")
                 else:
-                    param_names.append(
+                    cov_re_names.append(
                         exog_re_names[j] + " x " + exog_re_names[i] + " Cov"
                     )
-                jj += 1
 
-        vc_names = [x + " Var" for x in self.exog_vc.names]
+        variance_names = [x + " Var" for x in self.exog_vc.names]
 
-        return exog_names + param_names + vc_names, exog_re_names, param_names
+        return (
+            exog_names + cov_re_names + variance_names,
+            exog_re_names,
+            cov_re_names,
+            cov_re_names + variance_names,
+        )
 
     @classmethod
     def from_formula(
@@ -1178,13 +1191,17 @@ class MixedLM(base.LikelihoodModel):
         mod = super().from_formula(formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
-        param_names, exog_re_names, exog_re_names_full = mod._make_param_names(
-            exog_re_names
-        )
+        (
+            param_names,
+            exog_re_names,
+            exog_re_names_full,
+            variance_param_names,
+        ) = mod._make_param_names(exog_re_names)
 
         mod.data.param_names = param_names
         mod.data.exog_re_names = exog_re_names
         mod.data.exog_re_names_full = exog_re_names_full
+        mod.data.variance_param_names = variance_param_names
 
         if vc_formula is not None:
             mod.data.vcomp_names = mod.exog_vc.names
@@ -1391,7 +1408,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Get the Hessian including only the nonzero fixed effects,
         # then blow back up to the full size after inverting.
-        hess, sing = self.hessian(params_prof)
+        hess, sing, scale_grad = self._hessian(params_prof)
         if sing:
             warnings.warn(_warn_cov_sing, SingularMatrixWarning, stacklevel=2)
 
@@ -1405,6 +1422,9 @@ class MixedLM(base.LikelihoodModel):
         params_object = MixedLMParams.from_components(fe_params, cov_re=cov_re)
 
         results = MixedLMResults(self, params_prof, pcov / scale)
+        results._cov_vparams = self._cov_vparams(
+            pcov, params_prof[self.k_fe :], scale, scale_grad
+        )
         results.params_object = params_object
         results.fe_params = fe_params
         results.cov_re = cov_re
@@ -1919,8 +1939,30 @@ class MixedLM(base.LikelihoodModel):
         the parameterization defined by this model instance's
         `use_sqrt` attribute.
 
+        If `use_sqrt` is True, the packed entries are the Cholesky factor
+        of the random effects covariance matrix and the square roots of
+        the variance components. Their signs matter: the score is the
+        derivative at exactly the vector that is passed in. If a
+        MixedLMParams is passed instead, the Cholesky factor with a
+        nonnegative diagonal is used. If `cov_re` is singular, for example
+        ``[[1, 1], [1, 1]]``, the packing falls back to the square roots of
+        its diagonal, so the packed vector does not reproduce `cov_re` and
+        the returned score is not the derivative at a Cholesky factor of
+        `cov_re`.
+
+        .. versionchanged:: 0.15.1
+
+           If `use_sqrt` is True, the score is the derivative at the packed
+           vector with the signs of its entries. The signs of the diagonal
+           of the Cholesky factor and of the square roots of the variance
+           components used to be dropped.
+
         """
+        signed_params = None
         if type(params) is not MixedLMParams:
+            if self.use_sqrt:
+                # from_packed squares the square roots, so keep their signs
+                signed_params = params
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
             )
@@ -1933,8 +1975,11 @@ class MixedLM(base.LikelihoodModel):
                 warnings.warn(msg, SingularMatrixWarning, stacklevel=2)
 
         if self.use_sqrt:
-            score_fe, score_re, score_vc = self.score_sqrt(
-                params, calc_fe=not profile_fe
+            if signed_params is None:
+                signed_params = params.get_packed(use_sqrt=True, has_fe=False)
+            score_fe, score_re, score_vc = self._score_sqrt(
+                np.concatenate((params.fe_params, signed_params)),
+                calc_fe=not profile_fe,
             )
         else:
             score_fe, score_re, score_vc = self.score_full(
@@ -2111,7 +2156,7 @@ class MixedLM(base.LikelihoodModel):
 
         return score_fe, score_re, score_vc
 
-    def score_sqrt(self, params, calc_fe=True):
+    def _score_sqrt(self, signed_params, calc_fe=True):
         """
         Return the score with respect to transformed parameters
 
@@ -2121,9 +2166,11 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array_like
-            The model parameters.  If array-like must contain packed
-            parameters that are compatible with this model instance.
+        signed_params : ndarray
+            The packed parameters, including `fe_params`, with the Cholesky
+            factor of `cov_re` and the square roots of `vcomp`.  The score
+            depends on their signs, which repacking from `cov_re` and `vcomp`
+            does not preserve.
         calc_fe : bool, optional
             If True, calculate the score vector for the fixed effects
             parameters.  If False, this vector is not calculated, and
@@ -2142,13 +2189,15 @@ class MixedLM(base.LikelihoodModel):
             parameters.
 
         """
-        score_fe, score_re, score_vc = self.score_full(params, calc_fe=calc_fe)
-        params_vec = params.get_packed(use_sqrt=True, has_fe=True)
+        params_obj = MixedLMParams.from_packed(
+            signed_params, self.k_fe, self.k_re, use_sqrt=True, has_fe=True
+        )
+        score_fe, score_re, score_vc = self.score_full(params_obj, calc_fe=calc_fe)
 
         score_full = np.concatenate((score_fe, score_re, score_vc))
         scr = 0.0
-        for i in range(len(params_vec)):
-            v = self._lin[i] + 2 * np.dot(self._quad[i], params_vec)
+        for i in range(len(signed_params)):
+            v = self._lin[i] + 2 * np.dot(self._quad[i], signed_params)
             scr += score_full[i] * v
         score_fe = scr[0 : self.k_fe]
         score_re = scr[self.k_fe : self.k_fe + self.k_re2]
@@ -2182,6 +2231,17 @@ class MixedLM(base.LikelihoodModel):
             variances go to zero, directions with a variance below 1e-10 are
             dropped from the covariance of the observations.
 
+        """
+        hess, sing, _ = self._hessian(params)
+        return hess, sing
+
+    def _hessian(self, params):
+        """
+        Return the Hessian, see `hessian`, and the gradient of the scale
+
+        The gradient of the scale is the derivative of the profiled error
+        variance with respect to the variance parameters. It is the total
+        derivative if the fixed effects in `params` are their GLS estimates.
         """
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(
@@ -2334,7 +2394,34 @@ class MixedLM(base.LikelihoodModel):
         hess[self.k_fe :, 0 : self.k_fe] = hess_fere
         hess[self.k_fe :, self.k_fe :] = hess_re
 
-        return hess, sing
+        # The profiled scale is rvir / fac and B is minus the derivative of
+        # rvir with respect to the variance parameters
+        scale_grad = -B / fac
+
+        return hess, sing, scale_grad
+
+    def _cov_vparams(self, pcov, vparams, scale, scale_grad):
+        """
+        Return the covariance of the variance parameters in their own units
+
+        `pcov` is the inverse of the negative profile Hessian, in which the
+        variance parameters `vparams` are divided by `scale`. The returned
+        covariance is that of `scale * vparams`, the lower triangle of
+        `cov_re` followed by `vcomp`, by the delta method. It includes the
+        uncertainty of `scale`, which needs only the second derivative of the
+        log-likelihood in `scale` and `scale_grad`.
+        """
+        fac = self.n_totobs
+        if self.reml:
+            fac -= self.k_fe
+        cov_vv = pcov[self.k_fe :, self.k_fe :]
+        # Given the variance parameters, the inverse information of scale is
+        # 2 * scale**2 / fac; the profiled scale depends on them through
+        # scale_grad.
+        cov_vs = cov_vv @ scale_grad
+        var_s = 2 * scale**2 / fac + scale_grad @ cov_vs
+        cross = scale * np.outer(cov_vs, vparams)
+        return scale**2 * cov_vv + cross + cross.T + var_s * np.outer(vparams, vparams)
 
     def get_scale(self, fe_params, cov_re, vcomp):
         """
@@ -2594,7 +2681,7 @@ class MixedLM(base.LikelihoodModel):
         # Hessian with respect to the random effects covariance matrix
         # (not its square root).  It is used for obtaining standard
         # errors, not for optimization.
-        hess, sing = self.hessian(params)
+        hess, sing, scale_grad = self._hessian(params)
         if sing:
             warnings.warn(_warn_cov_sing, SingularMatrixWarning, stacklevel=2)
 
@@ -2619,6 +2706,9 @@ class MixedLM(base.LikelihoodModel):
         # Prepare a results class instance
         params_packed = params.get_packed(use_sqrt=False, has_fe=True)
         results = MixedLMResults(self, params_packed, pcov / scale)
+        results._cov_vparams = self._cov_vparams(
+            pcov, params_packed[self.k_fe :], scale, scale_grad
+        )
         results.params_object = params
         results.fe_params = fe_params
         results.cov_re = cov_re
@@ -2797,7 +2887,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
-        the variance components.
+        the variance components.  They are in the units of `cov_re` and
+        `vcomp`, not of the variance parameters in `params`, and include
+        the uncertainty of `scale`.
 
     See Also
     --------
@@ -2859,15 +2951,21 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         The first `k_re x (k_re + 1) / 2` elements of the returned array
         are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
-        components.
+        components. They are in the units of `cov_re` and `vcomp`, unlike
+        the variance parameters in `params`, and include the uncertainty
+        of `scale`.
 
         Note that the sampling distribution of variance parameters is
         strongly skewed unless the sample size is large, so these
         standard errors may not give meaningful confidence intervals
         or p-values if used in the usual way.
+
+        .. versionchanged:: 0.15.1
+
+           The standard errors were off by about a factor of the square
+           root of `scale` and did not include the uncertainty of `scale`.
         """
-        p = self.model.exog.shape[1]
-        return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
+        return np.sqrt(np.diag(self._cov_vparams))
 
     def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)
@@ -3116,14 +3214,14 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         for i in range(self.k_re):
             for j in range(i + 1):
                 sdf[jj, 0] = self.cov_re[i, j]
-                sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
                 jj += 1
 
         # Variance components
         for i in range(self.k_vc):
             sdf[jj, 0] = self.vcomp[i]
-            sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
             jj += 1
+
+        sdf[self.k_fe :, 1] = self.bse_re
 
         sdf = pd.DataFrame(index=param_names, data=sdf)
         sdf.columns = [
@@ -3320,7 +3418,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
 class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
     _attrs = {
-        "bse_re": ("generic_columns", "exog_re_names_full"),
+        "bse_re": ("generic_columns", "variance_param_names"),
         "fe_params": ("generic_columns", "xnames"),
         "bse_fe": ("generic_columns", "xnames"),
         "cov_re": ("generic_columns_2d", "exog_re_names"),

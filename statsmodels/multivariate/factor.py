@@ -839,7 +839,7 @@ class FactorResults:
 
         if method == "bartlett":
             s_mat = np.linalg.inv(L.T.dot(L / (uni[:, None]))).dot(L.T / uni).T
-        elif method == "regression" or method == "reg":
+        elif method in {"regression", "reg"}:
             corr = self.model.corr
             corr_f = self._corr_factors()
             # if orthogonal then corr_f is just eye

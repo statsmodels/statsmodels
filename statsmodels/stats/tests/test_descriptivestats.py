@@ -156,20 +156,54 @@ def test_odd_percentiles(df):
         "freq_4",
         "freq_5",
         "7.0%",
-        "14.1%",
+        "14.2%",
         "21.3%",
         "28.5%",
-        "35.6%",
+        "35.7%",
         "42.8%",
         "50.0%",
-        "57.1%",
+        "57.2%",
         "64.3%",
         "71.5%",
-        "78.6%",
+        "78.7%",
         "85.8%",
         "93.0%",
     ]
     assert_equal(res.frame.index.tolist(), stats)
+
+
+@pytest.mark.parametrize(
+    "percentiles, labels",
+    [
+        ([29, 50], ["29%", "50%"]),
+        ([12.5, 50], ["12.5%", "50.0%"]),
+        ([1.25, 2.5], ["1.25%", "2.50%"]),
+        ([33.3, 66.7], ["33.3%", "66.7%"]),
+        ([10, 10.04], ["10.00%", "10.04%"]),
+        ([100 / 3, 50], ["33.3%", "50.0%"]),
+        ([100 / 3, 33.34], ["33.33%", "33.34%"]),
+        ([99.9, 99.99, 99.999], ["99.900%", "99.990%", "99.999%"]),
+        ([12.3456, 50], ["12.3456%", "50.0000%"]),
+        ([99.99999, 50], ["50.00000%", "99.99999%"]),
+        ([1e-5, 50], ["0.00001%", "50.00000%"]),
+    ],
+)
+def test_percentile_labels(percentiles, labels):
+    res = Description(pd.Series(np.arange(100.0)), percentiles=percentiles)
+    assert_equal(res.frame.index[-len(labels) :].tolist(), labels)
+
+
+@pytest.mark.parametrize("numeric", [True, False])
+@pytest.mark.parametrize("percentiles", [[np.nan], [np.nan, 50.0]])
+def test_percentiles_nan(percentiles, numeric):
+    # NaN passed the range check. For data without a numeric column nothing
+    # else rejected it, and the search for labels then never ended.
+    if numeric:
+        data = pd.Series(np.arange(10.0))
+    else:
+        data = pd.DataFrame({"c": pd.Series(list("abcab")).astype("category")})
+    with pytest.raises(ValueError, match="strictly between 0 and 100"):
+        Description(data, percentiles=percentiles)
 
 
 def test_large_ntop(df):

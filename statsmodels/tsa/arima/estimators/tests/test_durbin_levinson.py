@@ -113,3 +113,25 @@ def test_misc():
     assert_allclose(res_int[0].params, res_float[0].params)
     assert_allclose(res_int[1].params, res_float[1].params)
     assert_allclose(res_int[2].params, res_float[2].params)
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "integer"]
+)
+def test_durbin_levinson_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # Yule-Walker estimates of the demeaned ndarray for every order
+    from statsmodels.tsa.tests._contract import series_forms
+
+    x = np.random.default_rng(20261127).standard_normal(200).cumsum()
+    if form == "integer":
+        x = np.round(4 * x)
+        endog = x.astype(np.int64)
+    else:
+        endog = series_forms(x)[form]
+    p, _ = durbin_levinson(endog, ar_order=2)
+    xd = x - x.mean()
+    r = np.array([xd[k:] @ xd[: 200 - k] / 200 for k in range(3)])
+    phi = np.linalg.solve([[r[0], r[1]], [r[1], r[0]]], r[1:])
+    assert_allclose(p[2].ar_params, phi, rtol=1e-10)
+    assert_allclose(p[1].ar_params, [r[1] / r[0]], rtol=1e-10)

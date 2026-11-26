@@ -4,7 +4,6 @@ from statsmodels.compat.python import lmap, lrange, lzip
 import datetime as dt
 import re
 
-import numpy as np
 from pandas import to_datetime
 
 _quarter_to_day = {
@@ -116,7 +115,8 @@ def date_range_str(start, end=None, length=None):
     Parameters
     ----------
     start : str
-        The first abbreviated date, for instance, '1965q1' or '1965m1'
+        The first abbreviated date, for instance, '1965q1', '1965m1' or
+        '1965' for annual dates.
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
@@ -126,6 +126,13 @@ def date_range_str(start, end=None, length=None):
     -------
     date_range : list of str
         List of abbreviated date strings.
+
+        .. versionchanged:: 0.15.1
+
+           A range within one year is supported instead of raising, and a
+           range given by `length` continues into the next year, for
+           instance "1960m1" after "1959m12" instead of "1960m13". An end
+           before the start raises a ValueError.
     """
     flags = re.IGNORECASE | re.VERBOSE
 
@@ -145,27 +152,26 @@ def date_range_str(start, end=None, length=None):
     else:
         raise ValueError(f"Date {start} not understood")
     yr1, offset1 = lmap(int, start.replace(":", "").split(split))
+    # Number the periods consecutively across years
+    first = yr1 * annual_freq + offset1 - 1
     if end is not None:
         end = end.lower()
         yr2, offset2 = lmap(int, end.replace(":", "").split(split))
+        last = yr2 * annual_freq + offset2 - 1
     else:  # length > 0
         if not length:
             raise ValueError("length must be provided if end is None")
-        yr2 = yr1 + length // annual_freq
-        offset2 = length % annual_freq + (offset1 - 1)
-    years = [str(yr) for yr in np.repeat(lrange(yr1 + 1, yr2), annual_freq)]
-    # tack on first year
-    years = [(str(yr1))] * (annual_freq + 1 - offset1) + years
-    # tack on last year
-    years = years + [(str(yr2))] * offset2
+        last = first + length - 1
+    if last < first:
+        raise ValueError("end must not be before start, and length must be positive")
+    periods = range(first, last + 1)
     if split != "a":
-        offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype(str)
-        offset = np.r_[np.arange(offset1, annual_freq + 1).astype(str), offset]
-        offset = np.r_[offset, np.arange(1, offset2 + 1).astype(str)]
-
-        date_arr_range = [f"{i}{split}{j}" for i, j in zip(years, offset, strict=True)]
+        date_arr_range = [
+            f"{period // annual_freq}{split}{period % annual_freq + 1}"
+            for period in periods
+        ]
     else:
-        date_arr_range = years
+        date_arr_range = [str(period) for period in periods]
     return date_arr_range
 
 
@@ -190,12 +196,15 @@ def dates_from_str(dates):
 
 def dates_from_range(start, end=None, length=None):
     """
-    Turns a sequence of date strings and returns a list of datetime
+    Returns a list of datetime for a range of abbreviated dates
+
+    The datetime dates are at the end of each period.
 
     Parameters
     ----------
     start : str
-        The first abbreviated date, for instance, '1965q1' or '1965m1'
+        The first abbreviated date, for instance, '1965q1', '1965m1' or
+        '1965' for annual dates.
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional

@@ -14,6 +14,13 @@ import pytest
 
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace import sarimax, varmax
+from statsmodels.tsa.statespace.kalman_filter import (
+    MEMORY_CONSERVE,
+    MEMORY_NO_FORECAST_COV,
+    MEMORY_NO_LIKELIHOOD,
+)
+from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
+from statsmodels.tsa.statespace.mlemodel import MLEModel
 
 from .results import results_varmax
 
@@ -329,3 +336,243 @@ def test_concentrated_scale_univariate():
     check_concentrated_scale(
         filter_univariate=True, missing=True, loglikelihood_burn=10
     )
+
+
+@pytest.mark.parametrize("univariate", [False, True])
+@pytest.mark.parametrize("burn", [0, 1])
+@pytest.mark.parametrize("memory", [0, MEMORY_NO_FORECAST_COV,
+                                  MEMORY_NO_LIKELIHOOD, MEMORY_CONSERVE])
+def test_concentrated_exact_diffuse_closed_form(univariate, burn, memory):
+    # Independent scalar diffuse recursion: the first innovation is diffuse
+    # (F_inf=1); the second has F=7/4 and v=-1/2. At t=1 the two finite
+    # innovations have F=97/56, v=-9/14 and F=623/388, v=79/97.
+    # Their standardized squared errors sum to 58/89, so scale=29/89.
+    # Include log(2*pi) for the diffuse innovation, as in the existing
+    # exact-diffuse test convention (Durbin and Koopman, section 7.2.5).
+    mod = KalmanSmoother(2, 1)
+    mod.bind(np.asfortranarray([[1., 0.], [0., 1.]]))
+    mod["design"] = [[1.], [0.5]]
+    mod["obs_cov"] = np.diag([1., 1.5])
+    mod["transition"] = [[0.75]]
+    mod["selection"] = [[1.]]
+    mod["state_cov"] = [[0.25]]
+    mod.initialize_diffuse()
+    mod.filter_concentrated = True
+    mod.filter_univariate = univariate
+    mod.loglikelihood_burn = burn
+    expected = -4.004213273294209 if burn == 0 else -2.227986760129886
+    assert_allclose(mod.loglike(conserve_memory=memory), expected,
+                    rtol=1e-12)
+
+
+@pytest.mark.parametrize("memory", [0, MEMORY_NO_FORECAST_COV,
+                                   MEMORY_NO_LIKELIHOOD, MEMORY_CONSERVE])
+def test_concentrated_exact_diffuse_singular_innovation(memory):
+    # A deterministic zero observation contributes no likelihood. Burning
+    # one leading row ends inside the diffuse period, and must not count its
+    # zero finite forecast variance as an ordinary innovation.
+    endog = np.array([[np.nan, np.nan, 0.], [np.nan, np.nan, 0.],
+                      [1., 0., 0.], [0., 1., 0.], [2., -1., 0.]])
+    mod = KalmanSmoother(3, 1, tolerance=0)
+    mod.bind(np.asfortranarray(endog.T))
+    mod["design"] = [[1.], [0.5], [0.]]
+    mod["obs_cov"] = np.diag([1., 1.5, 0.])
+    mod["transition"] = [[0.75]]
+    mod["selection"] = [[1.]]
+    mod["state_cov"] = [[0.25]]
+    mod.initialize_diffuse()
+    mod.filter_concentrated = True
+    mod.filter_univariate = True
+    mod.loglikelihood_burn = 1
+    scale = mod.smooth().scale
+    with mod.fixed_scale(scale):
+        expected = mod.loglike(conserve_memory=0)
+    assert_allclose(mod.loglike(conserve_memory=memory), expected,
+                    rtol=1e-12)
+
+
+@pytest.mark.parametrize("burn", [0, 2])
+@pytest.mark.parametrize("memory", [0, MEMORY_NO_LIKELIHOOD, MEMORY_CONSERVE])
+def test_concentrated_stationary_loglike_memory(burn, memory):
+    # Preserve the non-diffuse concentrated likelihood with and without
+    # individual likelihood storage, including after likelihood burn.
+    mod = KalmanSmoother(1, 1, tolerance=0)
+    mod.bind(np.array([[1., 0., -1., 2., 0., 1.]]))
+    mod["design"] = [[1.]]
+    mod["obs_cov"] = [[1.]]
+    mod["transition"] = [[0.75]]
+    mod["selection"] = [[1.]]
+    mod["state_cov"] = [[0.25]]
+    mod.initialize_stationary()
+    mod.filter_concentrated = True
+    mod.loglikelihood_burn = burn
+    scale = mod.smooth().scale
+    with mod.fixed_scale(scale):
+        expected = mod.loglike(conserve_memory=0)
+    assert_allclose(mod.loglike(conserve_memory=memory), expected,
+                    rtol=1e-12)
+
+
+@pytest.mark.parametrize("univariate", [False, True])
+@pytest.mark.parametrize("burn", [0, 1, 2, 3, 4, 5])
+@pytest.mark.parametrize("memory", [0, MEMORY_NO_FORECAST_COV,
+                                  MEMORY_NO_LIKELIHOOD, MEMORY_CONSERVE])
+def test_concentrated_exact_diffuse_loglike(univariate, burn, memory):
+    # Leading missing data make burn=1/2 fall inside the diffuse period.
+    # At the first nonmissing period, one innovation is diffuse and the
+    # other is finite. Compare with a nonconcentrated filter at the SAME
+    # fitted scale; this does not redefine the scale estimator.
+    endog = np.array([[np.nan, np.nan], [np.nan, np.nan], [1., 0.],
+                      [0., 1.], [np.nan, 2.], [3., np.nan],
+                      [np.nan, np.nan], [1., -1.], [2., 0.]])
+    mod = KalmanSmoother(2, 1, tolerance=0)
+    mod.bind(np.asfortranarray(endog.T))
+    mod["design"] = [[1.], [0.5]]
+    mod["obs_cov"] = np.diag([1., 1.5])
+    mod["transition"] = [[0.75]]
+    mod["selection"] = [[1.]]
+    mod["state_cov"] = [[0.25]]
+    mod.initialize_diffuse()
+    mod.filter_concentrated = True
+    mod.filter_univariate = univariate
+    mod.loglikelihood_burn = burn
+    result = mod.smooth()
+    observed = mod.loglikeobs()
+    with mod.fixed_scale(result.scale):
+        expected = mod.loglike(conserve_memory=0)
+    assert_allclose(result.llf, expected, rtol=1e-12)
+    assert_allclose(observed.sum(), expected, rtol=1e-12)
+    assert_allclose(mod.loglike(conserve_memory=memory), expected,
+                    rtol=1e-12)
+
+
+@pytest.mark.parametrize("memory", [0, MEMORY_NO_FORECAST_COV,
+                                   MEMORY_NO_LIKELIHOOD, MEMORY_CONSERVE])
+def test_concentrated_exact_diffuse_kfas(memory):
+    # R 4.6.1, KFAS 1.6.0. The model of the closed form test with the scale
+    # fixed at its estimate 29 / 89 (common scale of obs_cov and state_cov):
+    #
+    #   library(KFAS)
+    #   y <- rbind(c(1, 0), c(0, 1))
+    #   s <- 29 / 89
+    #   mod <- SSModel(y ~ -1 + SSMcustom(
+    #       Z = array(c(1, 0.5), c(2, 1)), T = matrix(0.75), R = matrix(1),
+    #       Q = matrix(0.25 * s), a1 = matrix(0), P1 = matrix(0),
+    #       P1inf = matrix(1)), H = diag(c(1, 1.5) * s))
+    #   format(logLik(mod), digits=15)  # "-3.08527474008954"
+    #
+    # KFAS omits the term -0.5 * log(2 * pi) of a diffuse innovation, which
+    # the log-likelihood of statsmodels includes (one in this model).
+    kfas = -3.08527474008954
+    expected = kfas - 0.5 * np.log(2 * np.pi)
+    mod = KalmanSmoother(2, 1)
+    mod.bind(np.asfortranarray([[1., 0.], [0., 1.]]))
+    mod["design"] = [[1.], [0.5]]
+    mod["obs_cov"] = np.diag([1., 1.5])
+    mod["transition"] = [[0.75]]
+    mod["selection"] = [[1.]]
+    mod["state_cov"] = [[0.25]]
+    mod.initialize_diffuse()
+    mod.filter_concentrated = True
+    assert_allclose(mod.smooth().scale, 29 / 89, rtol=1e-12)
+    assert_allclose(mod.loglike(conserve_memory=memory), expected, rtol=1e-10)
+    assert_allclose(mod.loglikeobs().sum(), expected, rtol=1e-10)
+    assert_allclose(mod.smooth().llf, expected, rtol=1e-10)
+
+
+class BivariateLocalLevel(MLEModel):
+    # Two series that load on one diffuse random walk. The diffuse period has
+    # finite innovations (the second series at t = 0, after the first series
+    # identified the level). The scale is concentrated out, or fixed in the
+    # constructor.
+    def __init__(self, endog, scale=None):
+        super().__init__(endog, k_states=1, k_posdef=1, tolerance=0,
+                         initialization="diffuse")
+        self._scale = 1.0 if scale is None else scale
+        self.ssm["design"] = [[1.], [0.5]]
+        self.ssm["transition"] = [[1.]]
+        self.ssm["selection"] = [[1.]]
+        if scale is None:
+            self.ssm.filter_concentrated = True
+        self.ssm.loglikelihood_burn = 1
+
+    @property
+    def param_names(self):
+        return ["state_cov", "obs_cov_2"]
+
+    @property
+    def start_params(self):
+        return [0.5, 1.5]
+
+    def update(self, params, **kwargs):
+        params = super().update(params, **kwargs)
+        self.ssm["state_cov", 0, 0] = self._scale * params[0]
+        self.ssm["obs_cov"] = self._scale * np.diag([1., params[1]])
+
+
+def _diffuse_endog():
+    rng = np.random.default_rng(20261115)
+    level = np.cumsum(rng.standard_normal(40))
+    endog = np.column_stack([level + rng.standard_normal(40),
+                             0.5 * level + rng.standard_normal(40)])
+    missing = endog.copy()
+    missing[[5, 6, 12], 1] = np.nan
+    missing[20, 0] = np.nan
+    # Leading missing values: the diffuse period has two periods
+    missing[0] = np.nan
+    return endog, missing
+
+
+@pytest.mark.filterwarnings("ignore:Care should be used:"
+                            "statsmodels.tools.sm_exceptions.ModelWarning")
+@pytest.mark.parametrize("missing", [False, True])
+@pytest.mark.parametrize("burn", [0, 1, 3])
+@pytest.mark.parametrize("params", [[0.5, 1.5], [0.2, 0.8]])
+def test_concentrated_exact_diffuse_mlemodel(missing, burn, params):
+    # Concentrated likelihood through MLEModel: loglike, the results llf and
+    # the sum of loglikeobs agree, and equal the non-concentrated likelihood
+    # of the same model with the scale fixed at its estimate.
+    endog = _diffuse_endog()[int(missing)]
+    mod = BivariateLocalLevel(endog)
+    mod.ssm.loglikelihood_burn = burn
+    res = mod.smooth(params)
+    mod_fixed = BivariateLocalLevel(endog, scale=res.scale)
+    mod_fixed.ssm.loglikelihood_burn = burn
+    expected = mod_fixed.loglike(params)
+    assert_allclose(mod.loglike(params), expected, rtol=1e-12)
+    assert_allclose(res.llf, expected, rtol=1e-12)
+    assert_allclose(mod.loglikeobs(params).sum(), expected, rtol=1e-12)
+
+    # The complex step and the finite difference scores differ by the error
+    # of the finite difference only
+    score_cs = mod.score(params, approx_complex_step=True)
+    score_fd = mod.score(params, approx_complex_step=False,
+                         approx_centered=True)
+    assert_allclose(score_cs, score_fd, rtol=1e-6)
+
+
+@pytest.mark.filterwarnings("ignore:Care should be used:"
+                            "statsmodels.tools.sm_exceptions.ModelWarning")
+@pytest.mark.parametrize("burn", [None, 0, 2])
+def test_concentrated_exact_diffuse_sarimax(burn):
+    # SARIMAX(0, 1, 1) with the concentrated scale and exact diffuse
+    # initialization. The default loglikelihood_burn of SARIMAX is 1, which
+    # ends inside the two exact diffuse periods. Compare with the
+    # non-concentrated model with sigma2 fixed at the estimated scale.
+    rng = np.random.default_rng(20261116)
+    endog = np.cumsum(rng.standard_normal(50)) + rng.standard_normal(50)
+    kwargs = {"tolerance": 0}
+    if burn is not None:
+        kwargs["loglikelihood_burn"] = burn
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 1), concentrate_scale=True,
+                          **kwargs)
+    mod.ssm.initialize_diffuse()
+    assert mod.loglikelihood_burn == (1 if burn is None else burn)
+    params = np.array([-0.4])
+    res = mod.smooth(params)
+    mod_fixed = sarimax.SARIMAX(endog, order=(0, 1, 1), **kwargs)
+    mod_fixed.ssm.initialize_diffuse()
+    expected = mod_fixed.loglike(np.r_[params, res.scale])
+    assert_allclose(mod.loglike(params), expected, rtol=1e-12)
+    assert_allclose(res.llf, expected, rtol=1e-12)
+    assert_allclose(mod.loglikeobs(params).sum(), expected, rtol=1e-12)

@@ -1,8 +1,10 @@
+import warnings
+
 import numpy as np
 from numpy import asarray, diag, diag_indices, dot, ones, r_, zeros
 from numpy.linalg import solve
 
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import int_like, string_like
 
 # def denton(indicator, benchmark, freq="aq", **kwargs):
 #    """
@@ -92,12 +94,12 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     Parameters
     ----------
     indicator : array_like
-        A high-frequency indicator series.  It is assumed that there are no
-        pre-sample indicators.  I.e., the first indicators line up with
-        the first benchmark.
+        A high-frequency indicator series, 1-d or a single column.  It is
+        assumed that there are no pre-sample indicators.  I.e., the first
+        indicators line up with the first benchmark.
     benchmark : array_like
-        The low-frequency benchmark.  A 1d or 2d data series in columns.
-        If 2d, then M series are assumed.
+        The low-frequency benchmark, 1-d or a single column. Only one series
+        is benchmarked at a time.
     freq : {"aq", "qm", "other"}, optional
         The frequency to use in the conversion.
 
@@ -105,16 +107,20 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         * "qm" - Benchmarking a quarterly series to monthly.
         * "other" - Custom stride.  A kwarg, k, must be supplied.
     **kwargs
-        Additional keyword arguments. For example:
+        Only ``k`` is used, and only when ``freq="other"``, which requires
+        it: an int, the number of high-frequency observations that sum to
+        one low-frequency observation. Other keyword arguments are ignored.
 
-        * k, an int, the number of high-frequency observations that sum to make
-          an aggregate low-frequency observation. `k` is used with
-          `freq` == "other".
+        .. deprecated:: 0.15.1
+
+           Keyword arguments other than `k` are ignored. Passing them is
+           deprecated, and they will raise a TypeError after statsmodels 0.17
+           is released.
 
     Returns
     -------
     transformed : ndarray
-        The transformed series.
+        The benchmarked series, 1-d with the same length as indicator.
 
     Notes
     -----
@@ -162,6 +168,17 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #        D5 - sum((X[t]/I[t] / X[t-1]/I[t-1] - 1)**2)
 # NOTE: only D4 is the only one implemented, see IMF chapter 6.
 
+    unknown = sorted(set(kwargs) - {"k"})
+    if unknown:
+        names = ", ".join(repr(name) for name in unknown)
+        warnings.warn(
+            f"Unknown keyword arguments are ignored: {names}. This is "
+            "deprecated, and they will raise a TypeError after statsmodels "
+            "0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
     # check arrays and make 2d
     indicator = asarray(indicator)
     if indicator.ndim == 1:
@@ -169,6 +186,11 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     benchmark = asarray(benchmark)
     if benchmark.ndim == 1:
         benchmark = benchmark[:, None]
+    if benchmark.ndim != 2 or benchmark.shape[1] != 1:
+        raise ValueError(
+            "benchmark must be a single series, 1-d or a single column, but "
+            f"has shape {benchmark.shape}"
+        )
 
     # get dimensions
     N = len(indicator)  # total number of high-freq
@@ -183,8 +205,11 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         k = 3
     else:  # freq == "other"
         k = kwargs.get("k")
-        if not k:
+        if k is None:
             raise ValueError('k must be supplied with freq="other"')
+        k = int_like(k, "k")
+        if k < 1:
+            raise ValueError(f"k must be a positive integer, got {k}")
 
     n = k*m  # number of indicator series with a benchmark for back-series
     if n > N:

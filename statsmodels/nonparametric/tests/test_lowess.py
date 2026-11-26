@@ -248,7 +248,8 @@ class TestLowess:
         rs = np.random.RandomState(8437971)
         rfile = Path(rpath).joinpath("test_lowess_simple.csv")
         test_data = pd.read_csv(rfile)
-        y, x = test_data["y"], test_data["x"]
+        # Copies, since NaNs are set in y and x below
+        y, x = test_data["y"].copy(), test_data["x"].copy()
         target = lowess(y, x, is_sorted=True)
 
         # Test specifying exog_predict explicitly

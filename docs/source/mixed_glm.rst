@@ -8,8 +8,9 @@ linear models with random effects in the linear predictors.
 statsmodels currently supports estimation of binomial and Poisson
 GLIMMIX models using two Bayesian methods: the Laplace approximation
 to the posterior, and a variational Bayes approximation to the
-posterior.  Both methods provide point estimates (posterior means) and
-assessments of uncertainty (posterior standard deviation).
+posterior.  Both methods provide point estimates (the posterior mode
+for the Laplace approximation, the posterior mean for variational
+Bayes) and assessments of uncertainty (posterior standard deviation).
 
 The current implementation only supports independent random effects.
 

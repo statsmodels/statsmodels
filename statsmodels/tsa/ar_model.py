@@ -323,7 +323,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             hold_back = self._maxlag
         if hold_back < self._maxlag:
             raise ValueError(
-                "hold_back must be >= lags if lags is an int or"
+                "hold_back must be >= lags if lags is an int or "
                 "max(lags) if lags is array_like."
             )
         return _lags, int(hold_back)
@@ -588,6 +588,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     index = pd.period_range(index[0], freq=freq, periods=end)
                 else:
                     index = pd.date_range(index[0], freq=freq, periods=end)
+            elif isinstance(index, pd.RangeIndex):
+                # Extend with the start and the step of the index
+                stop = index.start + end * index.step
+                index = pd.RangeIndex(index.start, stop, index.step)
             else:
                 index = pd.RangeIndex(end)
         index = index[start - pad : end]
@@ -631,6 +635,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
         """
         reg = []
         hold_back = self._hold_back
+        requested_start = start
+        # Forecasts for the observations between the end of the sample and
+        # start are needed by the lags, so the recursion begins no later than
+        # the first out-of-sample observation
+        start = min(start, self.endog.shape[0])
+        dynamic += requested_start - start
         adj = 0
         if start < hold_back:
             # Adjust start and dynamic
@@ -638,17 +648,19 @@ class AutoReg(tsa_model.TimeSeriesModel):
         start += adj
         # New offset shifts, but must remain non-negative
         dynamic = max(dynamic - adj, 0)
+        # Out-of-sample observations have no true values to use before dynamic
+        dynamic = min(dynamic, max(end + 1 - start, 0))
 
-        if (start - hold_back) <= self.nobs:
-            # _x is missing hold_back observations, which is why
-            # it is shifted by this amount
-            is_loc = slice(start - hold_back, end + 1 - hold_back)
-            x = self._x[is_loc]
-            if exog is not None:
-                x = x.copy()
-                # Replace final columns
-                x[:, -exog.shape[1] :] = exog[start : end + 1]
-            reg.append(x)
+        # _x is missing hold_back observations, which is why
+        # it is shifted by this amount. start <= nobs + hold_back, so the
+        # slice is empty when the prediction starts out of sample.
+        is_loc = slice(start - hold_back, end + 1 - hold_back)
+        x = self._x[is_loc]
+        if exog is not None:
+            x = x.copy()
+            # Replace final columns
+            x[:, -exog.shape[1] :] = exog[start : end + 1]
+        reg.append(x)
         if num_oos > 0:
             reg.append(self._setup_oos_forecast(num_oos, exog_oos))
         _reg = np.vstack(reg)
@@ -668,7 +680,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     val = self.endog[fcast_loc + start]
                 _reg[h, det_col_idx + j] = val
             forecasts[h] = np.squeeze(_reg[h : h + 1] @ params)
-        return self._wrap_prediction(forecasts, start, end + 1 + num_oos, adj)
+        return self._wrap_prediction(
+            forecasts, requested_start + adj, end + 1 + num_oos, adj
+        )
 
     def _static_oos_predict(
         self, params: ArrayLike, num_oos: int, exog_oos: ArrayLike2D
@@ -772,13 +786,17 @@ class AutoReg(tsa_model.TimeSeriesModel):
         else:
             _exog_oos = array_like(exog_oos, "exog_oos", ndim=2, optional=True)
         start = 0 if start is None else start
-        end = self._index[-1] if end is None else end
+        end = self.endog.shape[0] - 1 if end is None else end
         start, end, num_oos, _ = self._get_prediction_index(start, end)
         return params, _exog, _exog_oos, start, end, num_oos
 
     def _parse_dynamic(self, dynamic, start):
         if isinstance(dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)):
             dynamic_loc, _, _ = self._get_index_loc(dynamic)
+            # A key that covers several dates, e.g. "2001-04" for daily data,
+            # gives a slice; dynamic prediction begins at its first date
+            if isinstance(dynamic_loc, slice):
+                dynamic_loc = dynamic_loc.start
             # Adjust since relative to start
             dynamic_loc -= start
         elif dynamic is True:
@@ -815,6 +833,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+            If `start` is after the first out-of-sample observation, the
+            forecasts in between are computed, since the later forecasts
+            depend on them, but they are not returned.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -824,6 +845,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
+               Out-of-sample predictions extend the RangeIndex with its
+               start and step. They were labelled as if it started at 0
+               with a step of 1.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
@@ -832,6 +862,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
+            Values after the end of the sample are never observed, so an
+            offset beyond the end of the sample is the same as an offset at
+            the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -1231,16 +1264,32 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             The maximum number of lags to use in the test. Jointly tests that
             all autocorrelations up to and including lag j are zero for
             j = 1, 2, ..., lags. If None, uses min(10, nobs // 5).
-        model_df : int, optional
-            The model degree of freedom to use when adjusting computing the
-            test statistic to account for parameter estimation. If None, uses
-            the number of AR lags included in the model.
+        model_df : int or {"ar", "regressors"}, optional
+            The model degrees of freedom subtracted from the degrees of
+            freedom of the test to account for parameter estimation. "ar"
+            uses the number of autoregressive lags, the usual correction of
+            the Ljung-Box test. "regressors" uses ``df_model``, the number
+            of estimated parameters, which includes the deterministic terms
+            and any exogenous regressors. If None, uses "regressors" and
+            warns that the default will change to "ar" after statsmodels
+            0.17 is released.
+
+            .. versionchanged:: 0.15.1
+
+               "ar" and "regressors" are accepted. The default will change
+               from "regressors" to "ar"; leaving `model_df` unset issues a
+               FutureWarning. Pass "ar" to use the future default now.
 
         Returns
         -------
         output : DataFrame
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
+
+            .. versionchanged:: 0.15.1
+
+                The test statistics, p-values and degrees of freedom are
+                returned. Since statsmodels 0.14.0 every value was NaN.
 
         See Also
         --------
@@ -1258,8 +1307,27 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         from statsmodels.stats.diagnostic import acorr_ljungbox
 
         lags = int_like(lags, "lags", optional=True)
-        model_df = int_like(model_df, "df_model", optional=True)
-        model_df = self.df_model if model_df is None else model_df
+        if model_df is None:
+            warnings.warn(
+                'The default model_df will change from "regressors" (df_model, '
+                "the number of estimated parameters) to \"ar\" (the number of "
+                "autoregressive lags) after statsmodels 0.17 is released. Pass "
+                'model_df="ar" to use the future default now, or '
+                'model_df="regressors" to keep the current one and silence '
+                "this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            model_df = "regressors"
+        if isinstance(model_df, str):
+            model_df = string_like(
+                model_df, "model_df", options=("ar", "regressors"), lower=False
+            )
+            if model_df == "ar":
+                model_df = len(self._ar_lags) if self._ar_lags else 0
+            else:
+                model_df = self.df_model
+        model_df = int_like(model_df, "model_df")
         nobs_effective = self.resid.shape[0]
         if lags is None:
             lags = min(nobs_effective // 5, 10)
@@ -1276,8 +1344,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf)
             df = df.astype(int)
         test_stats["df"] = df
-        index = pd.RangeIndex(1, lags + 1, name="Lag")
-        return pd.DataFrame(test_stats, columns=cols, index=index)
+        test_stats.columns = cols
+        test_stats.index = pd.RangeIndex(1, lags + 1, name="Lag")
+        return test_stats
 
     def test_normality(self):
         """
@@ -1351,6 +1420,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             A summary instance with panels for serial correlation tests,
             normality tests and heteroskedasticity tests.
 
+            .. versionchanged:: 0.15.1
+
+                The serial correlation panel is shown for the lags with a
+                positive test degree of freedom. Since statsmodels 0.14.0 it
+                was always missing.
+
         See Also
         --------
         test_serial_correlation
@@ -1364,9 +1439,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         spacer = SimpleTable([""])
         smry = Summary()
-        sc = self.test_serial_correlation()
+        # The current default of test_serial_correlation, without its
+        # FutureWarning; use "ar" when that default changes
+        sc = self.test_serial_correlation(model_df="regressors")
         sc = sc.loc[sc.DF > 0]
-        values = [[i + 1] + row for i, row in enumerate(sc.values.tolist())]
+        values = sc.reset_index().values.tolist()
         data_fmts = ("%10d", "%10.3f", "%10.3f", "%10d")
         if sc.shape[0]:
             tab = SimpleTable(
@@ -1425,6 +1502,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+            If `start` is after the first out-of-sample observation, the
+            forecasts in between are computed, since the later forecasts
+            depend on them, but they are not returned.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1434,6 +1514,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
@@ -1442,6 +1528,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
+            Values after the end of the sample are never observed, so an
+            offset beyond the end of the sample is the same as an offset at
+            the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -1462,12 +1551,13 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         mean_var = np.full_like(mean, self.sigma2)
         mean_var[np.isnan(mean)] = np.nan
         start = 0 if start is None else start
-        end = self.model._index[-1] if end is None else end
+        end = self.model.endog.shape[0] - 1 if end is None else end
         _, _, oos, _ = self.model._get_prediction_index(start, end)
         if oos > 0:
             ar_params = self._lag_repr()
             ma = arma2ma(ar_params, np.ones(1), lags=oos)
-            mean_var[-oos:] = self.sigma2 * np.cumsum(ma**2)
+            # start can be after the first out-of-sample observation
+            mean_var[-oos:] = (self.sigma2 * np.cumsum(ma**2))[-mean_var.shape[0] :]
         if isinstance(mean, pd.Series):
             mean_var = pd.Series(mean_var, index=mean.index)
 
@@ -1524,7 +1614,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         start = 0 if start is None else start
-        end = self.model._index[-1] if end is None else end
+        end = self.model.endog.shape[0] - 1 if end is None else end
         _, _, oos, _ = self.model._get_prediction_index(start, end)
 
         ax = fig.add_subplot(111)
@@ -2215,6 +2305,20 @@ class AROrderSelectionResults:
     Results from an AR order selection
 
     Contains the information criteria for all fitted model orders.
+
+    Parameters
+    ----------
+    model : AutoReg
+        The model selected using the chosen information criterion.
+    ics : list of tuple
+        The lags of each model fit, an int or a tuple of int, and its
+        ``InformationCriteria``.
+    trend : {"n", "c", "t", "ct", "ctt"}
+        The trend included in the model selection.
+    seasonal : bool
+        Flag indicating if a seasonal component is included.
+    period : int or None
+        The period of the seasonal component.
     """
 
     def __init__(

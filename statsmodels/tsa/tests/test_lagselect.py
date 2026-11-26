@@ -342,3 +342,33 @@ def test_level_declines():
     x_big = x - level + 1e9
     assert nested_lag_ols(y, x_big, exog, rcond=nobs * EPS) is None
     assert nested_lag_ols(y, x_big, exog, rcond=1e-20) is not None
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_one_dimensional_blocks(container):
+    # A block of shape (nobs,) is a single column
+    rng = np.random.default_rng(11)
+    nobs = 60
+    y = rng.standard_normal(nobs)
+    x = rng.standard_normal((nobs, 3))
+    exog = np.ones((nobs, 1))
+    lags = container(x[:, j] for j in range(3))
+    res = nested_lag_ols(y, lags, exog, rcond=nobs * EPS)
+    ssr, params, tvalues = _ols_loop(y, [x[:, [j]] for j in range(3)], exog)
+    assert_allclose(res.ssr, ssr, rtol=1e-10)
+    assert_allclose(res.params_last, np.squeeze(params), rtol=1e-10)
+    assert_allclose(res.tvalues_last, tvalues, rtol=1e-8)
+    assert_equal(res.df_model, [1, 2, 3, 4])
+
+
+def test_original_columns_not_finite():
+    # The rank check applies to the original columns, which are the centered
+    # ones plus offset / constant times the constant column. With a tiny
+    # constant and a large level they overflow, so the check cannot be done.
+    rng = np.random.default_rng(12)
+    nobs = 50
+    y = rng.standard_normal(nobs) + 1e10
+    x = rng.standard_normal((nobs, 2)) + 1e10
+    exog = np.full((nobs, 1), 1e-300)
+    with np.errstate(over="ignore", invalid="ignore"):
+        assert nested_lag_ols(y, x, exog, rcond=nobs * EPS) is None

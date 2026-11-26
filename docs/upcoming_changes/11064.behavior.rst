@@ -1,0 +1,5 @@
+- ``score`` and ``score_obs`` of state space models with
+  ``method="harvey"`` ignored ``approx_centered=True`` and used forward
+  differences. With ``approx_complex_step=False``, ``approx_centered=True``
+  gives centered differences, as documented, so results of such calls
+  change. :pr:`11064`

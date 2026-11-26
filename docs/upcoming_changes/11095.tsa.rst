@@ -1,0 +1,6 @@
+- ``DynamicFactorMQ`` with ``init_t0=True`` raised an error for data
+  with a ``DatetimeIndex`` or without a date index. With a
+  ``DatetimeIndex`` with a frequency, the prepended period is one
+  frequency before the first date (without a frequency, a
+  ``ValueError`` says so), and data without a date index get an
+  integer index. :pr:`11095`

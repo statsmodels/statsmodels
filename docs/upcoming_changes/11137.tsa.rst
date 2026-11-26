@@ -1,0 +1,6 @@
+- ``ThetaModelResults.summary()`` showed the parameter estimates
+  under the wrong labels: the first in a row labelled "Parameters",
+  the second in the row of the first parameter, without the label of
+  the last. This was a regression in 0.15.0. The estimates are in the
+  rows of their parameters and use four significant digits.
+  :pr:`11137`

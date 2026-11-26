@@ -41,8 +41,8 @@ if __name__ == "__main__":
     df.index.names = ("k", "case", "I1")
     df.columns = quantiles
 
-    for key, row in df.iterrows():
-        crit_vals[key] = [round(val, 7) for val in list(row)]
+    for key, row in zip(df.index, df.to_numpy().tolist(), strict=True):
+        crit_vals[key] = [round(val, 7) for val in row]
 
     def setup_regressors(df, low_pow=3, high_pow=3, cut=70, log=False):
         s = df.stack(**FUTURE_STACK).reset_index()

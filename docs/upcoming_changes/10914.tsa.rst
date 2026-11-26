@@ -1,0 +1,4 @@
+- :class:`~statsmodels.tsa.holtwinters.SimpleExpSmoothing` and
+  :class:`~statsmodels.tsa.holtwinters.Holt` raised a ``TypeError``
+  unless ``initialization_method`` was given. The default is
+  ``"estimated"``, as documented. :pr:`10914`

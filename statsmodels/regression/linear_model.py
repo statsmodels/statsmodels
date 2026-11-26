@@ -40,7 +40,7 @@ import warnings
 
 import numpy as np
 from scipy import optimize, stats
-from scipy.linalg import cholesky, toeplitz
+from scipy.linalg import cho_solve, cholesky, toeplitz
 from scipy.linalg.lapack import get_lapack_funcs
 
 import statsmodels.base.model as base
@@ -50,6 +50,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools._decorators import cache_readonly, cache_writable
+from statsmodels.tools._lstsq import QRSVD, default_rcond, numerical_rank
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     InvalidTestWarning,
@@ -135,6 +136,34 @@ _fit_regularized_doc = r"""
 
         For WLS and GLS, the RSS is calculated using the whitened endog and
         exog data.
+
+        Every element of ``params`` is penalized, including the coefficient
+        of the constant, and the columns of ``exog`` are used as they are. R's
+        ``glmnet`` does not penalize the intercept and standardizes the
+        columns by default (``standardize=TRUE``). For OLS and a vector
+        ``alpha`` the fit has the estimates of ``glmnet``, where ``alpha`` is
+        its ``lambda`` and ``L1_wt`` is its ``alpha``:
+
+        * To leave the constant unpenalized, as ``glmnet`` with
+          ``intercept=TRUE`` and ``standardize=FALSE`` does, give it the
+          penalty weight 0. If the constant is the first of the ``k`` columns
+          of ``exog``, use ``alpha * np.r_[0.0, np.ones(k - 1)]``.
+        * To standardize the columns, as ``standardize=TRUE`` does, let
+          ``sd`` be the standard deviations of the columns other than the
+          constant, with the divisor ``n``. Use the weights
+          ``alpha * np.r_[0.0, sd**2]`` for the ridge penalty (``L1_wt=0``)
+          and ``alpha * np.r_[0.0, sd]`` for the lasso (``L1_wt=1``). For
+          other values of ``L1_wt``, divide the columns of ``exog`` by
+          ``sd``, fit with the weights ``alpha * np.r_[0.0, np.ones(k - 1)]``
+          and divide the estimated coefficients other than the constant by
+          ``sd``.
+
+        The estimates agree with those of ``glmnet`` up to the convergence
+        tolerances of the two algorithms. In R, use the family object
+        ``gaussian()``: the default ``family="gaussian"`` standardizes ``y``
+        and so divides the weight of the L2 penalty,
+        ``(1 - L1_wt) * alpha``, by the standard deviation of ``y`` (with the
+        divisor ``n``).
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
@@ -254,7 +283,7 @@ class RegressionModel(base.LikelihoodModel):
         self.weights: Float64Array | None = None
         self.sigma: Float64Array | None = None
         super().__init__(endog, exog, **kwargs)
-        self._data_attr.extend(["pinv_wexog", "wendog", "wexog", "weights"])
+        self._data_attr.extend(["_pinv_wexog", "wendog", "wexog", "weights"])
         self._check_finite()
 
     def _check_finite(self):
@@ -284,9 +313,40 @@ class RegressionModel(base.LikelihoodModel):
         # set by fit, None until the model has been fit
         self.rank: int | None = None
         self.pinv_wexog: Float64Array | None = None
+        # True after fit(method="chol"): pinv_wexog is computed on first access
+        self._pinv_wexog_lazy = False
         self.normalized_cov_params: Float64Array | None = None
         self.wexog_singular_values: Float64Array | None = None
         self.effects: Float64Array | None = None  # only set by fit(method="qr")
+
+    @property
+    def pinv_wexog(self) -> Float64Array | None:
+        """
+        The p x n Moore-Penrose pseudoinverse of the whitened design matrix.
+
+        It is computed in ``fit`` with ``method="pinv"`` or ``method="qr"``.
+        With ``method="chol"`` it is not needed for the estimation and is
+        only computed, as ``normalized_cov_params @ wexog.T``, when it is
+        first used, for example by a heteroscedasticity robust covariance or
+        by influence measures. It is None before the model has been fit.
+        """
+        state = self.__dict__
+        pinv_wexog = state.get("_pinv_wexog", state.get("pinv_wexog"))
+        if pinv_wexog is None and state.get("_pinv_wexog_lazy", False):
+            wexog = state.get("wexog")
+            normalized_cov_params = state.get("normalized_cov_params")
+            if wexog is not None and normalized_cov_params is not None:
+                pinv_wexog = normalized_cov_params @ wexog.T
+                self._pinv_wexog = pinv_wexog
+        return pinv_wexog
+
+    @pinv_wexog.setter
+    def pinv_wexog(self, value):
+        self._pinv_wexog = value
+
+    @pinv_wexog.deleter
+    def pinv_wexog(self):
+        self._pinv_wexog = None
 
     @property
     def df_model(self):
@@ -336,9 +396,69 @@ class RegressionModel(base.LikelihoodModel):
         """
         raise NotImplementedError("Subclasses must implement.")
 
+    def _fit_normal_equations(self):
+        """
+        Estimate the parameters by solving the normal equations.
+
+        Returns
+        -------
+        ndarray or None
+            The parameter estimates, or None if the whitened regressors are
+            collinear or too close to collinear for the normal equations.
+            In that case nothing is changed and a ``SingularMatrixWarning``
+            is raised. Otherwise ``normalized_cov_params``,
+            ``wexog_singular_values`` and ``rank`` are set from the Cholesky
+            factor of ``wexog.T @ wexog`` and ``pinv_wexog`` is computed from
+            them when it is first accessed.
+
+        Notes
+        -----
+        The regressors are checked column by column in the order of the
+        Cholesky factorization: a column is treated as collinear with the
+        preceding columns if its norm after projecting out the preceding
+        columns is less than ``tol = 1e-7`` times its own norm. This is the
+        criterion and the default tolerance of ``lm`` in R. A column that is
+        a linear combination of other columns always makes one of the pivots
+        of the factorization that small, or the factorization fail.
+        """
+        tol = 1e-7
+        wexog = self.wexog
+        k_vars = wexog.shape[1]
+        # For an array X, X.T @ X uses the symmetric rank-k update of BLAS,
+        # so no n x k temporary array is created.
+        xtx = wexog.T @ wexog
+        xty = wexog.T @ self.wendog
+        try:
+            chol = cholesky(xtx, lower=True, check_finite=False)
+        except np.linalg.LinAlgError:
+            chol = None
+        if chol is None or np.any(np.diag(chol) < tol * np.sqrt(np.diag(xtx))):
+            warnings.warn(
+                "The design matrix is collinear or nearly collinear, so the "
+                "normal equations cannot be solved accurately. Using pinv.",
+                SingularMatrixWarning,
+                stacklevel=3,
+            )
+            return None
+
+        # (X'X)^{-1} from the Cholesky factor
+        normalized_cov_params = cho_solve(
+            (chol, True), np.eye(k_vars), check_finite=False
+        )
+        self.normalized_cov_params = (
+            normalized_cov_params + normalized_cov_params.T
+        ) / 2
+        # X'X = L L', so the singular values of wexog are those of the
+        # Cholesky factor. Only used for the condition number in the summary.
+        self.wexog_singular_values = np.linalg.svd(chol, compute_uv=False)
+        self.rank = k_vars
+        self.pinv_wexog = None
+        self._pinv_wexog_lazy = True
+        return cho_solve((chol, True), xty, check_finite=False)
+
     def fit(
             self,
-            method: Literal["pinv", "qr"] = "pinv",
+            method: Literal["pinv", "qr", "chol"] = "pinv",
             cov_type: Literal[
                 "nonrobust",
                 "fixed scale",
@@ -365,10 +485,19 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : {'pinv', 'qr'}, optional
-            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
-            to solve the least squares problem. "qr" uses the QR
-            factorization.
+        method : {'pinv', 'qr', 'chol'}, optional
+            The method used to solve the least squares problem. "pinv" uses
+            the Moore-Penrose pseudoinverse of the whitened design matrix.
+            "qr" uses the QR factorization of the whitened design matrix
+            followed by the SVD of the R factor. Both return the minimum-norm
+            solution and use the same rank rule. "chol" uses the Cholesky
+            factorization of the cross product matrix of the whitened design
+            matrix to solve the normal equations. See Notes for the
+            differences between the methods.
+
+            .. versionadded:: 0.15.1
+
+               The ``"chol"`` method.
         cov_type : str, optional
             See `regression.linear_model.RegressionResults` for a description
             of the available covariance estimators.
@@ -400,45 +529,146 @@ class RegressionModel(base.LikelihoodModel):
 
         Notes
         -----
-        The fit method uses the pseudoinverse of the design/exogenous variables
-        to solve the least squares minimization.
+        By default, the fit method uses the pseudoinverse of the
+        design/exogenous variables to solve the least squares minimization.
 
+        ``method="pinv"`` computes the pseudoinverse of the n x k whitened
+        design matrix from its singular value decomposition. It supports a
+        rank-deficient design, with a ``SingularMatrixWarning`` that the
+        parameters are not uniquely determined.
+
+        ``method="qr"`` computes the QR factorization of the n x k whitened
+        design matrix followed by the SVD of the k x k R factor. It returns
+        the same minimum-norm solution, covariance and pseudoinverse as
+        "pinv", and also stores the ``effects`` used by ``anova_lm``.
+
+        For "pinv" and "qr", a singular value of the design is treated as
+        zero if it is at most ``max(nobs, k) * eps`` times the largest
+        singular value, where ``eps`` is the machine precision. This is the
+        rule of ``numpy.linalg.matrix_rank``. The rank, ``rank``, is the
+        number of singular values above the cutoff and a
+        ``SingularMatrixWarning`` is issued if it is less than the number of
+        columns of the design.
+
+        ``method="chol"`` forms the k x k cross product matrix of the whitened
+        regressors and solves the normal equations ``X'X b = X'y`` with its
+        Cholesky factor, so the only arrays with the size of the design
+        matrix are the data. It is much faster and needs much less memory
+        than the other two methods when the number of observations is large
+        relative to the number of regressors. The pseudoinverse
+        ``pinv_wexog`` is computed from the Cholesky factor when it is first
+        used, for example by the heteroscedasticity robust covariance
+        estimators or by influence measures. It is an array of the size of
+        the design matrix, so the memory advantage is lost when it is needed.
+        For example, with 1,000,000 observations and 10 regressors (a design
+        matrix of 80 MB) the peak memory of ``fit`` followed by ``bse``,
+        measured with ``tracemalloc``, was about 16 MB with the default
+        covariance, about 180 MB with ``cov_type="HC0"`` and about 240 MB
+        with ``method="pinv"``. The ``"cluster"`` and ``"HAC"`` covariances
+        need other arrays of the size of the design matrix (about 90 MB in
+        this example).
+
+        **Limitations of "chol".** ``method="chol"`` is less accurate than
+        the other two methods and should only be used when speed and memory
+        usage are more important than numerical accuracy. Forming ``X'X``
+        squares the condition number, so "chol" loses about twice as many
+        digits as "pinv" and "qr". The loss depends on the condition number
+        of the design after its columns are scaled to unit norm,
+        ``np.linalg.cond(X / np.linalg.norm(X, axis=0))``, and not on the
+        scales of the columns: the rounding error of the parameters grows
+        roughly like the square of this condition number times ``eps``
+        instead of the condition number times ``eps`` for "pinv" and "qr".
+        In simulated designs with 10,000 observations and 50 regressors, the
+        relative error of the parameter vector against the exact least
+        squares solution was about:
+
+        - 1e-9 for "chol" and 5e-13 for "pinv" and "qr" at a condition
+          number of about 1e4,
+        - 2e-6 to 9e-6 for "chol" and 5e-11 for "pinv" and "qr" at about 1e6,
+        - 0.02 to 0.1 for "chol" and 5e-9 for "pinv" and "qr" at about 1e8.
+
+        The error of a single coefficient can be much larger than the error
+        of the whole vector: at 1e8 the largest relative error of a
+        coefficient from "chol" was between 0.6 and 8.
+
+        The typical silent failure of "chol" is a regressor with a large mean
+        next to the constant, which is nearly collinear with the constant
+        once the columns are scaled. For a regressor with mean 1e6 and
+        standard deviation 1, the condition number of the scaled design is
+        about 2e6, and with 1,000 observations the slope from "chol" had a
+        relative error of up to 3e-3 and the parameters were off by up to
+        0.2 standard errors, without a warning, against at most 1e-10 and
+        4e-9 with "pinv" and "qr". Center such regressors before the fit, or use
+        "pinv" or "qr". Other ill-conditioned designs are nearly collinear
+        regressors, polynomial or interaction terms of uncentered variables
+        and dummy variables with few observations in a category.
+
+        **Collinearity check and fallback.** The regressors are checked
+        column by column: if the norm of a column after projecting out the
+        preceding columns is less than 1e-7 times its norm, the default
+        tolerance of ``lm`` in R, or if the Cholesky factorization fails, the
+        regressors are treated as collinear, a ``SingularMatrixWarning`` is
+        raised and the model is estimated with "pinv" instead, including its
+        rank rule. Otherwise the rank is the number of columns. In contrast
+        to ``lm``, which drops an aliased column and reports an ``NA``
+        coefficient, the fallback keeps all columns and returns the
+        minimum-norm solution of "pinv". This check only prevents the
+        factorization from breaking down on (nearly) collinear regressors;
+        in the simulation it did not trigger below a condition number of
+        about 1e8. It does not trigger for designs that are merely
+        ill-conditioned, such as the regressor with a large mean above, and
+        it is not a guarantee of accuracy.
         """
         # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
         # rank are recomputed from self.wexog on every call (rather than
         # cached based on whether they already exist) so that the model's
         # state after fit() depends only on the current data, never on
         # which `method` a previous fit() call happened to use.
-        method = string_like(method, "method", options=("pinv", "qr"), lower=False)
+        method = string_like(
+            method, "method", options=("pinv", "qr", "chol"), lower=False
+        )
+        # One rank rule for "pinv" and "qr": singular values at or below
+        # rcond * max(singular values) are zero, see tools._lstsq
+        rcond = default_rcond(*self.wexog.shape)
+        self._pinv_wexog_lazy = False
+        if method == "chol":
+            # Solve the normal equations from the Cholesky factor of X'X,
+            # GH#9317. Falls back to "pinv" if the regressors are collinear.
+            beta = self._fit_normal_equations()
+            if beta is None:
+                method = "pinv"
+
         if method == "pinv":
-            pinv_wexog, singular_values = pinv_extended(self.wexog)
+            pinv_wexog, singular_values = pinv_extended(self.wexog, rcond=rcond)
             self.pinv_wexog = pinv_wexog
             self.normalized_cov_params = np.dot(
                 pinv_wexog, np.transpose(pinv_wexog)
             )
             self.wexog_singular_values = singular_values
-            self.rank = np.linalg.matrix_rank(np.diag(singular_values))
-
-            if self.rank < self.wexog.shape[1]:
-                warnings.warn(
-                    "The design matrix is rank-deficient. "
-                    "The model parameters are not uniquely determined.",
-                    SingularMatrixWarning,
-                    stacklevel=2,
-                )
+            self.rank = numerical_rank(singular_values, self.wexog.shape, rcond)
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
-        else:  # method == "qr"
-            Q, R = np.linalg.qr(self.wexog)
-            self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
-            self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-            self.rank = np.linalg.matrix_rank(R)
+        elif method == "qr":
+            # QR of the design, then the SVD of R. The covariance comes from
+            # the SVD and not from inv(R'R), which squares the condition number
+            qr_svd = QRSVD(self.wexog)
+            self.normalized_cov_params = qr_svd.cov_unscaled(rcond)
+            self.wexog_singular_values = qr_svd.singular_values
+            self.rank = qr_svd.rank(rcond)
             # Needed for some covariance estimators, see GH #8157
-            self.pinv_wexog = np.linalg.pinv(self.wexog)
+            self.pinv_wexog = qr_svd.pinv(rcond)
             # used in ANOVA
-            self.effects = effects = np.dot(Q.T, self.wendog)
-            beta = np.linalg.solve(R, effects)
+            self.effects = qr_svd.effects(self.wendog)
+            beta = qr_svd.solve(self.wendog, rcond)
+
+        if self.rank < self.wexog.shape[1]:
+            warnings.warn(
+                "The design matrix is rank-deficient. "
+                "The model parameters are not uniquely determined.",
+                SingularMatrixWarning,
+                stacklevel=2,
+            )
 
         if self._df_model is None:
             self._df_model = float(self.rank - self.k_constant)
@@ -716,35 +946,43 @@ class GLS(RegressionModel):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Compute weights for calculating Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            An array of ones if ``sigma`` is None, otherwise ``1 / sigma``
+            for a scalar or one-dimensional ``sigma``. A scalar ``sigma`` is
+            the value for every observation.
 
         Raises
         ------
         NotImplementedError
-            If `sigma` is a full (non-diagonal) covariance matrix. A 1d
-            per-observation weight vector cannot represent the
-            off-diagonal correlation terms, so no choice of
-            `hessian_factor` can satisfy the reassembly formula above in
-            this case; `fit`, `predict`, and other core results are
-            unaffected; only this diagnostic is unavailable.
+            If `sigma` is two-dimensional. Per-observation weights are
+            only supported for scalar or one-dimensional variances;
+            `fit`, `predict`, and other core results are unaffected.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        For the standard GLS whitening, if ``weights`` is the returned
+        array, the weighted cross-product ``(exog.T * weights).dot(exog)``
+        equals ``wexog.T.dot(wexog)``. For a fixed positive Gaussian
+        error-variance scale ``s``, the Hessian of the log-likelihood with
+        respect to the regression coefficients is the negative of this
+        matrix divided by ``s``. This sign and scaling are not applied
+        here, so the factor is not divided by the scale as the one of
+        ``GLM.hessian_factor`` is. These identities do not in general apply
+        to subclasses that override ``whiten``, such as ``GLSAR``.
 
         """
         if self.sigma is None or self.sigma.shape == ():
@@ -958,25 +1196,33 @@ class WLS(RegressionModel):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Compute the weights for calculating the Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            The observation weights supplied to the model. This is the
+            ``weights`` array of the model itself, not a copy.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        If ``weights`` is the returned array, the weighted cross-product
+        ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+        For a fixed positive Gaussian error-variance scale ``s``, the
+        Hessian of the log-likelihood with respect to the regression
+        coefficients is the negative of this matrix divided by ``s``. This
+        sign and scaling are not applied here, so the factor is not divided
+        by the scale as the one of ``GLM.hessian_factor`` is.
 
         """
         return self.weights
@@ -1088,7 +1334,7 @@ class OLS(WLS):
     def __init__(self, endog, exog=None, missing="none", hasconst=None, **kwargs):
         if "weights" in kwargs:
             msg = (
-                "Weights are not supported in OLS and will be ignored"
+                "Weights are not supported in OLS and will be ignored. "
                 "An exception will be raised in the next version."
             )
             warnings.warn(msg, ValueWarning, stacklevel=2)
@@ -1261,25 +1507,32 @@ class OLS(WLS):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Calculate the weights for the Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            An array of ones, with one entry per observation.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        If ``weights`` is the returned array, the weighted cross-product
+        ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+        For a fixed positive Gaussian error-variance scale ``s``, the
+        Hessian of the log-likelihood with respect to the regression
+        coefficients is the negative of this matrix divided by ``s``. This
+        sign and scaling are not applied here, so the factor is not divided
+        by the scale as the one of ``GLM.hessian_factor`` is.
 
         """
         return np.ones(self.exog.shape[0])
@@ -1627,6 +1880,43 @@ class GLSAR(GLS):
         for i in range(self.order):
             _x[(i + 1) :] = _x[(i + 1) :] - self.rho[i] * x[0 : -(i + 1)]
         return _x[self.order :]
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """
+        Not available, the whitening of GLSAR cannot be written as weights.
+
+        Parameters
+        ----------
+        params : ndarray
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
+
+        Raises
+        ------
+        NotImplementedError
+            Always. The whitened design matrix has ``nobs - order`` rows and
+            each row mixes neighboring observations, so there is no
+            per-observation weight vector for which
+            ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+            `fit`, `predict`, and other core results are unaffected.
+
+        Notes
+        -----
+        ``GLSAR`` inherited ``GLS.hessian_factor``, which returned a vector
+        with one entry for each of the ``nobs`` observations and did not
+        reproduce the cross-product of the whitened design.
+        """
+        raise NotImplementedError(
+            "hessian_factor is not available for GLSAR: the whitened design "
+            "has nobs - order rows and each row mixes neighboring "
+            "observations, so a 1d per-observation weight vector cannot "
+            "represent its cross-product. This affects only diagnostics "
+            "built on hessian_factor; fit(), predict(), and other core "
+            "results are unaffected."
+        )
 
 
 class YuleWalkerResult(NamedTuple):

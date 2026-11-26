@@ -525,7 +525,7 @@ def margeff_cov_params(
     derivative : callable or array_like
         If callable, it returns the marginal effects of the model with
         respect to the exogenous variables evaluated at exog. Expected to be
-        called derivative(params, exog). This will be numerically
+        called derivative(params, exog, method). This will be numerically
         differentiated. Otherwise, it can be the Jacobian of the marginal
         effects with respect to the parameters.
     dummy_ind : array_like
@@ -548,21 +548,31 @@ def margeff_cov_params(
     where V is the parameter variance-covariance.
 
     The outer Jacobians are computed via numerical differentiation if
-    derivative is a function.
+    derivative is a function. For ``at="overall"`` the average of the
+    marginal effects is differentiated, so that the Jacobian has shape
+    (k_effects, k_params) and its size does not depend on the number of
+    observations.
     """
     if callable(derivative):
         from statsmodels.tools.numdiff import approx_fprime_cs
 
         params = params.ravel("F")  # for Multinomial
+        if at == "overall":
+            # Differentiate the average marginal effect directly instead of
+            # averaging the Jacobian of the effect at each observation, which
+            # would have shape (k_effects, nobs, k_params), GH#4158.
+            def func(params, exog, method):
+                return derivative(params, exog, method).mean(0)
+
+        else:
+            func = derivative
         try:
-            jacobian_mat = approx_fprime_cs(params, derivative, args=(exog, method))
+            jacobian_mat = approx_fprime_cs(params, func, args=(exog, method))
         except TypeError:  # norm.cdf does not take complex values
             from statsmodels.tools.numdiff import approx_fprime
 
-            jacobian_mat = approx_fprime(params, derivative, args=(exog, method))
-        if at == "overall":
-            jacobian_mat = np.mean(jacobian_mat, axis=1)
-        else:
+            jacobian_mat = approx_fprime(params, func, args=(exog, method))
+        if at != "overall":
             jacobian_mat = jacobian_mat.squeeze()  # exog was 2d row vector
         if dummy_ind is not None:
             jacobian_mat = _margeff_cov_params_dummy(

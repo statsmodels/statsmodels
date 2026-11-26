@@ -59,6 +59,7 @@ from statsmodels.stats.rates import (
 )
 from statsmodels.tsa.stattools import (
     ADFullerResult,
+    ClarkWestResult,
     DieboldMarianoResult,
     KPSSResult,
     RURResult,
@@ -239,6 +240,10 @@ CASES = [
     )),
     (DieboldMarianoResult, dict(
         statistic=1.0, pvalue=0.1, lags=1, harvey_adj_factor=None,
+    )),
+    (ClarkWestResult, dict(
+        statistic=1.0, pvalue=0.1, lags=1, kernel="bartlett",
+        mspe_restricted=1.0, mspe_unrestricted=0.9, adjustment=0.05,
     )),
     (KPSSResult, dict(
         statistic=0.3, pvalue=0.1, lags=3,

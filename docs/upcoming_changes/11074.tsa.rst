@@ -1,0 +1,6 @@
+- State space models created with ``dtype=np.complex64``
+  (``KalmanFilter``, ``KalmanSmoother`` and ``SimulationSmoother`` with
+  every system matrix in complex64) raised a ``ValueError`` ("Buffer
+  dtype mismatch, expected 'float32_t' but got 'double'") when
+  filtering with a stationary initialization. They are filtered in
+  complex64. :pr:`11074`

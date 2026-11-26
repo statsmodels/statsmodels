@@ -55,7 +55,7 @@ jobs:
     - name: Install pandoc
       uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 #v2
     - name: Install graphviz
-      uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c #v2
+      uses: ts-graphviz/setup-graphviz@6005aebc0168bb7f1c4b55f1e611648e57fb15d0 #v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 #v6
       with:

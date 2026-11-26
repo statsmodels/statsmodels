@@ -89,7 +89,12 @@ class PredictionResults:
             prediction, using the standard error of the mean (``se_mean``).
             If True, return the prediction interval for a new observation,
             using the standard error of the observation (``se_obs``), which
-            also accounts for the residual variance.
+            also accounts for the residual variance. Both intervals use
+            ``df_resid_inference`` degrees of freedom when the results have it,
+            for example ``n_groups - 1`` with ``cov_type="cluster"`` and
+            ``use_t=True``. For the prediction interval this is conservative,
+            because the residual variance part of ``se_obs`` is estimated with
+            more degrees of freedom.
         alpha : float, optional
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
@@ -176,6 +181,18 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
 
+    Notes
+    -----
+    The intervals of the prediction results use the t distribution if
+    ``use_t`` is True and the normal distribution otherwise. With the t
+    distribution, the degrees of freedom are ``df_resid_inference`` if the
+    results have it (``n_groups - 1`` with ``cov_type="cluster"``, for
+    example) and ``df_resid`` otherwise.
+
+    .. versionchanged:: 0.15.1
+
+       The t distribution uses ``df_resid_inference`` instead of ``df_resid``
+       if the results have it.
     """
     # prepare exog and row_labels, based on base Results.predict
     # without exog, predict must use the model's offset and exposure
@@ -235,6 +252,9 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         var_resid /= weights
 
     dist = ["norm", "t"][self.use_t]
+    # same df as conf_int, e.g. n_groups - 1 with cluster robust cov_type;
+    # conservative for the prediction interval of a new observation
+    df = getattr(self, "df_resid_inference", self.df_resid)
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,
-                             df=self.df_resid, dist=dist,
+                             df=df, dist=dist,
                              row_labels=row_labels)

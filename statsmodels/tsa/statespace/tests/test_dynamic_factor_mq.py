@@ -12,12 +12,15 @@ from statsmodels.compat.pandas import (
     assert_series_equal,
 )
 
+import re
+
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels.iolib.summary import Summary
+from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, EstimationWarning
@@ -1618,7 +1621,7 @@ def test_date_indexes(freq_M, freq_Q):
     assert_allclose(mod.endog, mod_base.endog)
 
 
-def gen_dfm_data(k_endog=2, nobs=1000):
+def gen_dfm_data(k_endog=2, nobs=1000, seed=0):
     if k_endog > 10:
         raise ValueError("Only allows for k_endog <= 10")
     ix = pd.period_range(start="1950-01", periods=1, freq="M")
@@ -1630,7 +1633,9 @@ def gen_dfm_data(k_endog=2, nobs=1000):
     idio_ar1 = [0] * k_endog
     idio_var = [1.0, 0.2, 1.5, 0.8, 0.8, 1.4, 0.1, 0.2, 0.4, 0.5][:k_endog]
     params = np.r_[loadings, idio_var, phi]
-    endog = mod.simulate(params, nobs)
+    # simulate with rng=None draws OS entropy, which neither np.random.seed
+    # nor the pytest-randomly seed controls, so the data must be seeded here
+    endog = mod.simulate(params, nobs, rng=np.random.default_rng(seed))
     return endog, loadings, phi, sigma2, idio_ar1, idio_var
 
 
@@ -2976,3 +2981,891 @@ def test_filter_reproduces_model_loglike():
     assert_allclose(filt.llf, mod.loglike(res.params), rtol=1e-8)
     assert_allclose(filt.params, res.params)
     assert np.isfinite(filt.llf)
+
+
+def _ar1_factor_data(nobs=30, k_endog=3, seed=0, use_pandas=True):
+    # One AR(1) factor, with loadings of both signs, plus noise
+    rng = np.random.default_rng(seed)
+    shocks = rng.standard_normal(nobs)
+    factor = np.zeros(nobs)
+    for t in range(1, nobs):
+        factor[t] = 0.6 * factor[t - 1] + shocks[t]
+    loadings = np.linspace(1.0, -0.5, k_endog)
+    endog = factor[:, None] * loadings + 0.5 * rng.standard_normal((nobs, k_endog))
+    if use_pandas:
+        index = pd.period_range(start="2000-01", periods=nobs, freq="M")
+        columns = [f"y{i + 1}" for i in range(k_endog)]
+        endog = pd.DataFrame(endog, index=index, columns=columns)
+    return endog
+
+
+def _trend_data(nobs=20):
+    # Two trending series: one EM step from the start parameters gives a
+    # factor autoregression with a root outside the unit circle
+    trend = np.arange(nobs, dtype=float)
+    noise = np.zeros(nobs)
+    noise[10:12] = [0.4, -0.2]
+    index = pd.period_range(start="2000-01", periods=nobs, freq="M")
+    return pd.DataFrame({"y1": trend + noise, "y2": 0.5 * trend - noise}, index=index)
+
+
+def _quarterly_series(values, name="q"):
+    index = pd.period_range(start="2000Q1", periods=len(values), freq="Q")
+    return pd.Series(values, index=index, name=name)
+
+
+def _decrease_llf_at(monkeypatch, mod, iteration):
+    # Lower the loglikelihood of one EM iteration by 1, as a numerical
+    # problem could; the parameters of the iterations are not changed
+    original_iteration = mod._em_iteration
+    state = {"iteration": 0, "llf": None}
+
+    def em_iteration(params0, init=None, mstep_method=None):
+        res, params1 = original_iteration(params0, init=init, mstep_method=mstep_method)
+        state["iteration"] += 1
+        if state["iteration"] == iteration:
+            res.llf_obs += (state["llf"] - 1.0 - res.llf_obs.sum()) / res.llf_obs.size
+        state["llf"] = res.llf_obs.sum()
+        return res, params1
+
+    monkeypatch.setattr(mod, "_em_iteration", em_iteration)
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_init_t0_prepends_missing_period(use_pandas):
+    # init_t0=True prepends a period in which every value is missing. With
+    # the stationary initialization, alpha_1 = T alpha_0 + R eta_0 has the
+    # same (stationary) distribution as alpha_0, so the loglikelihood at
+    # fixed parameters does not change
+    endog = _ar1_factor_data(use_pandas=use_pandas)
+    kwargs = {"factor_orders": 2, "standardize": False}
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    mod_t0 = dynamic_factor_mq.DynamicFactorMQ(endog, init_t0=True, **kwargs)
+
+    assert_equal(mod_t0.nobs, mod.nobs + 1)
+    assert np.isnan(mod_t0.endog[0]).all()
+    assert_allclose(mod_t0.endog[1:], np.asarray(endog))
+    if use_pandas:
+        assert_equal(mod_t0.data.row_labels[0], pd.Period("1999-12", freq="M"))
+    params = mod.start_params
+    # rtol: the stationary covariance is propagated through one more
+    # (missing) period, which reproduces it only up to rounding
+    assert_allclose(mod_t0.loglike(params), mod.loglike(params), rtol=1e-9)
+
+
+def test_construct_endog_duplicate_names():
+    # A name used in both datasets gets a suffix 1, 2, ... in the order of
+    # the combined columns, and the other names are kept. Each quarterly
+    # value is placed in the last month of its quarter
+    index_M = pd.period_range(start="2000-01", periods=6, freq="M")
+    endog_M = pd.DataFrame(
+        np.arange(12.0).reshape(6, 2), index=index_M, columns=["a", "b"]
+    )
+    index_Q = pd.period_range(start="2000Q1", periods=2, freq="Q")
+    endog_Q = pd.DataFrame(
+        [[10.0, 20.0], [30.0, 40.0]], index=index_Q, columns=["a", "c"]
+    )
+    endog, k_endog_monthly = dynamic_factor_mq.DynamicFactorMQ.construct_endog(
+        endog_M, endog_quarterly=endog_Q
+    )
+
+    assert_equal(k_endog_monthly, 2)
+    assert_equal(endog.columns.tolist(), ["a1", "b", "a2", "c"])
+    assert endog.index.equals(index_M)
+    assert_allclose(endog[["a1", "b"]], endog_M)
+    nan = np.nan
+    assert_allclose(endog["a2"], [nan, nan, 10.0, nan, nan, 30.0])
+    assert_allclose(endog["c"], [nan, nan, 20.0, nan, nan, 40.0])
+
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog_M, endog_quarterly=endog_Q)
+    assert_equal(mod.endog_names, ["a1", "b", "a2", "c"])
+
+
+@pytest.mark.parametrize(
+    "case", ["ndarray", "mixed_frequency", "factor_blocks", "truncate"]
+)
+def test_model_summary_specification(case):
+    # The specification summary, with the layout shown in the examples of
+    # the DynamicFactorMQ docstring
+    endog = _ar1_factor_data(nobs=12, k_endog=2)
+    kwargs = {}
+    truncate = None
+    if case == "ndarray":
+        endog = endog.to_numpy()
+    elif case == "mixed_frequency":
+        kwargs["endog_quarterly"] = _quarterly_series([0.5, -0.3, 0.8, 0.1])
+    elif case == "factor_blocks":
+        kwargs["factors"] = 2
+    else:
+        endog.columns = ["alpha", "bravo"]
+        truncate = 3
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    text = str(mod.summary(truncate_endog_names=truncate))
+
+    if case == "ndarray":
+        # Without dates, the sample is given as 0 - nobs
+        assert re.search(r"Sample:\s+0\s", text)
+        assert re.search(r"\s- 12\s", text)
+        assert re.search(r"# of observed variables:\s+2\s", text)
+    elif case == "mixed_frequency":
+        assert "+ Mixed frequency (M/Q)" in text
+        assert re.search(r"# of monthly variables:\s+2\s", text)
+        assert re.search(r"# of quarterly variables:\s+1\s", text)
+    elif case == "factor_blocks":
+        assert "+ 2 factors in 2 blocks" in text
+        assert re.search(r"# of factor blocks:\s+2\s", text)
+    else:
+        assert re.search(r"\salp\.\.\.\s", text)
+        assert re.search(r"\sbra\.\.\.\s", text)
+        assert "alpha" not in text
+
+
+def test_start_params_factor_loading_only_on_quarterly():
+    # The start values of a factor come from the first principal component
+    # of the monthly variables that load on it or, if none does, of the
+    # quarterly variables that do. "q" loads only on the quarterly
+    # variables: its start values do not depend on the monthly data, and its
+    # AR(1) start values are those of SARIMAX for the first principal
+    # component of the (interpolated) quarterly data
+    rng = np.random.default_rng(1)
+    index_M = pd.period_range(start="2000-01", periods=36, freq="M")
+    endog_M = pd.DataFrame(
+        rng.standard_normal((36, 2)), index=index_M, columns=["m1", "m2"]
+    )
+    index_Q = pd.period_range(start="2000Q1", periods=12, freq="Q")
+    endog_Q = pd.DataFrame(
+        rng.standard_normal((12, 2)), index=index_Q, columns=["q1", "q2"]
+    )
+    factors = {"m1": ["g"], "m2": ["g"], "q1": ["g", "q"], "q2": ["g", "q"]}
+    kwargs = {"endog_quarterly": endog_Q, "factors": factors, "idiosyncratic_ar1": False}
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog_M, **kwargs)
+    start = pd.Series(mod.start_params, index=mod.param_names)
+    names = ["L1.q->q", "fb(1).cov.chol[1,1]"]
+
+    endog_M2 = endog_M * 2 + rng.standard_normal((36, 2))
+    mod2 = dynamic_factor_mq.DynamicFactorMQ(endog_M2, **kwargs)
+    start2 = pd.Series(mod2.start_params, index=mod2.param_names)
+    assert_allclose(start2[names], start[names], rtol=1e-12)
+
+    endog = pd.DataFrame(mod.endog).interpolate().bfill().to_numpy()
+    factor = PCA(endog[:, 2:], ncomp=1, method="eig", normalize=False).factors
+    desired = sarimax.SARIMAX(factor, order=(1, 0, 0)).start_params
+    assert_allclose(start[names], desired, rtol=1e-10)
+
+
+def test_start_params_nonstationary_factor_var():
+    # If the VAR estimated from the start values of a block of factors is
+    # not stationary, the AR start values are zeros and the start value of
+    # the factor covariance is diagonal, with the standard deviations of the
+    # factors (here two global factors: the first principal component of
+    # the data and then that of the residuals of the first step)
+    trend = np.arange(20, dtype=float)
+    index = pd.period_range(start="2000-01", periods=20, freq="M")
+    endog = pd.DataFrame(
+        {"y1": trend, "y2": trend**2 / 10, "y3": np.sqrt(trend) * 3}, index=index
+    )
+    endog.iloc[10:12] += np.array([[0.4, -0.2, 0.1], [-0.3, 0.2, 0.0]])
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_multiplicities=2, idiosyncratic_ar1=False
+    )
+    msg = "Non-stationary starting factor autoregressive parameters found"
+    with pytest.warns(EstimationWarning, match=msg):
+        start = pd.Series(mod.start_params, index=mod.param_names)
+
+    pca1 = PCA(mod.endog, ncomp=1, method="eig", normalize=False)
+    pca2 = PCA(mod.endog - pca1.projection, ncomp=1, method="eig", normalize=False)
+    ar_names = ["L1.0.1->0.1", "L1.0.2->0.1", "L1.0.1->0.2", "L1.0.2->0.2"]
+    # The AR start values are set to exactly zero
+    assert_allclose(start[ar_names], 0)
+    cov_names = ["fb(0).cov.chol[1,1]", "fb(0).cov.chol[2,1]", "fb(0).cov.chol[2,2]"]
+    desired = [pca1.factors.std(), 0, pca2.factors.std()]
+    assert_allclose(start[cov_names], desired)
+
+
+def test_loading_constraints():
+    # The restrictions 2 A - B = 0, 3 A - C = 0, 2 A - D = 0 and A - E = 0 on
+    # the loadings [A, B, C, D, E] of a quarterly variable, in the matrix
+    # form given in the docstring for a variable that loads on two factors
+    endog_M = _ar1_factor_data(nobs=12, k_endog=2)
+    endog_Q = _quarterly_series([0.5, -0.3, 0.8, 0.1])
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog_M, endog_quarterly=endog_Q, factors=2)
+
+    R, q = mod.loading_constraints(2)
+    desired = np.array(
+        [
+            [2, 0, -1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 2, 0, -1, 0, 0, 0, 0, 0, 0],
+            [3, 0, 0, 0, -1, 0, 0, 0, 0, 0],
+            [0, 3, 0, 0, 0, -1, 0, 0, 0, 0],
+            [2, 0, 0, 0, 0, 0, -1, 0, 0, 0],
+            [0, 2, 0, 0, 0, 0, 0, -1, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, -1, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, -1],
+        ],
+        dtype=float,
+    )
+    assert_allclose(R, desired)
+    assert_allclose(q, np.zeros(8))
+
+    with pytest.raises(ValueError, match="No constraints for monthly variables"):
+        mod.loading_constraints(0)
+
+
+@pytest.mark.parametrize(
+    "case", ["low_memory", "fixed_params", "nonmissing_with_missing"]
+)
+def test_fit_em_invalid_options(case):
+    endog = _ar1_factor_data(nobs=12)
+    if case == "nonmissing_with_missing":
+        endog.iloc[3, 0] = np.nan
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, idiosyncratic_ar1=False)
+
+    if case == "low_memory":
+        with pytest.raises(ValueError, match="low_memory option"):
+            mod.fit_em(low_memory=True)
+        # fit with method="em" passes low_memory on
+        with pytest.raises(ValueError, match="low_memory option"):
+            mod.fit(low_memory=True)
+    elif case == "fixed_params":
+        with mod.fix_params({"L1.0->0": 0.5}):
+            msg = "holding some parameters fixed"
+            with pytest.raises(NotImplementedError, match=msg):
+                mod.fit_em()
+    else:
+        with pytest.raises(ValueError, match='mstep_method="nonmissing"'):
+            mod.fit_em(maxiter=1, mstep_method="nonmissing")
+
+
+def test_fit_em_untransformed_start_params():
+    # With transformed=False the start parameters are transformed first, so
+    # the EM iterations are those from the transformed parameters
+    endog = _ar1_factor_data()
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog)
+    params = mod.start_params
+    unconstrained = mod.untransform_params(params)
+    transformed = mod.transform_params(unconstrained)
+    assert_allclose(transformed, params)
+
+    # The EM iterations start from exactly the transformed parameters. From
+    # parameters that differ by rounding (e.g. `params`), the second iteration
+    # can differ by 1e-3 since the forecast error covariance of the first
+    # period is singular with the EM initialization of this model.
+    msg = "EM reached maximum number of iterations"
+    with pytest.warns(ConvergenceWarning, match=msg):
+        desired = mod.fit_em(transformed, maxiter=2, return_params=True)
+    with pytest.warns(ConvergenceWarning, match=msg):
+        actual = mod.fit_em(
+            unconstrained, transformed=False, maxiter=2, return_params=True
+        )
+    assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("mstep_method", ["nonmissing", "missing"])
+@pytest.mark.parametrize("idiosyncratic_ar1", [False, True])
+def test_fit_em_one_iteration_closed_form(idiosyncratic_ar1, mstep_method):
+    # One EM iteration from fixed parameters (maxiter=1, return_params=True)
+    # against the maximization step written out by hand (Banbura and
+    # Modugno, 2014, section 2) from the smoothed moments of the same model
+    # written as a DynamicFactor (one AR(1) factor, monthly data only). The
+    # data have no missing values, so both M steps must give this result.
+    endog = _ar1_factor_data(use_pandas=False)
+    nobs, k_endog = endog.shape
+    loadings = np.array([0.9, 0.3, -0.5])
+    phi = 0.5
+    idio_ar1 = np.array([0.3, -0.2, 0.1])
+    idio_var = np.array([0.4, 0.3, 0.5])
+
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, idiosyncratic_ar1=idiosyncratic_ar1, standardize=False
+    )
+    mod_df = dynamic_factor.DynamicFactor(
+        endog, k_factors=1, factor_order=1, error_order=int(idiosyncratic_ar1)
+    )
+    if idiosyncratic_ar1:
+        params = np.r_[loadings, phi, 1.0, idio_ar1, idio_var]
+        params_df = np.r_[loadings, idio_var, phi, idio_ar1]
+    else:
+        params = np.r_[loadings, phi, 1.0, idio_var]
+        params_df = np.r_[loadings, idio_var, phi]
+    res_df = mod_df.smooth(params_df)
+    assert_allclose(mod.loglike(params), res_df.llf)
+
+    # E[a_t a_t'] and E[a_t a_{t-1}'] (the autocovariance at t - 1 is
+    # Cov(a_t, a_{t-1})); the factor is state 0
+    a = res_df.smoothed_state
+    Eaa = res_df.smoothed_state_cov + a[:, None, :] * a[None, :, :]
+    Eaa1 = res_df.smoothed_state_autocov[..., :-1] + a[:, None, 1:] * a[None, :, :-1]
+    sum_ff = Eaa[0, 0].sum()
+    phi1 = Eaa1[0, 0].sum() / Eaa[0, 0, :-1].sum()
+    var1 = (Eaa[0, 0, 1:].sum() - phi1 * Eaa1[0, 0].sum()) / (nobs - 1)
+    if idiosyncratic_ar1:
+        # The idiosyncratic terms are states 1, ..., k_endog
+        e = np.arange(1, k_endog + 1)
+        loadings1 = (endog.T @ a[0] - Eaa[e, 0].sum(axis=1)) / sum_ff
+        idio_ar1_1 = Eaa1[e, e].sum(axis=1) / Eaa[e, e, :-1].sum(axis=1)
+        idio_var1 = (
+            Eaa[e, e, 1:].sum(axis=1) - idio_ar1_1 * Eaa1[e, e].sum(axis=1)
+        ) / (nobs - 1)
+        desired = np.r_[loadings1, phi1, var1**0.5, idio_ar1_1, idio_var1]
+    else:
+        loadings1 = endog.T @ a[0] / sum_ff
+        # Mean of E[(y_t - loading * f_t)^2] with the new loadings
+        idio_var1 = (
+            (endog**2).sum(axis=0) - 2 * loadings1 * (endog.T @ a[0])
+            + loadings1**2 * sum_ff
+        ) / nobs
+        desired = np.r_[loadings1, phi1, var1**0.5, idio_var1]
+
+    msg = "EM reached maximum number of iterations"
+    with pytest.warns(ConvergenceWarning, match=msg):
+        actual = mod.fit_em(
+            params, maxiter=1, mstep_method=mstep_method, return_params=True
+        )
+    assert_allclose(actual, desired, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "factor_block",
+        "factor_block_mixed_frequency",
+        "idiosyncratic_monthly",
+        "idiosyncratic_quarterly",
+    ],
+)
+def test_fit_em_nonstationary_restart(case):
+    # Without EM initialization, the states whose transition is not
+    # stationary after an EM step are switched to a diffuse initialization
+    # and the EM algorithm restarts. The result is that of a fit with this
+    # initialization from the start, and the model keeps its initialization
+    rng = np.random.default_rng(3)
+    endog = _trend_data()
+    kwargs = {"standardize": False}
+    if case == "factor_block":
+        kwargs["idiosyncratic_ar1"] = False
+        switched = "factor block: ('0',)"
+    elif case == "factor_block_mixed_frequency":
+        kwargs["endog_quarterly"] = _quarterly_series(rng.standard_normal(6))
+        switched = "factor block: ('0',)"
+    elif case == "idiosyncratic_monthly":
+        # A common factor in y1 and y2, and a trend only in y3
+        factor = rng.standard_normal(20)
+        noise = 0.1 * rng.standard_normal((20, 2))
+        endog = pd.DataFrame(
+            {"y1": factor + noise[:, 0], "y2": factor + noise[:, 1], "y3": endog["y1"]},
+            index=endog.index,
+        )
+        switched = "idiosyncratic AR(1) for monthly variable: y3"
+    else:
+        endog = pd.DataFrame(
+            rng.standard_normal((20, 2)), index=endog.index, columns=["m1", "m2"]
+        )
+        kwargs["endog_quarterly"] = _quarterly_series(np.arange(6.0) ** 2)
+        switched = "idiosyncratic AR(1) for the block of quarterly variables"
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    start_params = mod.start_params
+
+    msg = re.escape(repr([switched])) + ", and fitting was restarted"
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(EstimationWarning, match=msg):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res = mod.fit(maxiter=2, em_initialization=False)
+
+    # The same steps by hand: one EM step with the stationary
+    # initialization, then a fit from the start parameters with the diffuse
+    # initialization for the states that were switched. (The first step
+    # matters only because the smoother does not compute Cov(a_{t+1}, a_t)
+    # in diffuse periods but keeps the value from its previous run.)
+    mod_diffuse = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        mod_diffuse.fit_em(start_params, maxiter=1, return_params=True)
+    names = mod_diffuse.state_names
+    if switched.startswith("factor block"):
+        index = (0, sum("eps_" not in name for name in names))
+    elif case == "idiosyncratic_monthly":
+        index = names.index("eps_M.y3")
+    else:
+        start = names.index("eps_Q.q")
+        index = (start, start + 5)
+    mod_diffuse.ssm.initialization.set(index, "diffuse")
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        res_diffuse = mod_diffuse.fit(
+            start_params, maxiter=2, em_initialization=False
+        )
+
+    assert_allclose(res.params, res_diffuse.params, rtol=1e-10)
+    assert_allclose(res.llf, res_diffuse.llf, rtol=1e-10)
+    mod_new = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    assert_allclose(mod.loglike(start_params), mod_new.loglike(start_params))
+
+
+@pytest.mark.parametrize("action", ["warn", "ignore"])
+def test_fit_em_llf_decrease_continues(monkeypatch, action):
+    # With "warn" or "ignore", a decrease of the loglikelihood does not stop
+    # the EM iterations: the lower value is kept and the iterations, which
+    # do not depend on it, continue to maxiter
+    mod = _get_small_em_model()
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        res_base = mod.fit_em(maxiter=4, llf_decrease_action="ignore")
+
+    _decrease_llf_at(monkeypatch, mod, 2)
+    msg = (
+        "Log-likelihood decreased at EM iteration 2, which can indicate"
+        " numerical issues"
+    )
+    if action == "warn":
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            with pytest.warns(EstimationWarning, match=msg):
+                res = mod.fit_em(maxiter=4, llf_decrease_action=action)
+    else:
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res = mod.fit_em(maxiter=4, llf_decrease_action=action)
+
+    llf = res.mle_retvals.llf
+    assert_equal(res.mle_retvals.iter, 4)
+    assert_allclose(llf[1], llf[0] - 1.0)
+    assert_allclose(res.params, res_base.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize("case", ["converged", "maxiter", "terminated"])
+def test_fit_em_disp(monkeypatch, capsys, case):
+    # The progress printed with disp: the first iteration, every disp-th
+    # iteration and the final state, with the loglikelihood values that are
+    # also stored in mle_retvals
+    mod = _get_small_em_model()
+    msg_maxiter = "EM reached maximum number of iterations"
+    if case == "converged":
+        res = mod.fit_em(disp=1000, tolerance=1e-3)
+    elif case == "maxiter":
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res = mod.fit_em(disp=2, maxiter=4)
+    else:
+        _decrease_llf_at(monkeypatch, mod, 2)
+        msg = "Reverting to the results from EM iteration 1"
+        with pytest.warns(EstimationWarning, match=msg):
+            res = mod.fit_em(disp=True, maxiter=4)
+    lines = capsys.readouterr().out.splitlines()
+
+    # The last loglikelihood in mle_retvals is that of the returned results
+    llf = res.mle_retvals.llf[:-1]
+    n_iter = res.mle_retvals.iter
+
+    def criterion(k):
+        # Convergence criterion after iteration k (k >= 2)
+        a, b = llf[k - 1], llf[k - 2]
+        return 2 * abs(a - b) / (abs(a) + abs(b))
+
+    desired = [f"EM start iterations, llf={llf[0]:.5g}"]
+    if case == "converged":
+        desired.append(
+            f"EM converged at iteration {n_iter}, llf={llf[-1]:.5g},"
+            f" convergence criterion={criterion(n_iter):.5g} < tolerance=0.001"
+        )
+    elif case == "maxiter":
+        desired += [
+            (
+                f"EM iteration {k}, llf={llf[k - 1]:.5g},"
+                f" convergence criterion={criterion(k):.5g}"
+            )
+            for k in (2, 4)
+        ]
+        desired.append(
+            "EM reached maximum number of iterations (4), without achieving"
+            f" convergence: llf={llf[-1]:.5g},"
+            f" convergence criterion={criterion(4):.5g}"
+            " (while specified tolerance was 1e-06)"
+        )
+    else:
+        assert_equal(n_iter, 1)
+        desired.append(
+            f"EM terminated at iteration 1, llf={llf[0]:.5g},"
+            " convergence criterion=inf (while specified tolerance was 1e-06)"
+        )
+    assert_equal(lines, desired)
+
+
+def test_fit_em_full_output_and_summary():
+    # Without full_output, mle_retvals and mle_settings are None and the
+    # summary does not report the number of EM iterations; the estimates are
+    # the same
+    mod = _get_small_em_model()
+    msg = "EM reached maximum number of iterations"
+    with pytest.warns(ConvergenceWarning, match=msg):
+        res = mod.fit_em(maxiter=3)
+    with pytest.warns(ConvergenceWarning, match=msg):
+        res_short = mod.fit_em(maxiter=3, full_output=False)
+
+    assert res_short.mle_retvals is None
+    assert res_short.mle_settings is None
+    assert_allclose(res_short.params, res.params, rtol=1e-12)
+    assert_allclose(res_short.llf, res.llf, rtol=1e-12)
+    assert_equal(res.mle_retvals.iter, 3)
+    assert re.search(r"EM Iterations\s+3\s", str(res.summary()))
+    assert "EM Iterations" not in str(res_short.summary())
+
+
+def _two_block_results():
+    endog = _ar1_factor_data()
+    factors = {"y1": ["g", "b"], "y2": ["g", "b"], "y3": ["g"]}
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=factors, idiosyncratic_ar1=False
+    )
+    return endog, factors, mod.smooth(mod.start_params)
+
+
+def test_coefficients_of_determination_property():
+    # With one factor and a constant, R-squared is the squared correlation
+    # of the variable and the (smoothed) factor; NaN if the variable does not
+    # load on the factor
+    endog, factors, res = _two_block_results()
+    actual = res.coefficients_of_determination
+
+    smoothed = res.factors.smoothed
+    desired = np.full((3, 2), np.nan)
+    for i, endog_name in enumerate(endog.columns):
+        for j, factor_name in enumerate(["g", "b"]):
+            if factor_name in factors[endog_name]:
+                corr = np.corrcoef(endog[endog_name], smoothed[factor_name])
+                desired[i, j] = corr[0, 1] ** 2
+    assert_equal(actual.index.tolist(), endog.columns.tolist())
+    assert_equal(actual.columns.tolist(), ["g", "b"])
+    assert_allclose(actual, desired)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("endog_labels", [True, False])
+@pytest.mark.parametrize("method", ["individual", "joint"])
+def test_plot_coefficients_of_determination_labels(close_figures, method, endog_labels):
+    # One panel per factor ("individual") or one panel ("joint"), with a bar
+    # for the R-squared of each variable; only the last panel has the names
+    # of the variables, and only with endog_labels=True
+    endog, _, res = _two_block_results()
+    fig = res.plot_coefficients_of_determination(
+        method=method, endog_labels=endog_labels
+    )
+    rsquared = res.get_coefficients_of_determination(method=method)
+    if method == "joint":
+        rsquared = rsquared.to_frame()
+
+    assert_equal(len(fig.axes), rsquared.shape[1])
+    for ax, (_, values) in zip(fig.axes, rsquared.items(), strict=True):
+        # A missing value (a factor that does not load) is an empty bar
+        heights = [patch.get_height() for patch in ax.patches]
+        assert_allclose(heights, values.fillna(0))
+    for ax in fig.axes[:-1]:
+        assert all(label.get_text() == "" for label in ax.get_xticklabels())
+    labels = [label.get_text() for label in fig.axes[-1].get_xticklabels()]
+    if endog_labels:
+        assert_equal(labels, endog.columns.tolist())
+    else:
+        assert all(label == "" for label in labels)
+
+
+@pytest.mark.parametrize("method", ["filter", "smooth"])
+def test_results_factors_filtered_and_smoothed(method):
+    # The factor estimates against those of the same model written as a
+    # DynamicFactor; without smoothing, the smoothed estimates are None
+    endog = _ar1_factor_data()
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, idiosyncratic_ar1=False, standardize=False
+    )
+    mod_df = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    loadings = [0.9, 0.3, -0.5]
+    idio_var = [0.4, 0.3, 0.5]
+    phi = 0.5
+    res = getattr(mod, method)(np.r_[loadings, phi, 1.0, idio_var])
+    res_df = getattr(mod_df, method)(np.r_[loadings, idio_var, phi])
+
+    factors = res.factors
+    assert_allclose(factors.filtered["0"], res_df.filtered_state[0])
+    assert_allclose(
+        factors.filtered_cov.to_numpy().ravel(), res_df.filtered_state_cov[0, 0]
+    )
+    if method == "filter":
+        assert factors.smoothed is None
+        assert factors.smoothed_cov is None
+    else:
+        assert_allclose(factors.smoothed["0"], res_df.smoothed_state[0])
+        assert_allclose(
+            factors.smoothed_cov.to_numpy().ravel(), res_df.smoothed_state_cov[0, 0]
+        )
+
+
+def test_news_common_states():
+    # state_index="common" computes the news from the factor states (here
+    # the factor and its lag) only, without the idiosyncratic AR(1) states
+    endog = _ar1_factor_data()
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog.iloc[:-1], factor_orders=2)
+    params = mod.start_params
+    res = mod.smooth(params)
+    res_new = mod.clone(endog, retain_standardization=True).smooth(params)
+    common = [i for i, name in enumerate(mod.state_names) if "eps_" not in name]
+    assert_equal(common, [0, 1])
+
+    kwargs = {"impact_date": endog.index[-1], "comparison_type": "previous"}
+    news = res_new.news(res, state_index="common", **kwargs)
+    desired = res_new.news(res, state_index=common, **kwargs)
+    news_all = res_new.news(res, **kwargs)
+    assert_allclose(news.update_impacts, desired.update_impacts)
+    assert_allclose(news.weights, desired.weights)
+    # The idiosyncratic states do matter for these impacts
+    assert not np.allclose(news.update_impacts, news_all.update_impacts)
+
+
+@pytest.mark.parametrize(
+    "standardize, original_scale", [(True, False), (False, True)]
+)
+def test_smoothed_decomposition_model_scale(standardize, original_scale):
+    # In the scale of the model's data (the standardized data unless
+    # standardize=False), the contributions add up to the smoothed signal
+    endog = _ar1_factor_data(nobs=12, k_endog=2)
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, idiosyncratic_ar1=False, standardize=standardize
+    )
+    res = mod.smooth(mod.start_params)
+    contributions = res.get_smoothed_decomposition(
+        decomposition_of="smoothed_signal", original_scale=original_scale
+    )
+    total = sum(contribution.sum(axis=1) for contribution in contributions)
+    total = total.unstack(level="variable_to")[mod.endog_names]
+
+    desired = res.get_prediction(
+        information_set="smoothed", signal_only=True, original_scale=False
+    ).predicted_mean
+    assert_allclose(total, desired)
+
+
+@pytest.mark.parametrize(
+    "case", ["factor_multiplicity", "params_as_list", "title"]
+)
+def test_results_summary_options(case):
+    endog = _ar1_factor_data(nobs=12)
+    if case == "factor_multiplicity":
+        mod = dynamic_factor_mq.DynamicFactorMQ(
+            endog, factor_multiplicities=2, idiosyncratic_ar1=False
+        )
+        params = pd.Series(mod.start_params, index=mod.param_names)
+        chol = ["fb(0).cov.chol[1,1]", "fb(0).cov.chol[2,1]", "fb(0).cov.chol[2,2]"]
+        params[chol] = [1.0, 0.5, 2.0]
+    else:
+        mod = dynamic_factor_mq.DynamicFactorMQ(endog, idiosyncratic_ar1=False)
+        params = mod.start_params
+    res = mod.smooth(params)
+
+    if case == "factor_multiplicity":
+        # The factor error covariance L L' = [[1, 0.5], [0.5, 4.25]] of the
+        # block of two factors
+        text = str(res.summary())
+        assert re.search(r"error covariance\s+0\.1\s+0\.2\s", text)
+        assert re.search(r"\s0\.1\s+\S+\s+\S+\s+0\.1\s+1\.00\s+0\.50\s", text)
+        assert re.search(r"\s0\.2\s+\S+\s+\S+\s+0\.2\s+0\.50\s+4\.25\s", text)
+    elif case == "params_as_list":
+        text = str(res.summary(display_params_as_list=True))
+        assert "Observation equation:" not in text
+        for name in mod.param_names:
+            assert name in text
+        assert "Observation equation:" in str(res.summary())
+    else:
+        text = str(res.summary(title="A title", model_name="A model name"))
+        assert "A title" in text
+        assert re.search(r"Model:\s+A model name\s", text)
+        assert "Dynamic Factor Results" not in text
+
+
+def test_filter_low_memory():
+    # filter(low_memory=True) conserves memory as MLEModel.filter does: the
+    # filter output is kept only for the last periods and the loglikelihood
+    # of each period is not stored, while the loglikelihood and the
+    # forecasts are those of the full filter
+    endog = _ar1_factor_data(nobs=12)
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, idiosyncratic_ar1=False)
+    params = mod.start_params
+    res = mod.filter(params, low_memory=True)
+    # MLEModel.filter
+    desired = super(dynamic_factor_mq.DynamicFactorMQ, mod).filter(
+        params, low_memory=True
+    )
+    res_full = mod.filter(params)
+
+    conserve_memory = res.filter_results.conserve_memory
+    assert_equal(conserve_memory, desired.filter_results.conserve_memory)
+    assert conserve_memory != res_full.filter_results.conserve_memory
+    assert res.filter_results.memory_no_filtered
+    assert res.filter_results.memory_no_likelihood
+    filtered_state = res.filter_results.filtered_state
+    assert_equal(filtered_state.shape, desired.filter_results.filtered_state.shape)
+    assert filtered_state.shape[1] < mod.nobs
+    assert_allclose(filtered_state, desired.filter_results.filtered_state)
+    assert res.llf_obs is None
+    assert_equal(res_full.filter_results.filtered_state.shape[1], mod.nobs)
+    assert_allclose(res.llf, res_full.llf)
+    assert_allclose(res.forecast(2), res_full.forecast(2))
+
+
+@pytest.mark.parametrize("case", ["ndarray", "period", "datetime", "range", "labels"])
+def test_init_t0_standardize(case):
+    # With init_t0=True and standardize=True, the data are standardized with
+    # their own statistics (the standard deviation with ddof=1),
+    # not with those of the data with the prepended missing period, so the
+    # model is the model without init_t0 of the data with an explicit missing
+    # first period, standardized with these statistics. With a date index,
+    # the prepended period is the one before the first date; otherwise the
+    # data get an integer index
+    endog = _ar1_factor_data(nobs=12)
+    values = endog.to_numpy()
+    values_t0 = np.r_[np.full((1, 3), np.nan), values]
+    if case == "ndarray":
+        data, data_t0 = values, values_t0
+        standardize = (values.mean(axis=0), values.std(axis=0, ddof=1))
+    else:
+        index_t0 = pd.RangeIndex(13)
+        if case == "period":
+            index = endog.index
+            index_t0 = pd.period_range(start="1999-12", periods=13, freq="M")
+        elif case == "datetime":
+            index = pd.date_range(start="2000-01-31", periods=12, freq=MONTH_END)
+            index_t0 = pd.date_range(start="1999-12-31", periods=13, freq=MONTH_END)
+        elif case == "range":
+            index = pd.RangeIndex(12)
+        else:
+            index = pd.Index([f"t{i}" for i in range(12)])
+        data = pd.DataFrame(values, index=index, columns=endog.columns)
+        data_t0 = pd.DataFrame(values_t0, index=index_t0, columns=endog.columns)
+        standardize = (data.mean(), data.std())
+    mod = dynamic_factor_mq.DynamicFactorMQ(data, init_t0=True)
+    desired = dynamic_factor_mq.DynamicFactorMQ(data_t0, standardize=standardize)
+
+    assert_equal(mod.nobs, 13)
+    assert np.isnan(mod.endog[0]).all()
+    assert not np.isnan(mod.endog[1:]).any()
+    assert_allclose(mod.endog, desired.endog, rtol=1e-12)
+    assert_allclose(mod.data.orig_endog, values_t0, rtol=1e-12)
+    if case != "ndarray":
+        assert mod.data.row_labels.equals(index_t0)
+    params = desired.start_params
+    assert_allclose(mod.loglike(params), desired.loglike(params), rtol=1e-12)
+
+
+def test_init_t0_datetime_index_without_freq():
+    endog = _ar1_factor_data(nobs=12)
+    dates = pd.date_range(start="2000-01-31", periods=13, freq=MONTH_END)
+    endog.index = pd.DatetimeIndex(dates.delete(5))
+    with pytest.raises(ValueError, match="requires a date index with a frequency"):
+        dynamic_factor_mq.DynamicFactorMQ(endog, init_t0=True)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_endog_array_like(container):
+    # A 2-D list or tuple of the data gives the model of the ndarray, and
+    # construct_endog returns it as an ndarray
+    endog = _ar1_factor_data(nobs=12, use_pandas=False)
+    data = container(container(row) for row in endog)
+    mod = dynamic_factor_mq.DynamicFactorMQ(data)
+    desired = dynamic_factor_mq.DynamicFactorMQ(endog)
+    assert_allclose(mod.endog, desired.endog, rtol=1e-12)
+    assert_equal(mod.endog_names, ["y1", "y2", "y3"])
+    params = desired.start_params
+    assert_allclose(mod.loglike(params), desired.loglike(params), rtol=1e-12)
+
+    construct_endog = dynamic_factor_mq.DynamicFactorMQ.construct_endog
+    out, k_endog_monthly = construct_endog(data, None)
+    assert isinstance(out, np.ndarray)
+    assert_allclose(out, endog)
+    assert_equal(k_endog_monthly, 3)
+    out, k_endog_monthly = construct_endog(container(endog[:, 0]), None)
+    assert isinstance(out, np.ndarray)
+    assert_allclose(out, endog[:, 0])
+    assert_equal(k_endog_monthly, 1)
+
+
+@pytest.mark.parametrize("method", ["transform_params", "untransform_params"])
+@pytest.mark.parametrize("case", ["list", "tuple", "series", "int_ndarray", "int_list"])
+def test_transform_params_array_like(method, case):
+    # Parameters given as a list, tuple or Series, or with integer values,
+    # are transformed as the ndarray of the same (float) values. The values
+    # are loadings, the factor AR(1) coefficient and standard deviation, the
+    # idiosyncratic AR(1) coefficients and variances; those for
+    # untransform_params are valid constrained values, and in both cases
+    # some transformed values are not integers
+    mod = dynamic_factor_mq.DynamicFactorMQ(_ar1_factor_data(nobs=12))
+    if method == "transform_params":
+        values = np.array([1, -1, 2, 1, 1, 1, -1, 2, 2, 3, 5])
+    else:
+        values = np.array([1, -1, 2, 0, 1, 0, 0, 0, 2, 3, 5])
+    floats = values.astype(float)
+    params = {
+        "list": floats.tolist(),
+        "tuple": tuple(floats),
+        "series": pd.Series(floats, index=mod.param_names),
+        "int_ndarray": values,
+        "int_list": values.tolist(),
+    }[case]
+    actual = getattr(mod, method)(params)
+    desired = getattr(mod, method)(floats)
+    assert isinstance(actual, np.ndarray)
+    assert_allclose(actual, desired, rtol=1e-12)
+    assert not np.allclose(desired, np.round(desired))
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_standardize_ndarray_like_dataframe(missing):
+    # The data are standardized with the mean and the standard deviation
+    # (ddof=1) of the observed values of each variable, for an ndarray as
+    # for a DataFrame, so that both give the same model. With a missing
+    # value, the other values of that variable are not missing.
+    endog = _ar1_factor_data(nobs=40)
+    if missing:
+        endog.iloc[[3, 17], 1] = np.nan
+    values = endog.to_numpy()
+    mod_df = dynamic_factor_mq.DynamicFactorMQ(endog)
+    mod = dynamic_factor_mq.DynamicFactorMQ(values)
+
+    desired_mean = np.nanmean(values, axis=0)
+    desired_std = np.nanstd(values, axis=0, ddof=1)
+    for model in [mod, mod_df]:
+        assert_allclose(np.asarray(model._endog_mean), desired_mean,
+                        rtol=1e-12)
+        assert_allclose(np.asarray(model._endog_std), desired_std,
+                        rtol=1e-12)
+    assert_allclose(mod.endog, (values - desired_mean) / desired_std,
+                    rtol=1e-12)
+    assert_equal(np.isnan(mod.endog).sum(), 2 if missing else 0)
+    assert_allclose(mod.endog, mod_df.endog, rtol=1e-12)
+
+    params = mod_df.start_params
+    assert_allclose(mod.start_params, params, rtol=1e-10)
+    assert_allclose(mod.loglike(params), mod_df.loglike(params), rtol=1e-12)
+    # Two EM iterations from the same start (the same data give the same
+    # iterations; rtol for the rounding differences of the two inputs)
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum"):
+        res = mod.fit(params, maxiter=2, disp=False)
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum"):
+        res_df = mod_df.fit(params, maxiter=2, disp=False)
+    assert_allclose(res.params, res_df.params, rtol=1e-8)
+    assert_allclose(res.llf, res_df.llf, rtol=1e-10)
+    # The original-scale predictions and simulations use the same statistics
+    assert_allclose(res.predict(), res_df.predict(), rtol=1e-8)
+    rng = np.random.default_rng(4321)
+    kwargs = {
+        "measurement_shocks": rng.standard_normal((4, mod.k_endog)),
+        "state_shocks": rng.standard_normal((4, mod.ssm.k_posdef)),
+        "initial_state": np.zeros(mod.k_states),
+    }
+    sim_df = res_df.simulate(4, **kwargs)
+    assert_(sim_df.columns.equals(endog.columns))
+    assert_allclose(res.simulate(4, **kwargs), sim_df, rtol=1e-8)
+
+    # The same for a single variable (a Series or a 1-dim ndarray)
+    mod_df = dynamic_factor_mq.DynamicFactorMQ(endog["y1"])
+    mod = dynamic_factor_mq.DynamicFactorMQ(values[:, 0])
+    params = mod_df.start_params
+    assert_allclose(mod.start_params, params, rtol=1e-10)
+    kwargs = {
+        "measurement_shocks": rng.standard_normal((4, 1)),
+        "state_shocks": rng.standard_normal((4, mod.ssm.k_posdef)),
+        "initial_state": np.zeros(mod.k_states),
+    }
+    sim_df = mod_df.smooth(params).simulate(4, **kwargs)
+    assert_allclose(mod.smooth(params).simulate(4, **kwargs), sim_df,
+                    rtol=1e-8)

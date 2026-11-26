@@ -13,10 +13,12 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy import linalg, stats
 
-from statsmodels.datasets import danish_data
+from statsmodels.datasets import danish_data, macrodata
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tsa.vector_ar.vecm import coint_johansen
+from statsmodels.tsa.coint_tables import c_sja, c_sjt
+from statsmodels.tsa.vector_ar.vecm import VECM, coint_johansen, select_coint_rank
 
 current_path = Path(__file__).resolve().parent
 dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
@@ -480,6 +482,76 @@ def test_coint_johansen_0lag():
     assert result.eig.shape == (2,)
 
 
+@pytest.mark.parametrize("det_order, deterministic", [(-1, "n"), (0, "co")])
+@pytest.mark.parametrize("k_ar_diff", [0, 1, 2])
+def test_coint_johansen_trace_equals_vecm_lr(det_order, deterministic, k_ar_diff):
+    # GH 7459: the trace statistic is the likelihood ratio statistic of the
+    # VECM with rank r against the VECM with full rank. With k_ar_diff=0 the
+    # levels were not lagged.
+    data = np.log(macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]])
+    neqs = data.shape[1]
+    res = coint_johansen(data, det_order, k_ar_diff)
+    llf = [
+        VECM(data, k_ar_diff=k_ar_diff, coint_rank=r, deterministic=deterministic)
+        .fit()
+        .llf
+        for r in range(neqs + 1)
+    ]
+    lr_trace = [2 * (llf[neqs] - llf[r]) for r in range(neqs)]
+    lr_max = [2 * (llf[r + 1] - llf[r]) for r in range(neqs)]
+    assert_allclose(res.lr1, lr_trace, rtol=1e-6)
+    assert_allclose(res.lr2, lr_max, rtol=1e-6)
+
+
+# Reference values for k_ar_diff=0 on the log of realgdp, realcons and realinv
+# of macrodata (203 observations), as (lr1, lr2). det_order -1 and 0: R 4.6.1
+# with tsDyn 11.0.6, rank.test(VECM(data, lag=0, r=1, estim="ML", include="none"
+# or "const"), type="trace" or "eigen"). urca::ca.jo needs K >= 2 and cannot
+# fit a model without lagged differences. det_order 1 (the sample is detrended
+# with a linear trend and the constant is partialled out afterwards) is not the
+# model of any R package: the values are those of a base R implementation of
+# the same steps (the moment matrices of the detrended differences and lagged
+# levels, the eigenvalues of S11^-1 S10 S00^-1 S01).
+ZERO_LAG_REFERENCE = {
+    -1: (
+        [224.65936991867954, 9.6618003484821973, 0.1274814825683236],
+        [214.99756957019736, 9.5343188659138729, 0.1274814825683236],
+    ),
+    0: (
+        [29.559752448160449, 12.996142176882785, 1.976442940717079],
+        [16.563610271277664, 11.019699236165707, 1.976442940717079],
+    ),
+    1: (
+        [25.018734502955127, 9.699926952440137, 0.253804581240836],
+        [15.318807550514990, 9.446122371199301, 0.253804581240836],
+    ),
+}
+
+
+@pytest.mark.parametrize("det_order", [-1, 0, 1])
+def test_coint_johansen_zero_lag_reference(det_order):
+    # GH 7459: without lagged differences the levels have to be lagged once
+    data = np.log(macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]])
+    lr1, lr2 = ZERO_LAG_REFERENCE[det_order]
+    res = coint_johansen(data, det_order, 0)
+    assert_allclose(res.lr1, lr1, rtol=1e-8)
+    assert_allclose(res.lr2, lr2, rtol=1e-8)
+    # the eigenvalues follow from the maximum eigenvalue statistics
+    nobs = data.shape[0] - 1
+    assert_allclose(res.eig, 1 - np.exp(-np.asarray(lr2) / nobs), rtol=1e-8)
+
+
+@pytest.mark.parametrize("method", ["trace", "maxeig"])
+@pytest.mark.parametrize("det_order, rank", [(-1, 1), (0, 0), (1, 0)])
+def test_select_coint_rank_zero_lag(det_order, rank, method):
+    # GH 7459: with the unlagged levels the rank was 2 for det_order=-1 and 1
+    # for det_order=0 (the trace statistic of rank 0 was 39.4 and not 29.6, the
+    # 5% critical value is 29.8)
+    data = np.log(macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]])
+    res = select_coint_rank(data, det_order, 0, method=method)
+    assert res.rank == rank
+
+
 def test_johansen_result_aliases_and_rkt_meth():
     # trace_stat/max_eig_stat/*_crit_vals are documented aliases for
     # lr1/lr2/cvt/cvm; rkt and meth have no alias and were never touched
@@ -655,3 +727,149 @@ def test_johansen_too_few_observations(shape, det_order, k_ar_diff):
     endog = np.cumsum(np.random.default_rng(0).standard_normal(shape), axis=0)
     with pytest.raises(ValueError, match="too few observations"):
         coint_johansen(endog, det_order, k_ar_diff)
+
+
+@pytest.mark.parametrize("det_order", [-1, 0, 1])
+def test_johansen_more_than_12_variables(det_order):
+    # The statistics are computed for any number of variables, but the tables
+    # of critical values end at 12 variables: the critical values of the
+    # first test (13 variables) are NaN and the others are tabulated
+    rng = np.random.default_rng(20261122)
+    endog = np.cumsum(rng.standard_normal((200, 13)), axis=0)
+    with pytest.warns(HypothesisTestWarning, match="12 variables at most"):
+        res = coint_johansen(endog, det_order, 1)
+    assert np.all(np.isnan(res.cvt[0]))
+    assert np.all(np.isnan(res.cvm[0]))
+    for i in range(1, 13):
+        assert_allclose(res.cvt[i], c_sjt(13 - i, det_order), rtol=1e-15)
+        assert_allclose(res.cvm[i], c_sja(13 - i, det_order), rtol=1e-15)
+    # The eigenvalues of the generalized symmetric eigenvalue problem of the
+    # residual moment matrices (Luetkepohl 2005, p. 295) and the statistics
+    # from them
+    nobs = res.r0t.shape[0]
+    s00 = res.r0t.T @ res.r0t / nobs
+    s0k = res.r0t.T @ res.rkt / nobs
+    skk = res.rkt.T @ res.rkt / nobs
+    eig = linalg.eigh(s0k.T @ np.linalg.solve(s00, s0k), skk, eigvals_only=True)
+    eig = eig[::-1]
+    assert_allclose(res.eig, eig, rtol=1e-10)
+    log_1m_eig = np.log(1 - eig)
+    assert_allclose(res.lr1, -nobs * np.cumsum(log_1m_eig[::-1])[::-1], rtol=1e-10)
+    assert_allclose(res.lr2, -nobs * log_1m_eig, rtol=1e-10)
+
+
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_one_variable(p):
+    # With one variable, the trace and the maximum eigenvalue statistics are
+    # the same statistic
+    assert_allclose(c_sja(1, p), c_sjt(1, p), rtol=1e-15)
+    if p >= 0:
+        # The tabulated values equal the 90%, 95% and 99% quantiles of
+        # chi2(1) to the 4 decimals given
+        expected = stats.chi2.ppf([0.90, 0.95, 0.99], 1)
+        assert_allclose(c_sja(1, p), expected, rtol=1e-4)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_ordered(func, p):
+    # The critical values increase with the level and with the number of
+    # variables, and n can be any integer type
+    values = np.array([func(n, p) for n in range(1, 13)])
+    assert np.all(np.diff(values, axis=1) > 0)
+    assert np.all(np.diff(values, axis=0) > 0)
+    assert_allclose(func(np.int64(3), p), values[2], rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("n, p", [(0, 0), (13, 0), (3, -2), (3, 2)])
+def test_coint_tables_out_of_range(func, n, p):
+    assert np.all(np.isnan(func(n, p)))
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [0.5, -0.5, 1.5, -1.5])
+def test_coint_tables_invalid_p(func, p):
+    # p is not an integer. Between -1 and 1, c_sja raised an
+    # UnboundLocalError and c_sjt "invalid p"; outside, both returned NaN.
+    with pytest.raises(ValueError, match="p must be an integer, got"):
+        func(3, p)
+
+
+# Rows n = 3 of the tables, MacKinnon, Haug and Michelis (1996)
+COINT_TABLES_N3 = {
+    (c_sja, -1): [15.7175, 17.7961, 22.2519],
+    (c_sja, 0): [18.8928, 21.1314, 25.8650],
+    (c_sja, 1): [21.8731, 24.2522, 29.2631],
+    (c_sjt, -1): [21.7781, 24.2761, 29.5147],
+    (c_sjt, 0): [27.0669, 29.7961, 35.4628],
+    (c_sjt, 1): [32.0645, 35.0116, 41.0815],
+}
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_integral_p(func, p):
+    expected = COINT_TABLES_N3[func, p]
+    for value in (p, float(p), np.float64(p), np.int64(p), np.array(p)):
+        assert_allclose(func(3, value), expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [True, False, np.True_, np.False_])
+def test_coint_tables_bool_p_deprecated(func, p):
+    # A bool selected the table of 0 or 1. It is deprecated.
+    with pytest.warns(FutureWarning, match="^p must be an integer. Passing a bool"):
+        res = func(3, p)
+    assert_allclose(res, COINT_TABLES_N3[func, int(p)], rtol=1e-15)
+
+
+def test_coint_johansen_bool_det_order_deprecated():
+    # det_order=True was used as 1 by coint_johansen and the tables
+    endog = np.cumsum(np.random.default_rng(0).standard_normal((100, 2)), axis=0)
+    expected = coint_johansen(endog, 1, 1)
+    with pytest.warns(FutureWarning, match="^p must be an integer. Passing a bool"):
+        res = coint_johansen(endog, True, 1)
+    assert_allclose(res.lr1, expected.lr1, rtol=1e-12)
+    assert_allclose(res.cvt, expected.cvt, rtol=1e-15)
+    assert_allclose(res.cvm, expected.cvm, rtol=1e-15)
+    # The critical values of 2 and 1 variables with a trend
+    assert_allclose(res.cvt[:, 1], [18.3985, 3.8415], rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_return_copy(func, p):
+    # The result was a view of the table, so changing it changed the
+    # values returned by later calls
+    expected = COINT_TABLES_N3[func, p]
+    res = func(3, p)
+    try:
+        res[:] = 0.0
+        assert_allclose(func(3, p), expected, rtol=1e-15)
+    finally:
+        # Restore the table if the result is a view
+        res[:] = expected
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_johansen_list_endog(form):
+    # endog is array_like, but coint_johansen and select_coint_rank read
+    # endog.shape before converting it, so a list raised an AttributeError.
+    # urca 1.3.4, R 4.6.1: ca.jo(y, ecdet="none", K=2), as in
+    # test_johansen_urca_danish
+    trace = [48.8037309574590878, 17.2901719813015191, 7.1448883768914024]
+    trace += [0.5560157618986894]
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    endog = y.tolist() if form == "list" else tuple(map(tuple, y))
+    res = coint_johansen(endog, 0, 1)
+    assert_allclose(res.lr1, trace, rtol=1e-8)
+    rank = select_coint_rank(endog, 0, 1, method="trace", signif=0.05)
+    # the first statistic is above its 5% critical value, the second is not
+    crit = [c_sjt(4, 0)[1], c_sjt(3, 0)[1]]
+    assert trace[0] > crit[0]
+    assert trace[1] < crit[1]
+    assert rank.rank == 1
+    assert rank.neqs == 4
+    assert_allclose(rank.test_stats, trace[:2], rtol=1e-8)
+    assert_allclose(rank.crit_vals, crit, rtol=1e-15)

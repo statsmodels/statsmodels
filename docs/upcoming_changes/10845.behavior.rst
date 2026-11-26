@@ -1,0 +1,7 @@
+- ``arma_order_select_ic`` warns with an ``EstimationWarning`` that lists the
+  orders whose fit failed, and raises a ``ValueError`` if every fit fails or no
+  model has a non-NaN criterion, instead of returning tables of NaN. A
+  ``TypeError`` from ``model_kw`` or ``fit_kw``, such as one for a mistyped
+  keyword, is raised instead of making every fit fail, and ``start_params`` in
+  ``fit_kw`` now works. ``ic`` accepts only ``"aic"``, ``"aicc"``, ``"bic"`` and
+  ``"hqic"``, checked before any model is fitted. :pr:`10845`

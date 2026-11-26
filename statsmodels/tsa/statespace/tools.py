@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy.linalg import solve_sylvester
@@ -122,6 +124,11 @@ def set_mode(compatibility=None):
     """
     Set the compatibility mode
 
+    .. deprecated:: 0.15.1
+        ``set_mode`` has had no effect since compatibility mode was removed
+        in statsmodels 0.10, and nothing in statsmodels calls it. It will be
+        removed after statsmodels 0.17 is released.
+
     Parameters
     ----------
     compatibility : bool, optional
@@ -134,6 +141,16 @@ def set_mode(compatibility=None):
     NotImplementedError
         If `compatibility` is truthy.
     """
+    warnings.warn(
+        "statsmodels.tsa.statespace.tools.set_mode is deprecated and is not "
+        "exported from any public statsmodels API; it has had no effect "
+        "since compatibility mode was removed in statsmodels 0.10. It will "
+        "be removed after statsmodels 0.17 is released. If you rely on this "
+        "function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     if compatibility:
         raise NotImplementedError("Compatibility mode is only available in"
                                   " statsmodels <= 0.9")
@@ -154,7 +171,8 @@ def companion_matrix(polynomial):
         polynomial, where the polynomial coefficients are initialized to zeros.
         If a matrix polynomial is passed, :math:`C_0` may be set to the scalar
         value 1 to indicate an identity matrix (doing so will improve the speed
-        of the companion matrix creation).
+        of the companion matrix creation). A three-dimensional array holds the
+        coefficient matrices along its first axis.
 
     Returns
     -------
@@ -236,13 +254,19 @@ def companion_matrix(polynomial):
                 polynomial = np.asanyarray(polynomial)
             # Check if 1 was passed as the first argument (indicating an
             # identity matrix)
-            elif polynomial[0] == 1:
+            elif np.ndim(polynomial[0]) == 0 and polynomial[0] == 1:
                 # Replace C_0 with the identity matrix on a copy: mutating the
                 # caller's list (or crashing on a tuple) is a side effect the
                 # caller does not expect.
                 polynomial = list(polynomial)
                 polynomial[0] = np.eye(m)
                 identity_matrix = True
+        elif np.ndim(polynomial) == 3:
+            # Coefficient matrices stacked along the first axis
+            polynomial = np.asarray(polynomial)
+            m = polynomial.shape[1]
+            if m == 1:
+                polynomial = polynomial[:, 0, 0]
         else:
             m = 1
             polynomial = np.asanyarray(polynomial)
@@ -381,6 +405,9 @@ def concat(series, axis=0, allow_mix=False):
                     s.columns = base_columns[:1]
                 s_columns = s.columns
             else:
+                # The same for two series to concatenate along the rows
+                if axis == 0 and s.name is None:
+                    s = series[i] = s.rename(base_columns[0])
                 s_columns = pd.Index([s.name])
 
             if axis == 0 and not base_columns.equals(s_columns):
@@ -500,6 +527,7 @@ def solve_discrete_lyapunov(a, q, complex_step=False):
     (usually the transition matrix) in order to allow complex step
     differentiation.
     """
+    a = np.asarray(a)
     eye = np.eye(a.shape[0], dtype=a.dtype)
     if not complex_step:
         aH = a.conj().transpose()
@@ -1586,6 +1614,14 @@ def validate_vector_shape(name, shape, nrows, nobs):
                          f" vector. Requires shape (*,{nobs:d}), got {shape!s}")
 
 
+def _mask_as_intc(mask):
+    # The Cython code takes an F-contiguous int mask and uses its values
+    # arithmetically. Go through bool first so that any nonzero value,
+    # including NaN, is 1.
+    return np.require(np.asarray(mask, dtype=bool), dtype=np.intc,
+                      requirements="F")
+
+
 def reorder_missing_matrix(matrix, missing, reorder_rows=False,
                            reorder_cols=False, is_diagonal=False,
                            inplace=False, prefix=None):
@@ -1625,10 +1661,10 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     reorder = prefix_reorder_missing_matrix_map[prefix]
 
     if not inplace:
-        matrix = np.copy(matrix, order="F")
+        matrix = np.array(matrix, dtype=prefix_dtype_map[prefix], order="F")
 
-    reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
-            is_diagonal)
+    missing = _mask_as_intc(missing)
+    reorder(matrix, missing, reorder_rows, reorder_cols, is_diagonal)
 
     return matrix
 
@@ -1660,9 +1696,10 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     reorder = prefix_reorder_missing_vector_map[prefix]
 
     if not inplace:
-        vector = np.copy(vector, order="F")
+        vector = np.array(vector, dtype=prefix_dtype_map[prefix], order="F")
 
-    reorder(vector, np.asfortranarray(missing))
+    missing = _mask_as_intc(missing)
+    reorder(vector, missing)
 
     return vector
 
@@ -1708,7 +1745,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     copy = prefix_copy_missing_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order="F")
+        B = np.array(B, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1716,10 +1753,10 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
         if not A.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        A = np.asfortranarray(A)
+        A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
-         is_diagonal)
+    missing = _mask_as_intc(missing)
+    copy(A, B, missing, missing_rows, missing_cols, is_diagonal)
 
     return B
 
@@ -1753,7 +1790,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     copy = prefix_copy_missing_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order="F")
+        b = np.array(b, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1761,9 +1798,10 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
         if not a.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        a = np.asfortranarray(a)
+        a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(a, b, np.asfortranarray(missing))
+    missing = _mask_as_intc(missing)
+    copy(a, b, missing)
 
     return b
 
@@ -1809,7 +1847,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     copy = prefix_copy_index_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order="F")
+        B = np.array(B, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1817,10 +1855,10 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
         if not A.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        A = np.asfortranarray(A)
+        A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(A, B, np.asfortranarray(index), index_rows, index_cols,
-         is_diagonal)
+    index = _mask_as_intc(index)
+    copy(A, B, index, index_rows, index_cols, is_diagonal)
 
     return B
 
@@ -1854,7 +1892,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     copy = prefix_copy_index_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order="F")
+        b = np.array(b, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1862,9 +1900,10 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
         if not a.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        a = np.asfortranarray(a)
+        a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(a, b, np.asfortranarray(index))
+    index = _mask_as_intc(index)
+    copy(a, b, index)
 
     return b
 
@@ -2001,6 +2040,7 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
         Array shaped `(nobs, k_trend)` containing the trend regressors
         associated with `polynomial_trend`.
     """
+    polynomial_trend = np.asarray(polynomial_trend)
     # Cache the arrays for calculating the intercept from the trend
     # components
     time_trend = np.arange(offset, nobs + offset)
@@ -2238,6 +2278,13 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
     to the `res` object. This can be overridden by the user for a small
     performance boost if they are sure that the attributes have not changed;
     see the `resmooth` argument.
+
+    .. versionchanged:: 0.15.1
+
+       The weights of copied (pickled or deep-copied) results are right
+       without ``resmooth=True``. The copied Kalman smoother held the smoothed
+       state autocovariance in place of the matrices :math:`L_t`, so the
+       weights were wrong unless the model was smoothed again.
 
     References
     ----------

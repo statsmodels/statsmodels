@@ -74,3 +74,18 @@ def test_start_params():
         statespace(endog, order=(1, 0, 0), start_params=[0, 1.0, 1.0])
     with pytest.raises(ValueError):
         statespace(endog, order=(0, 0, 1), start_params=[0, 1.0, 1.0])
+
+
+def test_fit_kwargs():
+    # fit_kwargs are passed to the fit of the state space model
+    endog = lake.copy()
+    endog = endog - endog.mean()
+    p, other = statespace(
+        endog, order=(1, 0, 0), include_constant=False, fit_kwargs={"cov_type": "oim"}
+    )
+    res = other.statespace_results
+    assert res.cov_type == "oim"
+    expected = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth(
+        p.params, cov_type="oim"
+    )
+    assert_allclose(res.bse, expected.bse, rtol=1e-8)

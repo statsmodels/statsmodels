@@ -249,6 +249,64 @@ def _adf_autolag(x, maxlag, regression, method):
     return crit[bestlag], int(bestlag)
 
 
+def _adf_max_maxlag(nobs, regression):
+    """
+    The largest number of lagged differences of the ADF regression
+
+    Parameters
+    ----------
+    nobs : int
+        The number of observations of the series.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+
+    Returns
+    -------
+    int
+        The largest maxlag, ``min(nobs // 2 - ntrend - 1,
+        (nobs - ntrend - 3) // 2)``, where ntrend is the number of trend
+        terms. It is negative if the sample is too short for any lag.
+    """
+    ntrend = len(regression) if regression != "n" else 0
+    # The regression with maxlag lags has nobs - 1 - maxlag rows and
+    # 1 + ntrend + maxlag columns. The second bound keeps at least one
+    # residual degree of freedom; it is only binding when ntrend is 0 and
+    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
+    return min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+
+
+def _adf_default_maxlag(nobs, regression):
+    """
+    The default maxlag of adfuller
+
+    Parameters
+    ----------
+    nobs : int
+        The number of observations of the series.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+
+    Returns
+    -------
+    int
+        ``ceil(12 * (nobs / 100) ** (1 / 4))`` (Schwert, 1989), or the
+        largest maxlag of the regression if that is smaller.
+
+    Raises
+    ------
+    ValueError
+        If the sample is too short for the regression.
+    """
+    # from Greene referencing Schwert 1989
+    maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
+    maxlag = min(_adf_max_maxlag(nobs, regression), maxlag)
+    if maxlag < 0:
+        raise ValueError(
+            "sample size is too short to use selected regression component"
+        )
+    return maxlag
+
+
 @dataclass(frozen=True, slots=True, repr=False)
 class ADFullerResult(LimitedIterationMixin[float]):
     """
@@ -265,12 +323,13 @@ class ADFullerResult(LimitedIterationMixin[float]):
     nobs : int
         The number of observations used for the ADF regression and
         calculation of the critical values.
-    critical_values : dict[str, float]
+    critical_values : dict of str to float
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010).
     icbest : float or None
-        The maximized information criterion if autolag is not None,
-        otherwise None.
+        The criterion of the selected lag length if autolag is not None,
+        otherwise None: the smallest AIC or BIC, or with "t-stat" the
+        absolute t-statistic of the last lag.
     resstore : ResultsStore or None
         A dummy class with results attached as attributes, if ``store`` was
         True, otherwise None.
@@ -329,8 +388,11 @@ def adfuller(
     x : array_like, 1d
         The data series to test.
     maxlag : int, optional
-        Maximum lag which is included in test, default value of
-        12*(nobs/100)^{1/4} is used when ``None``.
+        Maximum lag which is included in test. If ``None``,
+        ``ceil(12 * (nobs / 100) ** (1 / 4))`` is used, or
+        ``min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)`` if that is
+        smaller, where ntrend is the number of trend terms in
+        ``regression``. A larger maxlag raises ValueError.
     regression : {"c","ct","ctt","n"}, optional
         Constant and trend order to include in regression.
 
@@ -392,7 +454,9 @@ def adfuller(
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010).
     icbest : float
-        The maximized information criterion if autolag is not None.
+        The criterion of the selected lag length if autolag is not None:
+        the smallest AIC or BIC, or with "t-stat" the absolute t-statistic
+        of the last lag.
     resstore : ResultsStore, optional
         A dummy class with results attached as attributes.
 
@@ -445,20 +509,9 @@ def adfuller(
 
     nobs = x.shape[0]
 
-    ntrend = len(regression) if regression != "n" else 0
-    # The regression with maxlag lags has nobs - 1 - maxlag rows and
-    # 1 + ntrend + maxlag columns. The second bound keeps at least one
-    # residual degree of freedom; it is only binding when ntrend is 0 and
-    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
-    max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+    max_maxlag = _adf_max_maxlag(nobs, regression)
     if maxlag is None:
-        # from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
-        maxlag = min(max_maxlag, maxlag)
-        if maxlag < 0:
-            raise ValueError(
-                "sample size is too short to use selected regression component"
-            )
+        maxlag = _adf_default_maxlag(nobs, regression)
     elif maxlag > max_maxlag:
         raise ValueError(
             f"maxlag must be less than or equal to {max_maxlag} when nobs is "
@@ -646,11 +699,18 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
 
     if demean and deal_with_masked:
         # whether "drop" or "conservative":
-        xo = x - x.sum() / notmask_int.sum()
-        if missing == "conservative":
-            xo[~notmask_bool] = 0
+        x_valid = x if missing == "drop" else x[notmask_bool]
+        if x_valid.size > 0 and np.ptp(x_valid) == 0:
+            xo = np.zeros_like(x)
+        else:
+            xo = x - x.sum() / notmask_int.sum()
+            if missing == "conservative":
+                xo[~notmask_bool] = 0
     elif demean:
-        xo = x - x.mean()
+        if x.size > 0 and np.ptp(x) == 0:
+            xo = np.zeros_like(x)
+        else:
+            xo = x - x.mean()
     else:
         xo = x
 
@@ -871,6 +931,13 @@ def q_stat(x, nobs):
     ----------
     x : array_like
         Array of autocorrelation coefficients.  Can be obtained from acf.
+        The array is 1-D; a column with shape (nlags, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nlags, 1) now gives the same result as the
+           1-D array, and input with more than one column raises
+           ValueError.
     nobs : int
         Number of observations in the entire sample (ie., not just the length
         of the autocorrelation function results).
@@ -896,7 +963,7 @@ def q_stat(x, nobs):
     -----
     Designed to be used with acf.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     nobs = int_like(nobs, "nobs")
     if nobs <= len(x):
         raise ValueError(
@@ -965,6 +1032,16 @@ def acf(
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1). The returned value
         includes lag 0 (ie., 1) so size of the acf vector is (nlags + 1,).
+        When missing is "drop" or "conservative", nobs is the number of
+        non-missing observations.
+
+        .. versionchanged:: 0.15.1
+
+           The default counts only the non-missing observations when
+           missing is "drop" or "conservative". It used to count the NaNs
+           as observations, so it could give more lags, or raise because
+           the default was not smaller than the number of non-missing
+           observations.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -1068,6 +1145,11 @@ def acf(
     If adjusted is true, the denominator for the autocovariance is adjusted
     for the loss of data.
 
+    .. versionchanged:: 0.15.1
+
+       Returns 1.0 for lag 0 and NaN for lags 1 and higher when `x` is
+       constant.
+
     References
     ----------
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
@@ -1079,8 +1161,8 @@ def acf(
 
     See Also
     --------
-    statsmodels.tsa.stattools.acf
-        Estimate the autocorrelation function.
+    statsmodels.tsa.stattools.acovf
+        Estimate the autocovariances.
     statsmodels.graphics.tsaplots.plot_acf
         Plot autocorrelations and confidence intervals.
     """
@@ -1095,8 +1177,6 @@ def acf(
     )
     x = array_like(x, "x")
     nobs = x.shape[0]
-    if nlags is None:
-        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if missing in ("drop", "conservative"):
         # "drop" removes the NaNs and "conservative" zeroes them out, and
         # acovf uses the non-missing count as the divisor in both cases
@@ -1104,6 +1184,8 @@ def acf(
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
             raise ValueError("All observations are missing after dropping.")
+    if nlags is None:
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if nlags < 0:
         raise ValueError(f"nlags must be non-negative, got {nlags}")
     if nlags >= nobs:
@@ -1113,7 +1195,10 @@ def acf(
         )
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
-    acf = avf[: nlags + 1] / avf[0]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        acf = avf[: nlags + 1] / avf[0]
+    if avf[0] == 0:
+        acf[0] = 1.0
 
     confint = None
     if alpha is not None and not 0 < alpha < 1:
@@ -1247,7 +1332,8 @@ def pacf_yw(
     Returns
     -------
     ndarray
-        The partial autocorrelations, maxlag+1 elements.
+        The partial autocorrelations for lags 0, 1, ..., nlags, an array
+        with shape (nlags + 1,).
 
     See Also
     --------
@@ -1314,7 +1400,14 @@ def pacf_burg(
     Parameters
     ----------
     x : array_like
-        Observations of time series for which pacf is calculated.
+        Observations of time series for which pacf is calculated. The
+        series is 1-D; a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1).
@@ -1347,7 +1440,7 @@ def pacf_burg(
     .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     if demean:
         x = x - x.mean()
     nobs = x.shape[0]
@@ -1361,17 +1454,18 @@ def pacf_burg(
     u = x[::-1].copy()
     v = x[::-1].copy()
     d[1] = u[:-1].dot(u[:-1]) + v[1:].dot(v[1:])
-    pacf[1] = 2 / d[1] * v[1:].dot(u[:-1])
-    last_u = np.empty_like(u)
-    last_v = np.empty_like(v)
-    for i in range(1, p):
-        last_u[:] = u
-        last_v[:] = v
-        u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
-        v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
-        d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
-        pacf[i + 1] = 2 / d[i + 1] * v[i + 1 :].dot(u[i:-1])
-    sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        pacf[1] = 2 / d[1] * v[1:].dot(u[:-1])
+        last_u = np.empty_like(u)
+        last_v = np.empty_like(v)
+        for i in range(1, p):
+            last_u[:] = u
+            last_v[:] = v
+            u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
+            v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
+            d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
+            pacf[i + 1] = 2 / d[i + 1] * v[i + 1 :].dot(u[i:-1])
+        sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
     pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
     return PacfBurgResult(pacf, sigma2)
@@ -1458,7 +1552,7 @@ def pacf_ols(
         Observations of time series for which pacf is calculated.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
-        uses min(10 * np.log10(nobs), nobs - 1).
+        uses min(10 * np.log10(nobs), nobs // 2). At most nobs // 2.
     efficient : bool, optional
         If true, uses the maximum number of available observations to compute
         each partial autocorrelation. If not, uses the same number of
@@ -1469,8 +1563,8 @@ def pacf_ols(
     Returns
     -------
     ndarray
-        The partial autocorrelations, (maxlag,) array corresponding to lags
-        0, 1, ..., maxlag.
+        The partial autocorrelations, an array with shape (nlags + 1,)
+        corresponding to lags 0, 1, ..., nlags.
 
     See Also
     --------
@@ -1598,6 +1692,11 @@ def pacf(
     ----------
     x : array_like
         Observations of time series for which pacf is calculated.
+
+        .. versionchanged:: 0.15.1
+
+           With method="burg", a column with shape (nobs, 1) now gives the
+           same result as the 1-D series, as with the other methods.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs // 2 - 1). The returned value
@@ -1672,6 +1771,11 @@ def pacf(
 
     Yule-Walker (adjusted) and Levinson-Durbin (adjusted) performed
     consistently worse than the other options.
+
+    .. versionchanged:: 0.15.1
+
+       Returns 1.0 for lag 0 and NaN for lags 1 and higher when `x` is
+       constant.
     """
     result_object = bool_like(result_object, "result_object", optional=True)
     nlags = int_like(nlags, "nlags", optional=True)
@@ -1711,7 +1815,11 @@ def pacf(
             f"sample size. The requested nlags {nlags} must be < "
             f"{x.shape[0] // 2}."
         )
-    if method in ("ols", "ols-inefficient", "ols-adjusted"):
+    # x.size == nobs: a vector or one column; other shapes raise below
+    if x.size > 0 and x.size == nobs and np.ptp(x) == 0:
+        ret = np.full(nlags + 1, np.nan)
+        ret[0] = 1.0
+    elif method in ("ols", "ols-inefficient", "ols-adjusted"):
         efficient = "inefficient" not in method
         adjusted = "adjusted" in method
         ret = pacf_ols(x, nlags=nlags, efficient=efficient, adjusted=adjusted)
@@ -1753,7 +1861,14 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     Parameters
     ----------
     x, y : array_like
-       The time series data to use in the calculation.
+        The time series data to use in the calculation. Each series is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     adjusted : bool, optional
        If True, then denominators for cross-covariance are the number of
        overlapping observations at each lag k, min(m, n-k), otherwise n.
@@ -1771,8 +1886,8 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
         respectively.
     """
-    x = array_like(x, "x")
-    y = array_like(y, "y")
+    x = array_like(x, "x", ndim=1)
+    y = array_like(y, "y", ndim=1)
     adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
     fft = bool_like(fft, "fft", optional=False)
@@ -1832,7 +1947,14 @@ def ccf(
     Parameters
     ----------
     x, y : array_like
-        The time series data to use in the calculation.
+        The time series data to use in the calculation. Each series is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     adjusted : bool, optional
         If True, then denominators for cross-covariance are the number of
         overlapping observations at each lag k, min(m, n-k), otherwise n.
@@ -1892,13 +2014,17 @@ def ccf(
     -----
     If adjusted is True, the denominator for the cross-correlation is adjusted.
 
+    .. versionchanged:: 0.15.1
+
+       Returns NaN when either series is constant.
+
     References
     ----------
     .. [1] Brockwell and Davis, 2016. Introduction to Time Series and
        Forecasting, 3rd edition, p. 242.
     """
-    x = array_like(x, "x")
-    y = array_like(y, "y")
+    x = array_like(x, "x", ndim=1)
+    y = array_like(y, "y", ndim=1)
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
     result_object = bool_like(result_object, "result_object", optional=True)
@@ -1912,13 +2038,28 @@ def ccf(
                 f"({len(x)}), got {nlags}"
             )
 
-    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
-    ret = cvf / (np.std(x) * np.std(y))
-    ret = ret[:nlags]
-
     confint = None
     if alpha is not None and not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
+    x_valid = x[~np.isnan(x)]
+    y_valid = y[~np.isnan(y)]
+    is_constant = (x_valid.size > 0 and np.ptp(x_valid) == 0) or (
+        y_valid.size > 0 and np.ptp(y_valid) == 0
+    )
+    denom = np.std(x) * np.std(y)
+    if is_constant or denom == 0:
+        n_ret = nlags if nlags is not None else len(x)
+        ret = np.full(n_ret, np.nan)
+        if alpha is not None:
+            confint = np.full((n_ret, 2), np.nan)
+        if result_object or alpha is not None:
+            return CcfResult(ret, confint)
+        return ret
+
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
+    ret = cvf / denom
+    ret = ret[:nlags]
 
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
@@ -1935,8 +2076,16 @@ def ccf(
 def _pccf_yw(x, y, nlags, adjusted=False):
     """PCCF via multivariate Levinson-Durbin recursion."""
     nobs = len(x)
+    if np.ptp(x) == 0 or np.ptp(y) == 0:
+        return np.full(nlags, np.nan)
     xo = x - x.mean()
     yo = y - y.mean()
+    # Standardizing does not change the PCCF, and it makes the checks below
+    # relative to the variances of x and y. Dividing by the largest absolute
+    # value first avoids overflow and underflow.
+    for z in (xo, yo):
+        z /= np.max(np.abs(z))
+        z /= np.sqrt(z.dot(z) / nobs)
 
     gamma = np.empty((nlags + 1, 2, 2))
     for h in range(nlags + 1):
@@ -1949,7 +2098,15 @@ def _pccf_yw(x, y, nlags, adjusted=False):
             ]
         gamma[h] /= nobs - h if adjusted else nobs
 
-    if np.linalg.matrix_rank(gamma[0]) < 2:
+    # Rounding leaves the smallest singular value of a singular matrix at up
+    # to about nobs * eps times the largest; the factor 100 is a margin.
+    tol = 100 * nobs * np.finfo(np.float64).eps
+
+    def singular(cov):
+        sv = np.linalg.svd(cov, compute_uv=False)
+        return sv[-1] <= tol * sv[0]
+
+    if singular(gamma[0]):
         return np.full(nlags, np.nan)
 
     sig_f = gamma[0].copy()
@@ -1969,10 +2126,6 @@ def _pccf_yw(x, y, nlags, adjusted=False):
 
         v_f = sig_f[0, 0]
         v_b = sig_b[1, 1]
-        if not np.isfinite(v_f) or not np.isfinite(v_b):
-            pccf_vals[s - 1 :] = np.nan
-            break
-        tol = np.finfo(np.float64).eps * gamma[0].trace()
         if v_f <= tol or v_b <= tol:
             pccf_vals[s - 1 :] = np.nan
             break
@@ -1982,12 +2135,14 @@ def _pccf_yw(x, y, nlags, adjusted=False):
 
         pccf_vals[s - 1] = delta_f[0, 1] / (d_f * d_b)
 
-        try:
-            phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
-            psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
-        except np.linalg.LinAlgError:
-            pccf_vals[s - 1 :] = np.nan
+        # Lag s only uses the diagonals of sig_f and sig_b; the later lags
+        # need their inverses
+        if singular(sig_f) or singular(sig_b):
+            pccf_vals[s:] = np.nan
             break
+
+        phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
+        psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
 
         phi_new = [None] * (nlags + 1)
         psi_new = [None] * (nlags + 1)
@@ -2088,7 +2243,14 @@ def pccf(
     Parameters
     ----------
     x, y : array_like
-        The time series data to use in the calculation.
+        The time series data to use in the calculation. Each series is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     nlags : int, optional
         Number of lags to return partial cross-correlations for.
         If not provided, uses
@@ -2174,9 +2336,28 @@ def pccf(
     For a bivariate VAR(p) process, P(h) = 0 for h > p,
     providing a useful identification tool.
 
-    If the series are perfectly collinear or constant, the sample
-    autocovariance matrix is singular and the Yule-Walker methods
-    return NaN for all lags.
+    The Yule-Walker methods return NaN for all lags if x or y is
+    constant or the covariance matrix of x and y is singular, that is,
+    x and y are perfectly collinear. Their recursion stops when a
+    prediction error variance is not positive or a prediction error
+    covariance matrix is singular, as happens when the lagged values are
+    perfectly collinear: the lags that would divide by that variance, or
+    need the inverse of that matrix, are NaN. These decisions are made on
+    the standardized series, so they do not depend on the scales of x
+    and y. A variance counts as not positive when it is at most
+    ``100 * nobs * eps``, where ``eps`` is the machine epsilon of float64,
+    and a matrix as singular when its smallest singular value is at most
+    ``100 * nobs * eps`` times its largest.
+
+    .. versionchanged:: 0.15.1
+
+       These decisions no longer depend on the scales of x and y
+       (rescaling one series could make every lag NaN). Series that are
+       collinear to working precision give NaN instead of inaccurate
+       values. The lags after a singular prediction error covariance
+       matrix are NaN on every platform instead of depending on
+       rounding, and the lag computed just before it is no longer
+       dropped.
 
     The OLS method returns NaN for lags where either residual series
     has zero variance.
@@ -2211,8 +2392,8 @@ def pccf(
     >>> result_with_ci.confint.shape
     (5, 2)
     """
-    x = array_like(x, "x")
-    y = array_like(y, "y")
+    x = array_like(x, "x", ndim=1)
+    y = array_like(y, "y", ndim=1)
     nlags = int_like(nlags, "nlags", optional=True)
     methods = (
         "ols",
@@ -2306,7 +2487,15 @@ def levinson_durbin(s, nlags=10, isacov=False):
     ----------
     s : array_like
         If isacov is False, then this is the time series. If isacov is true
-        then this is interpreted as autocovariance starting with lag 0.
+        then this is interpreted as autocovariance starting with lag 0. The
+        array is 1-D; a column with shape (n, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           With isacov=True, a column with shape (n, 1) now gives the same
+           result as the 1-D array, as it did with isacov=False. Input with
+           more than one column raises a ValueError that says that s must
+           be 1-D.
     nlags : int, optional
         The largest lag to include in recursion or order of the autoregressive
         process.
@@ -2342,7 +2531,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     sample autocovariance function is calculated with the default options
     (biased, no fft).
     """
-    s = array_like(s, "s")
+    s = array_like(s, "s", ndim=1)
     nlags = int_like(nlags, "nlags")
     isacov = bool_like(isacov, "isacov")
 
@@ -2367,13 +2556,14 @@ def levinson_durbin(s, nlags=10, isacov=False):
     phi = np.zeros((order + 1, order + 1), "d")
     sig = np.zeros(order + 1)
     # initial points for the recursion
-    phi[1, 1] = sxx_m[1] / sxx_m[0]
-    sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
-    for k in range(2, order + 1):
-        phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])) / sig[k - 1]
-        for j in range(1, k):
-            phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
-        sig[k] = sig[k - 1] * (1 - phi[k, k] ** 2)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        phi[1, 1] = sxx_m[1] / sxx_m[0]
+        sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
+        for k in range(2, order + 1):
+            phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])) / sig[k - 1]
+            for j in range(1, k):
+                phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
+            sig[k] = sig[k - 1] * (1 - phi[k, k] ** 2)
 
     sigma_v = sig[-1]
     arcoefs = phi[1:, -1]
@@ -2494,7 +2684,8 @@ def breakvar_heteroskedasticity_test(
     subset_length : int or float, optional
         Length of the subsets to test (h in Notes below).
         If a float in 0 < subset_length < 1, it is interpreted as fraction.
-        Default is 1/3.
+        A value of 1 or more is the number of observations and must be a
+        whole number, such as 40 or 40.0. Default is 1/3.
     alternative : {"increasing", "decreasing", "two-sided"}, optional
         This specifies the alternative for the p-value calculation. Default
         is two-sided.
@@ -2573,10 +2764,16 @@ def breakvar_heteroskedasticity_test(
         squared_resid = squared_resid.reshape(-1, 1)
     nobs = len(resid)
 
-    if 0 < subset_length < 1:
-        h = int(np.round(nobs * subset_length))
-    elif type(subset_length) is int and subset_length >= 1:
-        h = subset_length
+    length = float_like(subset_length, "subset_length")
+    if 0 < length < 1:
+        h = int(np.round(nobs * length))
+    elif length >= 1 and length.is_integer():
+        h = int(length)
+    else:
+        raise ValueError(
+            "subset_length must be a fraction in (0, 1) or a positive integer, "
+            f"got {subset_length!r}"
+        )
 
     numer_resid = squared_resid[-h:]
     numer_dof = (~np.isnan(numer_resid)).sum(axis=0)
@@ -2658,14 +2855,26 @@ def grangercausalitytests(x, maxlag, addconst=True):
     Parameters
     ----------
     x : array_like
-        The data for testing whether the time series in the second column Granger
-        causes the time series in the first column. Missing values are not
-        supported.
+        The data, with two columns, for testing whether the time series in
+        the second column Granger causes the time series in the first column.
+        Missing values are not supported.
+
+        .. versionchanged:: 0.15.1
+
+           x with a number of columns other than two raises a ValueError
+           that says so.
     maxlag : int or sequence of int
         If an integer, computes the test for all lags up to maxlag. If a
         sequence, computes the tests only for the lags in maxlag.
+
+        .. versionchanged:: 0.15.1
+
+           A sequence with one element, such as ``np.array([3])`` or a
+           Series, gives only that lag, as a list does. It used to give
+           all lags up to its element.
     addconst : bool, optional
-        Include a constant in the model.
+        Include a constant in the model. Only True is implemented; False
+        raises NotImplementedError.
 
     Returns
     -------
@@ -2718,27 +2927,42 @@ def grangercausalitytests(x, maxlag, addconst=True):
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, "x", ndim=2)
+    if x.shape[1] != 2:
+        raise ValueError(f"x must have exactly 2 columns, but it has {x.shape[1]}.")
     if not np.isfinite(x).all():
         raise ValueError("x contains NaN or inf values.")
     addconst = bool_like(addconst, "addconst")
 
-    try:
-        maxlag = int_like(maxlag, "maxlag")
+    is_int = False
+    # int_like would squeeze a sequence with one element, such as
+    # np.array([3]), to an int, so only a scalar is treated as an int
+    if np.ndim(maxlag) == 0:
+        try:
+            maxlag = int_like(maxlag, "maxlag")
+            is_int = True
+        except TypeError:
+            pass
+    if is_int:
         if maxlag <= 0:
             raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
-    except TypeError as exc:
+    else:
         lags = np.array([int(lag) for lag in maxlag])
-        maxlag = lags.max()
-        if lags.min() <= 0 or lags.size == 0:
+        if lags.size == 0 or lags.min() <= 0:
             raise ValueError(
                 "maxlag must be a non-empty list containing only positive integers"
-            ) from exc
+            )
+        maxlag = lags.max()
 
-    if x.shape[0] <= 3 * maxlag + int(addconst):
-        raise ValueError(
-            f"Insufficient observations. Maximum allowable lag is {int((x.shape[0] - int(addconst)) / 3) - 1}"
-        )
+    nobs = x.shape[0]
+    if nobs <= 3 * maxlag + int(addconst):
+        # The largest lag that passes this check
+        max_lag = (nobs - int(addconst) - 1) // 3
+        if max_lag > 0:
+            detail = f"Maximum allowable lag is {max_lag}."
+        else:
+            detail = "x has too few observations for any lag."
+        raise ValueError(f"Insufficient observations. {detail}")
 
     resli = {}
 
@@ -2843,7 +3067,7 @@ class CointResult(NamedTuple):
     critical_values : ndarray
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels based on regression curve. This depends on the number of
-        observations.
+        observations. For trend "n" they are not available and are NaN.
     """
 
     coint_t: float
@@ -2871,7 +3095,7 @@ def coint(
     cointegrating equation.
 
     **Warning:** The autolag default has changed compared to statsmodels 0.8.
-    In 0.8 autolag was always None, no the keyword is used and defaults to
+    In 0.8 autolag was always None, now the keyword is used and defaults to
     "aic". Use `autolag=None` to avoid the lag search.
 
     Parameters
@@ -2902,10 +3126,15 @@ def coint(
           lag until the t-statistic on the last lag length is significant
           using a 5%-sized test.
     return_results : bool, optional
-        For future compatibility, currently only tuple available.
-        If True, then a results instance is returned. Otherwise, a tuple
-        with the test outcome is returned. Set `return_results=False` to
-        avoid future changes in return.
+        Not used. A ``CointResult`` is returned for every value. It is a
+        named tuple, so it also unpacks as the tuple
+        ``coint_t, pvalue, critical_values``.
+
+        .. deprecated:: 0.15.1
+
+            ``return_results`` has no effect and will be removed after
+            statsmodels 0.17 is released. Passing any value other than
+            None issues a ``FutureWarning``.
 
     Returns
     -------
@@ -2920,7 +3149,13 @@ def coint(
         critical_values : ndarray
             Critical values for the test statistic at the 1 %, 5 %, and
             10 % levels based on regression curve. This depends on the
-            number of observations.
+            number of observations. For trend "n" they are not available
+            and are NaN.
+
+            .. versionchanged:: 0.15.1
+
+               With trend "n", critical_values is an ndarray, as it is for
+               the other trends. It was a list.
 
     Notes
     -----
@@ -2959,6 +3194,15 @@ def coint(
         autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
     )
     return_results = bool_like(return_results, "return_results", optional=True)
+    if return_results is not None:
+        warnings.warn(
+            "return_results has no effect and will be removed after "
+            "statsmodels 0.17 is released. coint always returns a "
+            "CointResult. Remove the return_results argument to silence "
+            "this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     nobs, k_vars = y1.shape
     k_vars += 1  # add 1 for y0
@@ -2990,7 +3234,7 @@ def coint(
 
     # no constant or trend, see egranger in Stata and MacKinnon
     if trend == "n":
-        crit = [np.nan] * 3  # 2010 critical values not available
+        crit = np.full(3, np.nan)  # 2010 critical values not available
     else:
         crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
         #  nobs - 1, the -1 is to match egranger in Stata, I do not know why.
@@ -3013,18 +3257,28 @@ class DieboldMarianoResult(LimitedIterationMixin[float]):
         ``nobs - 1`` degrees of freedom when the Harvey et al. (1997)
         small-sample correction is applied.
     pvalue : float
-        The two-sided p-value for the null of equal predictive accuracy.
+        The p-value for the null of equal predictive accuracy against the
+        alternative given by ``alternative``.
     lags : int
-        The number of lags used in the Newey-West estimator of the long-run
+        The number of lags used in the HAC estimator of the long-run
         variance of the loss differential.
     harvey_adj_factor : float or None
         The finite-sample adjustment factor of Harvey et al. (1997) that
         was applied to ``statistic``. ``None`` unless ``harvey_adj`` was
         True.
+    alternative : str
+        The alternative hypothesis, one of "two-sided", "larger" or
+        "smaller".
+
+        .. versionadded:: 0.15.1
+    kernel : str
+        The kernel of the HAC estimator, "bartlett" or "uniform".
+
+        .. versionadded:: 0.15.1
 
     Notes
     -----
-    Unpacks as ``statistic, pvalue = result``. The other two fields are only
+    Unpacks as ``statistic, pvalue = result``. The other fields are only
     available through attribute access.
     """
 
@@ -3032,8 +3286,80 @@ class DieboldMarianoResult(LimitedIterationMixin[float]):
     pvalue: float
     lags: int
     harvey_adj_factor: float | None
+    alternative: str = "two-sided"
+    kernel: str = "bartlett"
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+
+def _hac_mean_tstat(d, lags, kernel, name):
+    """
+    Compute the t-statistic of the mean of d with a HAC variance estimate.
+
+    Parameters
+    ----------
+    d : ndarray
+        The series whose mean is tested.
+    lags : int
+        The number of lags of the HAC estimator.
+    kernel : {"bartlett", "uniform"}
+        The kernel of the HAC estimator.
+    name : str
+        The name of ``d`` used in error messages.
+
+    Returns
+    -------
+    float
+        The mean of ``d`` divided by the square root of its estimated
+        variance.
+
+    Raises
+    ------
+    MissingDataError
+        If ``d`` contains non-finite values.
+    ValueError
+        If ``lags`` is too large for the number of observations, if ``d`` is
+        constant up to rounding error, or if the estimated variance of its
+        mean is not positive.
+    """
+    nobs = d.shape[0]
+    if lags >= nobs:
+        raise ValueError(
+            f"lags ({lags}) must be smaller than the number of observations "
+            f"({nobs})."
+        )
+    if kernel == "uniform" and lags >= nobs - 1:
+        raise ValueError(
+            f"With kernel='uniform', lags ({lags}) must be smaller than the "
+            f"number of observations minus one ({nobs - 1}), since the "
+            "estimate of the long-run variance is otherwise identically zero."
+        )
+    if not np.all(np.isfinite(d)):
+        raise MissingDataError(
+            f"The {name} contains non-finite values. Check y and the forecasts."
+        )
+    if np.ptp(d) <= SQRTEPS * np.max(np.abs(d)):
+        raise ValueError(
+            f"The {name} is constant up to rounding error, so its variance is "
+            "zero and the test is undefined. This happens if the forecasts are "
+            "identical or if both forecast errors are constant."
+        )
+    res = OLS(d, np.ones_like(d)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": lags, "kernel": kernel}
+    )
+    variance = res.cov_params()[0, 0]
+    if not variance > 0:
+        msg = (
+            f"The estimated long-run variance of the {name} is not positive "
+            f"({variance:.6g}) with kernel='{kernel}' and lags={lags}."
+        )
+        if kernel == "uniform":
+            msg += (
+                " Use kernel='bartlett', which always gives a non-negative "
+                "estimate, or fewer lags."
+            )
+        raise ValueError(msg)
+    return float(res.params[0] / np.sqrt(variance))
 
 
 def diebold_mariano_test(
@@ -3046,6 +3372,8 @@ def diebold_mariano_test(
     power=2,
     harvey_adj=False,
     horizon=1,
+    alternative="two-sided",
+    kernel="bartlett",
 ):
     """
     Performs a Diebold-Mariano test under the null hypothesis of
@@ -3054,17 +3382,28 @@ def diebold_mariano_test(
     Parameters
     ----------
     y : array_like
-        Array of the observed variable.
+        Array of the observed variable. The array is 1-D; a column with
+        shape (nobs, 1) is also accepted.
     forecast_a : array_like
-        Array of forecasted values from the first model.
+        Array of forecasted values from the first model. The array is 1-D;
+        a column with shape (nobs, 1) is also accepted.
     forecast_b : array_like
-        Array of forecasted values from the second model.
+        Array of forecasted values from the second model. The array is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1), such as a one-column DataFrame,
+           in y, forecast_a or forecast_b now gives the same result as the
+           1-D array. It raised ValueError.
     lags : int, optional
-        The number of lags to include in the Newey-West (HAC) variance
-        estimator used for the loss differential. Must be non-negative if
-        provided. If not provided, ``max(horizon - 1, ceil(nobs ** (1/3)))``
-        is used, so this also depends on ``horizon`` even when
-        ``harvey_adj`` is False. See the Notes for details.
+        The number of lags to include in the HAC variance estimator used for
+        the loss differential. Must be non-negative if provided. If not
+        provided, ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used with the
+        Bartlett kernel and ``horizon - 1`` with the uniform kernel, so this
+        also depends on ``horizon`` even when ``harvey_adj`` is False. See
+        the Notes for details. Must be smaller than ``nobs``, and smaller
+        than ``nobs - 1`` with the uniform kernel.
     criterion : str or callable, optional
         The loss function used to score each forecast. Default is 'mse'.
         Implemented criteria are 'mse', 'mad' (equivalently 'mae') and
@@ -3083,17 +3422,58 @@ def diebold_mariano_test(
         small samples should be applied. Default is False. When True, the
         test statistic is rescaled and the p-value is computed from a
         Student's t distribution with ``nobs - 1`` degrees of freedom
-        instead of the standard normal.
+        instead of the standard normal. The adjustment factor depends only
+        on ``nobs`` and ``horizon``. Harvey et al. (1997) derive it for the
+        uniform kernel with ``lags=horizon - 1``; with other kernels or lags
+        it is applied unchanged, as in ``dm.test`` in R. See the Notes.
     horizon : int, optional
         The forecast horizon used to (1) form the default number of HAC
         lags and (2) compute the Harvey et al. (1997) adjustment when
-        ``harvey_adj`` is True. Must be a positive integer. Default is 1.
+        ``harvey_adj`` is True. Must be a positive integer. Must be smaller
+        than ``nobs`` if ``harvey_adj`` is True or ``lags`` is not provided,
+        and is otherwise not used. Default is 1.
+    alternative : {"two-sided", "larger", "smaller"}, optional
+        The alternative hypothesis, in terms of the mean loss differential
+        :math:`E[d_t]` defined in the Notes. "larger" is
+        :math:`E[d_t] > 0`, i.e. ``forecast_b`` is more accurate than
+        ``forecast_a``, and "smaller" is :math:`E[d_t] < 0`, i.e.
+        ``forecast_a`` is more accurate. Default is "two-sided".
+
+        .. versionadded:: 0.15.1
+    kernel : {"bartlett", "uniform"}, optional
+        The kernel of the HAC estimator of the long-run variance of the
+        loss differential. "bartlett" (the default) is the Newey-West
+        estimator. "uniform" weights all autocovariances up to ``lags``
+        equally, which with ``lags=horizon - 1`` is the estimator of
+        Diebold and Mariano (1995) and Harvey et al. (1997). See the Notes.
+
+        .. versionadded:: 0.15.1
 
     Returns
     -------
     DieboldMarianoResult
-        A result object containing the DM test statistic, its p-value, and
-        the Harvey et al. (1997) adjustment factor, if applicable.
+        A result object with the test statistic, the p-value, the number of
+        lags, the Harvey et al. (1997) adjustment factor, the alternative
+        and the kernel. Unpacks as ``statistic, pvalue``.
+
+    Raises
+    ------
+    MissingDataError
+        If the loss differential contains non-finite values.
+    ValueError
+        If ``horizon`` or ``lags`` is too large for the number of
+        observations, if ``criterion`` does not return one loss per
+        observation, if the loss differential is constant up to rounding
+        error, for example when the two forecasts are identical, or if the
+        estimated long-run variance is not positive, which can happen with
+        the uniform kernel. The loss differential is constant up to rounding
+        error if its range is at most ``sqrt(eps)`` times its largest
+        absolute value, which is a heuristic, see the Notes.
+
+    See Also
+    --------
+    clark_west_test
+        Test of equal predictive accuracy of forecasts from nested models.
 
     Notes
     -----
@@ -3109,21 +3489,49 @@ def diebold_mariano_test(
 
     Under the null hypothesis of equal predictive accuracy,
     :math:`E[d_t] = 0`. The test statistic is the t-statistic from
-    regressing :math:`d_t` on a constant using a Newey-West (HAC)
-    covariance estimator with ``lags`` lags, i.e.
+    regressing :math:`d_t` on a constant using a HAC covariance estimator
+    with :math:`L` = ``lags`` lags, i.e.
 
     .. math::
 
         DM = \\frac{\\bar{d}}{\\sqrt{\\widehat{\\mathrm{avar}}(\\bar{d})}},
+        \\qquad
+        \\widehat{\\mathrm{avar}}(\\bar{d}) = \\frac{1}{T}\\left(
+        \\hat{\\gamma}_0 + 2 \\sum_{j=1}^{L} w_j \\hat{\\gamma}_j\\right),
 
-    where :math:`\\bar{d}` is the sample mean of :math:`d_t` and
-    :math:`\\widehat{\\mathrm{avar}}` is the HAC long-run variance
-    estimator. When ``lags`` is not supplied, a bandwidth of
-    ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used. This differs from
-    some presentations of the DM test that always use ``horizon - 1``
-    lags; pass ``lags=horizon - 1`` explicitly to reproduce that
-    parameterization. Under the null, ``statistic`` is asymptotically
-    standard normal.
+    where :math:`\\bar{d}` is the sample mean of :math:`d_t`,
+    :math:`\\hat{\\gamma}_j` is its sample autocovariance at lag :math:`j`
+    (with divisor :math:`T`) and :math:`w_j` are the kernel weights. The
+    Bartlett kernel uses :math:`w_j = 1 - j / (L + 1)`, which always gives
+    a non-negative variance. The uniform kernel uses :math:`w_j = 1`. The
+    h-step forecast errors of an optimal forecast are at most MA(h - 1), so
+    Diebold and Mariano (1995) use the uniform kernel with
+    :math:`L = h - 1`, and Harvey et al. (1997) derive their correction for
+    this estimator. Its estimate of the variance can be negative, in which
+    case a ``ValueError`` is raised. When ``lags`` is not supplied,
+    ``max(horizon - 1, ceil(nobs ** (1/3)))`` lags are used with the
+    Bartlett kernel and ``horizon - 1`` with the uniform kernel. Under the
+    null, ``statistic`` is asymptotically standard normal.
+
+    With ``kernel="uniform"``, ``lags=horizon - 1`` and ``harvey_adj=True``,
+    the statistic and the p-values are those of ``dm.test`` in the R
+    package forecast with ``varestimator="acf"``, its default. With
+    ``kernel="bartlett"`` and ``lags=horizon - 1`` they are those of
+    ``varestimator="bartlett"``. ``alternative="larger"`` corresponds to
+    ``alternative="greater"`` in R. If the estimate of the variance with
+    the uniform kernel is not positive, ``dm.test`` warns and computes the
+    test with ``h=1`` instead, while a ``ValueError`` is raised here.
+
+    The loss differential is constant up to rounding error if its range,
+    ``np.ptp(d)``, is at most ``sqrt(eps) * np.max(np.abs(d))``, where
+    ``eps`` is the machine epsilon of float64. This relative threshold is a
+    heuristic. A loss differential that varies only slightly relative to its
+    largest value raises a ``ValueError`` even if it is not exactly
+    constant. If the losses are large relative to their difference, for
+    example for forecasts that differ from a series ``y`` of very large scale
+    by constants, rounding error can make the loss differential vary by more
+    than the threshold. The constant differential is then not detected and
+    the statistic is meaningless.
 
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
     overlapping information sets (e.g., multi-step-ahead forecasts), the
@@ -3164,6 +3572,17 @@ def diebold_mariano_test(
     callable, for example an asymmetric loss or a loss appropriate for
     strictly positive series such as QLIKE (see Examples).
 
+    .. versionchanged:: 0.15.1
+
+       A ``ValueError`` is raised if the loss differential is constant up
+       to rounding error, if ``horizon`` or ``lags`` is too large for the
+       number of observations, or if ``criterion`` does not return one loss
+       per observation. These cases returned ``nan`` or a statistic that is
+       not meaningful before, or raised a ``TypeError`` if ``criterion``
+       returned a scalar. A ``ValueError`` is also raised if the estimated
+       long-run variance is not positive, which only happens with
+       ``kernel="uniform"``.
+
     References
     ----------
 
@@ -3197,13 +3616,17 @@ def diebold_mariano_test(
     >>> res.statistic, res.pvalue  # doctest: +SKIP
     """
 
-    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
-    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, maxdim=1, dtype=float)
-    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, maxdim=1, dtype=float)
+    y = array_like(y, "y", ndim=1, dtype=float)
+    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, dtype=float)
+    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, dtype=float)
     lags = int_like(lags, "lags", optional=True)
     harvey_adj = bool_like(harvey_adj, "harvey_adj")
     power = float_like(power, "power", optional=True)
     horizon = int_like(horizon, "horizon")
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller")
+    )
+    kernel = string_like(kernel, "kernel", options=("bartlett", "uniform"))
 
     if horizon < 1:
         raise ValueError("horizon must be a positive integer.")
@@ -3213,9 +3636,18 @@ def diebold_mariano_test(
     t = len(y)
     if forecast_a.shape[0] != t or forecast_b.shape[0] != t:
         raise ValueError("y, forecast_a and forecast_b must all have equal length.")
+    # horizon is only used for the default lags and the Harvey adjustment
+    if horizon >= t and (harvey_adj or lags is None):
+        raise ValueError(
+            f"horizon ({horizon}) must be smaller than the number of "
+            f"observations ({t})."
+        )
 
     if lags is None:
-        lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
+        if kernel == "uniform":
+            lags = horizon - 1
+        else:
+            lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
 
     if isinstance(criterion, str):
         criterion = string_like(
@@ -3247,11 +3679,16 @@ def diebold_mariano_test(
     # calculate d based on criterion
     loss_1 = criterion_func(y, forecast_a)
     loss_2 = criterion_func(y, forecast_b)
-    d = loss_1 - loss_2
+    d = np.asarray(loss_1 - loss_2, dtype=float)
+    if d.shape == (t, 1):
+        d = d[:, 0]
+    if d.shape != (t,):
+        raise ValueError(
+            "criterion must return one loss per observation, an array with "
+            f"shape ({t},), but the loss differential has shape {d.shape}."
+        )
 
-    # calculate test statistic as the t-stat of a constant-only HAC regression
-    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
-    dm_stat = float(res.tvalues[0])
+    dm_stat = _hac_mean_tstat(d, lags, kernel, "loss differential")
 
     # Harvey et. al (1997) small-sample adjustment
     if harvey_adj:
@@ -3259,12 +3696,270 @@ def diebold_mariano_test(
             (t + 1 - (2 * horizon) + (horizon * (horizon - 1) / t)) / t
         )
         dm_stat = adj_factor * dm_stat
-        p_value = 2 * stats.t.cdf(-np.abs(dm_stat), df=t - 1)
+        dist = stats.t(df=t - 1)
     else:
         adj_factor = None
-        p_value = 2 * stats.norm.cdf(-np.abs(dm_stat))
+        dist = stats.norm
 
-    return DieboldMarianoResult(dm_stat, float(p_value), lags, adj_factor)
+    if alternative == "two-sided":
+        p_value = 2 * dist.cdf(-np.abs(dm_stat))
+    elif alternative == "larger":
+        p_value = dist.sf(dm_stat)
+    else:
+        p_value = dist.cdf(dm_stat)
+
+    return DieboldMarianoResult(
+        dm_stat, float(p_value), lags, adj_factor, alternative, kernel
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ClarkWestResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`clark_west_test`.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    statistic : float
+        The Clark-West test statistic, approximately standard normal under
+        the null of equal predictive accuracy.
+    pvalue : float
+        The one-sided p-value against the alternative that the unrestricted
+        model is more accurate, from the standard normal distribution.
+    lags : int
+        The number of lags used in the HAC estimator of the long-run
+        variance of the adjusted loss differential.
+    kernel : str
+        The kernel of the HAC estimator, "bartlett" or "uniform".
+    mspe_restricted : float
+        The mean squared prediction error of ``forecast_restricted``.
+    mspe_unrestricted : float
+        The mean squared prediction error of ``forecast_unrestricted``.
+    adjustment : float
+        The mean squared difference between the two forecasts. The mean of
+        the adjusted loss differential is
+        ``mspe_restricted - (mspe_unrestricted - adjustment)``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. The other fields are only
+    available through attribute access.
+    """
+
+    statistic: float
+    pvalue: float
+    lags: int
+    kernel: str
+    mspe_restricted: float
+    mspe_unrestricted: float
+    adjustment: float
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+
+def clark_west_test(
+    y,
+    forecast_restricted,
+    forecast_unrestricted,
+    *,
+    lags=None,
+    horizon=1,
+    kernel="bartlett",
+):
+    """
+    Clark-West test of equal predictive accuracy of nested models.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    y : array_like
+        The observed values of the forecast variable. The array is 1-D; a
+        column with shape (nobs, 1) is also accepted.
+    forecast_restricted : array_like
+        The forecasts of ``y`` from the restricted model, for example the
+        historical mean or a random walk. The array is 1-D; a column with
+        shape (nobs, 1) is also accepted.
+    forecast_unrestricted : array_like
+        The forecasts of ``y`` from the unrestricted model, which nests the
+        restricted model. The array is 1-D; a column with shape (nobs, 1) is
+        also accepted.
+    lags : int, optional
+        The number of lags to include in the HAC variance estimator used for
+        the adjusted loss differential. Must be non-negative if provided. If
+        not provided, ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used with
+        the Bartlett kernel and ``horizon - 1`` with the uniform kernel, as
+        in :func:`diebold_mariano_test`. Must be smaller than ``nobs``, and
+        smaller than ``nobs - 1`` with the uniform kernel.
+    horizon : int, optional
+        The forecast horizon, used to form the default number of lags. Must
+        be a positive integer. Must be smaller than ``nobs`` if ``lags`` is not
+        provided, and is otherwise not used. Default is 1.
+    kernel : {"bartlett", "uniform"}, optional
+        The kernel of the HAC estimator. "bartlett" (the default) is the
+        Newey-West estimator. "uniform" weights all autocovariances up to
+        ``lags`` equally. See :func:`diebold_mariano_test`.
+
+    Returns
+    -------
+    ClarkWestResult
+        A result object containing the test statistic, its one-sided p-value
+        and the mean squared prediction errors.
+
+    Raises
+    ------
+    MissingDataError
+        If the adjusted loss differential contains non-finite values.
+    ValueError
+        If ``horizon`` or ``lags`` is too large for the number of
+        observations, if the adjusted loss differential is constant up to
+        rounding error, for example when the two forecasts are identical, or
+        if its estimated long-run variance is not positive, which can happen
+        with the uniform kernel.
+
+    See Also
+    --------
+    diebold_mariano_test
+        Test of equal predictive accuracy of two forecasts.
+
+    Notes
+    -----
+    If the restricted model is nested in the unrestricted model, the
+    comparison of their mean squared prediction errors (MSPE), for example
+    with :func:`diebold_mariano_test`, is biased against the unrestricted
+    model. Under the null hypothesis the additional parameters of the
+    unrestricted model are zero, but their estimation adds noise to its
+    forecasts, so its MSPE is expected to be larger. Clark and West (2007)
+    adjust the MSPE of the unrestricted model for this noise. With the
+    forecast errors :math:`e_{1,t}` and :math:`e_{2,t}` and the forecasts
+    :math:`\\hat{y}_{1,t}` and :math:`\\hat{y}_{2,t}` of the restricted and
+    the unrestricted model, the test is based on the adjusted loss
+    differential
+
+    .. math::
+
+        f_t = e_{1,t}^2 - \\left[e_{2,t}^2
+        - (\\hat{y}_{1,t} - \\hat{y}_{2,t})^2\\right]
+        = 2 e_{1,t} (\\hat{y}_{2,t} - \\hat{y}_{1,t}).
+
+    The statistic is the t-statistic of the mean of :math:`f_t`, computed
+    with a HAC estimate of its variance as in :func:`diebold_mariano_test`.
+    The null hypothesis is equal predictive accuracy and the alternative is
+    that the unrestricted model is more accurate, so the test is one-sided
+    and rejects for large values of the statistic. Because of the
+    adjustment, ``forecast_restricted`` and ``forecast_unrestricted`` are
+    not interchangeable: swapping them does not only change the sign of the
+    statistic.
+
+    The statistic is not exactly normal under the null. Clark and West
+    (2007) recommend the standard normal critical values 1.282 for a test
+    at the 10% level and 1.645 at the 5% level, and find that these tests
+    reject slightly less often than the nominal level. The p-value is
+    computed from the standard normal distribution and is approximate.
+
+    The forecasts must be out-of-sample, for example from rolling or
+    recursive estimation, and ``y[t]`` is the observation that
+    ``forecast_restricted[t]`` and ``forecast_unrestricted[t]`` predict.
+    The errors of forecasts ``h > 1`` steps ahead are serially correlated,
+    and Clark and West (2007) only state that an autocorrelation consistent
+    standard error should be used. For one-step forecasts they use the
+    least squares standard error, which corresponds to ``lags=0`` and not
+    to the default number of lags. With ``lags=0`` the statistic is the
+    least squares t-statistic of the mean of :math:`f_t` multiplied by
+    :math:`\\sqrt{T / (T - 1)}`, since the HAC estimator divides by
+    :math:`T`.
+
+    References
+    ----------
+    .. [1] Clark, Todd E., and Kenneth D. West. "Approximately normal tests
+       for equal predictive accuracy in nested models." Journal of
+       Econometrics 138, no. 1 (2007): 291-311.
+
+    Examples
+    --------
+    Compare the historical mean with a predictive regression on ``x``,
+    where ``x[t]`` is known before ``y[t]`` is observed. Both forecasts use
+    recursive estimation windows.
+
+    >>> import numpy as np
+    >>> from statsmodels.tsa.stattools import clark_west_test, diebold_mariano_test
+    >>> rng = np.random.default_rng(0)
+    >>> x = rng.standard_normal(400)
+    >>> y = 0.05 * x + rng.standard_normal(400)
+    >>> f_restricted, f_unrestricted = [], []
+    >>> for t in range(200, 400):
+    ...     f_restricted.append(y[:t].mean())
+    ...     slope, intercept = np.polyfit(x[:t], y[:t], 1)
+    ...     f_unrestricted.append(intercept + slope * x[t])
+    >>> res = clark_west_test(y[200:], f_restricted, f_unrestricted)
+    >>> print(f"{res.statistic:.3f}, {res.pvalue:.4f}")
+    1.873, 0.0306
+
+    The one-sided Diebold-Mariano test of the same forecasts does not adjust
+    for the noise from the estimated slope and does not reject at the 5%
+    level.
+
+    >>> dm = diebold_mariano_test(
+    ...     y[200:], f_restricted, f_unrestricted, alternative="larger"
+    ... )
+    >>> print(f"{dm.statistic:.3f}, {dm.pvalue:.4f}")
+    1.251, 0.1056
+    """
+    y = array_like(y, "y", ndim=1, dtype=float)
+    forecast_restricted = array_like(
+        forecast_restricted, "forecast_restricted", ndim=1, dtype=float
+    )
+    forecast_unrestricted = array_like(
+        forecast_unrestricted, "forecast_unrestricted", ndim=1, dtype=float
+    )
+    lags = int_like(lags, "lags", optional=True)
+    horizon = int_like(horizon, "horizon")
+    kernel = string_like(kernel, "kernel", options=("bartlett", "uniform"))
+
+    if horizon < 1:
+        raise ValueError("horizon must be a positive integer.")
+    if lags is not None and lags < 0:
+        raise ValueError("lags must be a non-negative integer.")
+
+    t = len(y)
+    if forecast_restricted.shape[0] != t or forecast_unrestricted.shape[0] != t:
+        raise ValueError(
+            "y, forecast_restricted and forecast_unrestricted must all have "
+            "equal length."
+        )
+    if horizon >= t and lags is None:
+        raise ValueError(
+            f"horizon ({horizon}) must be smaller than the number of "
+            f"observations ({t})."
+        )
+
+    if lags is None:
+        if kernel == "uniform":
+            lags = horizon - 1
+        else:
+            lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
+
+    sq_err_restricted = (y - forecast_restricted) ** 2
+    sq_err_unrestricted = (y - forecast_unrestricted) ** 2
+    sq_diff = (forecast_restricted - forecast_unrestricted) ** 2
+    adj_loss_diff = sq_err_restricted - (sq_err_unrestricted - sq_diff)
+
+    statistic = _hac_mean_tstat(
+        adj_loss_diff, lags, kernel, "adjusted loss differential"
+    )
+    pvalue = float(stats.norm.sf(statistic))
+
+    return ClarkWestResult(
+        statistic,
+        pvalue,
+        lags,
+        kernel,
+        float(np.mean(sq_err_restricted)),
+        float(np.mean(sq_err_unrestricted)),
+        float(np.mean(sq_diff)),
+    )
 
 
 def has_missing(data):
@@ -3300,7 +3995,7 @@ class KPSSResult(LimitedIterationMixin[float]):
         is, if the p-value is outside the interval (0.01, 0.1).
     lags : int
         The truncation lag parameter.
-    critical_values : dict[str, float]
+    critical_values : dict of str to float
         The critical values at 10%, 5%, 2.5% and 1%. Based on Kwiatkowski
         et al. (1992).
     resstore : ResultsStore or None
@@ -3352,7 +4047,13 @@ def kpss(
     Parameters
     ----------
     x : array_like, 1d
-        The data series to test.
+        The data series to test. A column with shape (nobs, 1) is also
+        accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series with regression="c", as it did with "ct".
     regression : {"c", "ct"}, optional
         The null hypothesis for the KPSS test.
 
@@ -3362,8 +4063,8 @@ def kpss(
         Indicates the number of lags to be used. If "auto" (default), lags
         is calculated using the data-dependent method of Hobijn et al. (1998).
         See also Andrews (1991), Newey & West (1994), and Schwert (1989). If
-        set to "legacy", uses int(12 * (n / 100)**(1 / 4)), as outlined in
-        Schwert (1989).
+        set to "legacy", uses ceil(12 * (n / 100) ** (1 / 4)), as outlined in
+        Schwert (1989), and at most n - 1.
     store : bool, optional
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
@@ -3414,7 +4115,7 @@ def kpss(
     Notes
     -----
     To estimate sigma^2 the Newey-West estimator is used. If lags is "legacy",
-    the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
+    the truncation lag parameter is set to ceil(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
     Table 1 of Kwiatkowski et al. (1992). If the computed statistic is
     outside the table of critical values, then a warning message is
@@ -3445,7 +4146,7 @@ def kpss(
        investigation. Journal of Business and Economic Statistics, 7 (2):
        147-159.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     regression = string_like(regression, "regression", options=("c", "ct"))
     store = bool_like(store, "store")
     result_object = bool_like(result_object, "result_object", optional=True)
@@ -3457,10 +4158,6 @@ def kpss(
 
     nobs = x.shape[0]
     hypo = regression
-
-    # if m is not one, n != m * n
-    if nobs != x.size:
-        raise ValueError(f"x of shape {x.shape} not understood")
 
     if x.max() == x.min():
         # the residual variance is zero, so the statistic is undefined
@@ -3638,7 +4335,7 @@ class RURResult(LimitedIterationMixin[float]):
         statistic is below the 1% critical value, and 0.95 if it is at or
         above the 95% critical value, that is, if the actual p-value is
         outside the interval (0.01, 0.95).
-    critical_values : dict[str, float]
+    critical_values : dict of str to float
         The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
         al. (2006).
     resstore : ResultsStore or None
@@ -3678,7 +4375,13 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     Parameters
     ----------
     x : array_like, 1d
-        The data series to test.
+        The data series to test. A column with shape (nobs, 1) is also
+        accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series.
     store : bool, optional
         If True, then a result instance is returned additionally to
         the RUR statistic (default is False).
@@ -3751,15 +4454,11 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
         tests: robust against nonlinearities, error distributions, structural breaks
         and outliers. Journal of Time Series Analysis, 27 (4): 545-576.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     store = bool_like(store, "store")
     result_object = bool_like(result_object, "result_object", optional=True)
 
     nobs = x.shape[0]
-
-    # if m is not one, n != m * n
-    if nobs != x.size:
-        raise ValueError(f"x of shape {x.shape} not understood")
 
     # Table from [1] has been replicated using 200,000 samples
     # Critical values for new n_obs values have been identified
@@ -4341,9 +5040,18 @@ class ZivotAndrewsUnitRoot:
             The percentage of series at begin/end to exclude from break-period
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
-            The maximum lag which is included in test, default is
-            12*(nobs/100)^{1/4} (Schwert, 1989). Use 0 for a test without
-            lagged differences.
+            The maximum lag which is included in test. If None, the default
+            of ``adfuller`` with ``regression="ct"`` is used,
+            ceil(12 * (nobs / 100) ** (1 / 4)) (Schwert, 1989), or
+            nobs // 2 - 3 if that is smaller. It is the largest lag of the
+            lag search, or the number of lags if autolag is None. Use 0 for
+            a test without lagged differences.
+
+            .. versionchanged:: 0.15.1
+
+               With autolag=None, the default is the same as with a lag
+               search. It was int(12 * (nobs / 100) ** (1 / 4)), which is
+               one lag fewer for most nobs, and was not capped.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
@@ -4372,8 +5080,14 @@ class ZivotAndrewsUnitRoot:
         baselag : int
             The number of lags used for period regressions.
         bpidx : int
-            The index of x corresponding to endogenously calculated break period
-            with values in the range [0..nobs-1].
+            The index of x of the last observation before the endogenously
+            calculated break, for all three models.
+
+            .. versionchanged:: 0.15.1
+
+               With ``regression="t"``, ``bpidx`` is the last observation
+               before the break, as with "c" and "ct". It used to be the
+               observation after it, one larger. The statistic is unchanged.
 
         Notes
         -----
@@ -4388,6 +5102,29 @@ class ZivotAndrewsUnitRoot:
         significant run time reduction but also slightly more pessimistic test
         statistics than the original Zivot-Andrews method, although no attempt
         has been made to characterize the size/power trade-off.
+
+        A candidate break is skipped if its dummies are collinear with the
+        constant and the trend over the rows of the regression, which start
+        at observation ``baselag + 1``, since it then has no test statistic.
+        A level shift needs at least one row before the break and one after
+        it, and a trend shift two rows before it (and, next to a level
+        shift, two after it). So the last observation before the break, the
+        returned ``bpidx``, is at least ``baselag + 1`` ("c") or
+        ``baselag + 2`` ("t" and "ct"), and at most ``nobs - 2`` ("c" and
+        "t") or ``nobs - 3`` ("ct"). A ValueError is raised if no candidate
+        break is left. Within these bounds, ``bpidx`` is between ``trimcnt``
+        and ``nobs - trimcnt - 1`` for all three models, where
+        ``trimcnt = int(trim * nobs)``.
+
+        .. versionchanged:: 0.15.1
+
+           These break periods are skipped. They used to give a NaN or
+           meaningless statistic, or raise, when the number of lags was not
+           smaller than the number of trimmed observations, or with
+           ``trim=0``. With ``regression="t"``, the trimmed candidate breaks
+           are the same as for "c" and "ct"; they used to be one observation
+           earlier, so the statistic and break can differ when the minimum
+           is at the edge of the trimmed range.
 
         References
         ----------
@@ -4428,10 +5165,40 @@ class ZivotAndrewsUnitRoot:
         elif maxlag is not None:
             baselags = maxlag
         else:
-            baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
+            # the largest lag of the lag search above
+            baselags = _adf_default_maxlag(nobs, "ct")
         trimcnt = int(nobs * trim)
         start_period = trimcnt
         end_period = nobs - trimcnt
+        # The regressions start at period baselags + 1. For a break period
+        # whose dummies are zero, constant or a linear trend over those rows,
+        # the dummies are collinear with the constant and the trend, so the
+        # period has no t-statistic and is skipped. The level shift needs a
+        # zero and a nonzero row, the trend shift two zero rows and, next to
+        # the level shift ("ct"), two nonzero rows. The shifts of period p
+        # start at observation p for "c" and "ct" but at p - 1 for "t" (see
+        # _update_regression_exog), so the first valid period of "t" is one
+        # larger than that of "ct" although both need two zero rows.
+        if regression == "c":
+            first_valid, last_valid = baselags + 2, nobs - 1
+        elif regression == "t":
+            first_valid, last_valid = baselags + 4, nobs
+        else:
+            first_valid, last_valid = baselags + 3, nobs - 2
+        # The break of period p is after observation p - 1 for "c" and "ct"
+        # but after p - 2 for "t", so the trimmed periods of "t" are shifted
+        # by one to give all three models the same candidate breaks
+        shift = int(regression == "t")
+        periods = np.arange(
+            max(start_period + 1 + shift, first_valid),
+            min(end_period + shift, last_valid) + 1,
+        )
+        if periods.shape[0] == 0:
+            raise ValueError(
+                f"No break period is left: with {baselags} lags and trim={trim}, "
+                "the break dummies of every candidate period are collinear with "
+                "the constant and the trend. Use fewer lags or a smaller trim."
+            )
         if regression == "ct":
             basecols = 5
         else:
@@ -4444,8 +5211,7 @@ class ZivotAndrewsUnitRoot:
         endog, exog = self._format_regression_data(
             x, nobs, c_const, t_const, basecols, baselags
         )
-        stats = np.full(end_period + 1, np.inf)
-        periods = np.arange(start_period + 1, end_period + 1)
+        stats = np.full(end_period + 2, np.inf)
         tvalues = self._break_tvalues(
             endog[baselags:],
             exog,
@@ -4461,7 +5227,7 @@ class ZivotAndrewsUnitRoot:
             stats[periods] = tvalues
         else:
             # iterate through the time periods
-            for bp in range(start_period + 1, end_period + 1):
+            for bp in periods:
                 # update intercept dummy / trend / trend dummy
                 exog = self._update_regression_exog(
                     exog,
@@ -4474,7 +5240,7 @@ class ZivotAndrewsUnitRoot:
                     baselags,
                 )
                 # check exog rank on first iteration
-                if bp == start_period + 1:
+                if bp == periods[0]:
                     o = OLS(endog[baselags:], exog, hasconst=1).fit()
                     if o.df_model < exog.shape[1] - 1:
                         raise ValueError(
@@ -4485,9 +5251,11 @@ class ZivotAndrewsUnitRoot:
                     stats[bp] = o.tvalues[basecols - 1]
                 else:
                     stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
-        # return best seen
+        # return best seen. bpidx is the last observation before the break,
+        # where the dummies are still zero: p - 1 for "c" and "ct", but
+        # p - 2 for "t", whose trend shift starts at p - 1.
         zastat = np.min(stats)
-        bpidx = np.argmin(stats) - 1
+        bpidx = np.argmin(stats) - (2 if regression == "t" else 1)
         crit = self._za_crit(zastat, regression)
         pval = crit[0]
         cvdict = crit[1]

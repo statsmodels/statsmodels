@@ -130,7 +130,11 @@ class _MinimalWLS:
         resid = self.endog - fitted_values
         wresid = self.wendog - self.wexog.dot(params)
         df_resid = self.wexog.shape[0] - self.wexog.shape[1]
-        scale = np.dot(wresid, wresid) / df_resid
+        # Without residual degrees of freedom (a saturated model) the scale is
+        # inf (nan for a perfect fit), as in WLS, without warning in every
+        # iteration of GLM and RLM
+        with np.errstate(divide="ignore", invalid="ignore"):
+            scale = np.dot(wresid, wresid) / df_resid
 
         return Bunch(params=params, fittedvalues=fitted_values, resid=resid,
                      model=self, scale=scale)

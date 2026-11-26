@@ -1136,6 +1136,9 @@ class RandHIE:
 
     generalizedpoisson_gp2 = generalizedpoisson_gp2()
 
+    # Agrees with pscl 1.5.9 zeroinfl(y ~ idp + lpi + fmde | lncoins,
+    # dist="poisson", link="logit") to 2.1e-5 in bse and 1.4e-5 in params
+    # (relative; the limit is the number of stored digits).
     def zero_inflated_poisson_logit():
         obj = Namespace()
         obj.nobs = 20190
@@ -1178,6 +1181,9 @@ class RandHIE:
 
     zero_inflated_poisson_probit = zero_inflated_poisson_probit()
 
+    # Agrees with pscl 1.5.9 zeroinfl(y ~ idp + lpi + fmde + offset(hlthf) |
+    # lncoins, dist="poisson", link="logit") to 7.2e-6 in bse and 1.5e-6 in
+    # params (relative; the limit is the number of stored digits).
     def zero_inflated_poisson_offset():
         obj = Namespace()
         obj.nobs = 20190

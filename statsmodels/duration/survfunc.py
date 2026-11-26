@@ -409,6 +409,7 @@ class SurvfuncRight:
         _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
+        self.freq_weights = None
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
 
@@ -497,11 +498,44 @@ class SurvfuncRight:
         Returns
         -------
         float
-            The estimated quantile.
+            The estimated quantile.  It is nan if the survival function
+            does not get below 1 - `p`.
+
+        Notes
+        -----
+        The quantile is the first event time at which the estimated
+        survival probability is less than 1 - `p`.  Values within an
+        absolute tolerance of ``sqrt(eps)``, about 1.5e-8, of 1 - `p` are
+        treated as equal to 1 - `p`.  If the estimated survival function
+        equals 1 - `p` at an event time, for example 1/2 at the sixth of
+        12 distinct uncensored event times for ``p=0.5``, that time is not
+        the quantile and the next event time is returned.  R
+        (``survival::quantile.survfit``) returns the midpoint of the two
+        event times in this case.  For the uncensored times 1, ..., 12
+        and ``p=0.5`` the median is 7 here and 6.5 in R.  The result is
+        nan if the survival function never gets below 1 - `p`, for example
+        if all observations after the last time at which the curve is above
+        1 - `p` are censored.
+
+        .. versionchanged:: 0.15.1
+
+           Survival probabilities that equal 1 - `p` up to rounding error
+           are treated as equal.  Previously the result could depend on the
+           floating point rounding of the estimated survival probability.
         """
 
-        # SAS uses a strict inequality here.
-        ii = np.flatnonzero(self.surv_prob < 1 - p)
+        # The survival probabilities are computed as exp(cumsum(log(...))),
+        # so a value that is exactly 1 - p (e.g. a Kaplan-Meier value of 1/2)
+        # may be stored slightly below it.  The tolerance makes the strict
+        # inequality independent of that rounding; it is the default
+        # tolerance of R's quantile.survfit.  The rounding error is about
+        # 1e-15 (3e-15 for 1e5 observations) so the tolerance is much larger
+        # and could hide a genuine deficit smaller than it.  In exact
+        # arithmetic checks this occurred only with frequency weights that
+        # sum to 1e8 or more.  R returns the midpoint of the two event times
+        # at an exact tie, here the next event time is used.
+        tol = np.sqrt(np.finfo(float).eps)
+        ii = np.flatnonzero(self.surv_prob < 1 - p - tol)
 
         if len(ii) == 0:
             return np.nan
@@ -650,6 +684,28 @@ class SurvfuncRight:
         ucb : ndarray
             The upper confidence limits corresponding to the points
             in `surv_times`.
+
+        Notes
+        -----
+        The band follows Hall and Wellner (1980) and Klein and
+        Moeschberger (2003), eqs. 4.4.4-4.4.5, with the total sample size
+        ``n`` (the sum of ``freq_weights`` if given), the Greenwood
+        variance and the critical value 1.3581.  It agrees with the
+        Hall-Wellner helper functions of the R package ``km.ci`` at
+        ``k = 1.3581``.  ``km.ci(..., method="loghall")`` uses a critical
+        value that depends on the range of times covered by the band
+        (1.3364 for the ``bmt`` ALL group), so its limits differ slightly.
+
+        With left truncation (``entry`` is given), ``n`` is still the
+        number of records (the sum of ``freq_weights`` if given), which
+        includes subjects that enter after the early event times, and not
+        the number at risk at any time.
+
+        .. versionchanged:: 0.15.1
+
+           The band uses the total sample size ``n`` instead of the number
+           at risk at each time, and the Greenwood variance also when
+           ``freq_weights`` are given. All limits change.
         """
 
         _ = string_like(method, "method", options=("hw",))
@@ -658,8 +714,22 @@ class SurvfuncRight:
             raise ValueError("alpha must be set to 0.05")
 
         transform = string_like(transform, "transform", options=("log", "arcsin"))
-        s2 = self.surv_prob_se**2 / self.surv_prob**2
-        nn = self.n_risk
+        # Greenwood sum.  surv_prob_se uses Tsiatis' formula when
+        # freq_weights are given, so it is not used here.
+        n_risk = np.asarray(self.n_risk, dtype=np.float64)
+        n_events = np.asarray(self.n_events, dtype=np.float64)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            s2 = n_events / (n_risk * (n_risk - n_events))
+        s2[(n_risk == n_events) | (n_risk == 0)] = np.nan
+        s2 = np.cumsum(s2)
+        # Hall and Wellner (1980); Klein and Moeschberger (2003), eqs.
+        # 4.4.3-4.4.5: ``n`` is the total sample size, not the number at
+        # risk at each time point.
+        freq_weights = self.freq_weights
+        if freq_weights is not None:
+            nn = float(np.sum(freq_weights))
+        else:
+            nn = float(len(self.time))
         if transform == "log":
             denom = np.sqrt(nn) * np.log(self.surv_prob)
             theta = 1.3581 * (1 + nn * s2) / denom

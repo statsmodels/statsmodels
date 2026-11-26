@@ -1,0 +1,4 @@
+- ``test_serial_correlation`` of non-seasonal ETS models used at most
+  2 lags by default instead of ``min(10, nobs // 5)``, which also
+  changed the Ljung-Box statistic in ``summary``. Results change.
+  :pr:`10936`

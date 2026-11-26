@@ -5,6 +5,7 @@ py.extension_module(
     include_directories: [inc_np],
     subdir: 'statsmodels/nonparametric',
     c_args: cython_c_args,
+    cython_args: cython_trace_args,
 )
 
 py.extension_module(
@@ -14,4 +15,5 @@ py.extension_module(
     include_directories: [inc_np],
     subdir: 'statsmodels/nonparametric',
     c_args: cython_c_args,
+    cython_args: cython_trace_args,
 )

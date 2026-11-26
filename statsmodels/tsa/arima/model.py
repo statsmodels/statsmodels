@@ -206,8 +206,9 @@ class ARIMA(sarimax.SARIMAX):
             seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
             enforce_invertibility=enforce_invertibility,
-            concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification,
+            concentrate_scale=concentrate_scale, trend_offset=trend_offset,
+            dates=dates, freq=freq, missing=missing,
+            validate_specification=validate_specification,
             validate_exog=validate_exog)
         self.trend = trend
 
@@ -246,7 +247,21 @@ class ARIMA(sarimax.SARIMAX):
         ----------
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
-            If None, the default is given by Model.start_params.
+            If None, the default is given by Model.start_params. Must have one
+            element for each parameter of the model, or for each free
+            parameter if parameters were fixed and `includes_fixed` is False.
+
+            .. versionchanged:: 0.15.1
+
+               A `start_params` with the wrong number of elements raises a
+               ValueError where it previously raised another error.
+
+            .. deprecated:: 0.15.1
+
+               A `start_params` with too many elements, or with a single
+               element for several free parameters, returned a result. This
+               is deprecated and will raise a ValueError after statsmodels
+               0.17 is released.
         transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
@@ -315,7 +330,9 @@ class ARIMA(sarimax.SARIMAX):
 
         Returns
         -------
-        ARIMAResults
+        ARIMAResults or ndarray
+            The estimation results, or the array of estimated parameters if
+            `return_params` is True.
 
         Examples
         --------
@@ -376,6 +393,28 @@ class ARIMA(sarimax.SARIMAX):
                     'Starting parameters are not supported with'
                     ' method="innovations_mle" yet. Use method="statespace" to'
                     ' pass `start_params`.')
+
+            # Check the number of starting parameters
+            k_start = np.size(start_params)
+            free_only = self._has_fixed_params and not includes_fixed
+            k_params = len(self.param_names)
+            if free_only:
+                k_params -= len(self._fixed_params)
+            if k_start != k_params:
+                kind = "free parameters" if free_only else "parameters"
+                msg = (f"start_params has {k_start} elements, but the model"
+                       f" has {k_params} {kind}.")
+                # These lengths returned a result in earlier versions
+                broadcast = free_only and k_start == 1
+                extra = not free_only and k_start > k_params
+                if not (broadcast or extra):
+                    raise ValueError(msg)
+                warnings.warn(
+                    f"{msg} This is deprecated and will raise a ValueError"
+                    " after statsmodels 0.17 is released.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
 
             method_kwargs["start_params"] = start_params
             method_kwargs["transformed"] = transformed
@@ -458,7 +497,7 @@ class ARIMA(sarimax.SARIMAX):
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
-            elif method == "innovations_mle":
+            else:  # innovations_mle, validated above
                 p, fit_details = innovations_mle(
                     endog,
                     order=order,

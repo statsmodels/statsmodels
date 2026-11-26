@@ -5,14 +5,18 @@ Created on Mon Dec 10 09:18:14 2012
 Author: Josef Perktold
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pandas as pd
 import pytest
 
 from statsmodels.stats.inter_rater import (
     aggregate_raters,
     cohens_kappa,
     fleiss_kappa,
+    krippendorff_alpha,
     to_table,
 )
 from statsmodels.tools.testing import Holder
@@ -508,7 +512,444 @@ def test_cohens_kappa_rejects_non_square_table():
         cohens_kappa(np.ones((2, 3)))
 
 
+@pytest.mark.parametrize(
+    "table, message",
+    [
+        ([[0, 0], [0, 0]], "positive number of observations"),
+        ([[0]], "positive number of observations"),
+        ([[1, np.nan], [2, 3]], "finite counts"),
+        ([[1, np.inf], [2, 3]], "finite counts"),
+        ([[1, -np.inf], [2, 3]], "finite counts"),
+    ],
+    ids=["zeros", "zero-1x1", "nan", "inf", "neg-inf"],
+)
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_rejects_invalid_counts(table, message, wt):
+    # an all-zero table and non-finite counts used to warn about invalid
+    # divisions and then fail with an AssertionError without a message
+    with warnings.catch_warnings():
+        # the ValueError has to be raised before any value is divided
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match=message):
+            cohens_kappa(table, wt=wt)
+
+
+@pytest.mark.filterwarnings("ignore:overflow encountered")  # the sum overflows
+def test_cohens_kappa_rejects_overflowing_sum():
+    with pytest.raises(ValueError, match="sum of the table must be finite"):
+        cohens_kappa([[1e308, 1e308], [0, 0]])
+
+
 def test_fleiss_kappa_rejects_1d_table():
     # a 1-d table used to crash with a bare "not enough values to unpack"
     with pytest.raises(ValueError, match="2-d array"):
         fleiss_kappa(np.array([5, 5, 5]))
+
+
+# GH 5530, tables in which one rater uses a single category
+one_category_tables = [
+    [[60, 29], [0, 0]],
+    [[7, 3], [0, 0]],
+    [[1, 5], [0, 0]],
+    [[1, 4], [0, 0]],
+    [[60, 0], [29, 0]],
+    [[7, 0], [3, 0]],
+    [[1, 0], [5, 0]],
+    [[0, 10], [0, 0]],
+    [[20, 10, 5], [0, 0, 0], [0, 0, 0]],
+    [[20, 0, 0], [10, 0, 0], [5, 0, 0]],
+    [[0, 0, 0], [6, 0, 2], [0, 0, 0]],
+]
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+@pytest.mark.parametrize("table", one_category_tables)
+def test_cohens_kappa_one_category(table, wt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert_equal(kappa, 0)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+# GH 5530, tables in which both raters use the same single category
+same_category_tables = [
+    [[10, 0], [0, 0]],
+    [[0, 0], [0, 7]],
+    [[0, 0, 0], [0, 5, 0], [0, 0, 0]],
+]
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+@pytest.mark.parametrize("table", same_category_tables)
+def test_cohens_kappa_same_single_category(table, wt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert np.isnan(kappa)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    names += ["kappa_low", "kappa_upp", "kappa_max", "z_value"]
+    for name in names + ["pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+# the first row is the only one used; the first table gives exact zeros also
+# without the one category rule, the others gave rounding noise or nan in
+# the standard errors with user weights
+user_weights = {
+    "weights-1d": {"weights": [0, 1, 2]},
+    "toeplitz": {"weights": [0, 1, 4], "wt": "toeplitz"},
+    "weights-2d": {"weights": np.array([[0, 1, 2], [1, 0, 1], [2, 1, 0]])},
+}
+
+
+@pytest.mark.parametrize(
+    "kwds", list(user_weights.values()), ids=list(user_weights)
+)
+@pytest.mark.parametrize(
+    "first_row",
+    [[1, 5, 2], [1, 1, 3], [1, 2, 2], [1, 1, 1], [1, 1, 8]],
+    ids=lambda row: "-".join(map(str, row)),
+)
+def test_cohens_kappa_one_category_user_weights(first_row, kwds):
+    # user weights give the same exact result as the built-in weights
+    table = [first_row, [0, 0, 0], [0, 0, 0]]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, **kwds)
+        str(res)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_one_category_proportions(wt):
+    # a table of proportions: the standard error was 5e-9 instead of 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa([[0.3, 0.7], [0, 0]], wt=wt)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize(
+    "kwds",
+    [{}, {"weights": [0], "wt": "toeplitz"}, {"weights": np.zeros((1, 1))}],
+    ids=["simple", "toeplitz", "weights-2d"],
+)
+def test_cohens_kappa_single_cell_table(kwds):
+    # a 1 x 1 table is the same single category for both raters
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa([[5]], **kwds)
+        str(res)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    names += ["kappa_low", "kappa_upp", "kappa_max", "z_value"]
+    for name in names + ["pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize(
+    "wt, kappa, ase",
+    [
+        (None, 0.2666666666666667, 0.0913617149738498),
+        ("linear", 0.347826086956522, 0.111651276225669),
+    ],
+)
+def test_cohens_kappa_empty_category(wt, kappa, ase):
+    # both raters use several categories, one category is not used
+    # R 4.5.3, vcd 1.4.14, Kappa(t), the weighted kappa with the default
+    # equal spacing weights, which are the linear weights
+    table = [[20, 10, 5], [0, 0, 0], [3, 4, 8]]
+    res = cohens_kappa(table, wt=wt)
+    assert_allclose(res.kappa, kappa, rtol=1e-13)
+    assert_allclose(res.std_kappa, ase, rtol=1e-13)
+
+
+# Krippendorff (2011), "Computing Krippendorff's Alpha-Reliability", section C:
+# 12 units (rows) rated by 4 observers (columns), 7 ratings missing.
+# https://repository.upenn.edu/asc_papers/43
+kripp_data = np.array(
+    [
+        [1, 1, np.nan, 1],
+        [2, 2, 3, 2],
+        [3, 3, 3, 3],
+        [3, 3, 3, 3],
+        [2, 2, 2, 2],
+        [1, 2, 3, 4],
+        [4, 4, 4, 4],
+        [1, 1, 2, 1],
+        [2, 2, 2, 2],
+        [np.nan, 5, 5, 5],
+        [np.nan, np.nan, 1, 1],
+        [np.nan, 3, np.nan, np.nan],
+    ]
+)
+
+
+def _alpha_from_pairs(data, level):
+    # Alpha from its definition, 1 - D_o / D_e, enumerating the ordered pairs
+    # of ratings (Krippendorff 2011, section E) instead of building the
+    # coincidence matrix.
+    units = [row[~np.isnan(row)] for row in np.asarray(data, dtype=float)]
+    units = [u for u in units if len(u) >= 2]
+    values = np.concatenate(units)
+    freq = {v: np.sum(values == v) for v in np.unique(values)}
+
+    def delta2(c, k):
+        if level == "nominal":
+            return float(c != k)
+        if level == "ordinal":
+            lo, hi = min(c, k), max(c, k)
+            between = sum(f for v, f in freq.items() if lo <= v <= hi)
+            return (between - (freq[c] + freq[k]) / 2) ** 2
+        if level == "interval":
+            return (c - k) ** 2
+        return 0.0 if c + k == 0 else ((c - k) / (c + k)) ** 2
+
+    n = len(values)
+    # within subjects, each pair is weighted by 1 / (m_u - 1)
+    within = sum(
+        delta2(u[i], u[j]) / (len(u) - 1)
+        for u in units
+        for i in range(len(u))
+        for j in range(len(u))
+        if i != j
+    )
+    # all pairs of pairable ratings, regardless of subject
+    between = sum(
+        delta2(values[i], values[j]) for i in range(n) for j in range(n) if i != j
+    )
+    d_o = within / n
+    d_e = between / (n * (n - 1))
+    return 1 - d_o / d_e
+
+
+@pytest.mark.parametrize(
+    "level, expected",
+    [("nominal", 0.743), ("ordinal", 0.815), ("interval", 0.849), ("ratio", 0.797)],
+)
+def test_krippendorff_alpha_published(level, expected):
+    alpha = krippendorff_alpha(kripp_data, level=level)
+    # the published values are rounded to three decimals
+    assert_allclose(alpha, expected, atol=5e-4)
+    assert_allclose(alpha, _alpha_from_pairs(kripp_data, level), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "level, expected",
+    [
+        ("nominal", 0.743421052631579),
+        ("ordinal", 0.815387503754881),
+        ("interval", 0.849107142857143),
+        ("ratio", 0.797402774711612),
+    ],
+)
+def test_krippendorff_alpha_irr(level, expected):
+    # R 4.5.3, irr 0.85; kripp.alpha expects raters in rows
+    # > nmm <- matrix(c(1, 2, 3, 3, 2, 1, 4, 1, 2, NA, NA, NA,
+    # +                 1, 2, 3, 3, 2, 2, 4, 1, 2, 5, NA, 3,
+    # +                 NA, 3, 3, 3, 2, 3, 4, 2, 2, 5, 1, NA,
+    # +                 1, 2, 3, 3, 2, 4, 4, 1, 2, 5, 1, NA), nrow = 4, byrow = TRUE)
+    # > format(kripp.alpha(nmm, "nominal")$value, digits = 15)
+    alpha = krippendorff_alpha(kripp_data, level=level)
+    assert_allclose(alpha, expected, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "level, expected",
+    [
+        ("nominal", 0.43340982828202856),
+        ("ordinal", 0.33585752217398357),
+        ("interval", 0.28804962598066008),
+        ("ratio", 0.2400102941476886),
+    ],
+)
+def test_krippendorff_alpha_irr_complete(level, expected):
+    # irr 0.85 kripp.alpha weights every pair by 1 instead of 1 / (m_u - 1)
+    # when the data has no missing value, which is wrong for 3 or more
+    # raters. The reference values are computed with one extra subject that
+    # has a single rating, which makes irr use 1 / (m_u - 1) and does not
+    # change alpha, since that subject has no pair of ratings.
+    # R 4.5.3, irr 0.85; the category codes are the leading digits of the
+    # labels in irr's diagnoses, which gives the `diagnoses` array above
+    # > x <- sapply(diagnoses, function(v) as.integer(substr(as.character(v), 1, 1)))
+    # > x <- rbind(x, c(1, NA, NA, NA, NA, NA))
+    # > format(kripp.alpha(t(x), "nominal")$value, digits = 17)
+    alpha = krippendorff_alpha(diagnoses, level=level)
+    assert_allclose(alpha, expected, rtol=1e-13)
+
+
+def test_krippendorff_alpha_published_fractions():
+    # Exact values from the coincidence matrix printed in Krippendorff (2011),
+    # section C: the off-diagonal coincidences o_ck (c < k) are
+    # o_12 = o_23 = 4/3 and o_13 = o_14 = o_24 = o_34 = 1/3, the margins are
+    # n_c = (9, 13, 10, 5, 3) and n = 40.
+    # nominal: sum o_ck = 4 and sum n_c n_k = 608
+    assert_allclose(krippendorff_alpha(kripp_data), 1 - 39 * 4 / 608, rtol=1e-13)
+    # interval: sum o_ck (c - k)**2 = 26 / 3 and sum n_c n_k (c - k)**2 = 2240
+    assert_allclose(
+        krippendorff_alpha(kripp_data, level="interval"),
+        1 - 39 * (26 / 3) / 2240,
+        rtol=1e-13,
+    )
+
+
+def _random_ratings(kind, seed):
+    # Subjects rated by 2 to 4 raters, about 20% of the ratings missing. The
+    # ratings of a subject agree with a common value with probability 0.6.
+    rng = np.random.default_rng(seed)
+    n_sub, n_rat = rng.integers(5, 15), rng.integers(2, 5)
+    if kind == "continuous":
+        data = rng.uniform(0, 10, (n_sub, 1)) + rng.uniform(0, 2, (n_sub, n_rat))
+    else:
+        # zeros are included on purpose, they exercise c + k = 0 for "ratio"
+        codes = {
+            "consecutive": [0, 1, 2, 3],
+            "nonconsecutive": [3, 4, 9, 12],
+            "negative": [-5, -2, -1, 4],
+        }[kind]
+        base = rng.choice(codes, n_sub)
+        noise = rng.choice(codes, (n_sub, n_rat))
+        data = np.where(rng.random((n_sub, n_rat)) < 0.6, base[:, None], noise)
+    data = data.astype(float)
+    data[rng.random(data.shape) < 0.2] = np.nan
+    return data
+
+
+_levels = ["nominal", "ordinal", "interval", "ratio"]
+_random_cases = (
+    [("consecutive", level, seed) for level in _levels for seed in range(5)]
+    # codes that are not consecutive integers, so that a difference of the
+    # ranks of the codes is not the difference of the codes
+    + [("nonconsecutive", level, seed) for level in _levels for seed in range(2)]
+    # negative codes are not allowed for the ratio level
+    + [("negative", level, seed) for level in _levels[:3] for seed in range(2)]
+    # float ratings, almost all of them distinct
+    + [("continuous", level, seed) for level in _levels for seed in range(2)]
+)
+
+
+@pytest.mark.parametrize(
+    "kind, level, seed",
+    _random_cases,
+    ids=[f"{kind}-{level}-{seed}" for kind, level, seed in _random_cases],
+)
+def test_krippendorff_alpha_random_vs_pairs(kind, level, seed):
+    data = _random_ratings(kind, seed)
+    expected = _alpha_from_pairs(data, level)
+    # alpha is undefined without two different pairable ratings, see
+    # test_krippendorff_alpha_undefined; the seeds are chosen to avoid it
+    assert np.isfinite(expected)
+    assert_allclose(krippendorff_alpha(data, level=level), expected, rtol=1e-12)
+
+
+def test_krippendorff_alpha_fleiss_kappa():
+    # Without missing ratings, nominal alpha is a function of Fleiss' kappa,
+    # alpha = 1 - (1 - kappa) * (n - 1) / n with n the number of ratings.
+    kappa = fleiss_kappa(aggregate_raters(diagnoses)[0])
+    n = diagnoses.size
+    assert_allclose(
+        krippendorff_alpha(diagnoses), 1 - (1 - kappa) * (n - 1) / n, rtol=1e-13
+    )
+
+
+def test_krippendorff_alpha_scotts_pi():
+    # two raters: Scott's pi with pooled category proportions
+    data = np.array([[0, 0], [0, 1], [1, 1], [2, 2], [2, 1], [1, 1], [0, 0]])
+    p_observed = np.mean(data[:, 0] == data[:, 1])
+    p_cat = np.bincount(data.ravel()) / data.size
+    pi = (p_observed - (p_cat**2).sum()) / (1 - (p_cat**2).sum())
+    n = data.size
+    assert_allclose(krippendorff_alpha(data), 1 - (1 - pi) * (n - 1) / n, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "level, transform",
+    [
+        ("nominal", lambda x: 10 - 3 * x),
+        ("ordinal", np.exp),
+        ("interval", lambda x: 2.5 * x - 7),
+        ("ratio", lambda x: 0.4 * x),
+    ],
+)
+def test_krippendorff_alpha_invariance(level, transform):
+    # nominal: any relabeling; ordinal: increasing transform; interval:
+    # affine transform; ratio: change of unit
+    alpha = krippendorff_alpha(kripp_data, level=level)
+    assert_allclose(krippendorff_alpha(transform(kripp_data), level=level), alpha)
+    # order of subjects and raters does not matter
+    shuffled = kripp_data[::-1][:, [2, 0, 3, 1]]
+    assert_allclose(krippendorff_alpha(shuffled, level=level), alpha)
+
+
+def test_krippendorff_alpha_unpairable_subjects_ignored():
+    # subjects with fewer than two ratings do not contribute
+    extra = np.array([[np.nan, 7, np.nan, np.nan], [np.nan] * 4])
+    data = np.vstack([kripp_data, extra])
+    assert_allclose(krippendorff_alpha(data), krippendorff_alpha(kripp_data))
+
+
+def test_krippendorff_alpha_input_types():
+    data = [list(row) for row in kripp_data]
+    df = pd.DataFrame(kripp_data, columns=list("ABCD"))
+    alpha = krippendorff_alpha(kripp_data, level="ordinal")
+    assert_allclose(krippendorff_alpha(data, level="ordinal"), alpha)
+    assert_allclose(krippendorff_alpha(df, level="ordinal"), alpha)
+    assert isinstance(alpha, float)
+
+
+def test_krippendorff_alpha_perfect_agreement():
+    data = np.array([[1, 1, np.nan], [2, 2, 2], [3, np.nan, 3]])
+    for level in ["nominal", "ordinal", "interval", "ratio"]:
+        assert_equal(krippendorff_alpha(data, level=level), 1.0)
+
+
+@pytest.mark.parametrize("level", ["nominal", "interval"])
+@pytest.mark.parametrize(
+    "data",
+    [
+        # no subject has two ratings
+        [[1, np.nan], [np.nan, 2], [3, np.nan]],
+        # no rating at all
+        [[np.nan, np.nan], [np.nan, np.nan]],
+        # all pairable ratings are equal; the single rating 2 is not pairable
+        [[1, 1], [1, 1], [2, np.nan]],
+    ],
+    ids=["no-pairs", "all-missing", "one-value"],
+)
+def test_krippendorff_alpha_undefined(data, level):
+    # alpha is 0 / 0 in the last case, which must not be computed: it would
+    # return nan as well, but with a RuntimeWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        alpha = krippendorff_alpha(np.array(data), level=level)
+    assert np.isnan(alpha)
+
+
+def test_krippendorff_alpha_raises():
+    with pytest.raises(ValueError, match="2-d array"):
+        krippendorff_alpha(np.array([1, 2, 3]))
+    # the message comes from array_like, so it is not matched
+    with pytest.raises(ValueError):
+        krippendorff_alpha(np.ones((2, 2, 2)))
+    with pytest.raises(ValueError, match="level"):
+        krippendorff_alpha(kripp_data, level="circular")
+    with pytest.raises(ValueError, match="inf"):
+        krippendorff_alpha(np.array([[1, np.inf], [1, 2]]))
+    with pytest.raises(ValueError, match="nonnegative"):
+        krippendorff_alpha(np.array([[1, -1], [1, 2]]), level="ratio")

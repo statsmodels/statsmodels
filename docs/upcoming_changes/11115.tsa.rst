@@ -1,0 +1,4 @@
+- ``append`` of state space results raised a ``ValueError`` ("Columns
+  must match to concatenate along rows.") for new observations given
+  as a pandas Series without a name when the model's ``endog`` is a
+  named Series. :pr:`11115`

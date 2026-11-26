@@ -4,6 +4,7 @@ from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
 from typing import Any
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ import pandas as pd
 from statsmodels.base.data import PandasData
 from statsmodels.iolib.summary import SimpleTable, Summary
 from statsmodels.tools.docstring import Docstring, Parameter, indent
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
@@ -23,12 +25,11 @@ ds.insert_parameters(
     "endog",
     Parameter(
         "model",
-        "Model",
+        "type",
         [
-            (
-                "The model used to forecast endog after the seasonality has been "
-                "removed using STL"
-            )
+            "The model class, for example ARIMA, used to forecast endog after",
+            "the seasonality has been removed using STL. It is initialized with",
+            "the deseasonalized data, endog minus the STL seasonal component.",
         ],
     ),
 )
@@ -38,10 +39,8 @@ ds.insert_parameters(
         "model_kwargs",
         "dict, optional",
         [
-            (
-                "Any additional arguments needed to initialized the model using "
-                "the residuals produced by subtracting the seasonality."
-            )
+            "Any additional arguments needed to initialize the model using the",
+            "deseasonalized data.",
         ],
     ),
 )
@@ -201,7 +200,7 @@ class STLForecast:
         ----------\n%(fit_params)s
         fit_kwargs : dict, optional
             Any additional keyword arguments to pass to ``model``'s ``fit``
-            method when estimating the model on the decomposed residuals.
+            method when estimating the model on the deseasonalized data.
 
         Returns
         -------
@@ -246,16 +245,25 @@ class STLForecastResults:
         self._result = result
         self._model = model
         self._model_result = model_result
-        self._endog = np.asarray(endog)
+        self._endog = array_like(endog, "endog", ndim=1, dtype=None)
         self._nobs = self._endog.shape[0]
-        self._index = getattr(endog, "index", pd.RangeIndex(self._nobs))
+        self._index = getattr(endog, "index", None)
+        if not isinstance(self._index, pd.Index):
+            # No index, or not a pandas one, such as the method list.index
+            self._index = pd.RangeIndex(self._nobs)
         if not (
             isinstance(self._index, (pd.DatetimeIndex, pd.PeriodIndex))
             or is_int_index(self._index)
         ):
             try:
-                self._index = pd.to_datetime(self._index)
-            except ValueError:
+                with warnings.catch_warnings():
+                    # pandas warns before failing on an index of non-dates
+                    warnings.filterwarnings(
+                        "ignore", "Could not infer format", UserWarning
+                    )
+                    self._index = pd.to_datetime(self._index)
+            except (TypeError, ValueError):
+                # TypeError for values that cannot be dates, e.g. tuples
                 self._index = pd.RangeIndex(self._nobs)
 
     @property
@@ -324,16 +332,11 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
-        delta = len(left_data) - len(right_data)
-        adelta = abs(delta)
-        if delta < 0:
-            left_data += [[" " * len(left_data[0][0])] * adelta]
-            left_stubs += [" " * len(left_stubs[0])] * adelta
-        elif delta > 0:
-            right_data += [[" " * len(right_data[0][0])] * adelta]
-            right_stubs += [" " * len(right_stubs[0])] * adelta
+        # STL.config has 5 entries in the left column and 6 in the right
+        npad = len(right_data) - len(left_data)
+        left_data += [[" " * len(left_data[0][0])]] * npad
+        left_stubs += [" " * len(left_stubs[0])] * npad
         tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
-        right_data += [[""]] * (len(left_data) - len(right_data))
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary
@@ -384,6 +387,9 @@ class STLForecastResults:
 
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = get_index_loc(dynamic, self._index)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
             dynamic = dynamic - start
         elif dynamic is True:
             dynamic = 0
@@ -463,6 +469,9 @@ class STLForecastResults:
         """
         forecast = self._model_result.forecast(steps=steps, **kwargs)
         index = forecast.index if isinstance(forecast, pd.Series) else None
+        if not isinstance(steps, (int, np.integer)):
+            # A date: the model has forecast up to and including it
+            steps = len(forecast)
         return forecast + self._seasonal_forecast(steps, index)
 
     def get_prediction(
@@ -516,8 +525,6 @@ class STLForecastResults:
             var_pred_mean = pred.var_pred_mean
         except (AttributeError, NotImplementedError):
             # Allow models that do not return var_pred_mean
-            import warnings
-
             warnings.warn(
                 "The variance of the predicted mean is not available using "
                 f"the {self.model.__class__.__name__} model class.",

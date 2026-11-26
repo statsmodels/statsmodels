@@ -1,0 +1,6 @@
+- Time series models with a tz-aware ``DatetimeIndex`` raised a
+  ``TypeError`` ("Start and end cannot both be tz-aware with different
+  timezones") for a key after the end of the sample in another time
+  zone or with a UTC offset, such as
+  ``predict(end="2002-03-01T00:00-05:00")`` for a US/Eastern index.
+  The key is converted to the time zone of the index. :pr:`11105`

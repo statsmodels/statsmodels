@@ -313,8 +313,6 @@ ignore = [
   "RUF005", # 138
   # mutable-class-default
   "RUF012", # 177
-  # repeated-equality-comparison
-  "PLR1714", # 27
 
   ### New 2026-07-27 when enabling ASYNC, EXE, G, LOG, FURB, S, full ICN
   # assert is used pervasively outside of tests in this codebase (input

@@ -1,0 +1,6 @@
+- Since statsmodels 0.15.0, in-sample quarter strings such as
+  ``"2001Q2"`` as the ``start`` or ``end`` of a prediction selected the
+  last day of the quarter on daily and monthly date indexes, the wrong
+  quarter on quarter-start indexes, and only the first month on monthly
+  period indexes. They select the whole quarter again, as in 0.14, so
+  predictions with these keys change. :pr:`10921`

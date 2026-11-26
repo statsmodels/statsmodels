@@ -483,6 +483,15 @@ class LikelihoodModel(Model):
             'newton'
                 tol : float
                     Relative error in params acceptable for convergence.
+                step_halving : {True, False, "finite"}
+                    What is done with a Newton step that gives a log-likelihood
+                    that is not finite or lower than the current one. True,
+                    the default, halves such a step up to 30 times, "finite"
+                    halves only a step with a log-likelihood that is not
+                    finite, and False takes the full step. If no step is
+                    found, the iteration stops at the last parameters, the
+                    `warnflag` of the results is 2, `converged` is False and
+                    a ConvergenceWarning is issued.
             'nm' -- Nelder Mead
                 xtol : float
                     Relative error in params acceptable for convergence
@@ -578,6 +587,12 @@ class LikelihoodModel(Model):
                     For a list of methods and their arguments, see
                     documentation of `scipy.optimize.minimize`.
                     If no method is specified, then BFGS is used.
+
+        .. versionchanged:: 0.15.1
+
+           Added the option ``step_halving`` of ``method="newton"``. Before,
+           a Newton step that gave a log-likelihood that is not finite
+           continued with nan parameters and `converged` was True.
         """
         if not full_output:
             warnings.warn(
@@ -1156,6 +1171,10 @@ class GenericLikelihoodModel(LikelihoodModel):
         hessian_factor : ndarray, 1d
             A 1d weight vector used in the calculation of the Hessian.
             The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+            up to the sign and the scaling that the model uses, see the
+            ``hessian_factor`` of the model. For example, the factors of
+            ``OLS``, ``WLS`` and ``GLS`` are not divided by the scale and
+            ignore `scale` and `observed`.
         """
 
         raise NotImplementedError
@@ -3101,6 +3120,18 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         Notes
         -----
         Status: new in 0.14, experimental
+
+        The confidence intervals use the t distribution if ``use_t`` is True,
+        with ``df_resid_inference`` degrees of freedom if the results have it
+        (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+        ``df_resid`` otherwise. They use the normal distribution if ``use_t``
+        is False, if ``average`` is True and if ``which`` is not "mean" or
+        "linear".
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
         """
         from statsmodels.base._prediction_inference import get_prediction
 

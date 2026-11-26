@@ -1,0 +1,3 @@
+- ``DynamicFactorMQ.transform_params`` and ``untransform_params``
+  truncated the transformed values of an integer array to
+  integers. Integer values are converted to float. :pr:`11097`

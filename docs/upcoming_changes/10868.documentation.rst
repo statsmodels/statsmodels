@@ -1,0 +1,7 @@
+- Correct docstrings in ``statsmodels.tsa.filters``, ``seasonal_decompose``,
+  ``STL`` and ``MSTL``: the ``convolution_filter`` formulas and return type,
+  the reverse time order of ``init`` in ``recursive_filter`` and of ``useic``
+  in ``miso_lfilter``, the return types of ``bkfilter``, the trend of
+  ``cffilter`` with ``drift=True``, the ``bkfilter`` and ``cffilter``
+  examples that failed on current pandas, and the parameter types of ``STL``
+  and ``MSTL``. :pr:`10868`

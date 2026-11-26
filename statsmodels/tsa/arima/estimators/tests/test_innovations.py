@@ -1,7 +1,10 @@
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import (
     dowj,
     lake,
@@ -207,7 +210,11 @@ def test_innovations_mle_statespace():
     # Test MLE fitting
     # To avoid small numerical differences with MLE fitting, start at the
     # parameters found from innovations_mle
-    res2 = mod.fit(start_params=p.params, disp=0)
+    with warnings.catch_warnings():
+        # Started at the MLE, the line search of L-BFGS-B can fail to improve
+        # on the start parameters (with scipy 1.8), which warns
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        res2 = mod.fit(start_params=p.params, disp=0)
 
     # Test that the state space approach confirms the MLE values found by
     # innovations_mle
@@ -487,3 +494,43 @@ def test_innovations_mle_fixed_params_invalid():
 
     with pytest.raises(ValueError, match="Invalid fixed parameter"):
         innovations_mle(endog, order=(1, 0, 1), fixed_params={"not_a_param": 0.0})
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "integer"]
+)
+def test_innovations_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # estimates of the ndarray
+    from statsmodels.tsa.tests._contract import series_forms
+
+    x = np.random.default_rng(20261129).standard_normal(200)
+    x = x[1:] + 0.5 * x[:-1]
+    if form == "integer":
+        x = np.round(4 * x)
+        endog = x.astype(np.int64)
+    else:
+        endog = series_forms(x)[form]
+    p, _ = innovations(endog, ma_order=2)
+    expected, _ = innovations(x, ma_order=2)
+    assert_allclose(p[2].params, expected[2].params, rtol=1e-12)
+
+
+def test_innovations_mle_minimize_options():
+    # Options given in minimize_kwargs are kept. The objective is the
+    # negative loglikelihood of the demeaned data at the returned parameters
+    from statsmodels.tsa.innovations.arma_innovations import arma_loglike
+
+    x = np.random.default_rng(20261130).standard_normal(201)
+    x = x[1:] + 0.5 * x[:-1]
+    kwargs = {"options": {"maxiter": 2}}
+    p, other = innovations_mle(x, order=(0, 0, 1), minimize_kwargs=kwargs)
+    assert other.minimize_results.nit <= 2
+    assert other.minimize_kwargs["options"] == {"maxiter": 2}
+    llf = arma_loglike(
+        x - x.mean(), ma_params=p.ma_params, sigma2=p.sigma2
+    )
+    assert_allclose(-other.minimize_results.fun, llf, rtol=1e-10)
+    _, converged = innovations_mle(x, order=(0, 0, 1))
+    assert converged.minimize_results.nit > 2
+    assert converged.minimize_results.fun <= other.minimize_results.fun

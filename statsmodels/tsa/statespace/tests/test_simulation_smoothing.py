@@ -17,6 +17,7 @@ from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_ALL,
     SIMULATION_DISTURBANCE,
     SIMULATION_STATE,
+    SimulationSmoother,
 )
 
 current_path = Path(__file__).resolve().parent
@@ -662,7 +663,7 @@ def test_misc():
     mod = sarimax.SARIMAX(obs["realgdp"], order=(1, 0, 0))
     mod["design", 0, 0] = 0.0
     mod["obs_cov", 0, 0] = 1.0
-    mod.update(np.r_[1.0, 1.0])
+    mod.update(np.r_[0.5, 1.0])
     sim = mod.simulation_smoother()
 
     # Test that the simulation smoother is drawing variates correctly
@@ -878,3 +879,69 @@ def test_nan():
     print("Simulated values:")
     print(np.mean(out, axis=0))
     print(np.var(out, axis=0).round(6))
+
+
+@pytest.mark.parametrize(
+    "dtype, prefix",
+    [(np.float32, "s"), (np.float64, "d"), (np.complex64, "c"), (complex, "z")],
+)
+def test_simulate_default_variates_dtype(dtype, prefix):
+    # Without explicit variates, simulate draws them from rng. The draws are
+    # float64, and the float32, complex64 and complex128 simulation smoothers
+    # raised "Buffer dtype mismatch" when assigning them.
+    nobs, k_endog, k_states, k_posdef = 12, 2, 3, 2
+
+    def build(dtype):
+        endog = np.random.default_rng(1234).standard_normal((nobs, k_endog))
+        mod = SimulationSmoother(k_endog, k_states, k_posdef=k_posdef, dtype=dtype)
+        mod.bind(endog.astype(dtype))
+        mod["design"] = np.array([[1.0, 0.0, 0.5], [0.3, 1.0, 0.0]], dtype=dtype)
+        mod["obs_cov"] = np.array([[0.5, 0.1], [0.1, 0.4]], dtype=dtype)
+        mod["transition"] = np.array(
+            [[0.6, 0.2, 0.0], [0.0, 0.4, 0.1], [1.0, 0.0, 0.0]], dtype=dtype
+        )
+        mod["selection"] = np.array([[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]], dtype=dtype)
+        mod["state_cov"] = np.array([[1.0, 0.2], [0.2, 0.5]], dtype=dtype)
+        mod.initialize_known(np.array([0.1, -0.2, 0.0]), np.diag([1.0, 0.5, 0.8]))
+        return mod
+
+    names = [
+        "simulated_state",
+        "simulated_measurement_disturbance",
+        "simulated_state_disturbance",
+    ]
+    mod = build(dtype)
+    sim = mod.simulation_smoother()
+    sim.simulate(rng=np.random.default_rng(5678))
+    assert mod.prefix == prefix
+
+    # The same draws, in the order simulate draws them, passed explicitly
+    rng = np.random.default_rng(5678)
+    measurement = rng.normal(size=(nobs, k_endog))
+    state = rng.normal(size=(nobs, k_posdef))
+    initial = rng.normal(size=k_states)
+    explicit = build(dtype).simulation_smoother()
+    explicit.simulate(
+        measurement_disturbance_variates=measurement.astype(dtype),
+        state_disturbance_variates=state.astype(dtype),
+        initial_state_variates=initial.astype(dtype),
+    )
+    # The float64 simulation smoother with the same draws
+    desired = build(np.float64).simulation_smoother()
+    desired.simulate(rng=np.random.default_rng(5678))
+
+    # Single precision: the float64 results agree to about 1e-7 times the
+    # largest value, so the atol for the smaller elements (down to 0.006)
+    rtol = 1e-4 if prefix in ("s", "c") else 1e-12
+    for name in names:
+        actual = getattr(sim, name)
+        assert actual.dtype == dtype
+        # The same computation on the same values
+        assert_allclose(actual, getattr(explicit, name), rtol=1e-6)
+        expected = getattr(desired, name)
+        atol = rtol * np.abs(expected).max()
+        assert_allclose(actual.real, expected, rtol=rtol, atol=atol)
+        # The imaginary part is zero in exact arithmetic; allow rounding
+        # errors relative to the size of the values
+        atol = 10 * np.finfo(dtype).eps * np.abs(actual.real).max()
+        assert_allclose(actual.imag, 0, atol=atol)
