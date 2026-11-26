@@ -581,7 +581,7 @@ class FormulaManager:
             _ordering = statsmodels.formula.options.ordering
             if isinstance(formula, self.model_spec_type):
                 _formula = formula
-            if _ordering == "legacy":
+            elif _ordering == "legacy":
                 _formula = self._legacy_orderer(formula, _data, context=_eval_env)
             else:
                 feature_flags = (

@@ -147,6 +147,30 @@ def test_engine_options_order_effect(data):
     statsmodels.formula.options.ordering = default
 
 
+@require_formulaic
+@pytest.mark.thread_unsafe(reason="changes global ordering parameter")
+@pytest.mark.parametrize("ordering", ["degree", "sort", "none", "legacy"])
+def test_get_matrices_model_spec_any_ordering(data, ordering, monkeypatch):
+    # A ModelSpec was parsed again as a formula unless the ordering was legacy
+    monkeypatch.setattr(statsmodels.formula.options, "ordering", ordering)
+    mgr = FormulaManager(engine="formulaic")
+    _, rhs = mgr.get_matrices("y ~ 1 + x + c", data)
+    new = data.iloc[[4, 1, 6]]
+    out = mgr.get_matrices(rhs.model_spec, new)
+    assert list(out.columns) == list(rhs.columns)
+    expected = pd.DataFrame(
+        {
+            "Intercept": 1.0,
+            "x": new["x"],
+            "c[T.b]": (new["c"] == "b").astype(float),
+        },
+        index=new.index,
+    )
+    np.testing.assert_allclose(
+        np.asarray(out[list(expected.columns)], dtype=float), expected.to_numpy()
+    )
+
+
 def test_engine_options_err():
     with pytest.raises(ValueError, match="Invalid formula engine option"):
         statsmodels.formula.options.formula_engine = "unknown"
