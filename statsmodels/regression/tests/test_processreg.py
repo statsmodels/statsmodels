@@ -3,6 +3,7 @@
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import collections
+import inspect
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -11,6 +12,7 @@ import pytest
 
 from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.process_regression import GaussianCovariance, ProcessMLE
+from statsmodels.tools.docstring import Docstring
 import statsmodels.tools.numdiff as nd
 
 
@@ -347,3 +349,98 @@ def test_predict_matches_mean_structure_formula():
 
     # default exog (None) falls back to the model's own exog.
     assert_allclose(res.predict(), mod.exog @ np.asarray(res.mean_params), rtol=1e-10)
+
+
+class _DoubledCovariance(GaussianCovariance):
+    # Twice the Gaussian covariance, so that the log-likelihood depends on
+    # which covariance the model uses
+    def get_cov(self, time, sc, sm):
+        return 2 * super().get_cov(time, sc, sm)
+
+
+def _formula_data(nobs=40):
+    rng = np.random.default_rng(20261126)
+    return pd.DataFrame(
+        {
+            "y": rng.standard_normal(nobs),
+            "x": rng.standard_normal(nobs),
+            "g": np.repeat(np.arange(nobs // 5), 5),
+            "time": np.tile(np.arange(5.0), nobs // 5),
+        }
+    )
+
+
+def test_from_formula_documented_parameters_in_signature():
+    # Every documented parameter is a parameter of the signature, and every
+    # parameter of the signature is documented
+    doc = Docstring(ProcessMLE.from_formula.__doc__)
+    documented = [param.name for param in doc._ds["Parameters"]]
+    signature = []
+    for param in inspect.signature(ProcessMLE.from_formula).parameters.values():
+        prefix = "**" if param.kind is param.VAR_KEYWORD else ""
+        signature.append(prefix + param.name)
+    assert documented == signature
+
+
+def test_from_formula_required_and_positional_arguments():
+    data = _formula_data()
+    with pytest.raises(TypeError, match="scale_formula"):
+        ProcessMLE.from_formula(
+            "y ~ x", data, smooth_formula="0 + x", time="time", groups="g"
+        )
+    # Arguments after drop_cols are keyword-only (positional ones were ignored)
+    with pytest.raises(TypeError, match="positional"):
+        ProcessMLE.from_formula(
+            "y ~ x",
+            data,
+            None,
+            None,
+            "0 + x",
+            scale_formula="0 + x",
+            smooth_formula="0 + x",
+            time="time",
+            groups="g",
+        )
+
+
+def test_from_formula_passes_other_keywords():
+    # Keywords of the base model, such as hasconst, are used
+    data = _formula_data()
+    kwargs = dict(
+        scale_formula="0 + x", smooth_formula="0 + x", time="time", groups="g"
+    )
+    # The intercept is found as the constant by default
+    assert ProcessMLE.from_formula("y ~ x", data, **kwargs).k_constant == 1
+    mod = ProcessMLE.from_formula("y ~ x", data, hasconst=False, **kwargs)
+    assert mod.k_constant == 0
+
+
+def test_from_formula_passes_model_keywords():
+    # cov, and keywords that from_formula does not use itself, are passed to
+    # the model
+    data = _formula_data()
+    nobs = data.shape[0]
+    cov = _DoubledCovariance()
+    mod = ProcessMLE.from_formula(
+        "y ~ x",
+        data,
+        scale_formula="0 + x",
+        smooth_formula="0 + x",
+        time="time",
+        groups="g",
+        cov=cov,
+    )
+    assert mod.cov is cov
+
+    exog = np.column_stack([np.ones(nobs), data["x"]])
+    x = data[["x"]].to_numpy()
+    time = data["time"].to_numpy()
+    groups = data["g"].to_numpy()
+    args = (data["y"].to_numpy(), exog, x, x, None, time, groups)
+    direct = ProcessMLE(*args, cov=_DoubledCovariance())
+    default = ProcessMLE(*args)
+    params = np.array([0.1, -0.2, 0.3, 0.2])
+    expected = direct.loglike(params)
+    assert_allclose(mod.loglike(params), expected, rtol=1e-12)
+    # The covariance changes the log-likelihood
+    assert abs(expected - default.loglike(params)) > 1.0
