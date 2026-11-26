@@ -2938,6 +2938,28 @@ def test_news_comparison_with_longer_exog_invalid_shape_raises(varx1_data, ncols
         res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
 
 
+def test_news_comparison_with_longer_exog_dataframe(varx1_data):
+    fitted, endog, exog, nobs = varx1_data
+    res = fitted(nobs)
+    comparison = pd.DataFrame(endog)
+    news = res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
+    post = _varx1_forecast(endog[nobs], exog[nobs + 1 : nobs + 2])[-1]
+    prev = _varx1_forecast(endog[nobs - 1], exog[nobs : nobs + 2])[-1]
+    assert_allclose(news.post_impacted_forecasts.to_numpy(), [post], rtol=1e-12)
+    assert_allclose(news.total_impacts.to_numpy(), [post - prev], rtol=1e-12)
+
+
+@pytest.mark.parametrize("ncols", [1, 2])
+def test_news_comparison_with_longer_exog_3d_raises(varx1_data, ncols):
+    # A 3-d comparison is rejected, also when it has a trailing axis of
+    # length one after the right number of columns
+    fitted, endog, exog, nobs = varx1_data
+    res = fitted(nobs)
+    comparison = endog[:, :ncols, None]
+    with pytest.raises(ValueError, match="comparison must have ndim <= 2"):
+        res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
+
+
 def test_news_time_varying_extends_updated_multivariate(varx1_data):
     # A VARX(1) is time-varying through exog in the state intercept. The
     # impact date is beyond the updated sample, so that the updated results

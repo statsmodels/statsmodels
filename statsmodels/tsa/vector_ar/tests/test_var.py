@@ -1639,6 +1639,31 @@ def test_forecast_wrong_shape_params():
         forecast(y, results.params, results.params, steps=5)
 
 
+@pytest.mark.parametrize("convert", [np.asarray, lambda c: c.tolist()])
+def test_forecast_coefs_array_like(convert):
+    # VAR(2) forecasts by hand: y(h) = c + A1 y(h - 1) + A2 y(h - 2)
+    a1 = np.array([[0.5, 0.1], [0.2, 0.4]])
+    a2 = np.array([[-0.2, 0.0], [0.1, -0.1]])
+    intercept = np.array([0.1, -0.1])
+    y = np.array([[1.0, -1.0], [2.0, 0.5]])
+    path = [y[0], y[1]]
+    for _ in range(3):
+        path.append(intercept + a1 @ path[-1] + a2 @ path[-2])
+    fc = forecast(y, convert(np.array([a1, a2])), intercept, 3)
+    assert_allclose(fc, path[2:], rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "coefs, ndim",
+    [(np.eye(2), 2), (np.ones((1, 2, 2, 1)), 4), (0.5, 0)],
+    ids=["2d", "4d", "scalar"],
+)
+def test_forecast_coefs_not_3d_raises(coefs, ndim):
+    match = f"coefs must have 3 dimensions, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        forecast(np.ones((2, 2)), coefs, None, 3)
+
+
 def test_var_model_predict_matches_forecast_and_fittedvalues():
     # VAR.predict(params, start, end, lags, trend) is the model-level
     # prediction method exported alongside VARResults.forecast, but every

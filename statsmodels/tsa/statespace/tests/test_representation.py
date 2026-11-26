@@ -778,6 +778,63 @@ def test_initialization():
         mod.initialize_known(initial_state, initial_state_cov)
 
 
+@pytest.mark.parametrize("kind", ["ndarray", "list", "pandas"])
+def test_initialize_known_array_like(kind):
+    # The first predicted state and its covariance are the known moments
+    constant = np.array([1.5, -0.5])
+    cov = np.array([[2.0, 0.3], [0.3, 1.0]])
+    mod = sarimax.SARIMAX(np.zeros(5), order=(2, 0, 0))
+    if kind == "ndarray":
+        mod.initialize_known(constant, cov)
+    elif kind == "list":
+        mod.initialize_known(constant.tolist(), cov.tolist())
+    else:
+        mod.initialize_known(pd.Series(constant), pd.DataFrame(cov))
+    res = mod.filter([0.5, -0.2, 1.0])
+    assert_allclose(res.predicted_state[:, 0], constant, rtol=1e-15)
+    assert_allclose(res.predicted_state_cov[:, :, 0], cov, rtol=1e-15)
+
+
+def test_initialize_known_keeps_complex():
+    mod = Representation(1, k_states=2)
+    mod.initialize_known([1.0 + 2.0j, 3.0], np.eye(2))
+    assert_allclose(mod.initialization.constant, [1.0 + 2.0j, 3.0], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "k_states, constant, cov, match",
+    [
+        (1, 1.0, [[1.0]], "constant must have 1 dimension, but has 0"),
+        (1, [[1.0]], [[1.0]], "constant must have 1 dimension, but has 2"),
+        (2, np.ones((2, 1)), np.eye(2), "constant must have 1 dimension, but has 2"),
+        (1, [1.0], 1.0, "stationary_cov must have 2 dimensions, but has 0"),
+        (2, np.ones(2), np.ones(2), "stationary_cov must have 2 dimensions, but has 1"),
+        (
+            2,
+            np.ones(2),
+            np.eye(2)[:, :, None],
+            "stationary_cov must have 2 dimensions, but has 3",
+        ),
+        (2, np.ones(3), np.eye(2), r"Requires shape \(2,\), got \(3,\)"),
+        (2, np.ones(2), np.eye(3), r"Requires shape \(2,2\), got \(3, 3\)"),
+    ],
+    ids=[
+        "scalar-constant",
+        "1x1-constant",
+        "column-constant",
+        "scalar-cov",
+        "1d-cov",
+        "3d-cov",
+        "constant-length",
+        "cov-shape",
+    ],
+)
+def test_initialize_known_invalid_shape_raises(k_states, constant, cov, match):
+    mod = Representation(1, k_states=k_states)
+    with pytest.raises(ValueError, match=match):
+        mod.initialize_known(constant, cov)
+
+
 def test_init_matrices_time_invariant():
     # Test setting state space system matrices in __init__, with time-invariant
     # matrices

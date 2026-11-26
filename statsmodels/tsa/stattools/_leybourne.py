@@ -2,7 +2,7 @@ import numpy as np
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
-from statsmodels.tools.validation import is_int_like, string_like
+from statsmodels.tools.validation import array_like, is_int_like, string_like
 import statsmodels.tsa._leybourne
 from statsmodels.tsa.stattools._stattools import lagmat, pacf
 
@@ -233,12 +233,7 @@ class LeybourneMcCabeStationarity:
         varest = string_like(
             varest, "varest", options=("var94", "var99"), lower=False
         )
-        x = np.asarray(x)
-        if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
-            raise ValueError(
-                "LM: x must be a 1d array or a 2d array with a single column"
-            )
-        x = np.reshape(x, (-1, 1))
+        x = array_like(x, "x", dtype=None, maxdim=2, ndim=2, shape=(None, 1))
         # determine AR order if not specified
         if arlags is None:
             arlags = self._autolag(x)
