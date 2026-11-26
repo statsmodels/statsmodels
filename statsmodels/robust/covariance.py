@@ -35,7 +35,7 @@ import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
 from statsmodels.stats.covariance import corr_normal_scores, corr_rank
-from statsmodels.tools.validation import float_like, string_like
+from statsmodels.tools.validation import array_like, float_like, string_like
 
 from .scale import mad
 
@@ -535,9 +535,7 @@ def cov_gk(data, scale_func=mad):
     This uses a loop over pairs of variables with cov_gk1 to avoid large
     intermediate arrays.
     """
-    x = np.asarray(data)
-    if x.ndim != 2:
-        raise ValueError("data needs to be two dimensional")
+    x = array_like(data, "data", dtype=None, shape=(None, None))
     nobs, k_vars = x.shape
     cov = np.diag(scale_func(x) ** 2)
     for i in range(k_vars):
@@ -671,9 +669,7 @@ def cov_ogk(
         beta = reweight  # alias, need more reweighting options
     else:
         beta = 0.9
-    x = np.asarray(data)
-    if x.ndim != 2:
-        raise ValueError("data needs to be two dimensional")
+    x = array_like(data, "data", dtype=None, shape=(None, None))
     nobs, k_vars = x.shape
     z = x
     transf0 = np.eye(k_vars)

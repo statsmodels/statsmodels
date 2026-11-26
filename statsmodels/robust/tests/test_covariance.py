@@ -1159,3 +1159,38 @@ def test_covdet_mcd_healthy_data_still_fits():
     assert np.isfinite(np.linalg.det(res.cov))
     assert np.linalg.det(res.cov) > 0
     assert not robcov._is_singular(res.cov)
+
+
+def _cov_ogk_cov(data):
+    return robcov.cov_ogk(data).cov
+
+
+@pytest.mark.parametrize("func", [robcov.cov_gk, _cov_ogk_cov])
+@pytest.mark.parametrize("convert", [lambda x: x.tolist(), pd.DataFrame])
+def test_cov_gk_ogk_array_like(func, convert):
+    rng = np.random.default_rng(31415)
+    x = rng.standard_normal((40, 3))
+    x[:, 1] += x[:, 0]
+    assert_allclose(func(convert(x)), func(x), rtol=1e-13)
+
+
+def test_cov_gk_closed_form():
+    # GK: (scale(x + y)**2 - scale(x - y)**2) / 4 off the diagonal and
+    # scale(x)**2 on it
+    rng = np.random.default_rng(27182)
+    x = rng.standard_normal((40, 2))
+    x[:, 1] += x[:, 0]
+    mad = robscale.mad
+    s_sum, s_diff = mad(x[:, 0] + x[:, 1]), mad(x[:, 0] - x[:, 1])
+    off = (s_sum**2 - s_diff**2) / 4
+    expected = np.array([[mad(x[:, 0]) ** 2, off], [off, mad(x[:, 1]) ** 2]])
+    assert_allclose(robcov.cov_gk(x.tolist()), expected, rtol=1e-13)
+
+
+@pytest.mark.parametrize("func", [robcov.cov_gk, robcov.cov_ogk])
+@pytest.mark.parametrize(
+    "data", [np.arange(10.0), np.ones((10, 2, 2)), 1.0], ids=["1d", "3d", "scalar"]
+)
+def test_cov_gk_ogk_rejects_non_2d(func, data):
+    with pytest.raises(ValueError, match="data must have"):
+        func(data)
