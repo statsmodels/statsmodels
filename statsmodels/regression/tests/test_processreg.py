@@ -229,6 +229,39 @@ def test_score_numdiff(noise):
         assert_allclose(score, score_nd, atol=atol, rtol=1e-4)
 
 
+@pytest.mark.parametrize("noise", [False, True])
+def test_pandas_inputs(noise):
+    # pandas inputs, with an index that is not 0, 1, ..., give the same model
+    # as arrays
+    rng = np.random.default_rng(20261126)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(50, model1, noise, rng=rng)
+    arrays = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
+
+    index = np.arange(100, 150)
+
+    def frame(x, prefix):
+        columns = [f"{prefix}{j}" for j in range(x.shape[1])]
+        return pd.DataFrame(x, index=index, columns=columns)
+
+    x_no_pd = None if x_no is None else frame(x_no, "no")
+    mod = ProcessMLE(
+        pd.Series(y, index=index),
+        frame(x_mean, "mn"),
+        frame(x_sc, "sc"),
+        frame(x_sm, "sm"),
+        x_no_pd,
+        pd.Series(time, index=index),
+        pd.Series(groups, index=index),
+    )
+    params = arrays._get_start() + 0.1
+    assert_allclose(mod.loglike(params), arrays.loglike(params), rtol=1e-12)
+    assert_allclose(mod.score(params), arrays.score(params), rtol=1e-10)
+    # The parameter names come from the columns
+    names = mod.data.param_names
+    assert names[: x_mean.shape[1] + 1] == ["mn0", "mn1", "mn2", "mn3", "sc0"]
+    assert names[-1] == ("no1" if noise else "sm1")
+
+
 def test_summary_after_remove_data():
     # summary() must still work after remove_data() has been called
     rs = np.random.RandomState(8234)
