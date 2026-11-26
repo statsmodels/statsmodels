@@ -550,6 +550,43 @@ def test_cohens_kappa_rejects_1d_weights_of_wrong_length(weights, wt):
             cohens_kappa(table, weights=weights, wt=wt)
 
 
+@pytest.mark.parametrize("weights", [[5, 5, 5], [0, 1, 0]])
+@pytest.mark.parametrize("wt", [None, "linear", "ca", "quadratic", "fc"])
+def test_cohens_kappa_rejects_equal_first_and_last_scores(weights, wt):
+    # the score differences are divided by weights[-1] - weights[0], which
+    # gave nan with a RuntimeWarning
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="first and last 1-d weights must"):
+            cohens_kappa(table, weights=weights, wt=wt)
+
+
+def test_cohens_kappa_toeplitz_equal_first_and_last_weights():
+    # toeplitz weights are not scaled, so they can start and end with the
+    # same value. Weighted kappa is 1 - sum(w * observed) / sum(w * expected)
+    table = np.array([[10, 2, 1], [3, 12, 2], [1, 2, 9]])
+    w = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    observed = table / table.sum()
+    expected = np.outer(observed.sum(1), observed.sum(0))
+    kappa = 1 - (w * observed).sum() / (w * expected).sum()
+    res = cohens_kappa(table, weights=[0, 1, 0], wt="toeplitz")
+    assert_allclose(res.kappa, kappa, rtol=1e-13)
+    assert_allclose(res.kappa, cohens_kappa(table, weights=w).kappa, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [np.ones((2, 2)), np.ones((3, 4)), np.ones((3, 3, 1)), 1.0],
+    ids=["2x2", "3x4", "3x3x1", "scalar"],
+)
+def test_cohens_kappa_rejects_weights_of_wrong_shape(weights):
+    # the message was "weights are not square", also for square weights
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with pytest.raises(ValueError, match=r"have the shape of table, \(3, 3\)"):
+        cohens_kappa(table, weights=weights)
+
+
 @pytest.mark.filterwarnings("ignore:overflow encountered")  # the sum overflows
 def test_cohens_kappa_rejects_overflowing_sum():
     with pytest.raises(ValueError, match="sum of the table must be finite"):
@@ -664,11 +701,18 @@ def test_cohens_kappa_one_category_proportions(wt):
 
 @pytest.mark.parametrize(
     "kwds",
-    [{}, {"weights": [0], "wt": "toeplitz"}, {"weights": np.zeros((1, 1))}],
-    ids=["simple", "toeplitz", "weights-2d"],
+    [
+        {},
+        {"weights": [0], "wt": "toeplitz"},
+        {"weights": np.zeros((1, 1))},
+        {"wt": "linear"},
+        {"weights": [3], "wt": "quadratic"},
+    ],
+    ids=["simple", "toeplitz", "weights-2d", "linear", "quadratic"],
 )
 def test_cohens_kappa_single_cell_table(kwds):
-    # a 1 x 1 table is the same single category for both raters
+    # a 1 x 1 table is the same single category for both raters. Linear and
+    # quadratic weights divided by weights[-1] - weights[0] = 0 and warned
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         res = cohens_kappa([[5]], **kwds)

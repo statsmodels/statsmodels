@@ -478,13 +478,18 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for.
         One dimensional weights have one value for each category, so their
-        length is the number of rows and columns of table.
+        length is the number of rows and columns of table. Two dimensional
+        weights have the shape of table.
 
         .. versionchanged:: 0.15.1
 
            One dimensional weights of another length raise a ValueError.
            Weights of length 1 were broadcast and gave nan, or a kappa of
-           zero up to rounding with ``wt="toeplitz"``.
+           zero up to rounding with ``wt="toeplitz"``. Linear and quadratic
+           weights whose first and last values are equal raise a
+           ValueError. They gave nan with a RuntimeWarning. A 1 x 1 table
+           with these weights gives nan, as with other weights, without the
+           RuntimeWarning.
     return_results : bool, optional
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -518,7 +523,8 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     Weights for 'linear' and 'quadratic' are interpreted as scores for the
     categories, the weights in the computation are based on the pairwise
-    difference between the scores.
+    difference between the scores, divided by the difference between the
+    last and the first score, which therefore must not be equal.
     Weights for 'toeplitz' are interpreted as weighted distance. The
     distance only depends on how many levels apart two entries in the table
     are but not on the levels themselves.
@@ -651,12 +657,23 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
                     f"of categories in table, but they have length "
                     f"{weights.shape[0]}"
                 )
+            # Linear and quadratic weights divide the score differences by the
+            # difference between the last and the first score
+            scale = weights[-1] - weights[0]
+            if scale == 0 and weights.shape[0] == 1:
+                # A table with one category has no differences to scale
+                scale = 1.0
+            elif scale == 0 and wt in ["ca", "linear", "fc", "quadratic", None]:
+                raise ValueError(
+                    "the first and last 1-d weights must differ with linear or "
+                    "quadratic weights, since the differences between the "
+                    "weights are divided by weights[-1] - weights[0], but both "
+                    f"are {weights[0]}"
+                )
             if wt in ["ca", "linear", None]:
-                weights = np.abs(weights[:, None] - weights) /  \
-                           (weights[-1] - weights[0])
+                weights = np.abs(weights[:, None] - weights) / scale
             elif wt in ["fc", "quadratic"]:
-                weights = (weights[:, None] - weights)**2 /  \
-                           (weights[-1] - weights[0])**2
+                weights = (weights[:, None] - weights)**2 / scale**2
             elif wt == "toeplitz":
                 # assume toeplitz structure
                 from scipy.linalg import toeplitz
@@ -668,7 +685,11 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         else:
             rows, cols = table.shape
             if (table.shape != weights.shape):
-                raise ValueError("weights are not square")
+                raise ValueError(
+                    "weights must be 1-d with one value for each category or "
+                    f"have the shape of table, {table.shape}, but they have "
+                    f"shape {weights.shape}"
+                )
         # this is formula from Wikipedia
         if one_category:
             kappa = one_category_value
