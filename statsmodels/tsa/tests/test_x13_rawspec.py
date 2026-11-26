@@ -1291,3 +1291,26 @@ def test_process_closed_on_error(stub_run_spec, tmp_path):
     # the process is closed and waited for, and its files are removed
     assert [process.exited for process in processes] == [True]
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "name, title", [("gdp", "gdp"), (None, "Unnamed Series"), ("", "Unnamed Series")]
+)
+def test_spec_series_title(no_x12, name, title):
+    spec = x13.x13_arima_analysis(_monthly_endog().rename(name), speconly=True)
+
+    # the last two options of the series spec
+    assert f'\ntitle="{title}"\nname="{title}"\n' in spec[: spec.index("}")]
+
+
+def test_run_spec_meta_and_datameta():
+    with (
+        pytest.warns(
+            FutureWarning, match="meta and datameta arguments of run_spec"
+        ) as record,
+        pytest.raises(ValueError, match="Cannot specify both meta and datameta"),
+    ):
+        x13.run_spec("x12dummy", "spec", meta=True, datameta=True)
+
+    # the warning points at the caller
+    assert [warning.filename for warning in record] == [__file__]
