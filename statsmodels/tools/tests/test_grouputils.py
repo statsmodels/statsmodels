@@ -844,3 +844,35 @@ def test_dummy_sparse():
         dtype=np.int8,
     )
     assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "labels",
+    [
+        [1, 1, 2, 2, 3],  # sorted, the last group has one member
+        [3, 1, 2],  # unique, every group has one member
+        [2, 1, 2, 3, 1],  # unsorted, the group 3 has one member
+    ],
+)
+def test_grouping_slices_group_with_one_member(labels):
+    # Index.get_loc returns an int for a value that occurs once, so the
+    # group's row of a 2d array was passed to the function as a 1d array
+    labels = np.array(labels)
+    grouping = Grouping(pd.Index(labels))
+    groups, counts = np.unique(labels, return_counts=True)
+
+    grouping.get_slices()
+    positions = np.arange(labels.shape[0])
+    for group, idx in zip(groups, grouping.slices, strict=True):
+        assert positions[idx].tolist() == np.flatnonzero(labels == group).tolist()
+
+    rng = np.random.default_rng(20261126)
+    data = rng.standard_normal((labels.shape[0], 2))
+    result = grouping.transform_slices(data, lambda x, idx: x.sum(0))
+    expected = pd.DataFrame(data).groupby(labels).sum().to_numpy()
+    assert_allclose(result, expected, rtol=1e-12)
+
+    # The number of rows of each group, from a 2d and a 1d array
+    for values in (data, data[:, 0]):
+        result = grouping.transform_slices(values, lambda x, idx: [len(x)])
+        assert_equal(result, counts[:, None])

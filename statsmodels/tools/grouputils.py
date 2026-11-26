@@ -742,6 +742,13 @@ class Grouping:
         sorted groups for the given index level. I.e., ``self.slices[0]``
         is the index where each observation is in the first (sorted)
         group.
+
+        .. versionchanged:: 0.15.1
+
+           The index of a group with a single member is a slice of length
+           one. It was an int, so that `transform_slices` passed the group's
+           row of a 2d array to the function as a 1d array, and its element
+           of a 1d array as a scalar.
         """
         # TODO: refactor this
         groups = self.index.get_level_values(level).unique()
@@ -749,7 +756,14 @@ class Grouping:
         if isinstance(self.index, MultiIndex):
             self.slices = [self.index.get_loc_level(x, level=level)[0] for x in groups]
         else:
-            self.slices = [self.index.get_loc(x) for x in groups]
+            self.slices = []
+            for x in groups:
+                loc = self.index.get_loc(x)
+                if isinstance(loc, (int, np.integer)):
+                    # get_loc returns the position of a value that occurs
+                    # once. A slice keeps the dimension of the selection.
+                    loc = slice(loc, loc + 1)
+                self.slices.append(loc)
 
     def count_categories(self, level=0):
         """
