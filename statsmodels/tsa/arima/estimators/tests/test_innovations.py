@@ -20,6 +20,7 @@ from statsmodels.tsa.arima.estimators.innovations import (
 from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 from statsmodels.tsa.statespace import sarimax
+from statsmodels.tsa.stattools import acovf
 
 
 @pytest.mark.low_precision("Test against Example 5.1.5 in Brockwell and Davis (2016)")
@@ -91,6 +92,42 @@ def test_innovations_ma_itsmr():
     check_innovations_ma_itsmr(endog)  # Pandas series
     check_innovations_ma_itsmr(endog.values)  # Numpy array
     check_innovations_ma_itsmr(endog.tolist())  # Python list
+
+
+def test_innovations_demean():
+    # With demean=False, the estimates use the sample autocovariances of the
+    # series as given, gamma(h) = sum_t x_t x_{t+h} / n. For an MA(1), the
+    # innovations algorithm gives theta_11 = gamma(1) / gamma(0) and
+    # v_1 = gamma(0) * (1 - theta_11**2) (Brockwell and Davis, 2016,
+    # Section 2.5.4)
+    endog = lake.copy()  # mean is about 9
+    x = endog.values
+    nobs = len(x)
+    gamma0 = x @ x / nobs
+    gamma1 = x[1:] @ x[:-1] / nobs
+    theta = gamma1 / gamma0
+
+    p = innovations(endog, ma_order=1, demean=False).parameters
+    assert_allclose(p[0].sigma2, gamma0)
+    assert_allclose(p[1].ma_params, [theta])
+    assert_allclose(p[1].sigma2, gamma0 * (1 - theta**2))
+
+    # demean=True is the same computation on the demeaned series
+    p_demean = innovations(endog, ma_order=1, demean=True).parameters
+    desired = innovations(x - x.mean(), ma_order=1, demean=False).parameters
+    assert_allclose(p_demean[1].params, desired[1].params)
+    assert not np.allclose(p_demean[1].params, p[1].params)
+
+    # The ARMA estimates use the same autocovariances
+    p = innovations(endog, ar_order=1, ma_order=1, m=5, demean=False)
+    desired = _innovations_arma(
+        acovf(x, fft=True, demean=False), ar_order=1, ma_order=1, m=5
+    )
+    assert_allclose(p.parameters[-1].params, desired[-1].params)
+    p_demean = innovations(endog, ar_order=1, ma_order=1, m=5, demean=True)
+    assert not np.allclose(p_demean.parameters[-1].params, desired[-1].params)
+    desired = innovations(x - x.mean(), ar_order=1, ma_order=1, m=5, demean=False)
+    assert_allclose(p_demean.parameters[-1].params, desired.parameters[-1].params)
 
 
 def test_innovations_ma_invalid():
