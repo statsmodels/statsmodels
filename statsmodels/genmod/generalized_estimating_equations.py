@@ -54,7 +54,7 @@ from statsmodels.discrete.discrete_margins import (
     margeff_cov_with_se,
 )
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.genmod import cov_struct as cov_structs, families
 from statsmodels.genmod.families import varfuncs
 from statsmodels.genmod.families.links import Link
@@ -867,7 +867,8 @@ class GEE(GLM):
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g., Nested) for
             details.  If `dep_data` is a string, it is interpreted as
-            a formula that is applied to `data`. If it is an array, it
+            a formula that is applied to `data`, with the same
+            ``eval_env`` as the formula. If it is an array, it
             must be an array of strings corresponding to column names in
             `data`.  Otherwise it must be an array-like with the same
             number of rows as data.
@@ -902,7 +903,10 @@ class GEE(GLM):
         dep_data_names = None
         if dep_data is not None:
             if isinstance(dep_data, str):
-                dep_data = FormulaManager().get_matrices(dep_data, data, pandas=True)
+                eval_env = get_matrices_eval_env(kwargs.get("eval_env"))
+                dep_data = FormulaManager().get_matrices(
+                    dep_data, data, eval_env=eval_env, pandas=True
+                )
                 dep_data_names = dep_data.columns.tolist()
             else:
                 dep_data_names = list(dep_data)

@@ -22,6 +22,7 @@ from scipy.optimize import minimize
 
 import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.numdiff import approx_fprime
@@ -382,6 +383,16 @@ class ProcessMLE(base.LikelihoodModel):
         groups : array_like or str
             The group values (required keyword argument). If a
             string, this is the name of a column in `data`.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formulas that are not
+            in `data` are looked up (optional keyword argument). None (the
+            default) or 1 is the namespace that calls ``from_formula``, an
+            integer k the namespace k stack frames above it, -1 an empty
+            namespace, and a dict maps names to values.
+
+            .. versionadded:: 0.15.1
+
+               It was ignored, and only variables in `data` were found.
 
         Returns
         -------
@@ -426,24 +437,28 @@ class ProcessMLE(base.LikelihoodModel):
         if isinstance(groups, str):
             groups = np.asarray(data[groups])
         mgr = FormulaManager()
-        exog_scale = mgr.get_matrices(scale_formula, data)
+        eval_env = get_matrices_eval_env(kwargs.get("eval_env"))
+        exog_scale = mgr.get_matrices(scale_formula, data, eval_env=eval_env)
         scale_model_spec = mgr.spec
         scale_names = list(scale_model_spec.column_names)
         exog_scale = np.asarray(exog_scale)
 
-        exog_smooth = mgr.get_matrices(smooth_formula, data)
+        exog_smooth = mgr.get_matrices(smooth_formula, data, eval_env=eval_env)
         smooth_model_spec = mgr.spec
         smooth_names = list(smooth_model_spec.column_names)
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
-            exog_noise = mgr.get_matrices(noise_formula, data)
+            exog_noise = mgr.get_matrices(noise_formula, data, eval_env=eval_env)
             noise_model_spec = mgr.spec
             noise_names = list(noise_model_spec.column_names)
             exog_noise = np.asarray(exog_noise)
         else:
             exog_noise, noise_model_spec, noise_names = None, None, []
 
+        # The formula is evaluated one stack frame further down
+        formula_kwargs = {"eval_env": kwargs.get("eval_env")}
+        advance_eval_env(formula_kwargs)
         mod = super().from_formula(
             formula,
             data=data,
@@ -453,6 +468,7 @@ class ProcessMLE(base.LikelihoodModel):
             exog_noise=exog_noise,
             time=time,
             groups=groups,
+            **formula_kwargs,
         )
 
         mod.data.scale_model_spec = scale_model_spec
