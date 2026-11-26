@@ -5179,6 +5179,78 @@ def test_binary_model_scalar_offset(model, offset):
     assert_allclose(res.params, expected.params, rtol=1e-8)
 
 
+@pytest.mark.parametrize(
+    "model", [Poisson, NegativeBinomial, GeneralizedPoisson, NegativeBinomialP]
+)
+@pytest.mark.parametrize(
+    "extra, value",
+    [
+        ("offset", 0.3),
+        ("offset", np.float64(0.3)),
+        ("offset", np.array(0.3)),
+        ("exposure", 2),
+        ("exposure", 2.0),
+        ("exposure", np.array(2.0)),
+    ],
+    ids=[
+        "offset-float",
+        "offset-np-float",
+        "offset-0d-array",
+        "exposure-int",
+        "exposure-float",
+        "exposure-0d-array",
+    ],
+)
+def test_count_model_scalar_offset_exposure(model, extra, value):
+    endog = np.array([0, 1, 2, 1, 3, 2, 1, 4])
+    exog = np.column_stack(
+        (np.ones(endog.shape[0]), np.linspace(-1, 1, endog.shape[0]))
+    )
+    scalar_model = model(endog, exog, **{extra: value})
+    vector_model = model(endog, exog, **{extra: np.full(endog.shape[0], value)})
+
+    params = np.full(scalar_model.exog.shape[1] + scalar_model.k_extra, 0.1)
+    params[0] = 0.2
+    if scalar_model.k_extra:
+        params[-1] = 0.5
+    extra_value = np.log(float(value)) if extra == "exposure" else float(value)
+    expected_linear = exog @ params[: exog.shape[1]] + extra_value
+
+    assert_allclose(scalar_model.predict(params, which="linear"), expected_linear)
+    assert_allclose(scalar_model.predict(params), np.exp(expected_linear))
+    assert_allclose(scalar_model.predict(params), vector_model.predict(params))
+    assert_allclose(
+        scalar_model.get_distribution(params).mean(),
+        vector_model.get_distribution(params).mean(),
+    )
+
+
+@pytest.mark.parametrize("extra", ["offset", "exposure"])
+def test_count_model_scalar_offset_exposure_fit(extra):
+    endog = np.array([0, 1, 2, 1, 3, 2, 1, 4])
+    exog = np.column_stack(
+        (np.ones(endog.shape[0]), np.linspace(-1, 1, endog.shape[0]))
+    )
+    value = 0.3 if extra == "offset" else 2.0
+    scalar_res = Poisson(endog, exog, **{extra: value}).fit(disp=0)
+    vector_res = Poisson(endog, exog, **{extra: np.full(endog.shape[0], value)}).fit(
+        disp=0
+    )
+    assert_allclose(scalar_res.params, vector_res.params, rtol=1e-10)
+    assert_allclose(scalar_res.llf, vector_res.llf, rtol=1e-10)
+    assert_allclose(scalar_res.fittedvalues, vector_res.fittedvalues, rtol=1e-10)
+
+
+@pytest.mark.parametrize("extra", ["offset", "exposure"])
+def test_count_model_rejects_wrong_length_offset_exposure(extra):
+    endog = np.array([0, 1, 2, 1, 3, 2, 1, 4])
+    exog = np.column_stack(
+        (np.ones(endog.shape[0]), np.linspace(-1, 1, endog.shape[0]))
+    )
+    with pytest.raises(ValueError, match=f"{extra} is not the same length as endog"):
+        Poisson(endog, exog, **{extra: np.ones(3)})
+
+
 def test_negativebinomial_rejects_alpha_kwarg():
     # alpha was swallowed by **kwargs and silently ignored even though the
     # dispersion parameter is estimated, not fixed, for this model
