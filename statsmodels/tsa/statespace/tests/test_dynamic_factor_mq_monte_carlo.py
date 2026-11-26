@@ -84,13 +84,13 @@ def simulate_k_factors3_blocks2(nobs=1000, idiosyncratic_ar1=False):
     endog = pd.DataFrame(np.zeros((1, 2)), columns=["f1", "f2"], index=ix)
     mod_f_12 = varmax.VARMAX(endog, order=(1, 0), trend="n")
     params = [0.5, 0.1, -0.2, 0.9, 1.0, 0, 1.0]
-    f_12 = mod_f_12.simulate(params, nobs)
+    f_12 = mod_f_12.simulate(params, nobs, rng=rs)
 
     # Simulate the third factor
     endog = pd.Series([0], name="f3", index=ix)
     mod_f_3 = sarimax.SARIMAX(endog, order=(2, 0, 0))
     params = [0.7, 0.1, 1.0]
-    f_3 = mod_f_3.simulate(params, nobs)
+    f_3 = mod_f_3.simulate(params, nobs, rng=rs)
 
     # Combine the factors
     f = pd.concat([f_12, f_3], axis=1)
@@ -206,13 +206,13 @@ def gen_k_factor1_nonstationary(
     mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0), initialization="diffuse")
 
     params = np.r_[[0] * (k_ar - 1), [1.0001], 1.0]
-    factor = mod.simulate(params, nobs)
+    factor = mod.simulate(params, nobs, rng=rs)
 
     if idiosyncratic_ar1:
         mod_idio = sarimax.SARIMAX(faux, order=(1, 0, 0))
         endog = pd.concat(
             [
-                factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs)
+                factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs, rng=rs)
                 for i in range(2 * k)
             ],
             axis=1,
@@ -292,13 +292,13 @@ def gen_k_factor1(
     mod = sarimax.SARIMAX(faux, order=(k_ar, 0, 0))
 
     params = np.r_[[0] * (k_ar - 1), [0.5], 1.0]
-    factor = mod.simulate(params, nobs)
+    factor = mod.simulate(params, nobs, rng=rs)
 
     if idiosyncratic_ar1:
         mod_idio = sarimax.SARIMAX(faux, order=(1, 0, 0))
         endog = pd.concat(
             [
-                factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs)
+                factor + mod_idio.simulate([0.7, idiosyncratic_var], nobs, rng=rs)
                 for i in range(2 * k)
             ],
             axis=1,
@@ -391,6 +391,7 @@ def gen_k_factor2(
     nobs=10000, k=2, idiosyncratic_ar1=False, idiosyncratic_var=0.4, k_ar=6
 ):
     # Simulate bivariate VAR(6) for the factor
+    rs = np.random.RandomState(328913)
     ix = pd.period_range(start="1950-01", periods=1, freq="M")
     faux = pd.DataFrame([[0, 0]], index=ix, columns=["f1", "f2"])
     mod = varmax.VARMAX(faux, order=(k_ar, 0), trend="n")
@@ -401,7 +402,7 @@ def gen_k_factor2(
     params = np.r_[A.ravel(), L[np.tril_indices_from(L)]]
 
     # Simulate the factors
-    factors = mod.simulate(params, nobs)
+    factors = mod.simulate(params, nobs, rng=rs)
 
     # Add in the idiosyncratic part
     faux = pd.Series([0], index=ix)
@@ -414,7 +415,7 @@ def gen_k_factor2(
     columns = []
     for i in range(k):
         endog_M.iloc[:, i] = endog_M.iloc[:, i] + mod_idio.simulate(
-            [phi[0], idiosyncratic_var], nobs
+            [phi[0], idiosyncratic_var], nobs, rng=rs
         )
         columns += [f"yM{i + 1}_f2"]
     endog_M.columns = columns
@@ -424,7 +425,7 @@ def gen_k_factor2(
     columns = []
     for i in range(k):
         endog_Q_M.iloc[:, i] = endog_Q_M.iloc[:, i] + mod_idio.simulate(
-            [phi[0], idiosyncratic_var], nobs
+            [phi[0], idiosyncratic_var], nobs, rng=rs
         )
         columns += [f"yQ{i + 1}_f2"]
     endog_Q_M.columns = columns

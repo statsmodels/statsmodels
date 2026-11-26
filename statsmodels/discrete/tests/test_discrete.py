@@ -13,6 +13,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 # pylint: disable-msg=E1101
 from pathlib import Path
 import pickle
+import re
 import warnings
 
 import numpy as np
@@ -4150,6 +4151,56 @@ def test_negbin_alpha_outside_fit(loglike_method, state):
         assert_allclose(res_unpickled.llf, llf_scipy, rtol=1e-12)
         assert_allclose(res_unpickled.aic, res.aic, rtol=1e-12)
         assert_allclose(res_unpickled.llr, res.llr, rtol=1e-10)
+
+
+def _negbin_alpha_data():
+    rng = np.random.default_rng(3214)
+    nobs = 200
+    exog = sm.add_constant(rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.5, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    return endog, exog
+
+
+@pytest.mark.parametrize("loglike_method", ["nb1", "nb2"])
+@pytest.mark.parametrize("failure", ["callback", "start_params"])
+def test_negbin_alpha_after_failed_fit(loglike_method, failure):
+    # a fit that raises must not leave the model reading log(alpha)
+    endog, exog = _negbin_alpha_data()
+    model = NegativeBinomial(endog, exog, loglike_method=loglike_method)
+    res = model.fit(disp=0)
+    llf = res.llf  # llf is computed from the model, read it before the failure
+
+    def stop(xk):
+        raise RuntimeError("stop the optimizer")
+
+    if failure == "callback":
+        with pytest.raises(RuntimeError, match="stop the optimizer"):
+            model.fit(callback=stop, disp=0)
+    else:
+        # one parameter too few; its last value, a negative coefficient, is
+        # taken for alpha and its log is NaN before the error
+        with np.errstate(invalid="ignore"), pytest.raises(ValueError):
+            model.fit(start_params=res.params[:-1], disp=0)
+    assert_allclose(model.loglike(res.params), llf, rtol=1e-12)
+    # the same instance can be fit again
+    assert_allclose(model.fit(disp=0).params, res.params, rtol=1e-6)
+
+
+@pytest.mark.parametrize("loglike_method", ["nb1", "nb2"])
+def test_negbin_save_load(loglike_method, tmp_path):
+    # llf is computed from the loaded model after load, summary included
+    endog, exog = _negbin_alpha_data()
+    res = NegativeBinomial(endog, exog, loglike_method=loglike_method).fit(disp=0)
+    fname = tmp_path / "negbin.pickle"
+    res.save(fname)
+    res_loaded = sm.load(fname)
+
+    for attr in ("llf", "aic", "bic", "llr", "prsquared"):
+        assert_allclose(getattr(res_loaded, attr), getattr(res, attr), rtol=1e-10)
+    pattern = r"Log-Likelihood:\s+(\S+)"
+    llf_text = re.search(pattern, str(res_loaded.summary())).group(1)
+    assert_allclose(float(llf_text), res.llf, rtol=1e-4)
 
 
 def test_unchanging_degrees_of_freedom():

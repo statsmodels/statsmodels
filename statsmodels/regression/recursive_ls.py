@@ -6,12 +6,16 @@ License: Simplified-BSD
 """
 
 
+import datetime as dt
+
 import numpy as np
 import pandas as pd
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace.mlemodel import (
@@ -161,7 +165,7 @@ class RecursiveLS(MLEModel):
             self.k_endog = 1
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, constraints=None):
+    def from_formula(cls, formula, data, subset=None, constraints=None, eval_env=None):
         """
         Create a `RecursiveLS` model instance from a formula and dataframe.
 
@@ -177,13 +181,24 @@ class RecursiveLS(MLEModel):
             `pandas.DataFrame`.
         constraints : {None, array_like, str, tuple}, optional
             See `RecursiveLS` for details.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
         model : RecursiveLS instance
         """
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         return super(MLEModel, cls).from_formula(formula, data, subset,
-                                                 constraints=constraints)
+                                                 constraints=constraints,
+                                                 **kwargs)
 
     def _validate_can_fix_params(self, param_names):
         raise ValueError("Linear constraints on coefficients should be given"
@@ -284,6 +299,54 @@ class RecursiveLS(MLEModel):
         **kwargs
             Additional keyword arguments. Not used.
         """
+
+
+_get_prediction_doc = Docstring(MLEResults.get_prediction.__doc__)
+_get_prediction_doc.remove_parameters("dynamic")
+_get_prediction_doc.insert_parameters(
+    "end",
+    Parameter(
+        "dynamic",
+        "bool, int, str, or datetime, optional",
+        [
+            "Integer offset relative to `start` at which to begin dynamic",
+            "prediction. Can also be an absolute date string to parse or a",
+            "datetime type (these are not interpreted as offsets).",
+            "Prior to this observation, true endogenous values will be used for",
+            "prediction; starting with this observation and continuing through",
+            "the end of prediction, forecasted endogenous values will be used",
+            "instead.",
+            "",
+            ".. versionchanged:: 0.15.1",
+            "",
+            "    A date string is the date at which dynamic prediction begins.",
+            "    Its location was used as an offset relative to `start`, so",
+            "    dynamic prediction began late unless `start` was the first",
+            "    observation. A datetime raised a TypeError.",
+        ],
+    ),
+)
+_get_prediction_doc.replace_block(
+    "Returns",
+    Parameter(
+        "predictions",
+        "PredictionResults",
+        [
+            "PredictionResults instance containing in-sample predictions /",
+            "out-of-sample forecasts and results including confidence intervals.",
+            "",
+            ".. versionchanged:: 0.15.1",
+            "",
+            "    With constraints, the predictions are those of the dependent",
+            "    variable only. Before, they also held those of the extra",
+            "    variables through which the constraints are imposed, as a",
+            "    second column, and pandas data raised a TypeError.",
+        ],
+    ),
+)
+# The out-of-sample design comes from exog or the design keyword; the model
+# is not extended
+_get_prediction_doc.remove_parameters(["extend_model", "extend_kwargs"])
 
 
 class RecursiveLSResults(MLEResults):
@@ -551,7 +614,7 @@ class RecursiveLSResults(MLEResults):
                 f"{shape}. Note that this is the transpose of `design`."
             )
 
-    @Appender(MLEResults.get_prediction.__doc__)
+    @Appender(str(_get_prediction_doc))
     def get_prediction(self, start=None, end=None, dynamic=False,
                        information_set="predicted", signal_only=False,
                        index=None, exog=None, **kwargs):
@@ -565,8 +628,14 @@ class RecursiveLSResults(MLEResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, str)):
+        # A Timestamp is a datetime
+        if isinstance(dynamic, (bytes, str, dt.datetime)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
+            # Convert to offset relative to start
+            dynamic = dynamic - start
 
         if self.model._r_matrix is not None and (out_of_sample or dynamic):
             raise NotImplementedError("Cannot yet perform out-of-sample or"
@@ -587,6 +656,19 @@ class RecursiveLSResults(MLEResults):
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
             start, end + out_of_sample + 1, dynamic, **kwargs)
+
+        # The constraints are imposed through extra endog variables. Keep
+        # only the regression's own endog, as in the results: the prediction
+        # results cache each array under its name with a leading underscore,
+        # and compute the filtered and smoothed forecasts from these
+        if self.model._r_matrix is not None:
+            for name in ["endog", "design", "obs_intercept", "forecasts",
+                         "forecasts_error"]:
+                value = getattr(prediction_results, name)
+                setattr(prediction_results, "_" + name, value[:1])
+            for name in ["obs_cov", "forecasts_error_cov"]:
+                value = getattr(prediction_results, name)
+                setattr(prediction_results, "_" + name, value[:1, :1])
 
         # Return a new mlemodel.PredictionResults object
         res_obj = PredictionResults(self, prediction_results,
@@ -625,7 +707,7 @@ class RecursiveLSResults(MLEResults):
 
         """
         # Get variables
-        if isinstance(variables, (int, str)):
+        if isinstance(variables, (int, np.integer, str)):
             variables = [variables]
         k_variables = len(variables)
 

@@ -2249,8 +2249,6 @@ ROW_LABEL_DATES = pd.DatetimeIndex(
         (1, "2000-01", 1, 2),
         ("2000-01", "2000-03", 0, 4),
         ("2000-01", "2000", 0, 4),
-        # No date in February: the end is the last date before it
-        (0, "2000-02", 0, 2),
         # Without an end, prediction runs from the first date of the start key
         ("2000-03", None, 3, 4),
     ],
@@ -2615,6 +2613,9 @@ def test_period_index_nat_key_raises_key_error(key, which):
     # of an unmatched key, not an AttributeError from NaT
     from statsmodels.tsa.ar_model import AutoReg
 
+    if key == "" and PD_LT_2:
+        # pandas < 2 raises a parse error for "" instead of returning NaT
+        pytest.skip('pandas < 2 does not parse "" as NaT')
     index = pd.period_range("2000-01", periods=24, freq="M")
     y = pd.Series(np.arange(24.0) + np.sin(np.arange(24.0)), index=index)
     res = AutoReg(y, 1).fit()
@@ -2622,3 +2623,133 @@ def test_period_index_nat_key_raises_key_error(key, which):
     kwargs[which] = key
     with pytest.raises(KeyError, match="could not be matched"):
         res.predict(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "key, loc",
+    [
+        # The strings give the seconds since pandas < 2.2 cannot parse a date
+        # string with a UTC offset without them (KeyError: 14)
+        ("2002-03-01T00:00:00-05:00", 26),
+        ("2002-03-01T05:00:00Z", 26),
+        (pd.Timestamp("2002-03-01T05:00", tz="UTC"), 26),
+        (pd.Timestamp("2002-03-01T14:00", tz="Asia/Tokyo"), 26),
+        # Not a date of the index: extended through the next one
+        (pd.Timestamp("2002-01-15", tz="UTC"), 25),
+    ],
+    ids=["str-offset", "str-utc", "utc", "other-tz", "utc-between-dates"],
+)
+def test_get_index_loc_tz_aware_key_after_sample(key, loc):
+    # A key after the end of a tz-aware index in another time zone, or with
+    # a UTC offset, is the same date as the key converted to the time zone of
+    # the index; date_range raised a TypeError for it
+    tz = "US/Eastern"
+    index = pd.date_range("2000-01-01", periods=24, freq="MS", tz=tz)
+    expected = pd.date_range("2000-01-01", periods=loc + 1, freq="MS", tz=tz)
+    result = tsa_model.get_index_loc(key, index)
+    assert result[0] == loc
+    assert result[1].equals(expected)
+    assert result[2] is True
+    converted = tsa_model.get_index_loc(pd.Timestamp(key).tz_convert(tz), index)
+    assert converted[0] == loc
+    assert converted[1].equals(expected)
+
+    endog = pd.Series(np.zeros(24), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        20, key, 24, mod._index, data=mod.data
+    )
+    assert (start, end, out_of_sample) == (20, 23, loc - 23)
+    assert prediction_index.equals(expected[20:])
+
+
+@pytest.mark.parametrize("tz", ["UTC", "US/Eastern", "Asia/Tokyo"])
+@pytest.mark.parametrize(
+    "freq, nobs", [("D", 500), ("MS", 24), ("QS", 12), ("h", 24 * 200)]
+)
+def test_quarter_string_key_tz_aware_index(tz, freq, nobs):
+    # The bounds of the quarter of a key such as "2000Q2" are local times of
+    # a tz-aware index; comparing them with it as naive timestamps raised a
+    # TypeError
+    index = pd.date_range("2000-01-01", periods=nobs, freq=freq, tz=tz)
+    loc, new_index, expanded = tsa_model.get_index_loc("2000Q2", index)
+    # The dates of the second quarter of 2000 in local time (the hourly
+    # US/Eastern dates skip the hour lost to daylight saving time on April 2)
+    expected = index[(index.year == 2000) & (index.quarter == 2)]
+    if len(expected) == 1:
+        # A single date is an exact match
+        assert loc == index.get_loc(expected[0])
+    else:
+        assert index[loc].equals(expected)
+    assert not expanded
+    assert new_index.equals(index[: index.get_loc(expected[-1]) + 1])
+
+
+def test_quarter_string_keys_tz_aware_prediction():
+    index = pd.date_range("2000-01-01", periods=500, freq="D", tz="US/Eastern")
+    res = constant_mean_results(pd.Series(np.zeros(500), index=index))
+    pred = res.predict(start="2000Q2", end="2000Q3")
+    expected = pd.date_range("2000-04-01", "2000-09-30", freq="D", tz="US/Eastern")
+    assert pred.index.equals(expected)
+
+
+@pytest.mark.parametrize(
+    "start, end, expected_start, expected_end",
+    [
+        # No date in February: the end is the last date before it
+        (0, "2000-02", 0, 2),
+        # and the start is the first date after it
+        ("2000-02", None, 3, 4),
+    ],
+)
+def test_row_label_empty_partial_date_key_deprecated(
+    start, end, expected_start, expected_end
+):
+    # Dates without a frequency are only row labels. pandas gives an empty
+    # slice for a partial date string between two of them, which was used
+    # silently, as for dates with a frequency
+    endog = pd.Series(np.zeros(5), index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.warns(FutureWarning, match="No date of the index matches") as rec:
+        start_loc, end_loc, out_of_sample, prediction_index = (
+            tsa_model.get_prediction_index(
+                start,
+                end,
+                5,
+                mod._index,
+                index_generated=mod._index_generated,
+                data=mod.data,
+            )
+        )
+    # The warning points at the caller outside statsmodels
+    assert rec[0].filename == __file__
+    assert (start_loc, end_loc, out_of_sample) == (expected_start, expected_end, 0)
+    expected = ROW_LABEL_DATES[expected_start : expected_end + 1]
+    assert prediction_index.equals(expected)
+
+
+def test_row_label_empty_partial_date_key_deprecated_prediction():
+    y = pd.Series([0.3, 1.2, 1.9, 3.4, 3.8], index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        res = AutoReg(y, 1).fit()
+    with pytest.warns(FutureWarning, match="No date of the index matches"):
+        pred = res.predict(start="2000-02")
+    # The first date after February
+    expected = res.predict(start=3)
+    assert pred.index.equals(expected.index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+
+def test_row_label_partial_date_key_with_dates_not_deprecated():
+    # A partial date string that matches row labels gives a non-empty slice
+    endog = pd.Series(np.zeros(5), index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loc, index, _ = tsa_model.get_index_label_loc(
+            "2000-03", mod._index, mod.data.row_labels
+        )
+    assert loc == slice(3, 5)
+    assert index.equals(ROW_LABEL_DATES)

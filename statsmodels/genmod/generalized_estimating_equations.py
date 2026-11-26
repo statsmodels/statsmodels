@@ -54,7 +54,7 @@ from statsmodels.discrete.discrete_margins import (
     margeff_cov_with_se,
 )
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.genmod import cov_struct as cov_structs, families
 from statsmodels.genmod.families import varfuncs
 from statsmodels.genmod.families.links import Link
@@ -852,17 +852,23 @@ class GEE(GLM):
             These are passed to the model
         kwargs : extra keyword arguments
             These are passed to the model with two exceptions. `dep_data`
-            is processed as described below.  The ``eval_env`` keyword is
-            passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace.
-            If you wish to use a "clean" environment set ``eval_env=-1``.
+            is processed as described below. ``eval_env`` is the namespace
+            in which variables of the formula that are not in ``data`` are
+            looked up. None (the default) or 1 is the namespace that calls
+            ``from_formula``, and an integer k is the namespace k stack
+            frames above ``from_formula``. -1 is an empty namespace, and a
+            dict maps names to values.
+
+            .. versionchanged:: 0.15.1
+
+               An integer counts stack frames as in other models. Before, it
+               referred to one frame lower: 2 was the calling namespace.
         dep_data : str or array_like, optional
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g., Nested) for
             details.  If `dep_data` is a string, it is interpreted as
-            a formula that is applied to `data`. If it is an array, it
+            a formula that is applied to `data`, with the same
+            ``eval_env`` as the formula. If it is an array, it
             must be an array of strings corresponding to column names in
             `data`.  Otherwise it must be an array-like with the same
             number of rows as data.
@@ -897,7 +903,10 @@ class GEE(GLM):
         dep_data_names = None
         if dep_data is not None:
             if isinstance(dep_data, str):
-                dep_data = FormulaManager().get_matrices(dep_data, data, pandas=True)
+                eval_env = get_matrices_eval_env(kwargs.get("eval_env"))
+                dep_data = FormulaManager().get_matrices(
+                    dep_data, data, eval_env=eval_env, pandas=True
+                )
                 dep_data_names = dep_data.columns.tolist()
             else:
                 dep_data_names = list(dep_data)

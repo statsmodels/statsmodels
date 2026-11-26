@@ -93,10 +93,11 @@ def get_index_loc(key, index):
         .. versionchanged:: 0.15.1
 
            A quarter string such as "2001Q2" matches all dates of the
-           quarter in a DatetimeIndex, and all periods of the quarter in a
-           PeriodIndex with a finer frequency, as pandas' partial-string
-           indexing does for e.g. "2001-03". Previously it was taken as the
-           last day of the quarter, or did not match periods.
+           quarter in a DatetimeIndex (in its time zone if it is tz-aware),
+           and all periods of the quarter in a PeriodIndex with a finer
+           frequency, as pandas' partial-string indexing does for e.g.
+           "2001-03". Previously it was taken as the last day of the quarter,
+           or did not match periods.
     index : pd.Index
         The index to search.
 
@@ -225,6 +226,10 @@ def get_index_loc(key, index):
 
             # Out-of-sample
             if date_key > base_index[-1]:
+                # date_range needs a tz-aware key in the time zone of the
+                # index, so convert a key with another time zone or offset
+                if index_class is DatetimeIndex and date_key.tz is not None:
+                    date_key = date_key.tz_convert(base_index.tz)
                 # First create an index that may not always include `key`
                 index = index_fn(
                     start=base_index[0], end=date_key, freq=base_index.freq
@@ -252,9 +257,13 @@ def get_index_loc(key, index):
         ):
             # pandas deprecates parsing quarter strings as dates, so select
             # the dates in the quarter as its partial-string indexing does,
-            # e.g. for "2001-03" on a daily index
+            # e.g. for "2001-03" on a daily index (in local time if the index
+            # is tz-aware)
             period = Period(key)
-            loc = index.slice_indexer(period.start_time, period.end_time)
+            loc = index.slice_indexer(
+                period.start_time.tz_localize(index.tz),
+                period.end_time.tz_localize(index.tz),
+            )
             if loc.start == loc.stop:
                 raise KeyError(key)
             if loc.stop - loc.start == 1:
@@ -323,6 +332,15 @@ def get_index_label_loc(key, index, row_labels):
            up in `row_labels` with pandas' quarter parsing, which could
            match a date of another quarter, such as 2000-07-01 for
            semiannual dates starting on 2000-01-01.
+
+        .. deprecated:: 0.15.1
+
+           A partial date string that matches no row label but lies between
+           two of them, such as "2000-02" for dates without a frequency on
+           2000-01-24 and 2000-03-06, gives an empty slice, so that
+           prediction starts at the next date or ends at the previous one.
+           This is deprecated and will raise a KeyError after statsmodels
+           0.17 is released.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -381,6 +399,16 @@ def get_index_label_loc(key, index, row_labels):
         # as get_index_loc does, so that a key such as "2000-01" covers all
         # of its dates as the end of prediction.
         if isinstance(loc, slice):
+            if loc.start == loc.stop:
+                # pandas gives an empty slice for a partial date string that
+                # lies between two dates of the row labels
+                warnings.warn(
+                    f"No date of the index matches the key {key!r}. Keys that "
+                    "match no date are deprecated and will raise a KeyError "
+                    "after statsmodels 0.17 is released.",
+                    FutureWarning,
+                    stacklevel=_stacklevel_outside_statsmodels(),
+                )
             return loc, row_labels[: loc.stop], False
         if isinstance(loc, np.ndarray):
             # Pandas may return a mask (boolean array), for e.g.:

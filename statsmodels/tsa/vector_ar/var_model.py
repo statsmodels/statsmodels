@@ -105,6 +105,13 @@ def is_stable(coefs, verbose=False):
     Returns
     -------
     is_stable : bool
+        True if all eigenvalues of the VAR(1) representation are inside the
+        unit circle.
+
+        .. versionchanged:: 0.15.1
+
+           An eigenvalue on the unit circle (a unit root) makes the process
+           not stable. It counted as stable.
     """
     A_var1 = util.comp_matrix(coefs)
     eigs = np.linalg.eigvals(A_var1)
@@ -114,7 +121,7 @@ def is_stable(coefs, verbose=False):
         for val in np.abs(eigs):
             print(val)
 
-    return (np.abs(eigs) <= 1).all()
+    return (np.abs(eigs) < 1).all()
 
 
 def var_acf(coefs, sig_u, nlags=None):
@@ -702,6 +709,14 @@ class VAR(TimeSeriesModel):
     missing : str, optional
         See :class:`statsmodels.base.model.Model` for more information.
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       With ``missing="drop"``, the number of observations is that after
+       dropping. It was the number before, so ``nobs`` was too large and a
+       model with exog could not be fit.
+
     References
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
@@ -712,7 +727,7 @@ class VAR(TimeSeriesModel):
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
-        self.n_totobs = len(endog)
+        self.n_totobs = self.endog.shape[0]
         # Set by fit()/_estimate_var(), once the lag order is known
         self.nobs = None
         self.k_trend = None
@@ -1009,7 +1024,13 @@ class VAR(TimeSeriesModel):
         Parameters
         ----------
         maxlags : int, optional
-            if None, defaults to 12 * (nobs/100.)**(1./4)
+            if None, defaults to 12 * (nobs/100.)**(1./4). Must be at least
+            1 with trend "n" and no exog, otherwise a ValueError is raised.
+
+            .. versionchanged:: 0.15.1
+
+               maxlags=0 with trend "n" and no exog raises a ValueError. It
+               raised a KeyError.
         trend : {"n", "c", "ct", "ctt"}, optional
             * "n" - no deterministic terms
             * "c" - constant term
@@ -1047,6 +1068,12 @@ class VAR(TimeSeriesModel):
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
+        if maxlags < p_min:
+            # VAR(0) without deterministic terms or exog has no parameters
+            raise ValueError(
+                'maxlags must be at least 1 with trend="n" and no exog, got '
+                f"{maxlags}"
+            )
         fast_ics = None
         if trend in ("n", "c", "ct", "ctt"):
             fast_ics = _var_order_ics(self.endog, self.exog, maxlags, trend, p_min)
@@ -1422,7 +1449,24 @@ class VARProcess:
         Notes
         -----
         Lütkepohl pp 37-38
+
+        A VARProcess that is not estimation results has no values of the
+        trend or exog in the forecast period. Its only deterministic term
+        can be the intercept, and `exog_future` must be None.
+
+        .. versionchanged:: 0.15.1
+
+           Forecasts of a VARProcess with at most an intercept work. They
+           raised an AttributeError.
         """
+        if not isinstance(self, VARResults):
+            if exog_future is not None or self.k_trend > 1 or self.k_exog_user:
+                raise ValueError(
+                    "A VARProcess can only forecast with an intercept as the "
+                    "only deterministic term and exog_future=None."
+                )
+            # The intercept is zero without a constant
+            return forecast(y, self.coefs, self.intercept, steps)
         if self.exog is None and exog_future is not None:
             raise ValueError(
                 "No exog in model, so no exog_future supported in forecast method."
@@ -1512,7 +1556,12 @@ steps ({steps}) observations.
         y : ndarray or None
             The initial values to use for the forecasts. If None,
             the last k_ar values of the original endogenous variables are
-            used.
+            used. A VARProcess that is not estimation results needs y.
+
+            .. versionchanged:: 0.15.1
+
+               None uses the last k_ar observations. It raised an
+               AttributeError.
         steps : int
             Number of steps ahead to forecast
         alpha : float, optional
@@ -1541,6 +1590,13 @@ steps ({steps}) observations.
         if not 0 < alpha < 1:
             raise ValueError("alpha must be between 0 and 1")
         q = util.norm_signif_level(alpha)
+        if y is None:
+            if getattr(self, "endog", None) is None:
+                raise ValueError(
+                    "y is required, since a VARProcess that is not estimation "
+                    "results has no observations."
+                )
+            y = self.endog[-self.k_ar :]
 
         point_forecast = self.forecast(y, steps, exog_future=exog_future)
         sigma = np.sqrt(self._forecast_vars(steps))
@@ -2345,6 +2401,12 @@ class VARResults(VARProcess):
             variables are Granger-causing the variable(s) specified by
             `caused`.
             If None, `causing` is assumed to be the complement of `caused`.
+
+            .. versionchanged:: 0.15.1
+
+               With None, the results name the complement of `caused` as
+               `causing`; they named `caused`. Unless `caused` held half of
+               the variables, the test raised an error.
         kind : {'f', 'wald'}, optional
             Perform F-test or Wald (chi-sq) test
         signif : float, optional
@@ -2407,7 +2469,7 @@ class VARResults(VARProcess):
             causing_ind = [util.get_index(self.names, c) for c in causing]
         else:
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
-            causing = [self.names[c] for c in caused_ind]
+            causing = [self.names[c] for c in causing_ind]
 
         k, p = self.neqs, self.k_ar
         if p == 0:
@@ -2551,8 +2613,8 @@ class VARResults(VARProcess):
         sig_mask = np.zeros(sigma_u.shape)
         # set =1 twice to ensure, that all the ones needed are below the main
         # diagonal:
-        sig_mask[causing_ind, caused_ind] = 1
-        sig_mask[caused_ind, causing_ind] = 1
+        sig_mask[np.ix_(causing_ind, caused_ind)] = 1
+        sig_mask[np.ix_(caused_ind, causing_ind)] = 1
         vech_sig_mask = util.vech(sig_mask)
         inds = np.nonzero(vech_sig_mask)[0]
 

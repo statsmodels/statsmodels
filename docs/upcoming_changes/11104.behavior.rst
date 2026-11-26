@@ -1,0 +1,8 @@
+- ``get_prediction`` and ``predict`` of
+  :class:`~statsmodels.regression.recursive_ls.RecursiveLSResults` used
+  the location of a ``dynamic`` date string as an offset relative to
+  ``start``, so dynamic prediction began late unless ``start`` was the
+  first observation. A ``dynamic`` date is the date at which dynamic
+  prediction begins, as documented, so these predictions change. A
+  ``Timestamp`` or ``datetime`` ``dynamic`` raised a ``TypeError``.
+  :pr:`11104`

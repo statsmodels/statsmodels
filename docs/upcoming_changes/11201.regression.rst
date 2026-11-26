@@ -1,0 +1,4 @@
+- ``RecursiveLSResults.plot_recursive_coefficient`` and
+  ``RollingRegressionResults.plot_recursive_coefficient`` accept NumPy integers
+  in ``variables`` like Python integers instead of raising. :issue:`11200`,
+  :pr:`11201`

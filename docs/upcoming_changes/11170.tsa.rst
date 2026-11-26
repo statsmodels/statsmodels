@@ -1,0 +1,5 @@
+- :class:`~statsmodels.tsa.ardl.UECM` raised "ValueError: could
+  not broadcast input array from shape (n-1,) into shape (n-1,1)"
+  for a 1-d array, a list or a Series as ``exog``. Such an exog is
+  a single variable with the key 0, as in
+  :class:`~statsmodels.tsa.ardl.ARDL`. :pr:`11170`

@@ -161,7 +161,7 @@ from scipy.stats.distributions import norm
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.tools import data as data_tools
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.rng_qrng import check_random_state
@@ -1028,12 +1028,18 @@ class MixedLM(base.LikelihoodModel):
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with one exception: ``eval_env``,
+            the namespace in which variables of the formulas that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, and an integer k is the namespace k
+            stack frames above ``from_formula``. -1 is an empty namespace,
+            and a dict maps names to values.
+
+            .. versionchanged:: 0.15.1
+
+               An integer counts stack frames as in other models. Before, it
+               referred to one frame lower for ``formula`` (2 was the
+               calling namespace) than for ``re_formula`` and ``vc_formula``.
 
         Returns
         -------
@@ -1125,12 +1131,7 @@ class MixedLM(base.LikelihoodModel):
                 exog_re = np.ones((data.shape[0], 1))
                 exog_re_names = [group_name]
             else:
-                eval_env = kwargs.get("eval_env", None)
-                if eval_env is None:
-                    eval_env = 1
-                elif eval_env == -1:
-                    mgr = FormulaManager()
-                    eval_env = mgr.get_empty_eval_env()
+                eval_env = get_matrices_eval_env(kwargs.get("eval_env", None))
                 mgr = FormulaManager()
                 exog_re = mgr.get_matrices(re_formula, data, eval_env=eval_env)
                 exog_re_names = mgr.get_column_names(exog_re)
@@ -1148,12 +1149,7 @@ class MixedLM(base.LikelihoodModel):
                 exog_re_names = []
 
         if vc_formula is not None:
-            eval_env = kwargs.get("eval_env", None)
-            if eval_env is None:
-                eval_env = 1
-            elif eval_env == -1:
-                mgr = FormulaManager()
-                eval_env = mgr.get_empty_eval_env()
+            eval_env = get_matrices_eval_env(kwargs.get("eval_env", None))
 
             vc_mats = []
             vc_colnames = []
@@ -2887,7 +2883,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
-        the variance components.
+        the variance components.  They are in the units of `cov_re` and
+        `vcomp`, not of the variance parameters in `params`, and include
+        the uncertainty of `scale`.
 
     See Also
     --------
@@ -2963,9 +2961,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
            The standard errors were off by about a factor of the square
            root of `scale` and did not include the uncertainty of `scale`.
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            return np.sqrt(np.diag(self._cov_vparams))
+        return np.sqrt(np.diag(self._cov_vparams))
 
     def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)

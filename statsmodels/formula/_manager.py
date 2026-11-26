@@ -122,22 +122,43 @@ def _maybe_convert_data(data):
     return data
 
 
+def _restore_rows(matrix, index, pandas):
+    """
+    Label the rows of a formulaic pandas ModelMatrix, or convert it to NumPy.
+
+    Parameters
+    ----------
+    matrix : ModelMatrix
+        A model matrix with pandas output.
+    index : Index
+        The labels of its rows.
+    pandas : bool
+        Keep pandas output if True, otherwise convert to NumPy.
+
+    Returns
+    -------
+    ModelMatrix
+        The relabeled pandas matrix, or a NumPy matrix with the same spec.
+    """
+    if pandas:
+        matrix.index = index
+        return matrix
+    spec = matrix.model_spec.update(output="numpy")
+    return formulaic.ModelMatrix(matrix.to_numpy(), spec=spec)
+
+
 class _FormulaOption:
     """
     Container for the global formula-related options.
 
-    Parameters
-    ----------
-    default_engine : {"patsy", "formulaic"}, optional
-        The initial formula engine to use. If None, the best available
-        engine is selected automatically.
+    The formula engine starts as the one selected when
+    ``statsmodels.formula`` is imported: the ``SM_FORMULA_ENGINE``
+    environment variable if it is set, otherwise patsy if it is installed,
+    otherwise formulaic.
     """
 
-    def __init__(self, default_engine: Literal["patsy", "formulaic"] | None = None):
-        if default_engine is None:
-            default_engine = DEFAULT_FORMULA_ENGINE
-
-        self._formula_engine = default_engine
+    def __init__(self):
+        self._formula_engine = DEFAULT_FORMULA_ENGINE
         self._allowed_options = tuple()
         if HAVE_PATSY:
             self._allowed_options += ("patsy",)
@@ -160,17 +181,8 @@ class _FormulaOption:
     @formula_engine.setter
     def formula_engine(self, value: Literal["patsy", "formulaic"]) -> None:
         if value not in self._allowed_options:
-            msg = "Invalid formula engine option. Must be "
-            if len(self._allowed_options) == 1:
-                msg += f"{self._allowed_options[0]}"
-            else:
-                allowed = list(self._allowed_options)
-                allowed[-1] = f"or {allowed[-1]}"
-                if len(allowed) > 2:
-                    msg += ", ".join(allowed)
-                else:
-                    msg += " ".join(allowed)
-            raise ValueError(f"{msg}.")
+            allowed = " or ".join(self._allowed_options)
+            raise ValueError(f"Invalid formula engine option. Must be {allowed}.")
 
         self._formula_engine = value
 
@@ -190,7 +202,7 @@ class _FormulaOption:
     def ordering(self, value: str):
         if value not in ("degree", "sort", "none", "legacy"):
             raise ValueError(
-                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy."
+                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy'."
             )
         self._ordering = value
 
@@ -219,7 +231,7 @@ class LinearConstraintValues(NamedTuple):
         The constraint coefficient matrix.
     constraint_values : ndarray
         The constraint constant values.
-    variable_names : list[str]
+    variable_names : list of str
         The names of the variables in the constraint matrix.
     """
 
@@ -408,18 +420,18 @@ class FormulaManager:
             return formula
         if isinstance(context, int):
             context += 1
-        mm = formulaic.model_matrix(formula, data, context=context)
         feature_flags = formulaic.parser.DefaultFormulaParser.FeatureFlags.TWOSIDED
         parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
         _formula = formulaic.Formula(formula, _parser=parser, _ordering="none")
-        if isinstance(mm, formulaic.ModelMatrices):
-            rhs = mm.rhs
+        if hasattr(_formula, "rhs"):
             rhs_formula = _formula.rhs
             lhs_formula = _formula.lhs
         else:
-            rhs = mm
             rhs_formula = _formula
             lhs_formula = None
+        # Only the right-hand side is materialized: the left-hand side does not
+        # affect the order, and it is not in the data when predicting
+        rhs = formulaic.model_matrix(rhs_formula, data, context=context)
         include_intercept = any(
             (term.degree == 0 and str(term) == "1") for term in rhs_formula
         )
@@ -480,25 +492,45 @@ class FormulaManager:
 
         Parameters
         ----------
-        formula : str, Formula
-            The formula to use.
-        data : DataFrame, dict, list, recarray
-            The data to use when evaluating the formula.
+        formula : str, Formula, ModelDesc, ModelSpec or DesignInfo
+            The formula, as a string or an engine-specific formula object, or
+            the model specification of an existing design (a formulaic
+            ``ModelSpec`` or a patsy ``DesignInfo``), which is applied to data.
+        data : DataFrame, dict or recarray
+            The data to use when evaluating the formula. A Polars DataFrame is
+            converted to pandas. Data structures other than a DataFrame are
+            deprecated.
         eval_env : int or dict, optional
-            Additional context to use when evaluating the formula.
+            Additional context to use when evaluating the formula: the number
+            of stack frames above the caller in which variables are looked
+            up, or a dict that maps names to values. A patsy
+            ``EvalEnvironment`` is accepted but deprecated.
         pandas : bool, optional
             Return a DataFrame if true, otherwise return a numpy array.
         na_action : NAAction or str, optional
             The action to take on missing values.
         prediction : bool, optional
             True if using the formula for prediction. In this case, only the
-            rhs is evaluated using data.
+            right-hand side is evaluated using data, and only its design
+            matrix is returned.
+
+            .. versionchanged:: 0.15.1
+
+               The left-hand side of a formula is no longer evaluated, so it
+               need not be in data. Previously, patsy evaluated it and
+               returned both matrices, and formulaic raised when it was
+               missing.
 
         Returns
         -------
-        tuple[DataFrame, ...], tuple[ndarray, ...], tuple[DesignMatrix, ...]
-            If pandas is True, returns one or more DataFrames. If False,
-            returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
+        DataFrame, ndarray, or tuple of DataFrame or ndarray
+            The design matrix of a one-sided formula or of a model
+            specification, or a tuple of the left-hand-side and
+            right-hand-side matrices of a two-sided formula (only the
+            right-hand side if prediction is True). DataFrames if pandas is
+            True, otherwise NumPy arrays: patsy returns a ``DesignMatrix``
+            (an ndarray subclass), and formulaic wraps either type in a
+            ``ModelMatrix``.
         """
         # Convert Polars objects to pandas
         data = _to_pandas(data)
@@ -519,6 +551,11 @@ class FormulaManager:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
                     warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
+            if prediction and not isinstance(formula, patsy.design_info.DesignInfo):
+                # Only the right-hand side is evaluated when predicting
+                if not isinstance(formula, patsy.desc.ModelDesc):
+                    formula = patsy.ModelDesc.from_formula(formula)
+                formula = patsy.ModelDesc([], formula.rhs_termlist)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
@@ -581,7 +618,7 @@ class FormulaManager:
             _ordering = statsmodels.formula.options.ordering
             if isinstance(formula, self.model_spec_type):
                 _formula = formula
-            if _ordering == "legacy":
+            elif _ordering == "legacy":
                 _formula = self._legacy_orderer(formula, _data, context=_eval_env)
             else:
                 feature_flags = (
@@ -601,32 +638,29 @@ class FormulaManager:
             if na_drop:
                 _data = _data.copy(deep=False)
                 _data.index = pd.RangeIndex(_data.shape[0])
+                # The rows kept are read from the index of pandas output,
+                # which is converted to NumPy afterwards if requested
+                kwargs["output"] = "pandas"
 
             output = formulaic.model_matrix(
                 _formula, _data, context=_eval_env, **kwargs
             )
             if na_drop:
-                if isinstance(output, formulaic.ModelMatrices):
-                    rhs = output.rhs
-                else:
-                    rhs = output
-                if rhs.shape[0] == _data.shape[0]:
-                    replacement_index = original_index
-                    empty_mask = np.full(rhs.shape[0], False)
-                    self._missing_mask = pd.Series(
-                        empty_mask, index=original_index, name=None
+                single = isinstance(output, formulaic.ModelMatrix)
+                rhs = output if single else output.rhs
+                kept = np.asarray(rhs.index)
+                is_missing = np.ones(_data.shape[0], dtype=bool)
+                is_missing[kept] = False
+                self._missing_mask = pd.Series(is_missing, index=original_index)
+                # Selecting rows would drop the freq of a DatetimeIndex
+                index = original_index[kept] if is_missing.any() else original_index
+                if single:
+                    output = _restore_rows(output, index, pandas)
+                elif hasattr(output, "lhs") and len(output) == 2:
+                    output = formulaic.ModelMatrices(
+                        lhs=_restore_rows(output.lhs, index, pandas),
+                        rhs=_restore_rows(output.rhs, index, pandas),
                     )
-                else:
-                    replacement_index = original_index[rhs.index]
-                    self._missing_mask = (
-                        pd.Series(rhs.index, index=rhs.index)
-                        .reindex(pd.RangeIndex(_data.shape[0]))
-                        .isna()
-                    )
-                for key in ("lhs", "rhs", "root"):
-                    if hasattr(output, key):
-                        df = getattr(output, key)
-                        df.index = replacement_index
             if not isinstance(output, formulaic.ModelMatrix):
                 if (
                     len(output) == 2
@@ -652,18 +686,32 @@ class FormulaManager:
 
         Parameters
         ----------
-        constraints : ndarray, str, list[str]
-            The constraints either as an array, a string, or a list of strings.
-            Single strings can be comma-separated so that multiple constraints
-            can be passed in this format.
-        variable_names : list[str]
+        constraints : str, list of str, dict, array_like or tuple
+            The constraints. A string can hold several constraints separated
+            by commas, and a list can hold one constraint per string. A dict
+            maps variable names to the values they are constrained to. An
+            array_like is the constraint matrix, with one row per constraint
+            and one column per variable, and constrains each row to 0. A
+            tuple holds the constraint matrix and the constraint values.
+        variable_names : sequence of str
             The ordered list of variable names.
 
         Returns
         -------
         LinearConstraintValues
-            The constraint matrix, constraint values, and variable names.
+            The constraint matrix, constraint values, and variable names. The
+            matrix is a float array with one row per constraint, and the
+            values are a float array with one row and one column per
+            constraint.
+
+            .. versionchanged:: 0.15.1
+
+               With formulaic, the matrix and the values are always float
+               arrays, as with patsy. They were integer arrays when the
+               input was integer.
         """
+        if isinstance(constraints, list) and len(constraints) == 0:
+            raise ValueError("Constraints must be non-empty")
         if self._using_patsy:
             from patsy.design_info import DesignInfo
 
@@ -676,9 +724,6 @@ class FormulaManager:
         else:  # self._engine == "formulaic"
             # Handle list of constraints, which is not supported by formulaic
             if isinstance(constraints, list):
-                if len(constraints) == 0:
-                    raise ValueError("Constraints must be non-empty")
-
                 if isinstance(constraints[0], str):
                     if not all(isinstance(c, str) for c in constraints):
                         raise ValueError(
@@ -697,9 +742,10 @@ class FormulaManager:
             lc_f = formulaic.utils.constraints.LinearConstraints.from_spec(
                 _constraints, variable_names=list(variable_names)
             )
+            values = np.asarray(lc_f.constraint_values, dtype=float)
             return LinearConstraintValues(
-                constraint_matrix=lc_f.constraint_matrix,
-                constraint_values=np.atleast_2d(lc_f.constraint_values).T,
+                constraint_matrix=np.asarray(lc_f.constraint_matrix, dtype=float),
+                constraint_values=np.atleast_2d(values).T,
                 variable_names=lc_f.variable_names,
             )
 
@@ -709,29 +755,32 @@ class FormulaManager:
 
         Returns
         -------
-        EvalEnvironment or dict
-            A formula-engine-dependent empty evaluation environment.
-        """
-        if self._using_patsy:
-            from patsy.eval import EvalEnvironment
+        dict
+            An empty dict, which ``get_matrices`` uses as an evaluation
+            environment that holds no variables.
 
-            return EvalEnvironment({})
-        else:
-            return {}
+            .. versionchanged:: 0.15.1
+
+               Also a dict with patsy. It was a patsy ``EvalEnvironment``,
+               which is deprecated as an evaluation environment, so using it
+               raised a FutureWarning.
+        """
+        return {}
 
     def remove_intercept(self, terms):
         """
-        Remove intercept from Patsy terms.
+        Remove the intercept from a list of terms.
 
         Parameters
         ----------
-        terms : list[Term]
-            A list of terms that might have an intercept
+        terms : list of Term
+            Terms of the formula engine in use, which might include the
+            intercept. The list is changed in place.
 
         Returns
         -------
-        list[Term]
-            The terms with the intercept removed, if present.
+        list of Term
+            The same list, without the intercept.
         """
         intercept = self.intercept_term
         if intercept in terms:
@@ -757,7 +806,7 @@ class FormulaManager:
 
     def intercept_idx(self, spec):
         """
-        Returns boolean array index indicating which column holds the intercept.
+        Returns boolean array index indicating which term is the intercept.
 
         Parameters
         ----------
@@ -767,7 +816,9 @@ class FormulaManager:
         Returns
         -------
         ndarray
-            Boolean array index indicating which column holds the intercept.
+            Boolean array with one element per term of the specification, in
+            the order of its terms, that is True for the intercept. A term
+            can have several columns, so this indexes terms, not columns.
         """
         from numpy import array
 
@@ -781,10 +832,11 @@ class FormulaManager:
         Parameters
         ----------
         action : str, optional
-            The action to take on missing values, e.g., "drop" or "raise".
-        types : Sequence[Any], optional
-            The types of missing values to consider, e.g., "None" or "NaN".
-            Only used when using patsy.
+            The action to take on missing values: "drop" or "raise", and with
+            formulaic also "ignore".
+        types : sequence of str, optional
+            The types of missing values to consider, e.g., "None" or "NaN"
+            (the default is both). Only used when using patsy.
 
         Returns
         -------
@@ -821,15 +873,16 @@ class FormulaManager:
             return formulaic.Formula(formula)
 
     def _ensure_spec(self, spec_or_frame):
-        if not isinstance(spec_or_frame, self.model_spec_type):
-            return self.get_model_spec(spec_or_frame)
-        if not isinstance(spec_or_frame, self.model_spec_type):
+        if isinstance(spec_or_frame, self.model_spec_type):
+            return spec_or_frame
+        spec = self.get_model_spec(spec_or_frame, optional=True)
+        if not isinstance(spec, self.model_spec_type):
+            name = self.model_spec_type.__name__
             raise TypeError(
-                "spec_or_frame must be a ModelSpec or a DesignInfo when not a "
-                f"DataFrame. Expected a {self.model_spec_type.__name__}, got a "
-                f"{type(spec_or_frame).__name__}."
+                f"spec_or_frame must be a {name} or a DataFrame with a {name} "
+                f"attached, got a {type(spec_or_frame).__name__}."
             )
-        return spec_or_frame
+        return spec
 
     def get_term_names(self, spec_or_frame):
         """
@@ -843,7 +896,7 @@ class FormulaManager:
 
         Returns
         -------
-        list[str]
+        list of str
             The list of term names.
         """
         spec = self._ensure_spec(spec_or_frame)
@@ -864,7 +917,7 @@ class FormulaManager:
 
         Returns
         -------
-        list[str]
+        list of str
             The column names.
         """
         spec = self._ensure_spec(spec_or_frame)
@@ -882,7 +935,7 @@ class FormulaManager:
 
         Returns
         -------
-        dict[str, slice]
+        dict of str to slice
             A dictionary mapping term names to location in the materialized formula.
         """
         spec = self._ensure_spec(spec_or_frame)
@@ -893,12 +946,14 @@ class FormulaManager:
 
     def get_model_spec(self, frame, optional=False):
         """
-        Get the model specification attached to a DataFrame.
+        Get the model specification attached to a design matrix.
 
         Parameters
         ----------
-        frame : DataFrame
-            The frame to get the model specification from.
+        frame : DataFrame or ndarray
+            The design matrix to get the model specification from: a
+            DataFrame, or a NumPy design matrix (a patsy ``DesignMatrix`` or a
+            formulaic ``ModelMatrix``).
         optional : bool, optional
             Whether to return None if the frame does not have a model specification.
 
@@ -925,8 +980,8 @@ class FormulaManager:
         ----------
         model_spec : ModelSpec or DesignInfo
             The model specification.
-        term : Term
-            The model term.
+        term : Term or str
+            The model term, or its name.
 
         Returns
         -------

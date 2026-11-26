@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+from statsmodels.regression.linear_model import GLS, OLS, WLS, RegressionResultsWrapper
 from statsmodels.stats._adnorm import anderson_statistic, normal_ad
 from statsmodels.stats._lilliefors import (
     kstest_exponential,
@@ -1665,6 +1665,19 @@ def het_goldfeldquandt(
     in the second sample is larger than in the first, or decreasing or
     two-sided.
 
+    The F statistic is the ratio of the residual variance of the second
+    subsample to that of the first. Under the null hypothesis it has an F
+    distribution with the residual degrees of freedom of the second and of the
+    first subsample as numerator and denominator degrees of freedom, in this
+    order.
+
+    .. versionchanged:: 0.15.1
+
+       The p-values for ``alternative="increasing"`` and ``"decreasing"`` use
+       the degrees of freedom in this order. Before, the order was reversed,
+       and the p-values were wrong if the two subsamples had different
+       residual degrees of freedom.
+
     Results are identical to R, but the drop option is defined differently.
     (sorting by idx not tested yet)
     """
@@ -1735,10 +1748,10 @@ def het_goldfeldquandt(
     fval = resols2.mse_resid / resols1.mse_resid
     # if fval>1:
     if alternative == "increasing":
-        fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
+        fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = "increasing"
     elif alternative == "decreasing":
-        fpval = stats.f.sf(1.0 / fval, resols2.df_resid, resols1.df_resid)
+        fpval = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
         ordering = "decreasing"
     elif alternative == "two-sided":
         fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
@@ -1837,6 +1850,11 @@ def linear_reset(
       the principal component. In either case, the principal component
       is extracted from the correlation matrix of remaining columns.
 
+    .. versionchanged:: 0.15.1
+
+        The auxiliary regression now uses the weights or covariance of the
+        supplied WLS or GLS results.
+
     The test is a Wald test of the null :math:`H_0:\gamma=0`. If use_f
     is True, then the quadratic-form test statistic is divided by the
     number of restrictions and the F distribution is used to compute
@@ -1855,7 +1873,7 @@ def linear_reset(
     )
     cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
-    if isinstance(power, int):
+    if isinstance(power, (int, np.integer)):
         if power < 2:
             raise ValueError("power must be >= 2")
         power = np.arange(2, power + 1, dtype=int)
@@ -1895,7 +1913,12 @@ def linear_reset(
         aug = pca.factors[:, :1]
     aug_exog = np.hstack([exog] + [aug**p for p in power])
     mod_class = res.model.__class__
-    mod = mod_class(res.model.data.endog, aug_exog)
+    mod_kwds = {}
+    if isinstance(res.model, WLS) and not isinstance(res.model, OLS):
+        mod_kwds["weights"] = res.model.weights
+    if isinstance(res.model, GLS):
+        mod_kwds["sigma"] = res.model.sigma
+    mod = mod_class(res.model.data.endog, aug_exog, **mod_kwds)
     cov_kwds = {} if cov_kwds is None else cov_kwds
     res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]

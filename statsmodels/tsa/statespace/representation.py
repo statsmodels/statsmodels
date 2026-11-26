@@ -898,10 +898,6 @@ class Representation:
                 "Invalid endogenous array; must be ordered in contiguous memory."
             )
 
-        # We may still have a non-fortran contiguous array, so double-check
-        if not endog.flags["F_CONTIGUOUS"]:
-            endog = np.asfortranarray(endog)
-
         # Set a flag for complex data
         self._complex_endog = np.iscomplexobj(endog)
 
@@ -910,8 +906,7 @@ class Representation:
         self.nobs = self.endog.shape[1]
 
         # Reset shapes
-        if hasattr(self, "shapes"):
-            self.shapes["obs"] = self.endog.shape
+        self.shapes["obs"] = self.endog.shape
 
     def initialize(
         self,
@@ -1131,9 +1126,8 @@ class Representation:
         """Initialize the statespace model as diffuse"""
         self.initialize("diffuse")
 
-    def _initialize_representation(self, prefix=None):
-        if prefix is None:
-            prefix = self.prefix
+    def _initialize_representation(self):
+        prefix = self.prefix
         dtype = tools.prefix_dtype_map[prefix]
 
         # If the dtype-specific representation matrices do not exist, create

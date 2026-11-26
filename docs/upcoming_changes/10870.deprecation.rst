@@ -1,0 +1,5 @@
+- A 2-d ``ma`` without one column per column of a 2-d ``x`` in
+  :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter`, which returned
+  the filter of a misaligned part of ``x``, is deprecated. It gives the same
+  result as before with a ``FutureWarning``, and will raise a ``ValueError``
+  in statsmodels 0.17. :pr:`10870`

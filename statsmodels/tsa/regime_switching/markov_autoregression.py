@@ -125,8 +125,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         self.switching_ar = switching_ar
 
         # Switching options
-        if self.switching_ar is True or self.switching_ar is False:
-            self.switching_ar = [self.switching_ar] * order
+        # A scalar (bool, numpy bool or 0/1) applies to every coefficient
+        if np.ndim(self.switching_ar) == 0:
+            self.switching_ar = [bool(self.switching_ar)] * order
         elif len(self.switching_ar) != order:
             raise ValueError("Invalid iterable passed to `switching_ar`.")
 
@@ -429,6 +430,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
+        unconstrained = np.asarray(unconstrained)
         # Inherited parameters
         constrained = super().transform_params(
             unconstrained)
@@ -459,6 +461,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
+        constrained = np.asarray(constrained)
         # Inherited parameters
         unconstrained = super().untransform_params(
             constrained)

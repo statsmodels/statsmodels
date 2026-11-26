@@ -34,11 +34,11 @@ from statsmodels.discrete.discrete_model import (
     Poisson,
     Probit,
 )
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 import statsmodels.stats.sandwich_covariance as sw
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl import ARDL
@@ -279,6 +279,51 @@ class TestDiagnosticG:
         compare_to_reference(gq, het_gq_two_sided_01, decimal=(12, 12))
         assert_equal(gq[-1], "two-sided")
         # TODO other options ???
+
+    def test_het_goldfeldquandt_unequal_df(self):
+        # > gq = gqtest(fm, point=80, alternative='greater')  # df1 = 119, df2 = 77
+        # > gq = gqtest(fm, point=80, alternative='less')
+        res = smsdia.het_goldfeldquandt(
+            self.endog, self.exog, split=80, result_object=True
+        )
+        assert_allclose(res.fval, 0.65566048877998839, rtol=1e-10)
+        assert_allclose(res.pval, 0.98095490518697237, rtol=1e-10)
+        res = smsdia.het_goldfeldquandt(
+            self.endog,
+            self.exog,
+            split=80,
+            alternative="decreasing",
+            result_object=True,
+        )
+        assert_allclose(res.pval, 0.019045094813027602, rtol=1e-10)
+        # > gq = gqtest(fm, point=80, alternative='two.sided')
+        res = smsdia.het_goldfeldquandt(
+            self.endog,
+            self.exog,
+            split=80,
+            alternative="two-sided",
+            result_object=True,
+        )
+        assert_allclose(res.pval, 0.038090189626055204, rtol=1e-10)
+
+    @pytest.mark.parametrize("split", [30, 80, 101, 140])
+    def test_het_goldfeldquandt_alternatives(self, split):
+        # The one-sided p-values add to one and the two-sided p-value is twice
+        # the smaller one, also if the subsamples have different degrees of
+        # freedom.
+        pval = {
+            alt: smsdia.het_goldfeldquandt(
+                self.endog,
+                self.exog,
+                split=split,
+                alternative=alt,
+                result_object=True,
+            ).pval
+            for alt in ("increasing", "decreasing", "two-sided")
+        }
+        assert_allclose(pval["increasing"] + pval["decreasing"], 1.0, rtol=1e-12)
+        smaller = min(pval["increasing"], pval["decreasing"])
+        assert_allclose(pval["two-sided"], 2 * smaller, rtol=1e-12)
 
     def test_het_breusch_pagan(self):
         res = self.res
@@ -2000,6 +2045,73 @@ def test_encompasing_error():
         smsdia.compare_encompassing(4, 2)
 
 
+@pytest.mark.parametrize("model_class", [WLS, GLS])
+@pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+@pytest.mark.parametrize("use_f", [False, True])
+def test_reset_preserves_weighting(model_class, cov_type, use_f):
+    # The auxiliary regression must use the same whitening as the original fit.
+    rng = np.random.default_rng(8675309)
+    nobs = 100
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    weights = np.exp(rng.standard_normal(nobs))
+    weights_before = weights.copy()
+    if model_class is WLS:
+        model_kwds = {"weights": weights}
+    else:
+        model_kwds = {"sigma": 1 / weights}
+
+    res = model_class(y, exog, **model_kwds).fit()
+    actual = smsdia.linear_reset(res, power=2, use_f=use_f, cov_type=cov_type)
+
+    aug_exog = np.column_stack([exog, res.fittedvalues**2])
+    aux_res = model_class(y, aug_exog, **model_kwds).fit(cov_type=cov_type)
+    r_matrix = np.eye(1, aug_exog.shape[1], k=aug_exog.shape[1] - 1)
+    expected = aux_res.wald_test(r_matrix, use_f=use_f, scalar=True)
+
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+    assert actual.distribution == expected.distribution
+    assert_allclose(actual.dist_args, expected.dist_args, rtol=0, atol=0)
+    assert_array_equal(weights, weights_before)
+
+
+def test_reset_preserves_dense_gls_covariance():
+    rng = np.random.default_rng(8675310)
+    nobs = 80
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    distances = np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    sigma = 0.5**distances
+    sigma_before = sigma.copy()
+
+    res = GLS(y, exog, sigma=sigma).fit()
+    actual = smsdia.linear_reset(res, power=2, use_f=True, cov_type="HC0")
+
+    aug_exog = np.column_stack([exog, res.fittedvalues**2])
+    aux_res = GLS(y, aug_exog, sigma=sigma).fit(cov_type="HC0")
+    r_matrix = np.eye(1, aug_exog.shape[1], k=aug_exog.shape[1] - 1)
+    expected = aux_res.wald_test(r_matrix, use_f=True, scalar=True)
+
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+    assert actual.distribution == expected.distribution
+    assert_allclose(actual.dist_args, expected.dist_args, rtol=0, atol=0)
+    assert_array_equal(sigma, sigma_before)
+
+
+def test_reset_ols_does_not_pass_weights():
+    rng = np.random.default_rng(8675309)
+    x = add_constant(rng.standard_normal((100, 2)))
+    y = rng.standard_normal(100)
+    res = OLS(y, x).fit()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ValueWarning)
+        smsdia.linear_reset(res, power=2)
+
+
 @pytest.mark.smoke
 @pytest.mark.parametrize("power", [2, 3])
 @pytest.mark.parametrize("test_type", ["fitted", "exog", "princomp"])
@@ -2019,6 +2131,17 @@ def test_reset_smoke(power, test_type, use_f, cov):
     y = x @ np.ones((7, 1)) + e
     res = OLS(y, x[:, :4]).fit()
     smsdia.linear_reset(res, power=power, test_type=test_type, use_f=use_f, **cov)
+
+
+def test_reset_numpy_integer_power():
+    rs = np.random.RandomState(32320967)
+    x = add_constant(rs.standard_normal((200, 2)))
+    y = x @ np.ones(3) + x[:, 1] ** 2 + rs.standard_normal(200)
+    res = OLS(y, x).fit()
+    expected = smsdia.linear_reset(res, power=3)
+    actual = smsdia.linear_reset(res, power=np.int64(3))
+    assert_allclose(actual.statistic, expected.statistic)
+    assert_allclose(actual.pvalue, expected.pvalue)
 
 
 @pytest.mark.smoke
@@ -2589,7 +2712,7 @@ def test_het_goldfeldquandt_smallest_subsample(split):
     res1 = OLS(y[:split], x[:split]).fit()
     res2 = OLS(y[split:], x[split:]).fit()
     assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
-    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res2.df_resid, res1.df_resid))
     assert np.isfinite(fval)
 
 
@@ -2607,7 +2730,7 @@ def test_het_goldfeldquandt_rank_deficient_subsample():
     res2 = OLS(y[3:], x[3:]).fit()
     assert res1.df_resid == 1
     assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
-    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res2.df_resid, res1.df_resid))
 
 
 def test_acorr_ljungbox_lags_exceed_nobs():

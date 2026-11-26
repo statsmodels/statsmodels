@@ -1134,11 +1134,12 @@ class KalmanFilter(Representation):
         initial_state : array_like, optional
             If specified, this is the state vector at time zero, which should
             be shaped (`k_states` x 1), where `k_states` is the same as in the
-            state space model. If unspecified, but the model has been
-            initialized, then that initialization is used. If unspecified and
-            the model has not been initialized, then a vector of zeros is used.
-            Note that this is not included in the returned `simulated_states`
-            array.
+            state space model. If unspecified, it is drawn from the
+            distribution of the initial state given by the initialization of
+            the model. The initial state is the state of the first simulated
+            period: the first row of the returned `simulated_states` array.
+            The model must be initialized (otherwise RuntimeError is raised),
+            also if `initial_state` is specified.
         pretransformed_measurement_shocks : bool, optional
             If `measurement_shocks` is provided, this flag indicates whether it
             should be directly used as the shocks. If False, then it is assumed
@@ -1979,8 +1980,11 @@ class FilterResults(FrozenRepresentation):
             Zero-indexed observation number at which to start prediction, i.e.,
             the first prediction will be at start.
         end : int, optional
-            Zero-indexed observation number at which to end prediction, i.e.,
-            the last prediction will be at end.
+            Zero-indexed observation number at which to end prediction. It is
+            excluded, as the end of a slice: the last prediction is at
+            `end - 1`. Default is the number of observations, so that the
+            predictions cover the sample; a larger `end` adds out-of-sample
+            forecasts.
         dynamic : bool or int, optional
             Offset relative to `start` at which to begin dynamic prediction.
             Prior to this observation, true endogenous values will be used for
@@ -2018,8 +2022,8 @@ class FilterResults(FrozenRepresentation):
             end = self.nobs
 
         # Prediction and forecasting is performed by iterating the Kalman
-        # Kalman filter through the entire range [0, end]
-        # Then, everything is returned corresponding to the range [start, end].
+        # filter through the entire range [0, end) (`end` is excluded).
+        # Then, everything is returned corresponding to the range [start, end).
         # In order to perform the calculations, the range is separately split
         # up into the following categories:
         # - static:   (in-sample) the Kalman filter is run as usual
@@ -2155,8 +2159,8 @@ class PredictionResults(FilterResults):
         Zero-indexed observation number at which to start forecasting,
         i.e., the first forecast will be at start.
     end : int
-        Zero-indexed observation number at which to end forecasting, i.e.,
-        the last forecast will be at end.
+        Zero-indexed observation number at which to end forecasting. It is
+        excluded, as the end of a slice: the last forecast is at `end - 1`.
     nstatic : int
         Number of in-sample static predictions (these are always the first
         elements of the prediction output).
@@ -2181,9 +2185,10 @@ class PredictionResults(FilterResults):
         i.e., the first predict will be at `start`; this is relative to the
         original model from which prediction was performed.
     end : int
-        Zero-indexed observation number at which to end prediction,
-        i.e., the last predict will be at `end`; this is relative to the
-        original model from which prediction was performed.
+        Zero-indexed observation number at which to end prediction. It is
+        excluded, as the end of a slice: the last prediction is at
+        `end - 1`; this is relative to the original model from which
+        prediction was performed.
     nstatic : int
         Number of in-sample static predictions.
     ndynamic : int
@@ -2484,7 +2489,11 @@ def _check_dynamic(dynamic, start, end, nobs):
     start : int
         The location of the first forecast.
     end : int
-        The location of the final forecast (inclusive).
+        The end of the forecasts. ``FilterResults.predict`` passes the
+        location after the final forecast (exclusive, out-of-sample forecasts
+        included), and ``STLForecastResults`` the location of the final
+        in-sample forecast (inclusive). Dynamic prediction that begins after
+        `end` has no effect.
     nobs : int
         The number of observations in the time series.
 
@@ -2494,7 +2503,9 @@ def _check_dynamic(dynamic, start, end, nobs):
         The start location of the first dynamic forecast. None if there
         are no in-sample dynamic forecasts.
     ndynamic : int
-        The number of dynamic forecasts
+        The number of in-sample dynamic forecasts, ``min(end, nobs) -
+        dynamic``, for an exclusive `end` (``STLForecastResults`` does not
+        use it).
     """
     if dynamic is None:
         return dynamic, 0

@@ -1,0 +1,5 @@
+- ``set_smooth_method(smooth_univariate=True)`` of state space models
+  had no effect, and ``smooth_univariate`` was not accepted as a keyword
+  argument of the model constructors. With univariate filtering, both
+  set the univariate smoothing flag (the results do not change).
+  :pr:`11052`

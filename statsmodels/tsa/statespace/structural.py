@@ -35,7 +35,7 @@ _mask_map = {
     3: "deterministic constant",
     6: "random walk",
     7: "local level",
-    8: "fixed slope",
+    10: "fixed slope",
     11: "deterministic trend",
     14: "random walk with drift",
     15: "local linear deterministic trend",
@@ -98,13 +98,13 @@ class UnobservedComponents(MLEModel):
     cycle_period_bounds : tuple, optional
         A tuple with lower and upper allowed bounds for the period of the
         cycle. If not provided, the following default bounds are used:
-        (1) if no date / time information is provided, the frequency is
-        constrained to be between zero and :math:`\pi`, so the period is
-        constrained to be in [0.5, infinity].
-        (2) If the date / time information is provided, the default bounds
+        (1) if the data are annual, quarterly or monthly, the default bounds
         allow the cyclical component to be between 1.5 and 12 years; depending
         on the frequency of the endogenous variable, this will imply different
         specific bounds.
+        (2) Otherwise (including if no date / time information is provided),
+        the frequency is constrained to be between zero and :math:`\pi`, so
+        the period is constrained to be in [2, infinity].
     mle_regression : bool, optional
         Whether or not to estimate regression coefficients by maximum likelihood
         as one of hyperparameters. Default is True.
@@ -114,6 +114,10 @@ class UnobservedComponents(MLEModel):
         Whether or not to use exact diffuse initialization for non-stationary
         states. Default is False (in which case approximate diffuse
         initialization is used).
+    **kwargs
+        Keyword arguments may be used to provide default values for state space
+        matrices or for Kalman filtering options. See `Representation`, and
+        `KalmanFilter` for more details.
 
     See Also
     --------
@@ -307,13 +311,13 @@ class UnobservedComponents(MLEModel):
     The default bounds, if none are provided, are selected in the following
     way:
 
-    1. If no date / time information is provided, the frequency is
-       constrained to be between zero and :math:`\pi`, so the period is
-       constrained to be in :math:`[0.5, \infty]`.
-    2. If the date / time information is provided, the default bounds
+    1. If the data are annual, quarterly or monthly, the default bounds
        allow the cyclical component to be between 1.5 and 12 years; depending
        on the frequency of the endogenous variable, this will imply different
        specific bounds.
+    2. Otherwise (including if no date / time information is provided), the
+       frequency is constrained to be between zero and :math:`\pi`, so the
+       period is constrained to be in :math:`[2, \infty]`.
 
     Following the fitting of the model, the unobserved cyclical component
     time series is available in the results class in the `cycle`
@@ -833,6 +837,22 @@ class UnobservedComponents(MLEModel):
         self._repeat_any_var = any(self._var_repetitions > 1)
 
     def initialize_default(self, approximate_diffuse_variance=None):
+        """
+        Initialize the state vector with the default initialization
+
+        The autoregressive states have the stationary initialization and all
+        other states a diffuse initialization (a model with only an irregular
+        component has a known, zero, state). With approximate diffuse
+        initialization, the `loglikelihood_burn` is set to the number of
+        diffuse states unless it was given to the constructor.
+
+        Parameters
+        ----------
+        approximate_diffuse_variance : float, optional
+            The initial variance of the diffuse states if `use_exact_diffuse`
+            is False. Default is the `initial_variance` of the state space
+            representation.
+        """
         if approximate_diffuse_variance is None:
             approximate_diffuse_variance = self.ssm.initial_variance
         if self.use_exact_diffuse:
@@ -877,6 +897,24 @@ class UnobservedComponents(MLEModel):
         self.ssm.initialization = init
 
     def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : array_like, optional
+            Exogenous variables.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        UnobservedComponents
+        """
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
@@ -1050,6 +1088,25 @@ class UnobservedComponents(MLEModel):
         """
         Transform unconstrained parameters used by the optimizer to constrained
         parameters used in likelihood evaluation
+
+        Parameters
+        ----------
+        unconstrained : array_like
+            Array of unconstrained parameters used by the optimizer, to be
+            transformed.
+
+        Returns
+        -------
+        constrained : ndarray
+            Array of constrained parameters which may be used in likelihood
+            evaluation.
+
+        Notes
+        -----
+        The variances are squared, the cycle frequency is mapped into the
+        bounds `cycle_frequency_bound` and the cycle damping into (0, 1), both
+        with a logistic function, and the autoregressive coefficients are
+        constrained to be stationary.
         """
         unconstrained = np.array(unconstrained, ndmin=1)
         constrained = np.zeros(unconstrained.shape, dtype=unconstrained.dtype)
@@ -1089,7 +1146,21 @@ class UnobservedComponents(MLEModel):
         return constrained
 
     def untransform_params(self, constrained):
-        """Reverse the transformation"""
+        """
+        Transform constrained parameters used in likelihood evaluation
+        to unconstrained parameters used by the optimizer
+
+        Parameters
+        ----------
+        constrained : array_like
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
+
+        Returns
+        -------
+        unconstrained : ndarray
+            Array of unconstrained parameters used by the optimizer.
+        """
         constrained = np.array(constrained, ndmin=1)
         unconstrained = np.zeros(constrained.shape, dtype=constrained.dtype)
 
@@ -1145,6 +1216,28 @@ class UnobservedComponents(MLEModel):
     def update(
         self, params, transformed=True, includes_fixed=False, complex_step=False
     ):
+        """
+        Update the parameters of the model
+
+        Updates the representation matrices to fill in the new parameter
+        values.
+
+        Parameters
+        ----------
+        params : array_like
+            Array of new parameters.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. If set to False,
+            `transform_params` is called. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not the update is part of a complex-step differentiation
+            approximation. Default is False.
+        """
         params = self.handle_params(
             params, transformed=transformed, includes_fixed=includes_fixed
         )
@@ -1197,10 +1290,21 @@ class UnobservedComponentsResults(MLEResults):
     ----------
     model : UnobservedComponents instance
         The fitted model instance
+    params : ndarray
+        Fitted parameters
+    filter_results : FilterResults or SmootherResults
+        The underlying state space model and Kalman filter (and smoother)
+        output
+    cov_type : str, optional
+        The method for calculating the covariance matrix of parameter
+        estimates. See `MLEModel.fit` for a description of available options.
+    **kwargs
+        Additional keyword arguments used to initialize the results object,
+        for example `cov_kwds`.
 
     Attributes
     ----------
-    specification : dictionary
+    specification : Bunch
         Dictionary including all attributes from the unobserved components
         model instance.
 
@@ -1259,17 +1363,19 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            Has the following attributes:
+        out : Bunch or None
+            None if the model has no level component, otherwise a
+            Bunch with the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1298,17 +1404,19 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            Has the following attributes:
+        out : Bunch or None
+            None if the model has no trend component, otherwise a
+            Bunch with the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1338,17 +1446,19 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            Has the following attributes:
+        out : Bunch or None
+            None if the model has no seasonal component, otherwise a
+            Bunch with the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1381,16 +1491,19 @@ class UnobservedComponentsResults(MLEResults):
         Returns
         -------
         out : list of Bunch instances
-            Each item has the following attributes:
+            One item for each frequency domain seasonal component (an empty
+            list if there are none). Each item has the following attributes
+            (and a `pretty_name`):
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1465,17 +1578,19 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            Has the following attributes:
+        out : Bunch or None
+            None if the model has no cycle component, otherwise a
+            Bunch with the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1514,17 +1629,19 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            Has the following attributes:
+        out : Bunch or None
+            None if the model has no autoregressive component, otherwise a
+            Bunch with the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1562,17 +1679,21 @@ class UnobservedComponentsResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            Has the following attributes:
+        out : Bunch or None
+            None if the model has no regression component or if the
+            coefficients are estimated by maximum likelihood (with an
+            OutputWarning, since they are then in the parameters, not in the
+            state vector), otherwise a Bunch with the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
                           the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-                          the component
+                          the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate of
-                          the variance/covariance of the component
+                          the variance/covariance of the component, or None
+                          without smoother output
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
         """
@@ -1642,7 +1763,8 @@ class UnobservedComponentsResults(MLEResults):
             Type of state estimate to plot. Default is 'smoothed' if smoothed
             results are available otherwise 'filtered'.
         alpha : float, optional
-            The confidence intervals for the components are (1 - alpha) %
+            The confidence intervals for the one-step-ahead predictions of
+            the observed series are (1 - alpha) %. Default is 0.05.
         observed : bool, optional
             Whether or not to plot the observed series against
             one-step-ahead predictions.
@@ -1676,16 +1798,23 @@ class UnobservedComponentsResults(MLEResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        Returns
+        -------
+        Figure
+            The figure with the plots.
+
         Notes
         -----
         If all options are included in the model and selected, this produces
-        a 6x1 plot grid with the following plots (ordered top-to-bottom):
+        a plot grid with one column and the following plots (ordered
+        top-to-bottom):
 
         0. Observed series against predicted series
         1. Level
         2. Trend
         3. Seasonal
-        4. Freq Seasonal
+        4. Freq Seasonal (one plot for each frequency domain seasonal
+           component)
         5. Cycle
         6. Autoregressive
 
@@ -1693,7 +1822,9 @@ class UnobservedComponentsResults(MLEResults):
         the estimated model or if the corresponding keyword argument is set to
         False.
 
-        All plots contain (1 - `alpha`) %  confidence intervals.
+        The plot of the observed series contains (1 - `alpha`) % confidence
+        intervals for the one-step-ahead predictions. The first
+        `loglikelihood_burn` observations are not shown.
         """
         from scipy.stats import norm
 

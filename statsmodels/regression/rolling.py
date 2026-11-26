@@ -23,6 +23,7 @@ from scipy import stats
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import get_matrices_eval_env
 from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
@@ -274,7 +275,9 @@ class RollingWLS:
             else:
                 _, wy, wx, _, _ = self._get_data(idx)
                 if method == "lstsq":
-                    params = np.linalg.lstsq(wx, wy)[0]
+                    # rcond=None, the default of NumPy >= 2, is the cutoff
+                    # that _batched_lstsq uses; NumPy < 2 warns without it
+                    params = np.linalg.lstsq(wx, wy, rcond=None)[0]
                 else:  # 'pinv'
                     wxpwxiwxp = np.linalg.pinv(wx)
                     params = wxpwxiwxp @ wy
@@ -654,14 +657,7 @@ class RollingWLS:
     ):
         if subset is not None:
             data = data.loc[subset]
-        eval_env = kwargs.pop("eval_env", None)
-        if eval_env is None:
-            eval_env = 2
-        elif eval_env == -1:
-            mgr = FormulaManager()
-            eval_env = mgr.get_empty_eval_env()
-        else:
-            eval_env += 1  # we're going down the stack again
+        eval_env = get_matrices_eval_env(kwargs.pop("eval_env", None))
         missing = kwargs.get("missing", "skip")
 
         na_action = FormulaManager().get_na_action(action="raise", types=[])
@@ -1103,14 +1099,14 @@ class RollingRegressionResults:
         if variables is None:
             variable_idx = list(range(k_variables))
         else:
-            if isinstance(variables, (int, str)):
+            if isinstance(variables, (int, np.integer, str)):
                 variables = [variables]
             variable_idx = []
             for i in range(len(variables)):
                 variable = variables[i]
                 if variable in param_names:
                     variable_idx.append(param_names.index(variable))
-                elif isinstance(variable, int):
+                elif isinstance(variable, (int, np.integer)):
                     variable_idx.append(variable)
                 else:
                     msg = (

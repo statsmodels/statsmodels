@@ -22,7 +22,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
+from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess, VARResults
 
 
 def svar_ckerr(svar_type, A, B):
@@ -166,6 +166,11 @@ class SVAR(tsbase.TimeSeriesModel):
             fpe : Final prediction error
             hqic : Hannan-Quinn
             bic : Bayesian a.k.a. Schwarz
+
+            .. versionchanged:: 0.15.1
+
+               The order is selected by VAR.select_order with `maxlags` and
+               `trend`. It raised an AttributeError.
         verbose : bool, optional
             Print order selection output to the screen
         trend : {"c", "ct", "ctt", "n"}, optional
@@ -207,13 +212,15 @@ class SVAR(tsbase.TimeSeriesModel):
         """
         lags = maxlags
         if ic is not None:
-            selections = self.select_order(maxlags=maxlags, verbose=verbose)
-            if ic not in selections:
+            selections = VAR(self.endog).select_order(maxlags=maxlags, trend=trend)
+            if ic not in selections.selected_orders:
                 raise ValueError(
-                    f"{ic} not recognized, must be among {sorted(selections)}"
+                    f"{ic} not recognized, must be among "
+                    f"{sorted(selections.selected_orders)}"
                 )
-            lags = selections[ic]
+            lags = selections.selected_orders[ic]
             if verbose:
+                print(selections)
                 print(f"Using {lags:d} based on {ic} criterion")
         elif lags is None:
             lags = 1
@@ -371,10 +378,8 @@ class SVAR(tsbase.TimeSeriesModel):
         A_len = len(A[A_mask])
         B_len = len(B[B_mask])
 
-        if A is not None:
-            A[A_mask] = params[:A_len]
-        if B is not None:
-            B[B_mask] = params[A_len : A_len + B_len]
+        A[A_mask] = params[:A_len]
+        B[B_mask] = params[A_len : A_len + B_len]
 
         nobs = self.nobs
         neqs = self.neqs
@@ -489,23 +494,15 @@ class SVAR(tsbase.TimeSeriesModel):
         else:  # TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
-        if solver == "bfgs":
-            kwargs = {"gtol": 1e-5}
-        else:
-            kwargs = {}
         mlefit = super().fit(
             start_params=start_params,
             method=solver,
             maxiter=maxiter,
             disp=False,
-            **kwargs,
         )
         # used by sirf_errband_mc to count the fits that did not converge
         self.mle_retvals = mlefit.mle_retvals
         retvals = mlefit.params
-
-        if retvals.ndim > 1:
-            retvals = retvals.ravel()
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
 

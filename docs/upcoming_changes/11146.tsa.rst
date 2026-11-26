@@ -1,0 +1,7 @@
+- :class:`~statsmodels.tsa.ardl.ARDL`,
+  :class:`~statsmodels.tsa.ardl.UECM` and
+  :func:`~statsmodels.tsa.ardl.ardl_select_order` raised an
+  ``AssertionError``, an ``IndexError`` or an unrelated ``ValueError``
+  for an order dict with float or bool keys equal to a column index of
+  an exog that is not a DataFrame. They raise a ``TypeError`` that says
+  that the keys must be integer column indices. :pr:`11146`
