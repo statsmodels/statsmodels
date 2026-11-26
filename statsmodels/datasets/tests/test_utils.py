@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import assert_frame_equal
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 from pathlib import Path
@@ -160,3 +161,19 @@ def test_process_pandas_bool_endog_idx(endog_idx):
     data = _process_pandas_data()
     with pytest.raises(KeyError):
         utils.process_pandas(data, endog_idx=endog_idx)
+
+
+@pytest.mark.parametrize("index_idx", [None, 3])
+@pytest.mark.parametrize("endog_idx", [0, ["a"]], ids=["int", "list"])
+def test_process_pandas_int_exog_idx(endog_idx, index_idx):
+    # An int exog_idx raised AttributeError: 'Series' object has no
+    # attribute 'columns'. It selects one column, kept as a DataFrame.
+    data = pd.DataFrame(np.arange(12.0).reshape(3, 4), columns=list("abcd"))
+    ds = utils.process_pandas(
+        data, endog_idx=endog_idx, exog_idx=1, index_idx=index_idx
+    )
+    expected = data[["b"]].copy()
+    if index_idx is not None:
+        expected.index = pd.Index(data["d"])
+    assert_frame_equal(ds.exog, expected)
+    assert ds.exog_name == ["b"]
