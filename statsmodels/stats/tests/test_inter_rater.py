@@ -534,6 +534,22 @@ def test_cohens_kappa_rejects_invalid_counts(table, message, wt):
             cohens_kappa(table, wt=wt)
 
 
+@pytest.mark.parametrize(
+    "weights", [[1], [0, 1], [0, 1, 2, 3]], ids=["len1", "len2", "len4"]
+)
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic", "toeplitz"])
+def test_cohens_kappa_rejects_1d_weights_of_wrong_length(weights, wt):
+    # weights of length 1 were broadcast and gave nan (0 / 0), or a kappa of
+    # zero up to rounding with toeplitz; other lengths failed with a numpy
+    # broadcast error
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with warnings.catch_warnings():
+        # the ValueError has to be raised before any value is divided
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="1-d weights must have length 3"):
+            cohens_kappa(table, weights=weights, wt=wt)
+
+
 @pytest.mark.filterwarnings("ignore:overflow encountered")  # the sum overflows
 def test_cohens_kappa_rejects_overflowing_sum():
     with pytest.raises(ValueError, match="sum of the table must be finite"):
