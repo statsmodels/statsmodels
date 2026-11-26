@@ -91,7 +91,17 @@ def array_like(
     Returns
     -------
     ndarray
-        The converted input.
+        The converted input, always a base-class ndarray: a subclass such as
+        ``np.matrix`` or a masked array is converted, as ``np.asarray`` does,
+        and the mask of a masked array is dropped.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       Subclasses of ndarray are converted to ndarray. They were returned
+       unchanged, so ``np.matrix`` input kept matrix semantics and the mask
+       of a masked array was kept.
 
     Examples
     --------
@@ -146,7 +156,8 @@ def array_like(
         if optional:
             return None
         raise TypeError(f"{name} must be array_like, not None")
-    reqs = ["W"] if writeable else []
+    # "E" makes np.require return a base-class ndarray, as np.asarray does
+    reqs = ["E", "W"] if writeable else ["E"]
     if order == "C" or contiguous:
         reqs += ["C"]
     elif order == "F":
