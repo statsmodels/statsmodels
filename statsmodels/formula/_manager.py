@@ -806,7 +806,7 @@ class FormulaManager:
 
     def intercept_idx(self, spec):
         """
-        Returns boolean array index indicating which column holds the intercept.
+        Returns boolean array index indicating which term is the intercept.
 
         Parameters
         ----------
@@ -816,7 +816,9 @@ class FormulaManager:
         Returns
         -------
         ndarray
-            Boolean array index indicating which column holds the intercept.
+            Boolean array with one element per term of the specification, in
+            the order of its terms, that is True for the intercept. A term
+            can have several columns, so this indexes terms, not columns.
         """
         from numpy import array
 
