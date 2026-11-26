@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring import Docstring, Parameter
@@ -164,7 +165,7 @@ class RecursiveLS(MLEModel):
             self.k_endog = 1
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, constraints=None):
+    def from_formula(cls, formula, data, subset=None, constraints=None, eval_env=None):
         """
         Create a `RecursiveLS` model instance from a formula and dataframe.
 
@@ -180,13 +181,24 @@ class RecursiveLS(MLEModel):
             `pandas.DataFrame`.
         constraints : {None, array_like, str, tuple}, optional
             See `RecursiveLS` for details.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
         model : RecursiveLS instance
         """
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         return super(MLEModel, cls).from_formula(formula, data, subset,
-                                                 constraints=constraints)
+                                                 constraints=constraints,
+                                                 **kwargs)
 
     def _validate_can_fix_params(self, param_names):
         raise ValueError("Linear constraints on coefficients should be given"
