@@ -121,7 +121,7 @@ def test_confint_proportion_wilson_clip():
 
 
 def test_samplesize_confidenceinterval_prop():
-    # consistency test for samplesize to achieve confidence_interval
+    # round trip: the interval half-width at the estimate gives nobs
     nobs = 20
     ci = smprop.proportion_confint(12, nobs, alpha=0.05, method="normal")
     res = smprop.samplesize_confint_proportion(12.0 / nobs, (ci[1] - ci[0]) / 2)

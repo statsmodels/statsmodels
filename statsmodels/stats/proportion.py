@@ -620,33 +620,37 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
 
 def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="normal"):
     """
-    Find sample size to get desired confidence interval length
+    Find sample size for a desired margin of error of a proportion
 
     Parameters
     ----------
     proportion : float or array_like in [0, 1]
-        Proportion or quantile. All values have to be in the closed interval
-        [0, 1].
+        Planning value of the proportion. All values have to be in the closed
+        interval [0, 1].
     half_length : float or array_like, positive
-        Desired half length of the confidence interval. All values have to
-        be positive.
+        Desired margin of error, that is, the distance between the estimated
+        and the planning proportion that is to be achieved with probability
+        ``1 - alpha`` if the planning value is the true proportion. All
+        values have to be positive.
     alpha : float or array_like in (0, 1), optional
-        Significance level, default 0.05. Coverage of the two-sided interval
-        is (approximately) ``1 - alpha``. All values have to be in the open
-        interval (0, 1).
+        Significance level, default 0.05. If the true proportion equals
+        ``proportion``, the estimate is within ``half_length`` of
+        ``proportion`` with probability approximately ``1 - alpha``. All
+        values have to be in the open interval (0, 1).
     method : {"normal"}, optional
-        Method to use for the confidence interval. Currently only the normal
-        approximation is available.
+        Method to use for the sample size calculation. Currently only the
+        normal approximation is available.
 
     Returns
     -------
     n : float, ndarray, Series or DataFrame
-        Sample size to get the desired half length of the confidence
-        interval. The sample size is not rounded to an integer, and it is 0
-        if ``proportion`` is 0 or 1. The result is a float if all arguments
-        are scalars, and an ndarray if the arguments are array_like. It is a
-        pandas Series or DataFrame if ``proportion`` or ``half_length`` is
-        one, in which case the result has the index of that argument.
+        Sample size at which the normal-approximation margin of error at
+        ``proportion`` equals ``half_length``. The sample size is not rounded
+        to an integer, and it is 0 if ``proportion`` is 0 or 1. The result is
+        a float if all arguments are scalars, and an ndarray if the arguments
+        are array_like. It is a pandas Series or DataFrame if ``proportion``
+        or ``half_length`` is one, in which case the result has the index of
+        that argument.
 
     Raises
     ------
@@ -662,10 +666,29 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
 
     Notes
     -----
-    This is mainly to store the formula. For the normal approximation the
-    sample size is ``proportion * (1 - proportion) / (half_length / z) ** 2``,
+    For the normal approximation, the sample size solves the margin-of-error
+    equation
+
+    ``n = proportion * (1 - proportion) / (half_length / z) ** 2``,
+
     where ``z`` is the ``1 - alpha / 2`` quantile of the standard normal
-    distribution.
+    distribution. If the true proportion equals ``proportion``, then
+    ``Pr(|p_hat - proportion| <= half_length)`` is approximately
+    ``1 - alpha``.
+
+    This is a statement about the sampling error of the estimate ``p_hat``
+    at the planning value. It does not describe the confidence interval that
+    the study will produce. The realized half-width
+    ``z * sqrt(p_hat * (1 - p_hat) / n)`` is random and is at most
+    ``half_length`` only when
+    ``abs(p_hat - 0.5) >= abs(proportion - 0.5)``, which happens with
+    probability about one half when ``proportion != 0.5``; see [2]_. No
+    property of the realized confidence interval is guaranteed.
+
+    The normal approximation also under-covers when the true proportion is
+    close to 0 or 1. The usual safeguards that
+    ``n * min(proportion, 1 - proportion) >= 5`` or ``10`` do not ensure
+    adequate coverage; see [1]_. Only the normal approximation is available.
 
     A possible application is the number of replications in bootstrap
     samples.
@@ -676,6 +699,16 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
        range or nan raise a ``ValueError``. Previously the function returned
        ``inf``, ``nan`` or a meaningless, possibly negative, sample size.
        Lists are accepted for the three arguments.
+
+    References
+    ----------
+    .. [1] Brown, Lawrence D.; Cai, T. Tony; DasGupta, Anirban (2001).
+       "Interval Estimation for a Binomial Proportion", Statistical Science
+       16 (2): 101-133. doi:10.1214/ss/1009213286.
+
+    .. [2] Kupper, Lawrence L.; Hafner, Kerry B. (1989). "How Appropriate Are
+       Popular Sample Size Formulas?" The American Statistician 43 (2):
+       101-105.
     """
     # array_like converts lists and raises a TypeError for None
     proportion_a = array_like(proportion, "proportion", mindim=None)
