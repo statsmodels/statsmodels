@@ -1,0 +1,8 @@
+- :class:`~statsmodels.genmod.generalized_linear_model.GLM` and
+  :class:`~statsmodels.genmod.generalized_estimating_equations.GEE` issue a
+  ``DomainWarning`` if ``endog`` is outside of the support of the family:
+  proportions in [0, 1] for ``Binomial``, a nonnegative ``endog`` for
+  ``Poisson`` and ``NegativeBinomial``, and a positive one for ``Gamma`` and
+  ``InverseGaussian``. Such data, for example counts without ``n_trials`` in a
+  ``Binomial`` model, were fit without a warning. The results are unchanged.
+  :issue:`9058`, :pr:`11195`
