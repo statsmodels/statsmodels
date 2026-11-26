@@ -586,7 +586,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         """
         if start is None:
             freq = getattr(self._index, "freq", 1)
-            if isinstance(freq, int):
+            if is_int_like(freq):
                 start = self._index.shape[0]
             else:
                 start = self._index[-1] + freq

@@ -12,7 +12,7 @@ import pandas as pd
 from statsmodels.base.data import PandasData
 from statsmodels.iolib.summary import SimpleTable, Summary
 from statsmodels.tools.docstring import Docstring, Parameter, indent
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, is_int_like
 from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
@@ -457,6 +457,12 @@ class STLForecastResults:
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
             must be an integer. Default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, and a 0-d integer
+               array are a number of steps, as an int is. They are passed to
+               the model as an int. A bool is not a number of steps.
         **kwargs
             Additional arguments may be required for forecasting beyond the
             end of the sample. These arguments are passed into the time
@@ -467,9 +473,11 @@ class STLForecastResults:
         forecast : ndarray or Series
             Out of sample forecasts
         """
+        if is_int_like(steps):
+            steps = int(steps)
         forecast = self._model_result.forecast(steps=steps, **kwargs)
         index = forecast.index if isinstance(forecast, pd.Series) else None
-        if not isinstance(steps, (int, np.integer)):
+        if not is_int_like(steps):
             # A date: the model has forecast up to and including it
             steps = len(forecast)
         return forecast + self._seasonal_forecast(steps, index)

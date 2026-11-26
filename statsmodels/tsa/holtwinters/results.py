@@ -14,7 +14,7 @@ from statsmodels.base.wrapper import (
     union_dicts,
 )
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import is_int_like, string_like
 
 
 class HoltWintersResults(Results):
@@ -240,7 +240,7 @@ class HoltWintersResults(Results):
             ndarray.
         """
         freq = getattr(self.model._index, "freq", 1)
-        if not isinstance(freq, int) and isinstance(
+        if not is_int_like(freq) and isinstance(
             self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
         ):
             start = self.model._index[-1] + freq

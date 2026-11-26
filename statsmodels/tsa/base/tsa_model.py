@@ -32,6 +32,7 @@ from statsmodels.base.data import PandasData
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import is_int_like
 
 _tsa_doc = """
     %(model)s
@@ -98,6 +99,13 @@ def get_index_loc(key, index):
            frequency, as pandas' partial-string indexing does for e.g.
            "2001-03". Previously it was taken as the last day of the quarter,
            or did not match periods.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d integer array is a location, as an int is, so that it can
+           be the `start` or `end` of prediction with a date index, where it
+           raised a TypeError. A bool or a ``np.timedelta64`` is not a
+           location; a ``np.timedelta64`` was one.
     index : pd.Index
         The index to search.
 
@@ -136,9 +144,12 @@ def get_index_loc(key, index):
     range_index = isinstance(base_index, RangeIndex)
     index_class = type(base_index)
     nobs = len(index)
+    # strict: a float can be the label of an index with a float dtype
+    if is_int_like(key, strict=True):
+        key = int(key)
 
     # Special handling for RangeIndex
-    if range_index and isinstance(key, (int, np.integer)):
+    if range_index and is_int_like(key, strict=True):
         # Negative indices (that lie in the Index)
         if key < 0 and -key <= nobs:
             key = nobs + key
@@ -154,7 +165,7 @@ def get_index_loc(key, index):
         not range_index
         and int_index
         and not date_index
-        and isinstance(key, (int, np.integer))
+        and is_int_like(key, strict=True)
     ):
         # Negative indices (that lie in the Index)
         if key < 0 and -key <= nobs:
@@ -176,7 +187,7 @@ def get_index_loc(key, index):
         else:
             index_fn = period_range
         # Integer key (i.e., already given a location)
-        if isinstance(key, (int, np.integer)):
+        if is_int_like(key, strict=True):
             # Negative indices (that lie in the Index)
             if key < 0 and -key < nobs:
                 key = index[nobs + key]
@@ -389,7 +400,7 @@ def get_index_label_loc(key, index, row_labels):
             if not in_quarter.any():
                 raise
         # Without row labels (e.g. numpy data) there is nothing else to search
-        if not isinstance(key, (int, np.integer)) and row_labels is not None:
+        if not is_int_like(key, strict=True) and row_labels is not None:
             loc = row_labels.get_loc(key)
         else:
             raise

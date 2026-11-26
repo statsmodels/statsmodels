@@ -33,6 +33,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_int_like,
     string_like,
 )
 
@@ -1067,6 +1068,12 @@ class RollingRegressionResults:
             Integer index or string name of the variables whose coefficients
             to plot. Can also be an iterable of integers or strings. Default
             plots all coefficients.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a variable, as the integer it
+               holds does. A bool raises a TypeError, and a list that holds
+               a bool raises a ValueError.
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha)%. Set
             to None to exclude confidence intervals.
@@ -1099,15 +1106,17 @@ class RollingRegressionResults:
         if variables is None:
             variable_idx = list(range(k_variables))
         else:
-            if isinstance(variables, (int, np.integer, str)):
+            if isinstance(variables, str):
                 variables = [variables]
+            elif is_int_like(variables, strict=True):
+                variables = [int(variables)]
             variable_idx = []
             for i in range(len(variables)):
                 variable = variables[i]
                 if variable in param_names:
                     variable_idx.append(param_names.index(variable))
-                elif isinstance(variable, (int, np.integer)):
-                    variable_idx.append(variable)
+                elif is_int_like(variable, strict=True):
+                    variable_idx.append(int(variable))
                 else:
                     msg = (
                         "variable {} is not an integer and was not found "

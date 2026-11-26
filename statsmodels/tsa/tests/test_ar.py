@@ -1874,3 +1874,43 @@ def test_diagnostic_summary_serial_correlation():
     assert_allclose(rows[:, 1], stat[3:], rtol=1e-8)
     assert_allclose(rows[:, 2], pvalue[3:], rtol=1e-8)
     assert_allclose(rows[:, 3], df[3:])
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(3), np.int32(3), np.array(3), 3.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_autoreg_forecast_int_like_steps(steps, use_pandas):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They were the location of the last forecast, which raised.
+    rng = np.random.default_rng(20261126)
+    y = rng.standard_normal(100)
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=100, freq="MS"))
+    res = AutoReg(y, 2).fit()
+    fcast = res.forecast(steps)
+    # The AR(2) recursion by hand
+    const, phi1, phi2 = np.asarray(res.params)
+    path = list(np.asarray(y)[-2:])
+    for _ in range(3):
+        path.append(const + phi1 * path[-1] + phi2 * path[-2])
+    assert_allclose(np.asarray(fcast), path[2:], rtol=1e-10)
+    if use_pandas:
+        expected = pd.date_range("2008-05-01", periods=3, freq="MS")
+        pd.testing.assert_index_equal(fcast.index, expected)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_autoreg_forecast_bool_steps(steps, use_pandas):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises.
+    rng = np.random.default_rng(20261126)
+    y = rng.standard_normal(100)
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=100, freq="MS"))
+    res = AutoReg(y, 2).fit()
+    with pytest.raises(TypeError if use_pandas else KeyError):
+        res.forecast(steps)

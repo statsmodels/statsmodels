@@ -2483,6 +2483,8 @@ def test_select_order_deterministic_valid(deterministic, equivalent):
         (np.int64(0), np.int32(2)),
         (np.array([0, 1], dtype=np.int32), np.int64(3)),
         ([np.intp(3)], [np.int16(0), np.uint8(1), np.intc(2)]),
+        (np.array(1), np.array(3)),
+        ([np.array(0)], [np.array(2), 3]),
     ],
 )
 def test_causality_numpy_integer_indices(caused, causing):
@@ -2667,3 +2669,33 @@ def test_predict_exog_coint_fc_rows():
     # the trend 1, 2, ... as exog_coint is deterministic="li"
     li = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="li").fit()
     assert_allclose(res.predict(steps, exog_coint_fc=future), li.predict(steps), rtol=1e-8)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+def test_causality_bool_index(value):
+    # A bool is not an index: True was the variable with index 1
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality(value)
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality([0, value])
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_granger_causality(0, value)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality(value)
+
+
+@pytest.mark.parametrize(
+    "det_order",
+    [2, np.int64(2), np.int32(5), np.array(2), 2.0],
+    ids=["int", "int64", "int32", "0d-array", "float"],
+)
+def test_select_coint_rank_det_order_greater_than_one(det_order):
+    # An integer greater than 1, also a NumPy integer or an integral float,
+    # gets the message for orders greater than 1
+    y = np.random.default_rng(20261126).standard_normal((60, 2)).cumsum(0)
+    with pytest.raises(ValueError, match="greather than 1 is not supported"):
+        select_coint_rank(y, det_order, 1)

@@ -50,6 +50,7 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.tsatools import lagmat
@@ -1807,6 +1808,11 @@ def linear_reset(
         The maximum power to include in the model, if an integer. Includes
         powers 2, 3, ..., power. If an list of integers, includes all powers
         in the list.
+
+        .. versionchanged:: 0.15.1
+
+           A float with an integral value, such as 3.0, is the maximum power,
+           as an int is.
     test_type : str, default "fitted"
         The type of augmentation to use:
 
@@ -1873,7 +1879,8 @@ def linear_reset(
     )
     cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
-    if isinstance(power, (int, np.integer)):
+    if is_int_like(power):
+        power = int(power)
         if power < 2:
             raise ValueError("power must be >= 2")
         power = np.arange(2, power + 1, dtype=int)

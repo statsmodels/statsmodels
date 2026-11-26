@@ -566,3 +566,30 @@ def test_get_prediction_dynamic_key_covers_several_dates():
     assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
     assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
     pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(17), np.array(17), 17.0],
+    ids=["int64", "0d-array", "float"],
+)
+@pytest.mark.parametrize("form", ["ndarray", "series"])
+def test_forecast_int_like_steps(monthly, form, steps):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They are passed to the model as an int.
+    x = _stl_form(monthly, form)
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    locs = np.arange(NOBS, NOBS + 17)
+    expected = ar_res.forecast(17) + _seasonal_by_hand(seasonal, NOBS, locs)
+    assert_allclose(np.asarray(res.forecast(steps)), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(monthly, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises for a date index.
+    x = _stl_form(monthly, "series")
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    with pytest.raises(TypeError):
+        res.forecast(steps)

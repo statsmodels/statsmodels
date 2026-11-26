@@ -24,7 +24,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, EstimationWarning
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.validation import int_like, string_like
+from statsmodels.tools.validation import int_like, is_int_like, string_like
 from statsmodels.tsa.statespace import initialization, mlemodel
 from statsmodels.tsa.statespace._quarterly_ar1 import QuarterlyAR1
 from statsmodels.tsa.statespace.kalman_smoother import (
@@ -331,12 +331,12 @@ class DynamicFactorMQStates(dict):
         self.idiosyncratic_ar1 = idiosyncratic_ar1
 
         # Validate factor-related inputs
-        factors_is_int = np.issubdtype(type(factors), np.integer)
+        factors_is_int = is_int_like(factors)
         factors_is_list = isinstance(factors, (list, tuple))
-        orders_is_int = np.issubdtype(type(factor_orders), np.integer)
+        orders_is_int = is_int_like(factor_orders)
         if factor_multiplicities is None:
             factor_multiplicities = 1
-        mult_is_int = np.issubdtype(type(factor_multiplicities), np.integer)
+        mult_is_int = is_int_like(factor_multiplicities)
 
         if not (factors_is_int or factors_is_list or
                 isinstance(factors, dict)):
@@ -363,16 +363,18 @@ class DynamicFactorMQStates(dict):
             if factors_is_list:
                 factor_names = list(factors)
             else:
-                factor_names = [f"{i}" for i in range(factors)]
+                factor_names = [f"{i}" for i in range(int(factors))]
             factors = dict.fromkeys(endog_names, factor_names[:])
         _factor_names = []
         for val in factors.values():
             _factor_names.extend(val)
         factor_names = set(_factor_names)
         if orders_is_int:
-            factor_orders = dict.fromkeys(factor_names, factor_orders)
+            factor_orders = dict.fromkeys(factor_names, int(factor_orders))
         if mult_is_int:
-            factor_multiplicities = dict.fromkeys(factor_names, factor_multiplicities)
+            factor_multiplicities = dict.fromkeys(
+                factor_names, int(factor_multiplicities)
+            )
 
         # Apply the factor multiplicities
         factors, factor_orders = self._apply_factor_multiplicities(
@@ -764,6 +766,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         - keys : factor name
         - values : integer describing the factor multiplicity for the factors
           in the given block
+
+        .. versionchanged:: 0.15.1
+
+           A float with an integral value, such as 2.0, or a 0-d integer
+           array is an integer, as an int is, for `factors`, `factor_orders`
+           and `factor_multiplicities`. They raised a ValueError.
 
     idiosyncratic_ar1 : bool, optional
         Whether or not to model the idiosyncratic component for each series as

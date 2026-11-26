@@ -27,6 +27,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.arima_process import arma2ma
@@ -1574,6 +1575,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
             steps must be an integer. The default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, and a 0-d integer
+               array are a number of steps, as an int is. Before, they were
+               used as the index of the last forecast, which raised or gave
+               the wrong number of forecasts. A bool is not a number of
+               steps: True was one step.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows
@@ -1592,8 +1601,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             In- and out-of-sample predictions and confidence intervals
         """
         start = self.model.data.orig_endog.shape[0]
-        if isinstance(steps, (int, np.integer)):
-            end = start + steps - 1
+        if is_int_like(steps):
+            end = start + int(steps) - 1
         else:
             end = steps
         return self.predict(start=start, end=end, dynamic=False, exog_oos=exog)

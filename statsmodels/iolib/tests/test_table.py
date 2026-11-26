@@ -315,3 +315,65 @@ def test_simple_table_pad():
 
     for align in ("l", "r", "c"):
         assert tbl.pad("xy", 5, align) == pad_func("xy", 5, align)
+
+
+TABLE_DATA = [[1.30312, 2.73999], [1.95038, 2.65765]]
+TABLE_KWARGS = dict(
+    headers=("header1", "header2"),
+    stubs=("stub1", "stub2"),
+    data_fmts=["%3.1f", "%5.3f"],
+    data_aligns="lr",
+)
+TABLE_OUTPUTS = ("as_text", "as_html", "as_latex_tabular", "as_csv")
+
+
+@pytest.mark.parametrize(
+    "datatypes",
+    [np.array([1, 0]), [np.int64(1), np.int32(0)], np.array([1, 0], dtype=np.int8)],
+    ids=["ndarray", "numpy-scalars", "int8"],
+)
+def test_simple_table_numpy_int_datatypes(datatypes):
+    # NumPy integers index data_fmts and data_aligns, as Python ints do
+    expected = SimpleTable(TABLE_DATA, datatypes=[1, 0], **TABLE_KWARGS)
+    actual = SimpleTable(TABLE_DATA, datatypes=datatypes, **TABLE_KWARGS)
+    for output in TABLE_OUTPUTS:
+        assert getattr(actual, output)() == getattr(expected, output)()
+    # Column 1 has datatype 1 ("%5.3f", right) and column 2 datatype 0
+    # ("%3.1f", left), in columns as wide as the headers
+    rows = actual.as_text().splitlines()
+    assert rows[3] == "stub1   1.303 2.7    "
+
+
+@pytest.mark.parametrize(
+    "datatypes",
+    [[True, False], np.array([True, False])],
+    ids=["list", "ndarray"],
+)
+def test_simple_table_bool_datatypes(datatypes):
+    # Bools are not integers: True and False indexed data_fmts as 1 and 0
+    table = SimpleTable(TABLE_DATA, datatypes=datatypes, **TABLE_KWARGS)
+    with pytest.raises(ValueError, match="Unknown cell datatype: True"):
+        table.as_text()
+
+
+@pytest.mark.parametrize(
+    "colwidths",
+    [12, np.int64(12), np.int32(12), 12.0],
+    ids=["int", "int64", "int32", "float"],
+)
+def test_simple_table_int_like_colwidths(colwidths):
+    # A NumPy integer or an integral float is the width of every column. A
+    # list with one width per column, which takes the other branch, is the
+    # reference.
+    expected = SimpleTable(TABLE_DATA, **TABLE_KWARGS).as_text(colwidths=[12] * 3)
+    actual = SimpleTable(TABLE_DATA, **TABLE_KWARGS).as_text(colwidths=colwidths)
+    assert actual == expected
+    # Three columns of 12 characters and two separators of one space
+    assert all(len(row) == 38 for row in actual.splitlines())
+
+
+def test_simple_table_bool_colwidths():
+    # A bool is not a width: True was a width of 1
+    table = SimpleTable(TABLE_DATA, **TABLE_KWARGS)
+    with pytest.raises(TypeError):
+        table.as_text(colwidths=True)

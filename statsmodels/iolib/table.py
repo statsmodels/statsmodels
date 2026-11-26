@@ -87,6 +87,8 @@ import csv
 from itertools import cycle, zip_longest
 from pathlib import Path
 
+from statsmodels.tools.validation import is_int_like
+
 
 def csv2st(csvfile, headers=False, stubs=False, title=None):
     """
@@ -184,6 +186,12 @@ class SimpleTable(list):
             title of the table
         datatypes : list of int, optional
             indexes to `data_fmts`
+
+            .. versionchanged:: 0.15.1
+
+               NumPy integers are indexes, as ints are. Bools are not. A
+               ``colwidths`` option that is a NumPy integer or an integral
+               float is the width of every column, as an int is.
         txt_fmt : dict, optional
             text formatting options
         ltx_fmt : dict, optional
@@ -411,8 +419,8 @@ class SimpleTable(list):
             return [0] * ncols
         elif request is None:  # assume no extra space desired (e.g, CSV)
             request = [0] * ncols
-        elif isinstance(request, int):
-            request = [request] * ncols
+        elif is_int_like(request):
+            request = [int(request)] * ncols
         elif len(request) < ncols:
             request = [request[i % len(request)] for i in range(ncols)]
         min_widths = []
@@ -1021,8 +1029,8 @@ class Cell:
         fmt = self._get_fmt(output_format, **fmt_dict)
         datatype = self.datatype
         data_aligns = fmt.get("data_aligns", "c")
-        if isinstance(datatype, int):
-            align = data_aligns[datatype % len(data_aligns)]
+        if is_int_like(datatype, strict=True):
+            align = data_aligns[int(datatype) % len(data_aligns)]
         elif datatype == "stub":
             # still support deprecated `stubs_align`
             align = fmt.get("stubs_align") or fmt.get("stub_align", "l")
@@ -1099,8 +1107,8 @@ class Cell:
             if data_fmt is None:
                 data_fmt = "%s"
             data_fmts = [data_fmt]
-        if isinstance(datatype, int):
-            datatype = datatype % len(data_fmts)  # constrain to indexes
+        if is_int_like(datatype, strict=True):
+            datatype = int(datatype) % len(data_fmts)  # constrain to indexes
             data_fmt = data_fmts[datatype]
             if isinstance(data_fmt, str):
                 content = data_fmt % (data,)

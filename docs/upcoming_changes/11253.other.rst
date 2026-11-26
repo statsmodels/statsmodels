@@ -1,0 +1,5 @@
+- ``process_pandas`` accepts a NumPy integer ``endog_idx``. ``BSplines``
+  accepts NumPy integers and integral floats as ``df`` and ``degree``.
+  ``SimpleTable`` accepts NumPy integer ``datatypes`` and a NumPy integer or
+  integral float ``colwidths``. ``from_formula`` accepts a 0-d integer array
+  ``eval_env``. :pr:`11253`

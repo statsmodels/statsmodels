@@ -1,5 +1,4 @@
 from collections import defaultdict
-import numbers
 import warnings
 
 import numpy as np
@@ -12,7 +11,7 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import int_like, string_like
+from statsmodels.tools.validation import int_like, is_int_like, string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
@@ -622,7 +621,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     method = string_like(method, "method", options=("trace", "maxeig"), lower=False)
 
     if det_order not in [-1, 0, 1]:
-        if type(det_order) is int and det_order > 1:
+        if is_int_like(det_order) and det_order > 1:
             raise ValueError(
                 "A det_order greather than 1 is not supported."
                 "Use a value of -1, 0, or 1."
@@ -2212,6 +2211,12 @@ class VECMResults:
             If a sequence of int or str, test whether the corresponding
             variables are Granger-caused by the variable(s) specified
             by `causing`.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array is an index, as an int is, in `caused`
+               and `causing`. It raised a TypeError. A bool is not an index
+               and raises a TypeError: True was the variable with index 1.
         causing : int or str or sequence of int or str or None, optional
             If int or str, test whether the variable specified via this index
             (int) or name (str) is Granger-causing the variable(s) specified by
@@ -2240,35 +2245,35 @@ class VECMResults:
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, numbers.Integral)
-
-        if isinstance(caused, allowed_types):
+        # A variable is a name or an index (strict)
+        if isinstance(caused, str) or is_int_like(caused, strict=True):
             caused = [caused]
         if not np.iterable(caused) or not all(
-            isinstance(c, allowed_types) for c in caused
+            isinstance(c, str) or is_int_like(c, strict=True) for c in caused
         ):
             raise TypeError(
                 "caused has to be of type string or int (or a "
                 "sequence of these types)."
             )
         caused = [
-            self.names[c] if isinstance(c, numbers.Integral) else c for c in caused
+            self.names[int(c)] if is_int_like(c, strict=True) else c for c in caused
         ]
         caused_ind = [get_index(self.names, c) for c in caused]
 
         if causing is not None:
 
-            if isinstance(causing, allowed_types):
+            if isinstance(causing, str) or is_int_like(causing, strict=True):
                 causing = [causing]
             if not np.iterable(causing) or not all(
-                isinstance(c, allowed_types) for c in causing
+                isinstance(c, str) or is_int_like(c, strict=True) for c in causing
             ):
                 raise TypeError(
                     "causing has to be of type string or int (or "
                     "a sequence of these types) or None."
                 )
             causing = [
-                self.names[c] if isinstance(c, numbers.Integral) else c for c in causing
+                self.names[int(c)] if is_int_like(c, strict=True) else c
+                for c in causing
             ]
             causing_ind = [get_index(self.names, c) for c in causing]
 
@@ -2374,6 +2379,12 @@ class VECMResults:
             the variable(s) specified in caused.
             If sequence of int or str, test whether the corresponding variables
             are causing the variable(s) specified in caused.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array is an index, as an int is. It raised a
+               TypeError. A bool is not an index and raises a TypeError:
+               True was the variable with index 1.
         signif : float, 0 < `signif` < 1, optional
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level.
@@ -2398,11 +2409,11 @@ class VECMResults:
 
         .. |H1| replace:: H\ :sub:`1`
         """
-        allowed_types = (str, numbers.Integral)
-        if isinstance(causing, allowed_types):
+        # A variable is a name or an index (strict)
+        if isinstance(causing, str) or is_int_like(causing, strict=True):
             causing = [causing]
         if not np.iterable(causing) or not all(
-            isinstance(c, allowed_types) for c in causing
+            isinstance(c, str) or is_int_like(c, strict=True) for c in causing
         ):
             raise TypeError(
                 "causing has to be of type string or int (or a sequence of "
@@ -2410,7 +2421,7 @@ class VECMResults:
             )
         # pass the names, which also covers integer indices of numpy types
         causing = [
-            self.names[c] if isinstance(c, numbers.Integral) else c for c in causing
+            self.names[int(c)] if is_int_like(c, strict=True) else c for c in causing
         ]
 
         exog = _deterministic_to_exog(

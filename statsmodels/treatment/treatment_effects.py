@@ -984,8 +984,8 @@ class TreatmentEffect:
             names = self.results_select.model.exog_names
         else:
             names = getattr(exog, "columns", None)
-        exog = np.asarray(exog, dtype=float)
-        if (exog.ndim != 2 or exog.shape[0] != self.nobs
+        exog = array_like(exog, "exog", shape=(None, None))
+        if (exog.shape[0] != self.nobs
                 or exog.shape[1] == 0 or not np.isfinite(exog).all()):
             raise ValueError("exog must be a finite nonempty two-dimensional "
                              "array with one row per observation")
