@@ -1,0 +1,2 @@
+- ``forecast_interval(y=None)`` of ``VARResults`` raised, although it is
+  documented to use the last observations. :pr:`10971`

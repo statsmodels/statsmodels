@@ -3327,3 +3327,79 @@ def test_fix_params_plain_initial_seasonal_deprecated():
     assert_allclose(
         res.params_formatted["param"], ref.params_formatted["param"], rtol=1e-4
     )
+
+
+def _missing_drop_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+MISSING_DROP_SPECS = [
+    {"trend": "add"},
+    {"trend": "add", "seasonal": "add", "seasonal_periods": 12},
+    {"trend": "mul", "seasonal": "mul", "seasonal_periods": 12},
+    {"trend": "add", "use_boxcox": True},
+]
+
+
+@pytest.mark.parametrize("spec", MISSING_DROP_SPECS)
+@pytest.mark.parametrize("loc", [[3], [20], [40, 70]])
+def test_missing_drop_matches_data_with_nans_removed(spec, loc):
+    # With missing="drop", the initial values, the Box-Cox transformation
+    # and the optimizer used the data including the nans. A model of the
+    # data with the nans removed by hand is the reference. The nans are
+    # placed in the window of the initial values (3), in the second season
+    # (20) and later (40, 70), where only the optimizer used them.
+    y = _missing_drop_data()
+    y_nan = y.copy()
+    y_nan[loc] = np.nan
+    y_drop = np.delete(y, loc)
+    mod = ExponentialSmoothing(y_nan, missing="drop", **spec)
+    ref_mod = ExponentialSmoothing(y_drop, **spec)
+    assert mod.nobs == y_drop.shape[0]
+    for value, expected in zip(
+        mod.initial_values(), ref_mod.initial_values(), strict=True
+    ):
+        # None, for a component the model does not have, becomes nan
+        assert_allclose(
+            np.asarray(value, dtype=float),
+            np.asarray(expected, dtype=float),
+            rtol=1e-12,
+        )
+
+    smoothing = {"smoothing_level": 0.3, "smoothing_trend": 0.1}
+    if "seasonal" in spec:
+        smoothing["smoothing_seasonal"] = 0.2
+    res = mod.fit(**smoothing, optimized=False)
+    ref = ref_mod.fit(**smoothing, optimized=False)
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-12)
+    assert_allclose(res.sse, ref.sse, rtol=1e-12)
+    assert_allclose(res.forecast(6), ref.forecast(6), rtol=1e-12)
+
+    # Both optimizations solve the same problem from the same starting
+    # values, so they reach the same minimum. They can stop at points that
+    # differ by more than rounding (noise of 4 ulps in the data moves the
+    # estimates by up to 2e-3 and the SSE by up to 1e-6), so the SSE is
+    # compared, not the estimates. With the nans used, the SSE was 200 times
+    # larger.
+    res = mod.fit()
+    ref = ref_mod.fit()
+    assert_allclose(res.sse, ref.sse, rtol=1e-4)
+
+
+def test_missing_drop_simulate():
+    # simulate used the data including the nans to compute the residuals
+    y = _missing_drop_data()
+    y_nan = y.copy()
+    y_nan[20] = np.nan
+    smoothing = {"smoothing_level": 0.3, "smoothing_trend": 0.1}
+    res = ExponentialSmoothing(y_nan, trend="add", missing="drop").fit(
+        **smoothing, optimized=False
+    )
+    ref = ExponentialSmoothing(np.delete(y, 20), trend="add").fit(
+        **smoothing, optimized=False
+    )
+    sim = res.simulate(6, repetitions=3, rng=np.random.default_rng(0))
+    expected = ref.simulate(6, repetitions=3, rng=np.random.default_rng(0))
+    assert_allclose(sim, expected, rtol=1e-12)

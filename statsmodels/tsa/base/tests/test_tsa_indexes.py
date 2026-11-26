@@ -2630,8 +2630,10 @@ def test_period_index_nat_key_raises_key_error(key, which):
 @pytest.mark.parametrize(
     "key, loc",
     [
-        ("2002-03-01T00:00-05:00", 26),
-        ("2002-03-01T05:00Z", 26),
+        # The strings give the seconds since pandas < 2.2 cannot parse a date
+        # string with a UTC offset without them (KeyError: 14)
+        ("2002-03-01T00:00:00-05:00", 26),
+        ("2002-03-01T05:00:00Z", 26),
         (pd.Timestamp("2002-03-01T05:00", tz="UTC"), 26),
         (pd.Timestamp("2002-03-01T14:00", tz="Asia/Tokyo"), 26),
         # Not a date of the index: extended through the next one
@@ -2661,3 +2663,33 @@ def test_get_index_loc_tz_aware_key_after_sample(key, loc):
     )
     assert (start, end, out_of_sample) == (20, 23, loc - 23)
     assert prediction_index.equals(expected[20:])
+
+
+@pytest.mark.parametrize("tz", ["UTC", "US/Eastern", "Asia/Tokyo"])
+@pytest.mark.parametrize(
+    "freq, nobs", [("D", 500), ("MS", 24), ("QS", 12), ("h", 24 * 200)]
+)
+def test_quarter_string_key_tz_aware_index(tz, freq, nobs):
+    # The bounds of the quarter of a key such as "2000Q2" are local times of
+    # a tz-aware index; comparing them with it as naive timestamps raised a
+    # TypeError
+    index = pd.date_range("2000-01-01", periods=nobs, freq=freq, tz=tz)
+    loc, new_index, expanded = tsa_model.get_index_loc("2000Q2", index)
+    # The dates of the second quarter of 2000 in local time (the hourly
+    # US/Eastern dates skip the hour lost to daylight saving time on April 2)
+    expected = index[(index.year == 2000) & (index.quarter == 2)]
+    if len(expected) == 1:
+        # A single date is an exact match
+        assert loc == index.get_loc(expected[0])
+    else:
+        assert index[loc].equals(expected)
+    assert not expanded
+    assert new_index.equals(index[: index.get_loc(expected[-1]) + 1])
+
+
+def test_quarter_string_keys_tz_aware_prediction():
+    index = pd.date_range("2000-01-01", periods=500, freq="D", tz="US/Eastern")
+    res = constant_mean_results(pd.Series(np.zeros(500), index=index))
+    pred = res.predict(start="2000Q2", end="2000Q3")
+    expected = pd.date_range("2000-04-01", "2000-09-30", freq="D", tz="US/Eastern")
+    assert pred.index.equals(expected)

@@ -582,13 +582,13 @@ class ThetaModelResults:
         smry.add_table_2cols(
             self, gleft=top_left, gright=top_right, title=title
         )
-        table_fmt = {"data_fmts": ["%s", "%#0.4g"], "data_aligns": "r"}
+        table_fmt = {"data_fmts": ["%#0.4g"], "data_aligns": "r"}
 
         data = np.asarray(self.params)[:, None]
         st = SimpleTable(
             data,
             ["Estimate"],
-            ["Parameters"] + list(self.params.index),
+            list(self.params.index),
             title="Parameter Estimates",
             txt_fmt=table_fmt,
         )

@@ -1,0 +1,6 @@
+- ``forecast`` and ``get_forecast`` of state space results used a NumPy
+  integer ``steps`` (for example ``np.int64(3)``) as the index of the last
+  forecast instead of the number of steps, so they raised an error when
+  it was smaller than the number of observations and otherwise returned
+  too few forecasts. It is the number of steps, as for an ``int``, so
+  results of such calls change. :pr:`11059`

@@ -1,0 +1,3 @@
+- Creating ``VECMResults`` without ``delta_y_1_T``, ``y_lag1`` and
+  ``delta_x``, which are documented as computed when not given, raised a
+  ``TypeError``. :pr:`10957`

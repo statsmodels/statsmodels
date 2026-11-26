@@ -1,0 +1,2 @@
+- The ARIMA example notebook raised a TypeError with recent Matplotlib
+  when showing its ACF and PACF plots. :pr:`11208`

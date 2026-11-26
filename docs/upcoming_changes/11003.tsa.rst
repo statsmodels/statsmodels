@@ -1,0 +1,3 @@
+- ``score``, ``score_obs``, ``hessian`` and the default covariance of
+  Markov switching models whose conditional log-likelihoods do not depend on the
+  parameters raised a buffer dtype mismatch. :pr:`11003`
