@@ -161,7 +161,7 @@ from scipy.stats.distributions import norm
 from statsmodels.base._penalties import Penalty
 import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.tools import data as data_tools
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.rng_qrng import check_random_state
@@ -1131,12 +1131,7 @@ class MixedLM(base.LikelihoodModel):
                 exog_re = np.ones((data.shape[0], 1))
                 exog_re_names = [group_name]
             else:
-                eval_env = kwargs.get("eval_env", None)
-                if eval_env is None:
-                    eval_env = 1
-                elif eval_env == -1:
-                    mgr = FormulaManager()
-                    eval_env = mgr.get_empty_eval_env()
+                eval_env = get_matrices_eval_env(kwargs.get("eval_env", None))
                 mgr = FormulaManager()
                 exog_re = mgr.get_matrices(re_formula, data, eval_env=eval_env)
                 exog_re_names = mgr.get_column_names(exog_re)
@@ -1154,12 +1149,7 @@ class MixedLM(base.LikelihoodModel):
                 exog_re_names = []
 
         if vc_formula is not None:
-            eval_env = kwargs.get("eval_env", None)
-            if eval_env is None:
-                eval_env = 1
-            elif eval_env == -1:
-                mgr = FormulaManager()
-                eval_env = mgr.get_empty_eval_env()
+            eval_env = get_matrices_eval_env(kwargs.get("eval_env", None))
 
             vc_mats = []
             vc_colnames = []

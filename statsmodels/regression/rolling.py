@@ -23,6 +23,7 @@ from scipy import stats
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import get_matrices_eval_env
 from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
@@ -656,14 +657,7 @@ class RollingWLS:
     ):
         if subset is not None:
             data = data.loc[subset]
-        eval_env = kwargs.pop("eval_env", None)
-        if eval_env is None:
-            eval_env = 1
-        elif eval_env == -1:
-            mgr = FormulaManager()
-            eval_env = mgr.get_empty_eval_env()
-        # get_matrices is called from here, so an integer counts stack frames
-        # above this method, as in Model.from_formula
+        eval_env = get_matrices_eval_env(kwargs.pop("eval_env", None))
         missing = kwargs.get("missing", "skip")
 
         na_action = FormulaManager().get_na_action(action="raise", types=[])

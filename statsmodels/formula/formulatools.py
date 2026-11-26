@@ -142,3 +142,31 @@ def advance_eval_env(kwargs):
         kwargs["eval_env"] = FormulaManager().get_empty_eval_env()
     elif isinstance(eval_env, (int, np.integer)):
         kwargs["eval_env"] = int(eval_env) + 1
+
+
+def get_matrices_eval_env(eval_env):
+    """
+    Translate the ``eval_env`` of ``from_formula`` for ``get_matrices``.
+
+    For a formula that ``from_formula`` evaluates itself with
+    ``FormulaManager.get_matrices``, for example a second formula of the
+    model, so that it uses the same namespace as the model's formula.
+
+    Parameters
+    ----------
+    eval_env : int, dict or None
+        The ``eval_env`` passed to ``from_formula``.
+
+    Returns
+    -------
+    int or dict
+        The ``eval_env`` to pass to ``get_matrices`` when it is called in the
+        body of ``from_formula``: 1 (the namespace that calls
+        ``from_formula``) for None, an empty namespace for -1, and the value
+        itself otherwise.
+    """
+    if eval_env is None:
+        return 1
+    if eval_env == -1:
+        return FormulaManager().get_empty_eval_env()
+    return eval_env
