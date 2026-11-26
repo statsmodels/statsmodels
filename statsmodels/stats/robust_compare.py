@@ -6,11 +6,9 @@ Created on Sun Jun 09 23:51:34 2013
 Author: Josef Perktold
 """
 
-import numbers
-
 import numpy as np
 
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import is_float_like, string_like
 
 # the trimboth and trim_mean are taken from scipy.stats.stats
 # and enhanced by axis
@@ -328,7 +326,7 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=
     elif center == "trimmed":
         center = trim_mean(x, trim_frac, axis=axis)
         res = tfunc(x - np.expand_dims(center, axis))
-    elif isinstance(center, numbers.Number):
+    elif is_float_like(center):
         res = tfunc(x - center)
     else:
         raise ValueError("center should be median, mean or trimmed")

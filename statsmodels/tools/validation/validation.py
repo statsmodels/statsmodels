@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import math
+import numbers
 import operator
 from typing import Any
 import warnings
@@ -494,53 +495,163 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     return _int
 
 
-def float_like(value, name, optional=False, strict=False):
+def is_float_like(value: Any, strict: bool = False) -> bool:
+    """
+    Check whether a value is a scalar real number
+
+    Parameters
+    ----------
+    value : object
+        Value to check.
+    strict : bool, optional
+        If True, only ``float``, NumPy floating types and the integers
+        accepted by ``is_int_like(value, strict=True)`` are real numbers. If
+        False, any other instance of :class:`numbers.Real`, such as a
+        :class:`fractions.Fraction`, is also a real number.
+
+    Returns
+    -------
+    bool
+        True if `value` is a scalar real number.
+
+    See Also
+    --------
+    float_like
+        Convert a value to a float, raising if it is not float-like.
+    is_int_like
+        Check whether a value is a scalar integer.
+
+    Notes
+    -----
+    ``bool``, ``np.bool_`` and ``np.timedelta64`` are never real numbers,
+    and neither is a complex number, even with a zero imaginary part. NaN
+    and infinity are real numbers. A 0-d array is treated as the scalar it
+    holds; any other array, a Series and a list are not real numbers, even
+    if they hold a single value.
+
+    Use this function to dispatch on a parameter that can be a number or
+    something else, such as ``scale : float or str``.
+
+    .. versionadded:: 0.15.1
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from statsmodels.tools.validation import is_float_like
+    >>> is_float_like(0.5), is_float_like(np.int64(3)), is_float_like(np.nan)
+    (True, True, True)
+    >>> is_float_like(True), is_float_like(1 + 0j), is_float_like(np.array([0.5]))
+    (False, False, False)
+    """
+    if isinstance(value, np.ndarray) and value.ndim == 0:
+        value = value[()]
+    if isinstance(value, (bool, np.bool_, np.timedelta64)):
+        return False
+    if isinstance(value, (float, np.floating)) or is_int_like(value, strict=True):
+        return True
+    return not strict and isinstance(value, numbers.Real)
+
+
+def _legacy_float_like(value: Any, strict: bool) -> float | None:
+    """
+    Apply the rules float_like used before 0.15.1 to a value is_float_like rejects
+
+    They accepted a container holding a single value (a size-1 ndarray,
+    Series or DataFrame) and, unless strict, a complex number with a zero
+    imaginary part. Bools are rejected here too: accepting ``np.bool_`` and
+    boolean containers was a bug, not a deprecated feature. Returns None if
+    the old rules reject the value as well.
+    """
+    if hasattr(value, "squeeze") and callable(value.squeeze):
+        value = value.squeeze()
+    kind = getattr(getattr(value, "dtype", None), "kind", None)
+    if isinstance(value, bool) or kind in ("b", "m", "M"):
+        return None
+    is_complex = isinstance(value, (complex, np.complexfloating)) or kind == "c"
+    if isinstance(value, (int, np.integer, float, np.floating)):
+        return float(value)
+    if strict:
+        return None
+    if is_complex:
+        return float(np.real(value)) if np.imag(value) == 0 else None
+    try:
+        return float(value / 1.0)
+    except Exception:
+        return None
+
+
+def float_like(
+    value: Any, name: str, optional: bool = False, strict: bool = False
+) -> float | None:
     """
     Convert to float or raise if not float_like
 
     Parameters
     ----------
     value : object
-        Value to verify
+        Value to verify.
     name : str
-        Variable name for exceptions
+        Variable name for exceptions.
     optional : bool, optional
-        Flag indicating whether None is allowed
+        Flag indicating whether None is allowed.
     strict : bool, optional
-        If True, then only allow int, np.integer, float or np.inexact that are
-        not bool or complex. If False, allow complex types with 0 imag part or
-        any other type that is float-like in the sense that it supports
-        multiplication by 1.0 and conversion to float.
+        If True, only ``float``, ``int`` and NumPy real types are accepted.
+        If False, any other instance of :class:`numbers.Real`, such as a
+        :class:`fractions.Fraction`, is also accepted.
 
     Returns
     -------
     converted : float
-        value converted to a float
+        Value converted to a float.
 
+    Raises
+    ------
+    TypeError
+        If `value` is not float-like according to :func:`is_float_like`.
+
+    Warns
+    -----
+    FutureWarning
+        If `value` is a container holding a single real number (a size-1
+        ndarray, Series or DataFrame) or, unless `strict`, a complex number
+        with a zero imaginary part. These are accepted for now and will raise
+        a ``TypeError`` in statsmodels 0.17.
+
+    See Also
+    --------
+    is_float_like
+        The rule that decides what is float-like.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       ``np.bool_``, ``np.timedelta64`` and boolean arrays and Series are
+       rejected, as ``bool`` always was. Containers that hold a single value
+       and complex numbers with a zero imaginary part are deprecated.
     """
     if optional and value is None:
         return None
-    is_bool = isinstance(value, bool)
-    is_complex = isinstance(value, (complex, np.complexfloating))
-    if hasattr(value, "squeeze") and callable(value.squeeze):
-        value = value.squeeze()
-
-    if isinstance(value, (int, np.integer, float, np.inexact)) and not (
-        is_bool or is_complex
-    ):
+    if is_float_like(value, strict=strict):
         return float(value)
-    elif not strict and is_complex:
-        imag = np.imag(value)
-        if imag == 0:
-            return float(np.real(value))
-    elif not strict and not is_bool:
-        try:
-            return float(value / 1.0)
-        except Exception:
-            pass
+    legacy = _legacy_float_like(value, strict)
+    if legacy is not None:
+        warnings.warn(
+            f"Passing {name} of type {type(value).__name__} is deprecated and "
+            f"will raise a TypeError in statsmodels 0.17. Pass {name}={legacy} "
+            "as a float instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return legacy
     extra_text = " or None" if optional else ""
+    if strict:
+        accepted = "a float, an int or a NumPy real number"
+    else:
+        accepted = "a real number such as a float, an int or a NumPy real number"
     raise TypeError(
-        f"{name} must be float_like (float or np.inexact){extra_text}"
+        f"{name} must be float_like ({accepted}, but not a bool or a complex "
+        f"number){extra_text}"
     )
 
 

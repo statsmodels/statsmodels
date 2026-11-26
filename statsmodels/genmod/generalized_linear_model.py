@@ -49,7 +49,7 @@ from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     PerfectSeparationWarning,
 )
-from statsmodels.tools.validation import float_like, string_like
+from statsmodels.tools.validation import float_like, is_float_like, string_like
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
@@ -1164,8 +1164,8 @@ class GLM(base.LikelihoodModel):
             else:
                 return self._estimate_x2_scale(mu)
 
-        if isinstance(self.scaletype, float):
-            return np.array(self.scaletype)
+        if is_float_like(self.scaletype):
+            return np.array(float(self.scaletype))
 
         if isinstance(self.scaletype, str):
             scaletype = string_like(self.scaletype, "scaletype", options=("x2", "dev"))
@@ -1546,12 +1546,7 @@ class GLM(base.LikelihoodModel):
             scale = string_like(scale, "scale", options=("x2", "dev"))
         elif scale is not None:
             # GH-6627
-            try:
-                scale = float(scale)
-            except Exception as exc:
-                raise type(exc)(
-                    "scale must be a float if given and not a string."
-                ) from exc
+            scale = float_like(scale, "scale")
             if not scale > 0:
                 raise ValueError(f"scale must be positive, got {scale}")
         self.scaletype = scale
