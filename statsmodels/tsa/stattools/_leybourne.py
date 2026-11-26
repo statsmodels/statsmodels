@@ -148,8 +148,9 @@ class LeybourneMcCabeStationarity:
             data series
         arlags : None or int, optional
             Number of autoregressive terms to include. If None, the number
-            of lags is selected using the empirical autolag procedure.
-            Default is 1.
+            of lags is selected using the empirical autolag procedure. The
+            default is None for ``leybourne(x)`` and 1 for
+            ``leybourne.run(x)``.
 
             .. versionchanged:: 0.15.1
 
@@ -166,8 +167,12 @@ class LeybourneMcCabeStationarity:
         method : {'mle', 'ols'}, optional
             Method used to estimate ARIMA(p, 1, 1) filter model
 
-            * 'mle' : conditional sum of squares maximum likelihood (default)
+            * 'mle' : maximum likelihood, estimated with
+              :class:`~statsmodels.tsa.arima.model.ARIMA`
             * 'ols' : two-stage least squares
+
+            The default is 'ols' for ``leybourne(x)`` and 'mle' for
+            ``leybourne.run(x)``.
 
         varest : {'var94', 'var99'}, optional
             Method used for residual variance estimation
