@@ -347,11 +347,11 @@ class Contrast:
 def contrastfromcols(L, D, pseudo=None):
     """
     From an n x p design matrix D and a matrix L, tries
-    to determine a p x q contrast matrix C which
+    to determine a q x p contrast matrix C which
     determines a contrast of full rank, i.e., the
     n x q matrix
 
-    dot(transpose(C), pinv(D))
+    dot(D, transpose(C))
 
     is full rank.
 
@@ -393,7 +393,9 @@ def contrastfromcols(L, D, pseudo=None):
     Returns
     -------
     ndarray
-        The p x q contrast matrix C.
+        The q x p contrast matrix C, with one contrast in each row.
+        Dimensions of length 1 are removed, so that a single contrast
+        (q = 1) has shape (p,).
     """
     L = np.asarray(L)
     D = np.asarray(D)
