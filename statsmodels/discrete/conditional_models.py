@@ -410,27 +410,32 @@ class ConditionalLogit(_ConditionalModel):
     def _group_log_weights(self, grp, params):
         x = self._exog_grp[grp]
         x = x.astype(np.result_type(x, float), copy=False)
-        eta = x @ params
+        n_selected = int(self._n1[grp])
+        sign = 1
+        if n_selected > len(x) - n_selected:
+            # Selecting failures with negated weights gives the same likelihood.
+            sign = -1
+            n_selected = len(x) - n_selected
+
+        eta = sign * (x @ params)
         offsets = getattr(self, "_offset_grp", None)
         if offsets is not None:
             ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
-            offset_center = np.clip(0, ofs.real.min(), ofs.real.max())
+            ofs = sign * ofs
+            offset_center = self._log_weight_center(ofs.real, n_selected)
             eta = eta + (ofs - offset_center)
 
-        n_selected = int(self._n1[grp])
-        sign = 1
-        if n_selected > len(eta) - n_selected:
-            # Selecting failures with negated weights gives the same likelihood.
-            sign = -1
-            n_selected = len(eta) - n_selected
-            eta = -eta
-
-        # A common shift cancels. Center at the endpoint nearest zero so a
-        # single extreme value does not drown out differences among other rows.
-        center = np.clip(0, eta.real.min(), eta.real.max())
-        eta = eta - center
+        eta = eta - self._log_weight_center(eta.real, n_selected)
         selected = np.asarray(self._endog_grp[grp]) == (sign == 1)
         return x, eta, n_selected, selected, sign
+
+    @staticmethod
+    def _log_weight_center(values, n_selected):
+        # The largest value controls the singleton normalizer. With more than
+        # one selection, keep ordinary weights near zero even with an outlier.
+        if n_selected == 1:
+            return values.max()
+        return np.clip(0, values.min(), values.max())
 
     def _log_normalizer(self, eta, n_selected, x=None):
         if n_selected == 1:

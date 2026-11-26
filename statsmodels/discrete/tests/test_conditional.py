@@ -110,18 +110,24 @@ def test_logit_integer_group():
     assert_allclose(model.score(params), [-1.0])
 
 
-def test_logit_offset_outlier():
+@pytest.mark.parametrize("offset", [[-1e16, 0, 1, 2], [-1e16, 1e16, 1e16, 1e16]])
+@pytest.mark.parametrize("sign", [-1, 1])
+def test_logit_offset_outlier(offset, sign):
     # The first row has negligible weight, so evaluate the other three rows.
     exog = np.arange(4.0)[:, None]
-    offset = np.array([-1e16, 0.0, 1.0, 2.0])
+    endog = np.array([0, 0, 1, 0])
+    if sign == -1:
+        endog = 1 - endog
+    offset = np.array(offset)
+    params = np.array([0.2])
     model = ConditionalLogit(
-        np.array([0, 0, 1, 0]), exog, groups=np.zeros(4), offset=offset
+        endog, exog, groups=np.zeros(4), offset=sign * offset
     )
-    params = np.array([0.0])
-    log_total = logsumexp(offset[1:])
-    expected_score = exog[2] - np.exp(offset[1:] - log_total) @ exog[1:]
-    assert_allclose(model.loglike(params), offset[2] - log_total)
-    assert_allclose(model.score(params), expected_score)
+    eta = (offset[1:] - offset[1:].max()) + exog[1:] @ params
+    log_total = logsumexp(eta)
+    expected_score = exog[2] - np.exp(eta - log_total) @ exog[1:]
+    assert_allclose(model.loglike(sign * params), eta[1] - log_total)
+    assert_allclose(model.score(sign * params), sign * expected_score)
 
 
 @pytest.mark.parametrize("n_success", [1, 2, 4, 5])
