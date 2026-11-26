@@ -1,0 +1,1 @@
+* Clarified in the docstring of :func:`~statsmodels.stats.proportion.samplesize_confint_proportion` that the returned sample size controls the normal-approximation margin of error at the planning proportion rather than guaranteeing realized confidence interval width or coverage (:issue:`11065`, :pr:`11221`).
