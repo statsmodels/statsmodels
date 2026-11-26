@@ -1015,6 +1015,19 @@ def test_fc():
                 )
 
 
+def test_granger_causality_numpy_integer():
+    # NumPy integers are accepted as variable indices, like Python ints
+    ds = datasets[0]
+    dt = ds.dt_s_list[0]
+    res = results_sm[ds][dt]
+    result = res.test_granger_causality(np.int64(0), np.int64(1))
+    expected = res.test_granger_causality(0, 1)
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+    result = res.test_granger_causality([np.int32(0)], [np.int64(1)])
+    expected = res.test_granger_causality([0], [1])
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
 def test_granger_causality():
     for ds in datasets:
         for dt in ds.dt_s_list:

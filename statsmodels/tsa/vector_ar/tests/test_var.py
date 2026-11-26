@@ -407,6 +407,23 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(RuntimeError, match="0 lags"):
             res.test_causality(0, 1)
 
+    def test_causality_numpy_integer(self):
+        # NumPy integers are accepted as variable indices, like Python ints
+        result = self.res.test_causality(np.int64(0), np.int64(1), kind="f")
+        expected = self.res.test_causality(0, 1, kind="f")
+        assert_almost_equal(result.pvalue, expected.pvalue, DECIMAL_12)
+
+        result = self.res.test_causality(
+            [np.int32(0)], [np.int64(1), np.int32(2)], kind="f"
+        )
+        expected = self.res.test_causality([0], [1, 2], kind="f")
+        assert_almost_equal(result.pvalue, expected.pvalue, DECIMAL_12)
+
+    def test_inst_causality_numpy_integer(self):
+        result = self.res.test_inst_causality(np.int64(0))
+        expected = self.res.test_inst_causality(0)
+        assert_almost_equal(result.pvalue, expected.pvalue, DECIMAL_12)
+
     @pytest.mark.smoke
     def test_select_order(self):
         result = self.model.fit(10, ic="aic", verbose=True)

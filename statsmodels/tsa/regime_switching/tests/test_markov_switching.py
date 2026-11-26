@@ -528,6 +528,23 @@ def test_predict_with_probabilities_array(kind, as_list):
     assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)
 
 
+def test_parameters_getitem_numpy_integer():
+    # NumPy integers are accepted as regime indices in the parameters object
+    endog = np.random.default_rng(0).standard_normal(100)
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, trend="c", switching_variance=True
+    )
+    params = mod.parameters
+    for key in [np.int64(0), np.int32(1)]:
+        assert_equal(params[key], params[int(key)])
+        assert_equal(
+            params[key, "regime_transition"], params[int(key), "regime_transition"]
+        )
+        assert_equal(
+            params["regime_transition", key], params["regime_transition", int(key)]
+        )
+
+
 @pytest.mark.parametrize(
     "flag, expected", [(np.True_, True), (np.False_, False), (1, True), (0, False)]
 )
