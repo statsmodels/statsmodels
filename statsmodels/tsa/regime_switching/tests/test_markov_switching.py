@@ -280,6 +280,29 @@ def test_initialize_known_wrong_length_raises(probabilities):
         mod.initialize_known(probabilities)
 
 
+@pytest.mark.parametrize(
+    "probabilities",
+    [[0.2, 0.2], [0.2, 0.2, 0.6], [[0.2, 0.8]]],
+    ids=["not-summing-to-one", "too-long", "2d"],
+)
+@pytest.mark.parametrize("previous", ["steady-state", "known"])
+def test_initialize_known_failure_keeps_initialization(probabilities, previous):
+    # The initialization was set to known before the checks, so that after
+    # the ValueError initial_probabilities raised a TypeError (None >= 0)
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    params = np.r_[0.9, 0.2]
+    if previous == "known":
+        mod.initialize_known([0.3, 0.7])
+        expected = [0.3, 0.7]
+    else:
+        # The steady state of p[0->0] = 0.9 and p[1->0] = 0.2 solves
+        # 0.1 * pi_0 = 0.2 * pi_1
+        expected = [2 / 3, 1 / 3]
+    with pytest.raises(ValueError):
+        mod.initialize_known(probabilities)
+    assert_allclose(mod.initial_probabilities(params), expected, rtol=1e-12)
+
+
 def test_logistic():
     logistic = markov_switching._logistic
 
