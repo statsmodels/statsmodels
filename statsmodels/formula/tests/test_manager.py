@@ -384,6 +384,18 @@ def test_get_intercept_idx(engine, data):
     np.testing.assert_equal(result, np.array([False, False]))
 
 
+def test_get_intercept_idx_terms_not_columns(engine, data):
+    # One element per term: the categorical term has two columns here
+    mgr = FormulaManager(engine=engine)
+    frame = data.assign(d=list("pqrpqrp"))
+    _, rhs = mgr.get_matrices("y ~ d + x", frame)
+    assert rhs.shape[1] == 4
+    names = mgr.get_term_names(mgr.spec)
+    expected = [name in ("Intercept", "1") for name in names]
+    np.testing.assert_equal(mgr.intercept_idx(mgr.spec), expected)
+    assert len(expected) == 3
+
+
 def test_remove_intercept(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
