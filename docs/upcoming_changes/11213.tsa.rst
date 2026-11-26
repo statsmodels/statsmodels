@@ -1,0 +1,4 @@
+- ``DynamicFactorMQ.append`` and ``DynamicFactorMQ.extend`` now include
+  intervening missing months when monthly and quarterly updates do not span
+  the same dates, so partial-quarter updates no longer require manual padding.
+  :issue:`7452`, :pr:`11213`
