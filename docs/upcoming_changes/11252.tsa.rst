@@ -1,0 +1,8 @@
+- A NumPy bool ``dynamic`` (``np.True_``, ``np.False_``) in ``predict`` and
+  ``get_prediction`` of ``AutoReg``, ``ARDL``, ``UECM``, ``ETSModel``,
+  ``STLForecast`` and the state space models was taken as an integer
+  offset: ``np.False_`` made every prediction dynamic instead of none, and
+  ``np.True_`` started dynamic prediction one period late. It is now the bool
+  it holds, so the results of such calls change. ``UECM.predict`` no longer
+  raises for ``dynamic=np.False_``, and ``ExponentialSmoothing`` accepts a
+  NumPy bool ``use_boxcox``. :pr:`11252`

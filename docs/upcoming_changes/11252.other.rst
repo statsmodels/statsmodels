@@ -1,0 +1,2 @@
+- The GAM smoothers (``BSplines``, ``CubicSplines``, ...) accept a NumPy bool
+  ``include_intercept``, which failed. :pr:`11252`

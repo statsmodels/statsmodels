@@ -1,0 +1,6 @@
+- Passing a value that is not a bool or the integer 0 or 1 (a string, a
+  float, another integer, a list, None, or a container holding one value) to
+  a bool argument validated with ``bool_like`` is deprecated. It gives the
+  same result as before (``"False"`` is True) with a ``FutureWarning``, and
+  will raise a ``TypeError`` in statsmodels 0.17. With ``strict=True``,
+  ``np.bool_`` is accepted. :pr:`11252`
