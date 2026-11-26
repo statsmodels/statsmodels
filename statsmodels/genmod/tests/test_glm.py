@@ -2716,6 +2716,70 @@ def test_tweedie_EQL_zeros_exact(p, var_weights):
     assert_allclose(ll_ll, expected, rtol=1e-12)
 
 
+# Reference values of the log of the saddlepoint density without the shift, which
+# is the EQL, from R 4.6.2 with the tweedie package 3.2.2:
+#   library(tweedie)
+#   y <- c(0, 0.3, 0, 1.2, 4.0, 0)
+#   mu <- c(0.5, 1, 3, 0.8, 2.5, 1.5)
+#   phi <- 1.7
+#   w <- c(1, 0.5, 2, 1, 3, 0.25)
+#   log(dtweedie_saddle(y, power = p, mu = mu, phi = phi, eps = 0))
+#   log(dtweedie_saddle(y, power = p, mu = mu, phi = phi / w, eps = 0))
+# For y = 0, dtweedie_saddle uses the exact probability exp(-lambda), and
+# log(dtweedie(0, power = p, mu = mu, phi = phi)) gives the same values.
+_EQL_R_SADDLE = {
+    1.2: (
+        [-0.422315571690086, -0.676288494662926, -1.770753445059333,
+         -1.345429762294018, -2.196226828224363, -1.017030784722494],
+        [-0.422315571690086, -0.915652325681534, -3.541506890118665,
+         -1.345429762294018, -2.007315789523649, -0.254257696180623],
+    ),
+    1.5: (
+        [-0.831890330807703, -0.521925861361504, -2.037706832433973,
+         -1.374144117483136, -2.354515733362609, -1.440876319284222],
+        [-0.831890330807703, -0.748173048706377, -4.075413664867947,
+         -1.374144117483136, -2.066294196602421, -0.360219079821056],
+    ),
+    1.8: (
+        [-2.560442833223895, -0.372724614266597, -3.663914528280934,
+         -1.402939340851760, -2.526592051708030, -3.189622856463820],
+        [-2.560442833223895, -0.583274464834479, -7.327829056561868,
+         -1.402939340851760, -2.166634843302716, -0.797405714115955],
+    ),
+}
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8], ids=lambda p: f"p={p}")
+def test_tweedie_EQL_zeros_R(p):
+    # Zeros and positive observations together against the R values above.
+    # rtol=1e-12: the R values are printed with 15 significant digits.
+    y = np.array([0, 0.3, 0, 1.2, 4.0, 0])
+    mu = np.array([0.5, 1, 3, 0.8, 2.5, 1.5])
+    phi = 1.7
+    w = np.array([1, 0.5, 2, 1, 3, 0.25])
+    fam = sm.families.Tweedie(var_power=p, eql=True)
+    expected, expected_w = _EQL_R_SADDLE[p]
+
+    ll = fam.loglike_obs(y, mu, scale=phi)
+    assert_allclose(ll, expected, rtol=1e-12)
+    ll_w = fam.loglike_obs(y, mu, var_weights=w, scale=phi)
+    assert_allclose(ll_w, expected_w, rtol=1e-12)
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8], ids=lambda p: f"p={p}")
+def test_tweedie_EQL_zeros_pseudo_rsquared(p):
+    # GH 8136: pseudo_rsquared was NaN with a RuntimeWarning (warnings are
+    # errors in the test configuration)
+    y, x = _gen_tweedie_zeros(p)
+    assert (y == 0).sum() >= 30
+    res = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True)).fit()
+    assert np.isfinite(res.llnull)
+    for kind in ("cs", "mcf"):
+        value = res.pseudo_rsquared(kind=kind)
+        assert np.isfinite(value)
+        assert 0 < value < 1
+
+
 def test_tweedie_EQL_positive_unchanged():
     # positive observations keep the EQL value with V(y) = y**p
     p = 1.5
