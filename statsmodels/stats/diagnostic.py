@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+from statsmodels.regression.linear_model import GLS, OLS, WLS, RegressionResultsWrapper
 from statsmodels.stats._adnorm import anderson_statistic, normal_ad
 from statsmodels.stats._lilliefors import (
     kstest_exponential,
@@ -1850,6 +1850,11 @@ def linear_reset(
       the principal component. In either case, the principal component
       is extracted from the correlation matrix of remaining columns.
 
+    .. versionchanged:: 0.15.1
+
+        The auxiliary regression now uses the weights or covariance of the
+        supplied WLS or GLS results.
+
     The test is a Wald test of the null :math:`H_0:\gamma=0`. If use_f
     is True, then the quadratic-form test statistic is divided by the
     number of restrictions and the F distribution is used to compute
@@ -1908,7 +1913,12 @@ def linear_reset(
         aug = pca.factors[:, :1]
     aug_exog = np.hstack([exog] + [aug**p for p in power])
     mod_class = res.model.__class__
-    mod = mod_class(res.model.data.endog, aug_exog)
+    mod_kwds = {}
+    if isinstance(res.model, WLS) and not isinstance(res.model, OLS):
+        mod_kwds["weights"] = res.model.weights
+    if isinstance(res.model, GLS):
+        mod_kwds["sigma"] = res.model.sigma
+    mod = mod_class(res.model.data.endog, aug_exog, **mod_kwds)
     cov_kwds = {} if cov_kwds is None else cov_kwds
     res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]

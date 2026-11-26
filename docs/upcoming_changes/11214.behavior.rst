@@ -1,0 +1,3 @@
+- :func:`~statsmodels.stats.diagnostic.linear_reset` now preserves WLS weights
+  and GLS covariance in its auxiliary regression. Results from WLS and GLS
+  models change to those from the correctly weighted regression. :pr:`11214`
