@@ -304,3 +304,27 @@ def test_xvals_dtype():
     # Previously raised ValueError: Buffer dtype mismatch
     results_xvals = lowess(y, x, frac=0.4, xvals=x[:5])
     assert_allclose(results_xvals, np.zeros(5), atol=1e-12)
+
+
+@pytest.mark.parametrize("convert", [list, pd.Series, np.asarray])
+def test_lowess_array_like(convert):
+    x = np.linspace(0, 10, 21)
+    y = 2 + 3 * x
+    res = lowess(convert(y), convert(x), frac=0.5, it=0)
+    # a local linear regression reproduces a line
+    assert_allclose(res, np.column_stack([x, y]), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "endog, exog, name",
+    [
+        (np.ones((10, 1)), np.arange(10.0), "endog"),
+        (np.ones(10), np.arange(10.0)[:, None], "exog"),
+        (np.ones((1, 10)), np.arange(10.0)[None, :], "endog"),
+        (1.0, 2.0, "endog"),
+    ],
+    ids=["endog-column", "exog-column", "row", "scalar"],
+)
+def test_lowess_rejects_non_1d(endog, exog, name):
+    with pytest.raises(ValueError, match=f"{name} must have"):
+        lowess(endog, exog)

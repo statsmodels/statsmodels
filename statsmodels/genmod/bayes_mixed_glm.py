@@ -246,10 +246,9 @@ class _BayesMixedGLM(base.Model):
             msg = "'exog_vc' must have one or two columns"
             raise ValueError(msg)
 
-        ident = np.asarray(ident)
-        if ident.ndim != 1:
-            msg = "ident must be a one-dimensional array"
-            raise ValueError(msg)
+        if ident is None:
+            raise ValueError("ident must be a one-dimensional array")
+        ident = array_like(ident, "ident", dtype=None, mindim=0, shape=(None,))
 
         if len(ident) != exog_vc.shape[1]:
             msg = "len(ident) should match the number of columns of exog_vc"
