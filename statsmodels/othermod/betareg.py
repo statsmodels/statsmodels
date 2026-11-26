@@ -179,11 +179,9 @@ class BetaModel(GenericLikelihoodModel):
         if exog_precision_formula is not None:
 
             mgr = FormulaManager()
-            if "subset" in kwargs:
-                d = data.ix[kwargs["subset"]]
-                Z = mgr.get_matrices(exog_precision_formula, d, pandas=False)
-            else:
-                Z = mgr.get_matrices(exog_precision_formula, data, pandas=False)
+            subset = kwargs.get("subset")
+            precision_data = data if subset is None else data.loc[subset]
+            Z = mgr.get_matrices(exog_precision_formula, precision_data, pandas=False)
             kwargs["exog_precision"] = Z
         advance_eval_env(kwargs)
         return super().from_formula(formula, data, *args, **kwargs)
