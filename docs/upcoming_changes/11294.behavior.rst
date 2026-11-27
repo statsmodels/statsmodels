@@ -1,0 +1,5 @@
+- :func:`~statsmodels.stats.diagnostic.linear_rainbow` now refits the
+  central subset with ``WLS`` or ``GLS`` (using subset weights or ``sigma``)
+  instead of unweighted ``OLS``. The statistic and the p-value change for
+  ``WLS`` and ``GLS`` results; ``OLS`` and ``GLSAR`` results are unchanged.
+  :pr:`11294`
