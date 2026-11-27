@@ -1,0 +1,10 @@
+- The exact diffuse smoother of state space models did not reset its
+  diffuse terms at the start of the diffuse periods (unless they
+  covered the whole sample), so values from an earlier smoothing run
+  of the same model were used. After a run with NaN values in the
+  state space matrices, the smoothed state and its covariance matrix
+  (and autocovariance) of later runs were NaN in the diffuse periods;
+  for a diffuse state whose filtered diffuse covariance is not zero
+  in the last diffuse period (for example one that is never observed
+  and does not enter the next period), finite earlier values changed
+  the results. They no longer depend on earlier runs. :pr:`11155`

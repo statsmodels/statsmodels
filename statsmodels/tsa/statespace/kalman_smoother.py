@@ -647,11 +647,23 @@ class SmootherResults(FilterResults):
         4.5) at each time period, shaped `(k_endog, nobs)`.
     smoothed_state : ndarray
         The smoothed state at each time period.
+
+        .. versionchanged:: 0.15.1
+
+           In the periods of an exact diffuse initialization, the smoothed
+           state, its covariance matrix and its autocovariance no longer
+           depend on earlier smoothing runs of the same model. After a run
+           with NaN values in the state space matrices, they were NaN.
     smoothed_state_cov : ndarray
         The smoothed state covariance matrices at each time period.
     smoothed_state_autocov : ndarray
         The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
+
+        .. versionchanged:: 0.15.1
+
+           It is computed in the periods of an exact diffuse initialization,
+           where it was left at zero or at the values of an earlier run.
     smoothed_measurement_disturbance : ndarray
         The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
