@@ -1,0 +1,3 @@
+- The default standard errors of ``QuantReg`` (``vcov="robust"``) change: they
+  now use the Powell (1991) kernel sandwich, which is robust to
+  heteroskedasticity. ``vcov="iid"`` is unchanged. :pr:`11281`
