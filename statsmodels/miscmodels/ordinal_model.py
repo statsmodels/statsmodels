@@ -750,6 +750,26 @@ class OrderedResults(GenericLikelihoodModelResults):
         resid_prob = r[np.arange(endog.shape[0]), endog]
         return resid_prob
 
+    def brant_test(self, by_var=True):
+        """
+        Brant test of the parallel regression (proportional odds) assumption.
+
+        Parameters
+        ----------
+        by_var : bool, default True
+            Whether to report individual chi-squared statistics for each
+            explanatory variable in addition to the overall Omnibus test.
+
+        Returns
+        -------
+        BrantResults
+            Results instance with omnibus and per-variable test statistics,
+            degrees of freedom, and p-values.
+        """
+        from statsmodels.discrete._diagnostics_ordered import brant_test
+
+        return brant_test(self, by_var=by_var)
+
 
 class OrderedResultsWrapper(lm.RegressionResultsWrapper):
     pass
