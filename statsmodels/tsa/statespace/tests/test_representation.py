@@ -1918,3 +1918,95 @@ def test_prediction_results_time_varying_dynamic():
     # Each forecast uses the intercept of its period
     forecasts = mod["design"] @ pred.predicted_state + desired
     assert_allclose(pred.forecasts, forecasts)
+
+
+def _diff_endog_model(k_endog):
+    # Ten observations with the sixth missing in the first series
+    endog = np.arange(10.0 * k_endog).reshape(10, k_endog)
+    endog[5, 0] = np.nan
+    mod = KalmanFilter(endog, k_states=1)
+    mod["design"] = np.ones((k_endog, 1))
+    mod["transition"] = [[0.5]]
+    mod["selection"] = [[1.0]]
+    mod["state_cov"] = [[1.0]]
+    mod["obs_cov"] = np.eye(k_endog)
+    mod.initialize_known([0.0], [[1.0]])
+    return mod
+
+
+@pytest.mark.parametrize("form", ["ndarray", "list", "series", "column"])
+@pytest.mark.parametrize("nobs_append", [0, 1])
+def test_diff_endog_univariate(form, nobs_append):
+    # A revision of the fourth observation, a value for the missing sixth one,
+    # and a new observation if appended
+    mod = _diff_endog_model(1)
+    new_endog = np.r_[np.arange(10.0), [10.0] * nobs_append]
+    new_endog[3] = 99.0
+    if form == "list":
+        new_endog = new_endog.tolist()
+    elif form == "series":
+        new_endog = pd.Series(new_endog)
+    elif form == "column":
+        new_endog = new_endog[:, None]
+    revision_ix, new_ix = mod.diff_endog(new_endog)
+    assert revision_ix == [(3, 0)]
+    assert new_ix == [(5, 0)] + [(10, 0)] * nobs_append
+
+
+@pytest.mark.parametrize("form", ["ndarray", "list", "dataframe"])
+def test_diff_endog_multivariate(form):
+    mod = _diff_endog_model(2)
+    new_endog = np.arange(20.0).reshape(10, 2)
+    new_endog[2, 1] = -1.0
+    new_endog[7, 0] = np.nan
+    if form == "list":
+        new_endog = new_endog.tolist()
+    elif form == "dataframe":
+        new_endog = pd.DataFrame(new_endog)
+    revision_ix, new_ix = mod.diff_endog(new_endog)
+    # A changed value, and a value that is no longer observed
+    assert revision_ix == [(2, 1), (7, 0)]
+    assert new_ix == [(5, 0)]
+
+
+def test_diff_endog_complex():
+    # The values are compared as given, so that a change of the imaginary
+    # part is a revision
+    mod = _diff_endog_model(1)
+    new_endog = np.arange(10.0) + 0j
+    new_endog[4] += 1j
+    revision_ix, new_ix = mod.diff_endog(new_endog)
+    assert revision_ix == [(4, 0)]
+    assert new_ix == [(5, 0)]
+
+
+@pytest.mark.parametrize("new_endog", [np.zeros(10), np.zeros((10, 1)), np.zeros((10, 3))])
+def test_diff_endog_wrong_columns(new_endog):
+    mod = _diff_endog_model(2)
+    with pytest.raises(ValueError, match="new_endog is required to have shape"):
+        mod.diff_endog(new_endog)
+
+
+@pytest.mark.parametrize("k_endog", [1, 2])
+@pytest.mark.parametrize("form", ["list", "pandas", "fortran"])
+def test_clone_array_like_endog(k_endog, form):
+    # Input other than an ndarray is read as shaped (nobs, k_endog), as a
+    # C-ordered ndarray is, and a Fortran-ordered ndarray is still read as
+    # shaped (k_endog, nobs)
+    mod = _diff_endog_model(k_endog)
+    endog = np.arange(12.0 * k_endog).reshape(12, k_endog) % 5
+    if k_endog == 1:
+        endog = endog[:, 0]
+    desired = mod.clone(endog).filter()
+    if form == "list":
+        new_endog = endog.tolist()
+    elif form == "fortran":
+        new_endog = np.asfortranarray(np.atleast_2d(endog.T))
+    elif k_endog == 1:
+        new_endog = pd.Series(endog)
+    else:
+        new_endog = pd.DataFrame(endog)
+    actual = mod.clone(new_endog).filter()
+    assert actual.nobs == 12
+    assert_allclose(actual.endog, desired.endog, rtol=1e-12)
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
