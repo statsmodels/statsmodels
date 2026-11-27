@@ -14,6 +14,7 @@ from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.process_regression import GaussianCovariance, ProcessMLE
 from statsmodels.tools.docstring import Docstring
 import statsmodels.tools.numdiff as nd
+from statsmodels.tools.sm_exceptions import MissingDataError
 
 
 # Parameters for a test model, with or without additive
@@ -444,3 +445,98 @@ def test_from_formula_passes_model_keywords():
     assert_allclose(mod.loglike(params), expected, rtol=1e-12)
     # The covariance changes the log-likelihood
     assert abs(expected - default.loglike(params)) > 1.0
+
+
+def _missing_data():
+    data = _formula_data()
+    data["z"] = np.random.default_rng(11231).standard_normal(data.shape[0])
+    return data
+
+
+@pytest.mark.parametrize(
+    "nan_cells, scale, smooth, noise",
+    [
+        # A missing value in the mean formula, with one- and two-column
+        # scale and smoothness formulas
+        ([(3, "y")], "0 + x", "0 + x", None),
+        ([(3, "y")], "x", "x", None),
+        # Missing values only in the scale, smoothness or noise formula
+        ([(7, "z")], "z", "x", None),
+        ([(7, "z")], "x", "z", None),
+        ([(7, "z")], "x", "x", "z"),
+        # Missing values in several formulas, in the same and other rows
+        ([(3, "y"), (7, "z"), (7, "x"), (12, "z")], "z", "x", "x"),
+    ],
+)
+def test_from_formula_drops_missing(nan_cells, scale, smooth, noise):
+    # The rows with a missing value in any of the formulas are dropped from
+    # all of the arrays, as if they were dropped from the data
+    data = _missing_data()
+    for row, col in nan_cells:
+        data.loc[row, col] = np.nan
+    dropped = sorted({row for row, _ in nan_cells})
+    kwargs = dict(
+        scale_formula=scale,
+        smooth_formula=smooth,
+        noise_formula=noise,
+        time="time",
+        groups="g",
+    )
+    mod = ProcessMLE.from_formula("y ~ x", data, **kwargs)
+    expected = ProcessMLE.from_formula("y ~ x", data.drop(index=dropped), **kwargs)
+
+    nobs = data.shape[0] - len(dropped)
+    assert mod.endog.shape[0] == nobs
+    for name in ("exog", "exog_scale", "exog_smooth", "time", "groups"):
+        assert_allclose(getattr(mod, name), getattr(expected, name))
+    if noise is not None:
+        assert_allclose(mod.exog_noise, expected.exog_noise)
+    assert_equal(dict(mod._groups_ix), dict(expected._groups_ix))
+    params = np.linspace(-0.3, 0.3, len(mod.data.param_names))
+    assert_allclose(mod.loglike(params), expected.loglike(params), rtol=1e-12)
+
+
+def test_from_formula_missing_raise():
+    data = _missing_data()
+    data.loc[7, "z"] = np.nan
+    with pytest.raises(MissingDataError):
+        ProcessMLE.from_formula(
+            "y ~ x",
+            data,
+            scale_formula="z",
+            smooth_formula="x",
+            time="time",
+            groups="g",
+            missing="raise",
+        )
+
+
+@pytest.mark.parametrize("k", [1, 2])
+@pytest.mark.parametrize("nan_in", ["endog", "exog_scale", "time"])
+def test_arrays_drop_missing(k, nan_in):
+    data = _missing_data()
+    nobs = data.shape[0]
+    arrays = {
+        "endog": data["y"].to_numpy(),
+        "exog": np.column_stack([np.ones(nobs), data["x"]]),
+        "exog_scale": np.column_stack([np.ones(nobs), data["z"]])[:, :k],
+        "exog_smooth": np.column_stack([np.ones(nobs), data["x"]])[:, :k],
+        "exog_noise": None,
+        "time": data["time"].to_numpy(),
+        "groups": data["g"].to_numpy(),
+    }
+    keep = np.ones(nobs, dtype=bool)
+    keep[5] = False
+    expected = ProcessMLE(
+        **{key: None if v is None else v[keep] for key, v in arrays.items()}
+    )
+    arrays[nan_in] = arrays[nan_in].copy()
+    arrays[nan_in][5] = np.nan
+    mod = ProcessMLE(**arrays, missing="drop")
+
+    assert mod.endog.shape[0] == nobs - 1
+    assert_equal(dict(mod._groups_ix), dict(expected._groups_ix))
+    params = np.linspace(-0.3, 0.3, 2 + 2 * k)
+    assert_allclose(mod.loglike(params), expected.loglike(params), rtol=1e-12)
+    with pytest.raises(MissingDataError):
+        ProcessMLE(**arrays, missing="raise")
