@@ -1,0 +1,5 @@
+- The docstrings of ``err_band_sz1``, ``err_band_sz2`` and
+  ``err_band_sz3`` of :class:`~statsmodels.tsa.vector_ar.irf.IRAnalysis`
+  and the ``stderr_type`` description of its ``plot`` method describe
+  how the Sims-Zha error bands are computed, and that the ``sz2`` and
+  ``sz3`` bands need not contain the impulse responses. :pr:`11186`

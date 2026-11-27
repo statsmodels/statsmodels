@@ -17,7 +17,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
-from scipy import stats
+from scipy import linalg, stats
 
 from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
@@ -1443,6 +1443,61 @@ def test_irf_err_band_component_max_last_row(method):
         expected[:, 2, 0] = getattr(ones, attr)[:, 2, 0]
         assert_allclose(getattr(mixed, attr), expected, rtol=1e-12)
     assert not np.allclose(ones.lower[1:, 2, 0], zeros.lower[1:, 2, 0])
+
+
+@pytest.mark.parametrize("orth", [False, True])
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2", "err_band_sz3"])
+def test_irf_err_band_sims_zha_documented(method, orth):
+    # The bands as described in the Notes of the err_band_sz* docstrings,
+    # computed from the simulated responses of irf_resim
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    periods, repl, signif = 4, 60, 0.1
+    irf = res.irf(periods)
+    irfs = irf.orth_irfs if orth else irf.irfs
+    sims = res.irf_resim(orth=orth, repl=repl, steps=periods, rng=np.random.default_rng(3))
+    band = getattr(irf, method)(
+        orth=orth, repl=repl, signif=signif, rng=np.random.default_rng(3)
+    )
+    # The round(signif / 2 * repl)-th and round((1 - signif / 2) * repl)-th
+    # smallest values: the 3rd and the 57th
+    lo, hi = 2, 56
+
+    def eig(values):
+        # The eigenvectors (columns) of the covariance of the simulated values
+        eigvals, eigvecs = linalg.eig(
+            np.cov(values, rowvar=False), left=True, right=False
+        )
+        return eigvals.real, eigvecs.real, int(np.argmax(eigvals.real))
+
+    expected_lower = irfs.copy()
+    expected_upper = irfs.copy()
+    for j in range(3):
+        if method == "err_band_sz3":
+            # The responses of all variables to shock j, variable by variable
+            _, w, k = eig(np.concatenate([sims[:, 1:, i, j] for i in range(3)], 1))
+        for i in range(3):
+            c = sims[:, 1:, i, j]
+            if method == "err_band_sz1":
+                lam, w, k = eig(c)
+                dev = stats.norm.ppf(1 - signif / 2) * np.sqrt(lam[k]) * w[:, k]
+                expected_lower[1:, i, j] += dev
+                expected_upper[1:, i, j] -= dev
+                continue
+            if method == "err_band_sz2":
+                _, w, k = eig(c)
+                row = w[k]
+            else:
+                row = w[k, i * periods : (i + 1) * periods]
+            g = np.sort(row * c, axis=0)
+            expected_lower[1:, i, j] += g[lo]
+            expected_upper[1:, i, j] += g[hi]
+    assert_allclose(band.lower, expected_lower, rtol=1e-10)
+    assert_allclose(band.upper, expected_upper, rtol=1e-10)
+    if method != "err_band_sz1":
+        # The bands need not contain the point estimate
+        inside = (band.lower[1:] <= irfs[1:]) & (irfs[1:] <= band.upper[1:])
+        assert not np.all(inside)
 
 
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
