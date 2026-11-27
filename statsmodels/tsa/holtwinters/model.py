@@ -352,10 +352,11 @@ class ExponentialSmoothing(TimeSeriesModel):
             ub = bound[1] if bound[1] is not None else np.inf
             if len(bound) != 2 or lb >= ub:
                 raise ValueError(msg)
-            if ("smoothing" in key or "damp" in key) and (
-                bound[0] < 0.0 or bound[1] > 1.0
-            ):
-                raise ValueError(f"{key} must have a lower bound >= 0.0 and <= 1.0")
+            if ("smoothing" in key or "damp" in key) and (lb < 0.0 or ub > 1.0):
+                raise ValueError(
+                    f"{key} must have a lower bound >= 0.0 and an upper bound "
+                    f"<= 1.0. None is not a valid bound for {key}."
+                )
         return bounds
 
     def _boxcox(self):
@@ -394,6 +395,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             "estimated", the initial values "initial_level", and
             "initial_trend" and "initial_seasonal.<j>" for
             j=0,...,m-1, where m is `seasonal_periods`, can be fixed too.
+
+            .. versionchanged:: 0.15.1
+
+               A fit with a fixed ``initial_seasonal.<j>`` no longer changes
+               the initial values stored on the model. It previously did,
+               which changed the results of later fits of the same model.
 
         Yields
         ------
@@ -749,8 +756,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             phi = fixed.get("damping_trend", phi)
             l0 = fixed.get("initial_level", l0)
             b0 = fixed.get("initial_trend", b0)
-            for i in range(self.seasonal_periods):
-                s0[i] = fixed.get(f"initial_seasonal.{i}", s0[i])
+            # A new list, since s0 is the array of initial values stored on
+            # the model, which must not change
+            s0 = [
+                fixed.get(f"initial_seasonal.{i}", s0[i])
+                for i in range(self.seasonal_periods)
+            ]
         return sel, alpha, beta, gamma, phi, l0, b0, s0
 
     def _construct_bounds(self):
@@ -1044,6 +1055,13 @@ class ExponentialSmoothing(TimeSeriesModel):
             set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood.
+
+            .. versionchanged:: 0.15.1
+
+               If False, a ValueError is raised unless `smoothing_level`, and
+               `smoothing_trend`, `smoothing_seasonal` and `damping_trend` if
+               the model has these components, are given or fixed using
+               ``fix_params``. A TypeError was raised previously.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
@@ -1120,6 +1138,23 @@ class ExponentialSmoothing(TimeSeriesModel):
                 continue
             if not 0 <= value <= 1:
                 raise ValueError(f"{name} must be in [0, 1], got {value}")
+        if not optimized:
+            required = (
+                ("smoothing_level", alpha, True),
+                ("smoothing_trend", beta, self.has_trend),
+                ("smoothing_seasonal", gamma, self.has_seasonal),
+                ("damping_trend", phi, self.damped_trend),
+            )
+            missing = [
+                name
+                for name, value, needed in required
+                if needed and value is None and name not in self._fixed_parameters
+            ]
+            if missing:
+                raise ValueError(
+                    f"{', '.join(missing)} must be given when optimized is "
+                    "False, either as an argument of fit or using fix_params."
+                )
         start_params = array_like(start_params, "start_params", optional=True)
         minimize_kwargs = dict_like(minimize_kwargs, "minimize_kwargs", optional=True)
         minimize_kwargs = {} if minimize_kwargs is None else minimize_kwargs

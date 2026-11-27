@@ -280,6 +280,29 @@ def test_initialize_known_wrong_length_raises(probabilities):
         mod.initialize_known(probabilities)
 
 
+@pytest.mark.parametrize(
+    "probabilities",
+    [[0.2, 0.2], [0.2, 0.2, 0.6], [[0.2, 0.8]]],
+    ids=["not-summing-to-one", "too-long", "2d"],
+)
+@pytest.mark.parametrize("previous", ["steady-state", "known"])
+def test_initialize_known_failure_keeps_initialization(probabilities, previous):
+    # The initialization was set to known before the checks, so that after
+    # the ValueError initial_probabilities raised a TypeError (None >= 0)
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    params = np.r_[0.9, 0.2]
+    if previous == "known":
+        mod.initialize_known([0.3, 0.7])
+        expected = [0.3, 0.7]
+    else:
+        # The steady state of p[0->0] = 0.9 and p[1->0] = 0.2 solves
+        # 0.1 * pi_0 = 0.2 * pi_1
+        expected = [2 / 3, 1 / 3]
+    with pytest.raises(ValueError):
+        mod.initialize_known(probabilities)
+    assert_allclose(mod.initial_probabilities(params), expected, rtol=1e-12)
+
+
 def test_logistic():
     logistic = markov_switching._logistic
 
@@ -795,3 +818,29 @@ def test_params_bool_float_regime(key):
         params[key, "exog"]
     with pytest.raises(IndexError, match="Invalid index"):
         params["exog", key]
+
+
+@pytest.mark.parametrize("k_regimes", [2, np.int64(2)], ids=["int", "int64"])
+def test_params_counts_are_python_ints(k_regimes):
+    # np.sum made k_parameters, k_params and the slice bounds NumPy integers,
+    # which print as np.int64(4) with NumPy 2
+    params = markov_switching.MarkovSwitchingParams(k_regimes=k_regimes)
+    params["regime_transition"] = [1, 1]
+    params["exog"] = [0, 1]
+    assert params.k_parameters == {"regime_transition": 4, "exog": 3}
+    assert params.k_params == 7
+    assert params["exog"] == slice(4, 7)
+    values = [*params.k_parameters.values(), params.k_params]
+    for block in (params["regime_transition"], params["exog"]):
+        values += [block.start, block.stop]
+    assert all(type(value) is int for value in values)
+    assert repr(params["exog"]) == "slice(4, 7, None)"
+    assert repr(params.k_parameters["exog"]) == "3"
+
+
+def test_model_k_params_is_python_int():
+    endog = np.random.default_rng(0).standard_normal(50)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    # 2 transition probabilities, 2 switching constants and 1 variance
+    assert mod.k_params == 5
+    assert type(mod.k_params) is int

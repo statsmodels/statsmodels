@@ -302,6 +302,34 @@ def test_plot_bool_variables(variables, exception, match, close_figures):
         res.plot_recursive_coefficient(variables=variables)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "make_variables",
+    [
+        lambda names: iter([names[0], 2]),
+        lambda names: (v for v in [0, names[2]]),
+        lambda names: {names[0], 2},
+        lambda names: (names[0], 2),
+    ],
+    ids=["iterator", "generator", "set", "tuple"],
+)
+def test_plot_iterable_variables(make_variables, close_figures):
+    # An iterator raised a TypeError from len() and a set raised "not
+    # subscriptable"
+    y, x, _ = gen_data(250, 3, True)
+    res = RollingOLS(y, x, window=100).fit()
+    names = res.model.data.param_names
+    fig = res.plot_recursive_coefficient(variables=make_variables(names), alpha=None)
+    titles = [ax.get_title() for ax in fig.axes]
+    assert sorted(titles) == sorted([names[0], names[2]])
+    params = np.asarray(res.params)
+    for ax, title in zip(fig.axes, titles, strict=True):
+        column = params[:, names.index(title)]
+        expected = column[~np.isnan(column)]
+        assert_allclose(ax.get_lines()[0].get_ydata(), expected, rtol=1e-12)
+
+
 @pytest.mark.parametrize("params_only", [True, False])
 def test_methods(basic_data, params_only):
     y, x, _ = basic_data

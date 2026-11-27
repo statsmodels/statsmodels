@@ -1,0 +1,4 @@
+- The ignored arguments ``method``, ``s_method`` and ``maxfun`` of
+  ``fit`` of :class:`~statsmodels.tsa.vector_ar.svar_model.SVAR` and ``orth`` of ``sirf_errband_mc`` are deprecated
+  and will raise or be removed after statsmodels 0.17 is released.
+  :pr:`10985`

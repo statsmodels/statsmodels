@@ -1241,7 +1241,9 @@ class KalmanFilter(Representation):
             .. versionchanged:: 0.15.1
 
                NumPy integers and 0-d integer arrays are accepted as the
-               index of the state innovation. They raised ValueError.
+               index of the state innovation. They raised ValueError. A
+               custom impulse vector of shape `(1, 1)` works when `k_posdef`
+               is 1. It raised a ValueError.
 
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
@@ -1316,7 +1318,8 @@ class KalmanFilter(Representation):
         else:
             impulse = np.array(impulse)
             if impulse.ndim > 1:
-                impulse = np.squeeze(impulse)
+                # A (1, 1) impulse for k_posdef = 1 is squeezed to 0-d
+                impulse = np.atleast_1d(np.squeeze(impulse))
             if not impulse.shape == (self.k_posdef,):
                 raise ValueError("Invalid impulse vector. Must be shaped"
                                  f" ({self.k_posdef:d},)")

@@ -151,6 +151,8 @@ def lowess(
 
     endog = array_like(endog, "endog", mindim=0, shape=(None,))
     exog = array_like(exog, "exog", mindim=0, shape=(None,))
+    # xvals is converted to float before it is passed to _lowess
+    xvals = array_like(xvals, "xvals", mindim=0, shape=(None,), optional=True)
 
     # Whether xvals argument was provided
 
@@ -161,10 +163,6 @@ def lowess(
 
     if endog.shape[0] != exog.shape[0]:
         raise ValueError("exog and endog must have same length")
-    if xvals is not None:
-        xvals = np.ascontiguousarray(xvals)
-        if xvals.ndim != 1:
-            raise ValueError("exog_predict must be a vector")
     if missing in ["drop", "raise"]:
         mask_valid = np.isfinite(exog) & np.isfinite(endog)
         all_valid = np.all(mask_valid)

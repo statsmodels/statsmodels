@@ -1,0 +1,5 @@
+- :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` accepts a single column as ``endog``, raises a
+  ``ValueError`` instead of an ``AssertionError`` when
+  ``seasonal_periods`` is needed and cannot be inferred, and raises a
+  ``ValueError`` for a known ``initial_seasonal`` of the wrong
+  length. :pr:`10937`

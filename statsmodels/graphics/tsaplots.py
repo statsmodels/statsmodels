@@ -510,6 +510,13 @@ def plot_ccf(
     --------
     statsmodels.graphics.tsaplots.plot_acf
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+       When ``negative_lags`` is True and ``lags`` is irregular, correlations
+       are indexed using non-negative lags and signed lags are used only as
+       artist labels.
+
     Examples
     --------
     >>> import pandas as pd
@@ -526,9 +533,6 @@ def plot_ccf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, True)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
-    if negative_lags:
-        lags = -lags
-
     ccf_res = ccf(
         x,
         y,
@@ -541,14 +545,20 @@ def plot_ccf(
     # result_object=True always yields a CcfResult; confint is None when
     # alpha is None.
     ccf_xy, confint = ccf_res.ccf, ccf_res.confint
+    # Index coefficients with non-negative lags, but label artists with signed lags.
+    plot_lags = -lags if negative_lags else lags
+    if irregular:
+        ccf_xy = ccf_xy[lags]
+        if confint is not None:
+            confint = confint[lags]
 
     _plot_corr(
         ax,
         title,
         ccf_xy,
         confint,
-        lags,
-        irregular,
+        plot_lags,
+        False,
         use_vlines,
         vlines_kwargs,
         auto_ylims=auto_ylims,

@@ -1,0 +1,5 @@
+- :meth:`~statsmodels.tsa.holtwinters.ExponentialSmoothing.fit`
+  with ``optimized=False`` and a missing smoothing or damping
+  parameter, and a ``None`` bound of a smoothing or damping parameter,
+  raised a ``TypeError``. They raise a ``ValueError`` that names the
+  parameter. :pr:`10917`

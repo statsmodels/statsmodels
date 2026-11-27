@@ -2699,3 +2699,61 @@ def test_select_coint_rank_det_order_greater_than_one(det_order):
     y = np.random.default_rng(20261126).standard_normal((60, 2)).cumsum(0)
     with pytest.raises(ValueError, match="greather than 1 is not supported"):
         select_coint_rank(y, det_order, 1)
+
+
+@pytest.mark.parametrize(
+    "deterministic, k_ar_diff",
+    [("co", 1), ("n", 2), ("co", 0), ("colo", 1)],
+)
+def test_summary_coint_rank_zero(deterministic, k_ar_diff):
+    # With coint_rank 0 the VECM is a VAR in differences estimated by OLS, so
+    # the summary has the tables of the lagged differences and of the
+    # deterministic terms outside the relation, and no tables of alpha or
+    # beta. summary raised an IndexError (or an UnboundLocalError).
+    from statsmodels.datasets import danish_data
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(
+        endog, k_ar_diff=k_ar_diff, coint_rank=0, deterministic=deterministic
+    ).fit()
+    y = endog.to_numpy()
+    nobs_tot, neqs = y.shape
+    p = k_ar_diff + 1
+    dy = np.diff(y, axis=0)
+    z0 = dy[p - 1 :]
+    trend = np.arange(p + 1, nobs_tot + 1, dtype=float)
+    det = [np.ones(nobs_tot - p)] * ("co" in deterministic)
+    det += [trend] * ("lo" in deterministic)
+    x = np.column_stack([*det, *(dy[p - 1 - i : -i] for i in range(1, p))])
+    coef = np.linalg.lstsq(x, z0, rcond=None)[0].T
+    resid = z0 - x @ coef.T
+    sigma_u = resid.T @ resid / resid.shape[0]
+    stderr = np.sqrt(np.outer(np.diag(sigma_u), np.diag(np.linalg.inv(x.T @ x))))
+    params = np.hstack((res.det_coef, res.gamma))
+    assert_allclose(params, coef, rtol=1e-8)
+    assert_allclose(np.hstack((res.stderr_det_coef, res.stderr_gamma)), stderr, rtol=1e-8)
+
+    tables = res.summary().tables
+    assert len(tables) == neqs
+    names = ["const"] * ("co" in deterministic) + ["lin_trend"] * ("lo" in deterministic)
+    names += [f"L{i}.{n}" for i in range(1, p) for n in endog.columns]
+    for i, table in enumerate(tables):
+        assert table.title.endswith(f"parameters for equation {endog.columns[i]}")
+        rows = table.data[1:]
+        assert [row[0].strip() for row in rows] == names
+        # coefficients printed with four decimals, standard errors with three
+        assert_allclose([float(row[1]) for row in rows], coef[i], atol=5e-5)
+        assert_allclose([float(row[2]) for row in rows], stderr[i], atol=5e-4)
+
+
+@pytest.mark.parametrize("deterministic", ["n", "ci", "li"])
+def test_summary_no_parameters(deterministic):
+    # Delta y_t = u_t: without cointegration, lagged differences and terms
+    # outside the relation there is nothing to show
+    from statsmodels.datasets import danish_data
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(endog, k_ar_diff=0, coint_rank=0, deterministic=deterministic).fit()
+    assert res.det_coef.size == res.gamma.size == res.alpha.size == 0
+    with pytest.raises(ValueError, match="no estimated parameters"):
+        res.summary()
