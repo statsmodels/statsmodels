@@ -1410,7 +1410,11 @@ class FrozenRepresentation:
         self.initialization = model.initialization
 
         if model.initialization is not None:
-            model._initialize_state()
+            # Keep the initial state used by the last run of the filter: the
+            # smoother uses it, and it may have been computed for complex-step
+            # differentiation, which a new initialization would undo
+            if not model._statespaces[self.prefix].initialized:
+                model._initialize_state()
             self.initial_state = np.array(
                 model._statespaces[self.prefix].initial_state, copy=True
             )

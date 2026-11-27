@@ -1,0 +1,7 @@
+- ``smooth`` of state space models with ``complex_step=True`` gave a
+  wrong complex-step derivative of the smoothed state and its
+  covariance in the first period, and the results of ``filter`` and
+  ``smooth`` with ``complex_step=True`` had a wrong imaginary part of
+  ``initial_state_cov``: after the filter had run, the results
+  initialized the state again without complex step. Results of such
+  calls change. :pr:`11113`

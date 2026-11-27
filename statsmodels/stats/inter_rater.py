@@ -143,7 +143,7 @@ def to_table(data, bins=None):
     data : array_like, 2-Dim
         Data containing category assignment with subjects in rows and raters
         in columns.
-    bins : None, int or tuple of array_like, optional
+    bins : None, int or array_like, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
@@ -151,8 +151,10 @@ def to_table(data, bins=None):
         already assumed to be in integers, 0,1,2,...,n_cat-1. In this case,
         the returned array may contain columns with zero count, if no
         subject has been categorized with this level.
-        If bins are a tuple of two array_like, then the bins are directly
-        used by ``numpy.histogramdd``. This is useful if we want to merge
+        If bins are a 1-D array_like, then the same bin edges are used for
+        every rater. A sequence with one array_like of bin edges per rater
+        can be used to specify different edges. The bins are directly used
+        by ``numpy.histogramdd``. This is useful if we want to merge
         categories.
 
     Returns
@@ -160,8 +162,9 @@ def to_table(data, bins=None):
     arr : ndarray, (n_cat, n_cat)
         Contingency table that contains counts of category level with rater1
         in rows and rater2 in columns.
-    bins : ndarray
-        The bin edges used to construct the contingency table.
+    bins : ndarray or sequence of array_like
+        The bin edges used to construct the contingency table. For a single
+        shared set of edges, this is the object passed by the user.
 
     Notes
     -----
@@ -180,18 +183,25 @@ def to_table(data, bins=None):
         n_cat = len(cat_uni)
         data_ = cat_int.reshape(data.shape)
         bins_ = np.arange(n_cat+1) - 0.5
+        bins_hist = (bins_,) * n_cols
         # alternative implementation with double loop
         # tt = np.asarray([[(x == [i,j]).all(1).sum() for j in cat_uni]
         #                 for i in cat_uni] )
         # other altervative: unique rows and bincount
     elif np.isscalar(bins):
         bins_ = np.arange(bins+1) - 0.5
+        bins_hist = (bins_,) * n_cols
         data_ = data
     else:
         bins_ = bins
         data_ = data
+        first_bin = bins.iloc[0] if hasattr(bins, "iloc") else bins[0]
+        if np.ndim(first_bin) == 0:
+            bins_hist = (bins,) * n_cols
+        else:
+            bins_hist = bins
 
-    tt = np.histogramdd(data_, (bins_,)*n_cols)
+    tt = np.histogramdd(data_, bins_hist)
 
     return tt[0], bins_
 
@@ -470,6 +480,19 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for.
+        One dimensional weights have one value for each category, so their
+        length is the number of rows and columns of table. Two dimensional
+        weights have the shape of table.
+
+        .. versionchanged:: 0.15.1
+
+           One dimensional weights of another length raise a ValueError.
+           Weights of length 1 were broadcast and gave nan, or a kappa of
+           zero up to rounding with ``wt="toeplitz"``. Linear and quadratic
+           weights whose first and last values are equal raise a
+           ValueError. They gave nan with a RuntimeWarning. A 1 x 1 table
+           with these weights gives nan, as with other weights, without the
+           RuntimeWarning.
     return_results : bool, optional
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -503,7 +526,8 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     Weights for 'linear' and 'quadratic' are interpreted as scores for the
     categories, the weights in the computation are based on the pairwise
-    difference between the scores.
+    difference between the scores, divided by the difference between the
+    last and the first score, which therefore must not be equal.
     Weights for 'toeplitz' are interpreted as weighted distance. The
     distance only depends on how many levels apart two entries in the table
     are but not on the levels themselves.
@@ -628,12 +652,29 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         kind = "Weighted"
         weights = np.asarray(weights, float)
         if weights.ndim == 1:
+            if weights.shape[0] != table.shape[0]:
+                raise ValueError(
+                    f"1-d weights must have length {table.shape[0]}, the number "
+                    f"of categories in table, but they have length "
+                    f"{weights.shape[0]}"
+                )
+            # Linear and quadratic weights divide the score differences by the
+            # difference between the last and the first score
+            scale = weights[-1] - weights[0]
+            if scale == 0 and weights.shape[0] == 1:
+                # A table with one category has no differences to scale
+                scale = 1.0
+            elif scale == 0 and wt in ["ca", "linear", "fc", "quadratic", None]:
+                raise ValueError(
+                    "the first and last 1-d weights must differ with linear or "
+                    "quadratic weights, since the differences between the "
+                    "weights are divided by weights[-1] - weights[0], but both "
+                    f"are {weights[0]}"
+                )
             if wt in ["ca", "linear", None]:
-                weights = np.abs(weights[:, None] - weights) /  \
-                           (weights[-1] - weights[0])
+                weights = np.abs(weights[:, None] - weights) / scale
             elif wt in ["fc", "quadratic"]:
-                weights = (weights[:, None] - weights)**2 /  \
-                           (weights[-1] - weights[0])**2
+                weights = (weights[:, None] - weights)**2 / scale**2
             elif wt == "toeplitz":
                 # assume toeplitz structure
                 from scipy.linalg import toeplitz
@@ -645,7 +686,11 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         else:
             rows, cols = table.shape
             if (table.shape != weights.shape):
-                raise ValueError("weights are not square")
+                raise ValueError(
+                    "weights must be 1-d with one value for each category or "
+                    f"have the shape of table, {table.shape}, but they have "
+                    f"shape {weights.shape}"
+                )
         # this is formula from Wikipedia
         if one_category:
             kappa = one_category_value

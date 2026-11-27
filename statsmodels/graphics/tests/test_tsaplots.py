@@ -30,10 +30,11 @@ from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.stattools import pccf
+from statsmodels.tsa.stattools import ccf, pccf
 
 try:
     from matplotlib import pyplot as plt
+    from matplotlib.collections import LineCollection
 except ImportError:
     pass
 
@@ -230,6 +231,56 @@ def test_plot_ccf(close_figures):
     plot_ccf(x1, x2, ax=ax, title="CCF")
     plot_ccf(x1, x2, ax=ax, auto_ylims=True)
     plot_ccf(x1, x2, ax=ax, use_vlines=False)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("lags", [np.array([0, 2, 5]), np.arange(6), 6])
+@pytest.mark.parametrize("negative_lags", [False, True])
+@pytest.mark.parametrize("alpha", [None, 0.05])
+@pytest.mark.parametrize("use_vlines", [False, True])
+def test_plot_ccf_lag_artists(close_figures, lags, negative_lags, alpha, use_vlines):
+    rng = np.random.default_rng(123)
+    x = rng.standard_normal(50)
+    y = rng.standard_normal(50)
+    fig, ax = plt.subplots()
+
+    plot_ccf(
+        x,
+        y,
+        ax=ax,
+        lags=lags,
+        negative_lags=negative_lags,
+        alpha=alpha,
+        use_vlines=use_vlines,
+    )
+
+    expected_lags = np.arange(7) if np.isscalar(lags) else np.asarray(lags)
+    expected_ccf = ccf(x, y, adjusted=False, fft=False, nlags=7)[expected_lags]
+    plot_lags = -expected_lags if negative_lags else expected_lags
+
+    line = ax.lines[-1]
+    assert_equal(line.get_xdata(), plot_lags)
+    assert_allclose(line.get_ydata(), expected_ccf, rtol=1e-14, atol=1e-14)
+
+    vlines = [coll for coll in ax.collections if isinstance(coll, LineCollection)]
+    assert len(vlines) == int(use_vlines)
+    if use_vlines:
+        segments = vlines[0].get_segments()
+        assert_equal(
+            np.asarray(segments)[:, :, 0], np.column_stack((plot_lags, plot_lags))
+        )
+        assert_allclose(
+            np.asarray(segments)[:, :, 1],
+            np.column_stack((np.zeros(len(plot_lags)), expected_ccf)),
+            rtol=1e-14,
+            atol=1e-14,
+        )
+
+    fill_collections = [
+        coll for coll in ax.collections if not isinstance(coll, LineCollection)
+    ]
+    assert len(fill_collections) == int(alpha is not None)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")

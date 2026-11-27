@@ -47,6 +47,14 @@ class SVAR(tsbase.TimeSeriesModel):
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
         "AB" - estimate structural parameters indicated in both A and B matrix
+
+        .. versionchanged:: 0.15.1
+
+           "E" entries in the matrix that svar_type does not estimate raise a
+           ValueError. For "B" with "E" in A, fit raised an error or
+           estimated another model, in which the entries of A were estimated
+           too and those of B were tied to one value; for "A" with "E" in B,
+           fit raised an error.
     dates : array_like, optional
         must match number of rows of endog
     freq : str, optional
@@ -109,6 +117,14 @@ class SVAR(tsbase.TimeSeriesModel):
             B = B.astype("U")
             B_mask = np.logical_or(B == "E", B == "e")
             self.B_mask = B_mask
+        # Only the matrices that svar_type names are estimated
+        for name, mask in (("A", A_mask), ("B", B_mask)):
+            if name not in svar_type and mask.any():
+                raise ValueError(
+                    f'svar_type="{svar_type}" does not estimate {name}, but '
+                    f'{name} has entries "E" to estimate. Use svar_type="AB" to '
+                    "estimate A and B."
+                )
 
         # convert A and B to numeric
         # TODO: change this when masked support is better or with formula
@@ -140,7 +156,7 @@ class SVAR(tsbase.TimeSeriesModel):
         solver="bfgs",
         override=False,
         maxiter=500,
-        maxfun=500,
+        maxfun=None,
     ):
         """
         Fit the SVAR model and solve for structural parameters
@@ -160,6 +176,12 @@ class SVAR(tsbase.TimeSeriesModel):
             the maximum number of lags to check for order selection.
         method : {'ols'}, optional
             Estimation method to use
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the VAR was estimated by OLS.
+               They issue a FutureWarning and will raise a ValueError after
+               statsmodels 0.17 is released.
         ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
@@ -181,6 +203,13 @@ class SVAR(tsbase.TimeSeriesModel):
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}, optional
             Estimation method for structural parameters
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the structural parameters were
+               estimated by maximum likelihood. They issue a FutureWarning
+               and will raise a ValueError after statsmodels 0.17 is
+               released.
         solver : {'bfgs', 'newton', 'nm', 'lbfgs', 'powell', 'cg', 'ncg', 'basinhopping', 'minimize'}, optional
             The optimizer that maximizes the log-likelihood of the structural
             parameters, see the method argument of
@@ -192,7 +221,13 @@ class SVAR(tsbase.TimeSeriesModel):
         maxiter : int, optional
             Number of iterations to perform in solution method
         maxfun : int, optional
-            Number of function evaluations to perform
+            Unused.
+
+            .. deprecated:: 0.15.1
+
+               maxfun was ignored. Passing it issues a FutureWarning, and it
+               will be removed after statsmodels 0.17 is released. Use
+               maxiter.
 
         Returns
         -------
@@ -209,7 +244,42 @@ class SVAR(tsbase.TimeSeriesModel):
         -----
         Lütkepohl pp. 146-153
         Hamilton pp. 324-336
+
+        .. versionchanged:: 0.15.1
+
+           The results hold their own A and B. They were the arrays of the
+           model, so a later fit, or a call of loglike, score or hessian,
+           changed the A and B, and the structural responses, of earlier
+           results.
         """
+        if method is not None and not (
+            isinstance(method, str) and method.lower() == "ols"
+        ):
+            warnings.warn(
+                f"method={method!r} is ignored and the VAR is estimated by OLS. "
+                'Values other than "ols" are deprecated and will raise a '
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if s_method is not None and not (
+            isinstance(s_method, str) and s_method.lower() == "mle"
+        ):
+            warnings.warn(
+                f"s_method={s_method!r} is ignored and the structural "
+                "parameters are estimated by maximum likelihood. Values other "
+                'than "mle" are deprecated and will raise a ValueError after '
+                "statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if maxfun is not None:
+            warnings.warn(
+                "maxfun is ignored and deprecated, and will be removed after "
+                "statsmodels 0.17 is released. Use maxiter.",
+                FutureWarning,
+                stacklevel=2,
+            )
         lags = maxlags
         if ic is not None:
             selections = VAR(self.endog).select_order(maxlags=maxlags, trend=trend)
@@ -371,8 +441,8 @@ class SVAR(tsbase.TimeSeriesModel):
         """
 
         # TODO: this does not look robust if A or B is None
-        A = self.A
-        B = self.B
+        A = self.A.copy()
+        B = self.B.copy()
         A_mask = self.A_mask
         B_mask = self.B_mask
         A_len = len(A[A_mask])
@@ -480,8 +550,8 @@ class SVAR(tsbase.TimeSeriesModel):
         # TODO: this could stand a refactor
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A = self.A
-        B = self.B
+        A = self.A.copy()
+        B = self.B.copy()
         A_len = len(A[A_mask])
 
         A[A_mask] = start_params[:A_len]
@@ -885,6 +955,12 @@ class SVARResults(SVARProcess, VARResults):
         ----------
         orth : bool, optional
             Compute orthogonalized impulse response error bands
+
+            .. deprecated:: 0.15.1
+
+               True was ignored and gave the bands of the structural
+               responses. It issues a FutureWarning and will raise a
+               ValueError after statsmodels 0.17 is released.
         repl : int, optional
             number of Monte Carlo replications to perform
         steps : int, optional
@@ -930,6 +1006,14 @@ class SVARResults(SVARProcess, VARResults):
         -----
         Lütkepohl (2005) Appendix D
         """
+        if orth:
+            warnings.warn(
+                "orth=True is ignored and the error bands are those of the "
+                "structural responses. It is deprecated and will raise a "
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=3,
+            )
         neqs = self.neqs
         k_ar = self.k_ar
         coefs = self.coefs

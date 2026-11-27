@@ -297,3 +297,41 @@ def test_model_copied_after_incomplete_initialization(roundtrip):
     fresh = _make_model("sarimax")
     fresh.ssm.initialize_stationary()
     assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+
+
+def test_cfa_simulation_smoother_pickle():
+    rng = np.random.default_rng(1122)
+    endog = rng.standard_normal((50, 1)) + 0.5 * rng.standard_normal((50, 3))
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    params0 = mod.start_params
+    mod.update(params0)
+    sim = mod.simulation_smoother(method="cfa")
+    sim.simulate(rng.standard_normal((mod.k_states, mod.nobs)))
+
+    sim2 = pickle.loads(pickle.dumps(sim))
+    # The posterior moments come from the unpickled compiled object
+    assert_allclose(sim2.posterior_mean, sim.posterior_mean, rtol=1e-15)
+    assert_allclose(
+        sim2.posterior_cov_inv_chol_sparse,
+        sim.posterior_cov_inv_chol_sparse,
+        rtol=1e-15,
+    )
+    # A new draw from the same posterior moments
+    variates = rng.standard_normal((mod.k_states, mod.nobs))
+    sim.simulate(variates, update_posterior=False)
+    sim2.simulate(variates, update_posterior=False)
+    assert_allclose(sim2.simulated_state, sim.simulated_state, rtol=1e-15)
+
+    # The unpickled smoother follows new system matrices of its state space
+    # model (here larger factor loadings)
+    params1 = params0.copy()
+    params1[:3] *= 1.5
+    fresh = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    fresh.update(params1)
+    sim2.model["design"] = fresh["design"]
+    sim2.simulate(variates)
+    # The CFA and the Kalman smoother differ in rounding (about 1e-10 here);
+    # atol for smoothed states close to zero
+    assert_allclose(
+        sim2.posterior_mean, fresh.ssm.smooth().smoothed_state, rtol=1e-8, atol=1e-9
+    )

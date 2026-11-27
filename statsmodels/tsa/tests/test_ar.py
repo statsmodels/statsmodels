@@ -1610,6 +1610,38 @@ def test_autoreg_lags_sequence_forms(lags):
 
 
 @pytest.mark.parametrize(
+    "lags",
+    [np.array(2), np.array(2, dtype=np.int32), np.array(2.0)],
+    ids=["0d-int64", "0d-int32", "0d-float"],
+)
+def test_autoreg_lags_0d_array(lags):
+    # A 0-d array is a number of lags, as the number it holds is. It is
+    # iterable, so it raised "iteration over a 0-d array"
+    y, _ = _contract_ar_data()
+    res = AutoReg(y, lags).fit()
+    reg = np.column_stack([np.ones(118), y[1:-1], y[:-2]])
+    expected = np.linalg.lstsq(reg, y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    assert res.ar_lags == [1, 2]
+
+
+@pytest.mark.parametrize(
+    "lags, exception, match",
+    [
+        (np.array(True), TypeError, "lags must be integer_like"),
+        (np.array(2.5), TypeError, "lags must be integer_like"),
+        (np.array(-1), ValueError, "lags must be a non-negative scalar"),
+    ],
+    ids=["0d-bool", "0d-non-integral", "0d-negative"],
+)
+def test_autoreg_lags_0d_array_invalid(lags, exception, match):
+    # A 0-d array is checked as the number it holds
+    y, _ = _contract_ar_data()
+    with pytest.raises(exception, match=match):
+        AutoReg(y, lags)
+
+
+@pytest.mark.parametrize(
     "trend, names",
     [
         ("n", ["y.L1"]),

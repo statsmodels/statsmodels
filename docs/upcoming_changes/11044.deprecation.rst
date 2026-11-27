@@ -1,0 +1,8 @@
+- The ``results``, ``run_filter`` and ``prefix`` arguments of ``smooth``
+  of ``KalmanSmoother`` have no effect and are deprecated; they will be removed after
+  statsmodels 0.17 is released. :pr:`11044`
+- A ``smooth_method`` given to ``smooth`` of ``KalmanSmoother`` that cannot be used
+  with the filter method (univariate smoothing without univariate
+  filtering, or the reverse) is ignored, as before, with a
+  ``FutureWarning``; it will raise a ``ValueError`` after statsmodels
+  0.17 is released. :pr:`11044`

@@ -146,7 +146,8 @@ def var_acf(coefs, sig_u, nlags=None):
 
     Returns
     -------
-    acf : ndarray, (p, k, k)
+    acf : ndarray, (nlags + 1, k, k)
+        The autocovariances for the lags 0, 1, ..., nlags.
 
     Notes
     -----
@@ -221,7 +222,7 @@ def forecast_cov(ma_coefs, sigma_u, steps):
 
     Notes
     -----
-    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
+    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi_i \Sigma_u \Phi_i^T
     """
     neqs = len(sigma_u)
     forc_covs = np.zeros((steps, neqs, neqs))
@@ -247,9 +248,12 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     ----------
     y : ndarray (k_ar x neqs)
     coefs : array_like (k_ar x neqs x neqs)
-    trend_coefs : ndarray (1 x neqs) or (neqs)
+    trend_coefs : ndarray (k_exog x neqs) or (1 x neqs) or (neqs) or None
+        Coefficients of the deterministic terms in `exog`. Without `exog`,
+        the intercepts. None if there are no deterministic terms.
     steps : int
-    exog : ndarray (trend_coefs.shape[1] x neqs), optional
+    exog : ndarray (steps x k_exog), optional
+        Values of the deterministic terms in the forecast period.
 
     Returns
     -------
@@ -480,7 +484,8 @@ def orth_ma_rep(results, maxn=10, P=None):
 
     Returns
     -------
-    coefs : ndarray (maxn x neqs x neqs)
+    coefs : ndarray (maxn + 1 x neqs x neqs)
+        The matrices for the horizons 0, 1, ..., maxn.
     """
     if P is None:
         P = results._chol_sigma_u
@@ -666,6 +671,16 @@ class LagOrderResults:
         self.fpe = selected_orders["fpe"]
 
     def summary(self):  # basically copied from (now deleted) print_ic_table()
+        """
+        Table of the information criteria for each lag order
+
+        Returns
+        -------
+        SimpleTable
+            The information criteria, with one row per lag order and one
+            column per criterion. The minimum of each criterion is marked
+            with an asterisk.
+        """
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
         str_data = np.array(
             [[f"{v:#10.4g}" for v in self.ics[c]] for c in cols], dtype=object
@@ -702,7 +717,7 @@ class VAR(TimeSeriesModel):
     Parameters
     ----------
     endog : array_like
-        2-d endogenous response variable. The independent variable.
+        2-d endogenous response variables, with at least two columns.
     exog : array_like, optional
         2-d exogenous variable.
     dates : array_like, optional
@@ -710,7 +725,7 @@ class VAR(TimeSeriesModel):
     freq : str, optional
         See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more
         information.
-    missing : str, optional
+    missing : {"none", "drop", "raise"}, optional
         See :class:`statsmodels.base.model.Model` for more information.
 
     Notes
@@ -744,7 +759,7 @@ class VAR(TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The parameters/coefficients of the VAR model, in the same format
             as ``VARResults.params``.
         start : int, str, or datetime, optional
@@ -763,6 +778,24 @@ class VAR(TimeSeriesModel):
         ndarray
             Array of in-sample predicted values and/or out-of-sample
             forecasts.
+
+        Notes
+        -----
+        The deterministic terms are those of ``fit``: the time trend of the
+        zero-indexed observation t is t + 1. Out-of-sample forecasts are not
+        available for a model with exog, since predict has no future values
+        of exog; use ``VARResults.forecast`` instead.
+
+        .. versionchanged:: 0.15.1
+
+           Out-of-sample forecasts work with every trend and with a start
+           after the sample, and in-sample predictions work with exog;
+           these raised errors. Some ranges that end out of sample returned
+           an empty array (``end - start`` twice the number of out-of-sample
+           observations), in-sample predictions with trend "ct" or "ctt"
+           could use a wrong time trend, and a start below lags could
+           return copies of one prediction. Such a start raises a
+           ValueError.
         """
         params = np.array(params)
 
@@ -777,37 +810,45 @@ class VAR(TimeSeriesModel):
             prediction_index,
         ) = self._get_prediction_index(start, end)
 
-        if end < start:
-            raise ValueError("end is before start")
-        if end == start + out_of_sample:
-            return np.array([])
+        if start < lags:
+            raise ValueError(
+                f"start must be at least lags ({lags}), the first observation "
+                f"that has a prediction, got {start}"
+            )
 
         k_trend = util.get_trendorder(trend)
         k = self.neqs
         k_ar = lags
-
-        predictedvalues = np.zeros((end + 1 - start + out_of_sample, k))
-        if k_trend != 0:
-            intercept = params[:k_trend]
-            predictedvalues += intercept
-
         y = self.endog
-        x = util.get_var_endog(y, lags, trend=trend, has_constant="raise")
-        fittedvalues = np.dot(x, params)
+        n_totobs = y.shape[0]
 
-        fv_start = start - k_ar
-        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        fv_end = min(len(fittedvalues), end - k_ar + 1)
-        predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
+        # The regressors of fit for the observations k_ar, ..., n_totobs - 1:
+        # the trend terms (1, t + 1, (t + 1) ** 2), exog and the lags
+        time = np.arange(k_ar + 1.0, n_totobs + 1)
+        x = np.vander(time, k_trend, increasing=True)
+        if self.exog is not None:
+            x = np.column_stack((x, self.exog[k_ar:]))
+        x = np.column_stack((x, util.get_var_endog(y, k_ar, trend="n")))
+        predictedvalues = np.dot(x, params)[start - k_ar : end - k_ar + 1]
 
         if not out_of_sample:
             return predictedvalues
+        if self.exog is not None:
+            raise ValueError(
+                "predict cannot forecast out of sample with exog. Use the "
+                "forecast method of the results with exog_future."
+            )
 
-        # fit out of sample
-        y = y[-k_ar:]
+        # Forecasts of the observations n_totobs, ..., end + out_of_sample, with
+        # the trend terms built as in VARProcess.forecast
+        time = np.arange(n_totobs + 1.0, n_totobs + 1 + out_of_sample)
+        exog_future = np.vander(time, k_trend, increasing=True)
         coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1, 2)
-        predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
-        return predictedvalues
+        forecasts = forecast(
+            y[-k_ar:], coefs, params[:k_trend], out_of_sample, exog_future
+        )
+        # A start after the sample skips the first forecasts
+        return np.vstack((predictedvalues, forecasts[max(start - n_totobs, 0) :]))
 
     def fit(
         self,
@@ -829,10 +870,19 @@ class VAR(TimeSeriesModel):
         Parameters
         ----------
         maxlags : int, optional
-            Maximum number of lags to check for order selection, defaults to
-            12 * (nobs/100.)**(1./4), see select_order function
+            If ic is None, the lag order of the model, which defaults to 1.
+            Otherwise the maximum number of lags to check for order
+            selection, which defaults to round(12 * (nobs / 100) ** (1 / 4)),
+            reduced to the largest lag order that can be estimated. See
+            select_order.
         method : {'ols'}, optional
             Estimation method to use
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the model was estimated by OLS.
+               They issue a FutureWarning and will raise a ValueError after
+               statsmodels 0.17 is released.
         ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
@@ -878,6 +928,16 @@ class VAR(TimeSeriesModel):
         trend = string_like(
             trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
         )
+        if method is not None and not (
+            isinstance(method, str) and method.lower() == "ols"
+        ):
+            warnings.warn(
+                f'method={method!r} is ignored and the model is estimated by '
+                'OLS. Values other than "ols" are deprecated and will raise a '
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
         if maxlags is not None:
             if maxlags < 0:
                 raise ValueError(f"maxlags must be non-negative, got {maxlags}")
@@ -1207,7 +1267,7 @@ class VARProcess:
         Notes
         -----
         Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues of
-        the companion matrix must lie outside the unit circle
+        the companion matrix must lie inside the unit circle
         """
         return is_stable(self.coefs, verbose=verbose)
 
@@ -1347,7 +1407,9 @@ class VARProcess:
 
         Returns
         -------
-        coefs : ndarray (maxn x k x k)
+        coefs : ndarray (maxn + 1 x k x k)
+            The matrices for the horizons 0, 1, ..., maxn, starting with the
+            identity matrix.
         """
         return ma_rep(self.coefs, maxn=maxn)
 
@@ -1366,7 +1428,8 @@ class VARProcess:
 
         Returns
         -------
-        coefs : ndarray (maxn x k x k)
+        coefs : ndarray (maxn + 1 x k x k)
+            The matrices for the horizons 0, 1, ..., maxn, starting with P.
         """
         return orth_ma_rep(self, maxn, P)
 
@@ -1401,7 +1464,8 @@ class VARProcess:
 
         Returns
         -------
-        acf : ndarray (p x k x k)
+        acf : ndarray (nlags + 1 x k x k)
+            The autocovariances for the lags 0, 1, ..., nlags.
         """
         return var_acf(self.coefs, self.sigma_u, nlags=nlags)
 
@@ -1418,7 +1482,8 @@ class VARProcess:
         Returns
         -------
         acorr : ndarray
-            Autocorrelation and cross correlations (nlags, neqs, neqs)
+            Autocorrelation and cross correlations (nlags + 1, neqs, neqs)
+            for the lags 0, 1, ..., nlags.
         """
         return util.acf_to_acorr(self.acf(nlags=nlags))
 
@@ -1535,7 +1600,7 @@ steps ({steps}) observations.
 
         Notes
         -----
-        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
+        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi_i \Sigma_u \Phi_i^T
         """
         ma_coefs = self.ma_rep(steps)
 
@@ -2319,7 +2384,9 @@ class VARResults(VARProcess):
             Must satisfy Omega = P P', where P is the passed matrix. Defaults
             to Cholesky decomposition of Omega
         var_order : sequence, optional
-            Alternate variable order for Cholesky decomposition
+            Alternate variable order for Cholesky decomposition. Not
+            implemented: any value other than None raises
+            NotImplementedError. Use reorder to change the order.
 
         Returns
         -------
@@ -2550,9 +2617,9 @@ class VARResults(VARProcess):
         ----------
         causing : int or str or sequence of int or str
             If int or str, test whether the corresponding variable is causing
-            the variable(s) specified in caused.
+            the remaining variables of the system.
             If sequence of int or str, test whether the corresponding
-            variables are causing the variable(s) specified in caused.
+            variables are causing the remaining variables of the system.
 
             .. versionchanged:: 0.15.1
 
@@ -2565,26 +2632,11 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        results : dict
-            A dict holding the test's results. The dict's keys are:
-
-            "statistic" : float
-              The calculated test statistic.
-
-            "crit_value" : float
-              The critical value of the Chi^2-distribution.
-
-            "pvalue" : float
-              The p-value corresponding to the test statistic.
-
-            "df" : float
-              The degrees of freedom of the Chi^2-distribution.
-
-            "conclusion" : str {"reject", "fail to reject"}
-              Whether H0 can be rejected or not.
-
-            "signif" : float
-              Significance level
+        results : CausalityTestResults
+            The test results. Its attributes include ``test_statistic``,
+            ``crit_value`` and ``pvalue`` of the Chi^2-distribution with
+            ``df`` degrees of freedom, ``conclusion`` ("reject" or
+            "fail to reject") and ``signif``.
 
         Notes
         -----
@@ -2851,10 +2903,11 @@ class VARResults(VARProcess):
     @cache_readonly
     def roots(self):
         """
-        The roots of the VAR process are the solution to
-        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
-        Note that the inverse roots are returned, and stability requires that
-        the roots lie outside the unit circle.
+        The roots of the VAR process are the solutions to
+        det(I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
+        They are the reciprocals of the eigenvalues of the companion matrix
+        and are sorted by decreasing modulus. Stability requires that the
+        roots lie outside the unit circle.
         """
         neqs = self.neqs
         k_ar = self.k_ar
@@ -2899,7 +2952,11 @@ class FEVD:
         Matrix such that Sigma_u = PP', used to orthogonalize the impulse
         responses. Defaults to the Cholesky decomposition of Sigma_u.
     periods : int, optional
-        Number of periods to compute the FEVD for.
+        Number of periods to compute the FEVD for. The default is 10.
+
+        .. versionchanged:: 0.15.1
+
+           None gives the default. It raised a TypeError.
 
     Attributes
     ----------
@@ -2916,6 +2973,8 @@ class FEVD:
     """
 
     def __init__(self, model, P=None, periods=None):
+        if periods is None:
+            periods = 10
         self.periods = periods
 
         self.model = model
@@ -2941,6 +3000,12 @@ class FEVD:
         self.decomp = fevd.swapaxes(0, 1)
 
     def summary(self):
+        """
+        Print the FEVD as one table per variable
+
+        The rows of a table are the forecast horizons, starting with the
+        first step ahead at 0, and the columns are the orthogonalized shocks.
+        """
         buf = StringIO()
 
         rng = lrange(self.periods)
@@ -2962,17 +3027,34 @@ class FEVD:
         Parameters
         ----------
         periods : int, optional
-            Defaults to number originally specified. Can be at most that number
+            Defaults to number originally specified. Can be at most that number.
+            The first periods horizons are plotted.
+
+            .. versionchanged:: 0.15.1
+
+               A smaller number plots the first periods horizons. It raised
+               a ValueError. 0 raises a ValueError. It plotted all horizons.
         figsize : tuple of float, optional
             Figure size (width, height in inches), passed to
             `matplotlib.pyplot.subplots`. The default is (10, 10).
         **plot_kwds
             Additional keyword arguments to pass to the bar plotting function.
+
+        Returns
+        -------
+        Figure
+            The figure that contains the plot.
         """
         plt = _import_mpl()
 
         k = self.neqs
-        periods = periods or self.periods
+        if periods is None:
+            periods = self.periods
+        periods = int_like(periods, "periods")
+        if not 1 <= periods <= self.periods:
+            raise ValueError(
+                f"periods must be between 1 and {self.periods}, got {periods}"
+            )
 
         fig, axes = plt.subplots(nrows=k, figsize=figsize)
 
@@ -2981,7 +3063,7 @@ class FEVD:
         colors = [str(c) for c in np.arange(k, dtype=float) / k]
         ticks = np.arange(periods)
 
-        limits = self.decomp.cumsum(2)
+        limits = self.decomp[:, :periods].cumsum(2)
         ax = axes[0]
         for i in range(k):
             ax = axes[i]

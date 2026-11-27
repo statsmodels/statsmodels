@@ -1,0 +1,3 @@
+- ``RecursiveLSResults.plot_recursive_coefficient`` no longer replaces the
+  names in a ``variables`` list by their positions, and accepts a tuple that
+  holds a name or an iterator; they raised a ``TypeError``. :pr:`11247`
