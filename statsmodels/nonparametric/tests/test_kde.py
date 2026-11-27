@@ -516,6 +516,53 @@ def test_entropy_infinite_domain_kernel():
     assert np.isfinite(kde.entropy)
 
 
+@pytest.mark.parametrize("location", [-1000.0, 0.0, 1000.0])
+@pytest.mark.parametrize("bw", [1e-4, 2.0, 25.0])
+@pytest.mark.parametrize("fft", [False, True])
+def test_entropy_gaussian_closed_form(location, bw, fft):
+    # Identical observations produce exactly N(location, bw**2), independently
+    # of the grid used for fitting. Its entropy is (1 + log(2*pi*bw**2)) / 2.
+    kde = KDE(np.full(10, location)).fit(kernel="gau", bw=bw, fft=fft)
+    expected = (1 + np.log(2 * np.pi * bw**2)) / 2
+    npt.assert_allclose(kde.entropy, expected, rtol=1e-8, atol=1e-8)
+
+
+@pytest.mark.parametrize("weights", [None, [0.1, 0.2, 0.3, 0.4]])
+def test_entropy_location_invariant(weights):
+    sample = np.array([-1.0, -0.2, 0.7, 1.3])
+    centered = KDE(sample).fit(kernel="gau", bw=0.4, fft=False, weights=weights)
+    shifted = KDE(sample + 1000).fit(
+        kernel="gau", bw=0.4, fft=False, weights=weights
+    )
+    # Integrate the explicit Gaussian mixture over a known interval containing
+    # all but negligible normal tails, independently of the KDE integrand.
+    def reference_integrand(x):
+        density = np.average(stats.norm.pdf(x, loc=sample, scale=0.4), weights=weights)
+        return -density * np.log(density)
+
+    reference = integrate.quad(reference_integrand, sample.min() - 4, sample.max() + 4)[0]
+    npt.assert_allclose(shifted.entropy, reference, rtol=1e-10, atol=1e-10)
+    npt.assert_allclose(shifted.entropy, centered.entropy, rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize("fft", [False, True])
+@pytest.mark.parametrize("bw", [1e-4, 0.01])
+def test_entropy_separated_gaussians(bw, fft):
+    # With means 200 bandwidths apart (or more), overlap is negligible.
+    # Entropy is the component entropy plus the binary mixing entropy.
+    kde = KDE(np.array([-1.0, 1.0])).fit(bw=bw, fft=fft)
+    expected = (1 + np.log(2 * np.pi * bw**2)) / 2 + np.log(2)
+    npt.assert_allclose(kde.entropy, expected, rtol=1e-8, atol=1e-8)
+
+
+@pytest.mark.parametrize("weights", [[1.0, 0.0], [0.2, 0.8]])
+def test_entropy_separated_weighted_gaussians(weights):
+    kde = KDE(np.array([0.0, 1000.0])).fit(bw=1.0, fft=False, weights=weights)
+    positive = np.array(weights)[np.array(weights) > 0]
+    expected = (1 + np.log(2 * np.pi)) / 2 - positive @ np.log(positive)
+    npt.assert_allclose(kde.entropy, expected, rtol=1e-8, atol=1e-8)
+
+
 @pytest.mark.parametrize("kernel", ["epa", "tri", "uni"])
 def test_evaluate_outside_support(kernel):
     # GH 7195: for bounded-support kernels, evaluate() returned nan when an

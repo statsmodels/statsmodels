@@ -1,0 +1,3 @@
+- ``KDEUnivariate.entropy`` locates shifted, narrow, or separated components
+  by centering and scaling the integration variable and splitting the
+  integral near observations. :issue:`1313`, :pr:`10534`
