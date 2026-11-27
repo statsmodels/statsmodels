@@ -146,10 +146,13 @@ class ExponentialSmoothing(MLEModel):
        Forecasting with exponential smoothing: the state space approach.
        Springer Science & Business Media, 2008.
     """
+    _continuation_cov = None
+
     def __init__(self, endog, trend=False, damped_trend=False, seasonal=None,
                  initialization_method="estimated", initial_level=None,
                  initial_trend=None, initial_seasonal=None, bounds=None,
-                 concentrate_scale=True, dates=None, freq=None):
+                 concentrate_scale=True, dates=None, freq=None, *,
+                 _continuation=None):
         # Model definition
         self.trend = bool_like(trend, "trend")
         self.damped_trend = bool_like(damped_trend, "damped_trend")
@@ -242,13 +245,16 @@ class ExponentialSmoothing(MLEModel):
             if initial_seasonal is not None:
                 raise ValueError(msg % "initial_seasonal")
 
-        if self.initialization_method == "simple":
+        self._initial_state = None
+        if _continuation is not None:
+            self._initial_state, self._continuation_cov = _continuation
+        if _continuation is None and self.initialization_method == "simple":
             initial_level, initial_trend, initial_seasonal = (
                 es_init._initialization_simple(
                     self.endog[:, 0], trend="add" if self.trend else None,
                     seasonal="add" if self.seasonal else None,
                     seasonal_periods=self.seasonal_periods))
-        elif self.initialization_method == "heuristic":
+        elif _continuation is None and self.initialization_method == "heuristic":
             initial_level, initial_trend, initial_seasonal = (
                 es_init._initialization_heuristic(
                     self.endog[:, 0], trend="add" if self.trend else None,
@@ -289,13 +295,13 @@ class ExponentialSmoothing(MLEModel):
         self._initial_level = initial_level
         self._initial_trend = initial_trend
         self._initial_seasonal = initial_seasonal
-        self._initial_state = None
 
         # Initialize now if possible (if we have a damped trend, then
         # initialization will depend on the phi parameter, and so has to be
         # done at each `update`)
         methods = ["simple", "heuristic", "known"]
-        if not self.damped_trend and self.initialization_method in methods:
+        if (_continuation is None and not self.damped_trend
+                and self.initialization_method in methods):
             self._initialize_constant_statespace(initial_level, initial_trend,
                                                  initial_seasonal)
 
@@ -561,6 +567,11 @@ class ExponentialSmoothing(MLEModel):
             self.ssm["state_cov", 0, 0] = params[i]
             i += 1
 
+        # extend has already installed the predicted mean at the boundary.
+        if self._continuation_cov is not None:
+            self.initialization.stationary_cov = self._continuation_cov
+            return
+
         # State initialization
         if self.initialization_method == "estimated":
             initial_level = params[i]
@@ -585,6 +596,11 @@ class ExponentialSmoothing(MLEModel):
                 self._initial_seasonal)
 
         self._initialize_stationary_cov_statespace()
+
+    @property
+    def _concentrate_initial_state(self):
+        return (self.initialization_method == "concentrated" and
+                self._continuation_cov is None)
 
     def _compute_concentrated_states(self, params, *args, **kwargs):
         # Apply the usual filter, but keep forecasts
@@ -639,7 +655,7 @@ class ExponentialSmoothing(MLEModel):
 
     @Appender(MLEModel.loglike.__doc__)
     def loglike(self, params, *args, **kwargs):
-        if self.initialization_method == "concentrated":
+        if self._concentrate_initial_state:
             self._initialize_constant_statespace(
                 *self._compute_concentrated_states(params, *args, **kwargs))
             llf = self.ssm.loglike()
@@ -652,7 +668,7 @@ class ExponentialSmoothing(MLEModel):
     def filter(self, params, cov_type=None, cov_kwds=None,
                return_ssm=False, results_class=None,
                results_wrapper_class=None, *args, **kwargs):
-        if self.initialization_method == "concentrated":
+        if self._concentrate_initial_state:
             self._initialize_constant_statespace(
                 *self._compute_concentrated_states(params, *args, **kwargs))
 
@@ -662,7 +678,7 @@ class ExponentialSmoothing(MLEModel):
             results_wrapper_class=results_wrapper_class, **kwargs
         )
 
-        if self.initialization_method == "concentrated":
+        if self._concentrate_initial_state:
             self.ssm.initialization.constant = np.zeros(self.k_states)
         return results
 
@@ -670,7 +686,7 @@ class ExponentialSmoothing(MLEModel):
     def smooth(self, params, cov_type=None, cov_kwds=None,
                return_ssm=False, results_class=None,
                results_wrapper_class=None, *args, **kwargs):
-        if self.initialization_method == "concentrated":
+        if self._concentrate_initial_state:
             self._initialize_constant_statespace(
                 *self._compute_concentrated_states(params, *args, **kwargs))
 
@@ -679,7 +695,7 @@ class ExponentialSmoothing(MLEModel):
             return_ssm=return_ssm, results_class=results_class,
             results_wrapper_class=results_wrapper_class, **kwargs)
 
-        if self.initialization_method == "concentrated":
+        if self._concentrate_initial_state:
             self.ssm.initialization.constant = np.zeros(self.k_states)
         return results
 
@@ -714,6 +730,13 @@ class ExponentialSmoothingResults(MLEResults):
     """
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
+        # A concentrated fit can have zero scale (or no observed innovations).
+        # In that case its scaled covariances cannot recover the filter gain
+        # for a later extension. Save the last covariance before rescaling.
+        if model.concentrate_scale and not filter_results.scale > 0:
+            kfilter = model.ssm._kalman_filter
+            self._unscaled_end_cov = np.asarray(kfilter.predicted_state_cov)[
+                ..., -1].copy()
         super().__init__(model, params, filter_results, cov_type, **kwargs)
 
         # Save the states
@@ -724,6 +747,50 @@ class ExponentialSmoothingResults(MLEResults):
                 [model._initial_state], columns=model.state_names[1:])
             if model._index_dates and model._index_freq is not None:
                 self.initial_state.index = index.shift(-1)[:1]
+
+    def extend(self, endog, exog=None, fit_kwargs=None, **kwargs):
+        """
+        Filter new observations that immediately follow the original data.
+
+        Parameters
+        ----------
+        endog : array_like
+            The new observations.
+        exog : None
+            Exogenous regressors are not supported.
+        fit_kwargs : dict, optional
+            Keyword arguments to pass to the filter or smoother.
+        **kwargs
+            Additional model specification arguments.
+
+        Returns
+        -------
+        ExponentialSmoothingResults
+            Results for the new observations.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           Filtering continues from the previous level, trend and seasonal
+           states, including when their initial values were estimated.
+        """
+        # Results report covariances on the data scale. The new filter uses
+        # unit innovation variance when the scale is concentrated out.
+        cov = self.predicted_state_cov[..., -1]
+        if self.model.concentrate_scale:
+            if self.scale > 0:
+                cov = cov / self.scale
+            elif hasattr(self, "_unscaled_end_cov"):
+                cov = self._unscaled_end_cov
+            else:
+                # Older zero-scale results retained only the scaled covariance.
+                self.model.update(self.params, includes_fixed=True)
+                raw = self.model.ssm._filter()
+                cov = np.asarray(raw.predicted_state_cov)[..., -1]
+        state = self.filter_results.filtered_state[1:, -1]
+        kwargs["_continuation"] = (state.copy(), cov.copy())
+        return super().extend(endog, exog, fit_kwargs, **kwargs)
 
     @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):
