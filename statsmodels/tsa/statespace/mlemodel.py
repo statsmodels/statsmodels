@@ -2759,6 +2759,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             the unit (1) impulse is given.
             Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`. Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               A custom impulse vector of shape `(1, 1)` works when
+               `k_posdef` is 1. It raised a ValueError.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custom `impulse` vectors. Default
@@ -4576,6 +4581,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             the unit (1) impulse is given.
             Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`. Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               A custom impulse vector of shape `(1, 1)` works when
+               `k_posdef` is 1. It raised a ValueError.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custom `impulse` vectors. Default

@@ -1006,3 +1006,27 @@ def test_impulse_bool_float_index(impulse):
     params = np.array([0.5, 0.1, -0.2, 0.3, 1.0, 0.2, 1.0])
     with pytest.raises(ValueError, match="Invalid impulse vector"):
         mod.impulse_responses(params, steps=3, impulse=impulse)
+
+
+@pytest.mark.parametrize(
+    "impulse, scale",
+    [([[1.0]], 1.0), (np.array([[2.0]]), 2.0), ([2.0], 2.0), (0, 1.0)],
+    ids=["1x1", "1x1-scaled", "1d", "index"],
+)
+def test_impulse_vector_k_posdef_one(impulse, scale):
+    # A custom impulse of shape (k_posdef, 1) was squeezed to 0-d and
+    # rejected when k_posdef is 1
+    phi = 0.5
+    mod = sarimax.SARIMAX(np.zeros(20), order=(1, 0, 0))
+    expected = scale * phi ** np.arange(5)
+    irfs = mod.impulse_responses([phi, 4.0], steps=4, impulse=impulse)
+    assert_allclose(irfs, expected, rtol=1e-12)
+    # The state space representation returns one column for each endog
+    mod.update([phi, 4.0])
+    irfs = mod.ssm.impulse_responses(steps=4, impulse=impulse)
+    assert_allclose(irfs, expected[:, None], rtol=1e-12)
+    # The orthogonalized impulse is scaled by the standard deviation, 2
+    irfs = mod.impulse_responses(
+        [phi, 4.0], steps=4, impulse=impulse, orthogonalized=True
+    )
+    assert_allclose(irfs, 2 * expected, rtol=1e-12)
