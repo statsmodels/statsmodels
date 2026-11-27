@@ -1,0 +1,5 @@
+- With ``switching_variance=True`` and ``order`` of 2 or more, :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression`
+  used the error variance of the regime ``order - 1`` periods earlier
+  instead of that of the current regime, so the log-likelihood, the
+  estimates and the regime probabilities were wrong. Results of such
+  models change. :pr:`10994`
