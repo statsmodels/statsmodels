@@ -1,0 +1,3 @@
+- An invalid ``mode`` in ``fftconvolveinv`` and ``fftconvolve3`` returned
+  None. It warns with a ``FutureWarning`` and will raise a ``ValueError`` in
+  statsmodels 0.17. :pr:`10894`
