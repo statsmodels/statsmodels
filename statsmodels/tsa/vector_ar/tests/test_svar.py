@@ -979,3 +979,207 @@ def test_e_entries_not_estimated_raise(svar_type, A, B):
     match = f'svar_type="{svar_type}" does not estimate {other}'
     with pytest.raises(ValueError, match=match):
         SVAR(data, svar_type, A=np.array(A, dtype="U"), B=np.array(B, dtype="U"))
+
+
+def _svar_and_var(trend, lags=2):
+    # An SVAR and the VAR of the same data, trend and lags. The structural
+    # parameters do not matter for the reduced-form methods.
+    from statsmodels.tsa.vector_ar.var_model import VAR
+
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+    B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+    start = {"A_guess": [-0.5, -5.5, 3.0], "B_guess": [0.0075, 0.005, 0.02]}
+    # the ML fit may not converge, depending on the platform
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        res = SVAR(data, "AB", A=A, B=B).fit(maxlags=lags, trend=trend, **start)
+    return data, res, VAR(data).fit(lags, trend=trend)
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+def test_forecast_as_var(trend):
+    # forecast and forecast_interval raised AttributeError: 'exog'. The
+    # deterministic terms of SVAR and VAR give the same fitted values, so the
+    # forecasts are the same, also when the SVAR counts its time trend from
+    # its first estimation observation.
+    data, res, var_res = _svar_and_var(trend)
+    y = data[-2:]
+    assert_allclose(res.forecast(y, 6), var_res.forecast(y, 6), rtol=1e-8)
+    fi = res.forecast_interval(y, 6, alpha=0.1)
+    var_fi = var_res.forecast_interval(y, 6, alpha=0.1)
+    for actual, expected in zip(fi, var_fi, strict=True):
+        assert_allclose(actual, expected, rtol=1e-8)
+    with pytest.raises(ValueError, match="no exog"):
+        res.forecast(y, 6, exog_future=np.ones((6, 1)))
+
+
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_simulate_var_as_var(trend):
+    # SVARResults had no coefs_exog, which simulate_var uses with a trend
+    _, res, var_res = _svar_and_var(trend)
+    sim = res.simulate_var(rng=np.random.default_rng(0))
+    var_sim = var_res.simulate_var(rng=np.random.default_rng(0))
+    assert_allclose(sim, var_sim, rtol=1e-8)
+
+
+@pytest.mark.parametrize("orth", [False, True])
+def test_irf_resim_as_var(orth):
+    # irf_resim and irf_errband_mc raised AttributeError: 'exog'. They
+    # simulate the reduced-form VAR and refit it, as for VAR results.
+    _, res, var_res = _svar_and_var("c")
+    kwargs = {"orth": orth, "repl": 4, "steps": 3, "burn": 10}
+    resim = res.irf_resim(rng=np.random.default_rng(1), **kwargs)
+    var_resim = var_res.irf_resim(rng=np.random.default_rng(1), **kwargs)
+    assert_allclose(resim, var_resim, rtol=1e-8)
+    band = res.irf_errband_mc(signif=0.5, rng=np.random.default_rng(2), **kwargs)
+    var_band = var_res.irf_errband_mc(
+        signif=0.5, rng=np.random.default_rng(2), **kwargs
+    )
+    assert_allclose(band.lower, var_band.lower, rtol=1e-8)
+    assert_allclose(band.upper, var_band.upper, rtol=1e-8)
+
+
+def test_svar_process_forecast_simulate():
+    # SVARProcess.forecast raised AttributeError: 'exog' and simulate_var
+    # AttributeError: 'k_exog_user'
+    from statsmodels.tsa.vector_ar.svar_model import SVARProcess
+    from statsmodels.tsa.vector_ar.var_model import VARProcess
+
+    data, res, var_res = _svar_and_var("c")
+    coefs, intercept, sigma_u = var_res.coefs, var_res.intercept, var_res.sigma_u
+    proc = SVARProcess(coefs, intercept, sigma_u, res.A, res.B)
+    y = data[-2:]
+    assert_allclose(proc.forecast(y, 6), var_res.forecast(y, 6), rtol=1e-12)
+    var_proc = VARProcess(coefs, intercept, sigma_u)
+    sim = proc.simulate_var(steps=20, rng=np.random.default_rng(3))
+    var_sim = var_proc.simulate_var(steps=20, rng=np.random.default_rng(3))
+    assert_allclose(sim, var_sim, rtol=1e-12)
+    with pytest.raises(ValueError, match="no exog"):
+        proc.forecast(y, 6, exog_future=np.ones((6, 1)))
+
+
+@pytest.mark.matplotlib
+def test_plot_forecast_and_fevd(close_figures):
+    data, res, var_res = _svar_and_var("c")
+    fig = res.plot_forecast(5)
+    # the forecasts, drawn from the last observation
+    drawn = fig.axes[0].get_lines()[1].get_ydata()[1:]
+    assert_allclose(drawn, var_res.forecast(data[-2:], 5)[:, 0], rtol=1e-8)
+    fevd = res.fevd(4)
+    fevd.plot()
+    fevd.summary()
+
+
+# R vars 1.6.1: fevd(SVAR(v, Amat, Bmat, estmethod = "scoring", max.iter = 500,
+# conv.crit = 1e-12), n.ahead = 5) of v <- VAR(y, p = 3, type = "const") on the
+# log differences of realgdp, realcons and realinv of macrodata, for A lower
+# triangular with a unit diagonal and B diagonal (JUST) and with A[3, 1] = 0
+# (OVER), the A and B estimates rounded to 12 digits, and
+# fevd[[response]][horizon, shock]
+R_FEVD_JUST_A = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [-0.506802245191, 1.0, 0.0],
+        [-5.53605652, 3.04117686451, 1.0],
+    ]
+)
+R_FEVD_JUST_B = np.array(
+    [
+        [0.00757566759698, 0.0, 0.0],
+        [0.0, 0.00512051886485, 0.0],
+        [0.0, 0.0, 0.0207089479263],
+    ]
+)
+R_FEVD_JUST = np.array(
+    [
+        [
+            [1.0, 1.17594097322e-32, 0.0],
+            [0.864889160888, 0.129252541123, 0.00585829798874],
+            [0.816724712017, 0.177897582208, 0.00537770577512],
+            [0.7936474816, 0.197589778021, 0.00876274037871],
+            [0.777278553447, 0.208127175236, 0.0145942713165],
+        ],
+        [
+            [0.359877149046, 0.640122850954, 0.0],
+            [0.358767338668, 0.635420033705, 0.00581262762663],
+            [0.348044407894, 0.645138214585, 0.00681737752096],
+            [0.319913057616, 0.653608996566, 0.0264779458181],
+            [0.317406580746, 0.652179640008, 0.0304137792456],
+        ],
+        [
+            [0.577020648816, 0.152782926121, 0.270196425063],
+            [0.488158202899, 0.29362185505, 0.218219942052],
+            [0.478727162423, 0.314398433481, 0.206874404096],
+            [0.477182154003, 0.315563991331, 0.207253854666],
+            [0.466741151754, 0.324135243152, 0.209123605095],
+        ],
+    ]
+)
+R_FEVD_OVER_A = np.array(
+    [
+        [1.0, 0.0, 0.0],
+        [-0.506802245191, 1.0, 0.0],
+        [0.0, -0.889942731504, 1.0],
+    ]
+)
+R_FEVD_OVER_B = np.array(
+    [
+        [0.00757566759698, 0.0, 0.0],
+        [0.0, 0.00512051886485, 0.0],
+        [0.0, 0.0, 0.0394306609342],
+    ]
+)
+R_FEVD_OVER = np.array(
+    [
+        [
+            [1.0, 0.0, 0.0],
+            [0.800835596552, 0.178975667802, 0.0201887356455],
+            [0.760037642555, 0.221353846074, 0.0186085113709],
+            [0.719974592439, 0.250701466396, 0.0293239411651],
+            [0.682243413247, 0.270730459786, 0.0470261269662],
+        ],
+        [
+            [0.359877149046, 0.640122850954, 0.0],
+            [0.336074796576, 0.643449307396, 0.020475896028],
+            [0.317857471821, 0.65840481051, 0.0237377176694],
+            [0.268028626645, 0.651765449917, 0.0802059234374],
+            [0.261010581714, 0.648651295127, 0.0903381231584],
+        ],
+        [
+            [0.00735540395156, 0.0130832484359, 0.979561347612],
+            [0.0109051587191, 0.25801211763, 0.731082723651],
+            [0.0248537417335, 0.279360121774, 0.695786136492],
+            [0.0324522439126, 0.281735409786, 0.685812346301],
+            [0.0367307675839, 0.300285832294, 0.662983400122],
+        ],
+    ]
+)
+
+
+@pytest.mark.parametrize("case", ["just", "over"])
+def test_fevd_vars(case):
+    # fevd raised a TypeError. Compared at vars' estimates of A and B; vars
+    # uses the variances implied by the structural responses, which differ
+    # from those of sigma_u for the over-identified model.
+    from statsmodels.tsa.vector_ar.svar_model import SVARResults
+
+    A_r, B_r, fevd_r = {
+        "just": (R_FEVD_JUST_A, R_FEVD_JUST_B, R_FEVD_JUST),
+        "over": (R_FEVD_OVER_A, R_FEVD_OVER_B, R_FEVD_OVER),
+    }[case]
+    _, res, _ = _svar_and_var("c", lags=3)
+    fixed = SVARResults(
+        res.endog,
+        res.endog_lagged,
+        res.params,
+        res.sigma_u,
+        res.k_ar,
+        A=A_r,
+        B=B_r,
+        model=res.model,
+        names=res.names,
+    )
+    fevd = fixed.fevd(5)
+    # atol: the shares are in [0, 1], and vars has 1e-32 for some exact zeros
+    assert_allclose(fevd.decomp, fevd_r, rtol=1e-7, atol=1e-12)
