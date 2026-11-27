@@ -1317,11 +1317,16 @@ class FrozenRepresentation:
         The state vector used to initialize the Kalman filter.
     initial_state_cov : ndarray
         The state covariance matrix used to initialize the Kalman filter.
-    initial_diffuse_state_cov : ndarray
+    initial_diffuse_state_cov : ndarray or None
         The diffuse part of the state covariance matrix used to initialize
-        the Kalman filter.
+        the Kalman filter. None if the model has no initialization.
     initial_variance : float
-        Initial variance used for approximate diffuse initialization.
+        The `initial_variance` of the model: the variance used by an
+        approximate diffuse initialization unless another one is given.
+
+        .. versionchanged:: 0.15.1
+
+           It was always None.
     model : Representation
         The Statespace representation model from which this snapshot was
         taken.
@@ -1350,6 +1355,7 @@ class FrozenRepresentation:
         "initialization",
         "initial_state",
         "initial_state_cov",
+        "initial_diffuse_state_cov",
         "initial_variance",
     ]
     _attributes = _model_attributes
@@ -1408,6 +1414,7 @@ class FrozenRepresentation:
 
         # Save the state space initialization
         self.initialization = model.initialization
+        self.initial_variance = model.initial_variance
 
         if model.initialization is not None:
             # Keep the initial state used by the last run of the filter: the

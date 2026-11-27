@@ -1,0 +1,5 @@
+- State space filter and smoother results hold the model's
+  ``initial_variance`` (it was always None), and
+  ``initial_diffuse_state_cov`` of ``FrozenRepresentation`` is None for a
+  model without an initialization (it raised ``AttributeError``).
+  :pr:`11038`
