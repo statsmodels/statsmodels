@@ -261,7 +261,7 @@ def test_plot_ccf_lag_artists(close_figures, lags, negative_lags, alpha, use_vli
 
     line = ax.lines[-1]
     assert_equal(line.get_xdata(), plot_lags)
-    assert_allclose(line.get_ydata(), expected_ccf, rtol=1e-14, atol=1e-14)
+    assert_allclose(line.get_ydata(), expected_ccf)
 
     vlines = [coll for coll in ax.collections if isinstance(coll, LineCollection)]
     assert len(vlines) == int(use_vlines)
@@ -273,14 +273,29 @@ def test_plot_ccf_lag_artists(close_figures, lags, negative_lags, alpha, use_vli
         assert_allclose(
             np.asarray(segments)[:, :, 1],
             np.column_stack((np.zeros(len(plot_lags)), expected_ccf)),
-            rtol=1e-14,
-            atol=1e-14,
         )
 
     fill_collections = [
         coll for coll in ax.collections if not isinstance(coll, LineCollection)
     ]
     assert len(fill_collections) == int(alpha is not None)
+    if alpha is not None:
+        # The band runs from the lower to the upper bound, relative to the
+        # correlation, at the plotted lags; the outer lags are widened by 0.5.
+        confint = ccf(
+            x, y, adjusted=False, fft=False, nlags=7, alpha=alpha, result_object=True
+        ).confint[expected_lags]
+        band_lags = plot_lags.astype(float)
+        band_lags[np.argmin(band_lags)] -= 0.5
+        band_lags[np.argmax(band_lags)] += 0.5
+        expected_vertices = np.r_[
+            np.column_stack((band_lags, confint[:, 0] - expected_ccf)),
+            np.column_stack((band_lags, confint[:, 1] - expected_ccf)),
+        ]
+        vertices = fill_collections[0].get_paths()[0].vertices
+        assert_allclose(
+            np.unique(vertices, axis=0), np.unique(expected_vertices, axis=0)
+        )
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
