@@ -1472,6 +1472,12 @@ class FilterResults(FrozenRepresentation):
         The predicted state vector at each time period.
     predicted_state_cov : ndarray
         The predicted state covariance matrix at each time period.
+
+        .. versionchanged:: 0.15.1
+
+           With the filtered timing convention (``timing_init_filtered``),
+           the matrix for the period after the sample (the last one) is set
+           when the filter has converged. It was zero.
     forecasts_error_diffuse_cov : ndarray
         Diffuse forecast error covariance matrix at each time period.
     predicted_diffuse_state_cov : ndarray
