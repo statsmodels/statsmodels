@@ -1073,7 +1073,9 @@ class RollingRegressionResults:
 
                A 0-d integer array selects a variable, as the integer it
                holds does. A bool raises a TypeError, and a list that holds
-               a bool raises a ValueError.
+               a bool raises a ValueError. An iterable without a length or
+               indexing, such as a generator or a set, works. It raised a
+               TypeError.
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha)%. Set
             to None to exclude confidence intervals.
@@ -1110,6 +1112,8 @@ class RollingRegressionResults:
                 variables = [variables]
             elif is_int_like(variables, strict=True):
                 variables = [int(variables)]
+            # An iterable may have no length or indexing, as a generator
+            variables = list(variables)
             variable_idx = []
             for i in range(len(variables)):
                 variable = variables[i]
