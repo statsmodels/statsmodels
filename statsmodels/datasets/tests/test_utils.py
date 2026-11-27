@@ -177,3 +177,35 @@ def test_process_pandas_int_exog_idx(endog_idx, index_idx):
         expected.index = pd.Index(data["d"])
     assert_frame_equal(ds.exog, expected)
     assert ds.exog_name == ["b"]
+
+
+@pytest.mark.parametrize("index_idx", [None, 2], ids=["index-None", "index-2"])
+@pytest.mark.parametrize(
+    "exog_idx, exog_names",
+    [
+        (None, ["a", "c", "d"]),
+        ([3, 0], ["d", "a"]),
+        (2, ["c"]),
+        (np.array(2), ["c"]),
+    ],
+    ids=["exog-None", "exog-list", "exog-int", "exog-0d-array"],
+)
+def test_process_pandas_str_endog_idx(exog_idx, exog_names, index_idx):
+    # A str selects one column as a Series, as its position does. It raised
+    # AttributeError: 'Series' object has no attribute 'columns'. Both select
+    # exog in the same way; a 0-d array exog_idx with an int endog_idx raised
+    # an AttributeError on pandas < 3
+    data = _process_pandas_data()
+    dataset = utils.process_pandas(
+        data, endog_idx="b", exog_idx=exog_idx, index_idx=index_idx
+    )
+    by_position = utils.process_pandas(
+        data, endog_idx=1, exog_idx=exog_idx, index_idx=index_idx
+    )
+    assert dataset.endog_name == by_position.endog_name == "b"
+    assert dataset.exog_name == by_position.exog_name == exog_names
+    pd.testing.assert_series_equal(dataset.endog, by_position.endog)
+    pd.testing.assert_frame_equal(dataset.exog, by_position.exog)
+    if index_idx is None:
+        pd.testing.assert_series_equal(dataset.endog, data["b"])
+        pd.testing.assert_frame_equal(dataset.exog, data[exog_names])
