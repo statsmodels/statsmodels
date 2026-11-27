@@ -7,7 +7,7 @@ import itertools
 import warnings
 
 import numpy as np
-from scipy.special import logsumexp
+from scipy.special import expit, logsumexp
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -308,6 +308,14 @@ class _ConditionalModel(base.LikelihoodModel):
         return model
 
 
+def _complex_logaddexp(a, b):
+    # Order by real part to bound the exponential and keep complex-step terms.
+    a_larger = np.real(a) >= np.real(b)
+    larger = np.where(a_larger, a, b)
+    smaller = np.where(a_larger, b, a)
+    return larger + np.log1p(np.exp(smaller - larger))
+
+
 class ConditionalLogit(_ConditionalModel):
     """
     Fit a conditional logistic regression model to grouped data.
@@ -341,6 +349,20 @@ class ConditionalLogit(_ConditionalModel):
 
         self.K = self.exog.shape[1]
         # i.e., self.k_params, for compatibility with MNLogit
+
+        offsets = getattr(self, "_offset_grp", None)
+        self._pair_contrasts = [None] * self._n_groups
+        for grp, size in enumerate(self._groupsize):
+            if size == 2:
+                success = int(self._endog_grp[grp][0] == 0)
+                failure = 1 - success
+                x = self._exog_grp[grp]
+                x = x.astype(np.result_type(x, float), copy=False)
+                offset_diff = 0.0
+                if offsets is not None:
+                    ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
+                    offset_diff = ofs[success] - ofs[failure]
+                self._pair_contrasts[grp] = x[success] - x[failure], offset_diff
 
     def loglike(self, params):
         """
@@ -385,94 +407,93 @@ class ConditionalLogit(_ConditionalModel):
 
         return score
 
-    def _denom(self, grp, params, ofs=None):
+    def _group_log_weights(self, grp, params):
+        x = self._exog_grp[grp]
+        x = x.astype(np.result_type(x, float), copy=False)
+        n_selected = int(self._n1[grp])
+        sign = 1
+        if n_selected > len(x) - n_selected:
+            # Selecting failures with negated weights gives the same likelihood.
+            sign = -1
+            n_selected = len(x) - n_selected
 
-        if ofs is None:
-            ofs = 0
+        eta = sign * (x @ params)
+        offsets = getattr(self, "_offset_grp", None)
+        if offsets is not None:
+            ofs = offsets[grp].astype(np.result_type(offsets[grp], float))
+            ofs = sign * ofs
+            offset_center = self._log_weight_center(ofs.real, n_selected)
+            eta = eta + (ofs - offset_center)
 
-        exb = np.exp(np.dot(self._exog_grp[grp], params) + ofs)
+        eta = eta - self._log_weight_center(eta.real, n_selected)
+        selected = np.asarray(self._endog_grp[grp]) == (sign == 1)
+        return x, eta, n_selected, selected, sign
 
-        # In the recursions, f may be called multiple times with the
-        # same arguments, so we memoize the results.
-        memo = {}
+    @staticmethod
+    def _log_weight_center(values, n_selected):
+        # The largest value controls the singleton normalizer. With more than
+        # one selection, keep ordinary weights near zero even with an outlier.
+        if n_selected == 1:
+            return values.max()
+        return np.clip(0, values.min(), values.max())
 
-        def f(t, k):
-            if t < k:
-                return 0
-            if k == 0:
-                return 1
+    def _log_normalizer(self, eta, n_selected, x=None):
+        if n_selected == 1:
+            log_z = logsumexp(eta)
+            mean = None if x is None else np.exp(eta - log_z) @ x
+            return log_z, mean
 
-            try:
-                return memo[(t, k)]
-            except KeyError:
-                pass
+        logaddexp = _complex_logaddexp if np.iscomplexobj(eta) else np.logaddexp
+        log_mass = np.full(n_selected + 1, -np.inf, dtype=eta.dtype)
+        log_mass[0] = 0
+        if x is not None:
+            mean = np.zeros((n_selected + 1, self.k_params), dtype=eta.dtype)
 
-            v = f(t - 1, k) + f(t - 1, k - 1) * exb[t - 1]
-            memo[(t, k)] = v
+        nobs = len(eta)
+        for t, log_weight in enumerate(eta, 1):
+            # Retain reachable counts that can still reach the final subset size.
+            lower = max(1, n_selected - nobs + t)
+            upper = min(t, n_selected)
+            count = slice(lower, upper + 1)
+            previous = slice(lower - 1, upper)
+            skip = log_mass[count]
+            take = log_mass[previous] + log_weight
+            total = logaddexp(skip, take)
+            if x is not None:
+                # Propagate the conditional mean of the covariate sum.
+                mean[count] = (
+                    np.exp(skip - total)[:, None] * mean[count]
+                    + np.exp(take - total)[:, None] * (mean[previous] + x[t - 1])
+                )
+            log_mass[count] = total
 
-            return v
-
-        return f(self._groupsize[grp], self._n1[grp])
-
-    def _denom_grad(self, grp, params, ofs=None):
-
-        if ofs is None:
-            ofs = 0
-
-        ex = self._exog_grp[grp]
-        exb = np.exp(np.dot(ex, params) + ofs)
-
-        # s may be called multiple times in the recursions with the
-        # same arguments, so memoize the results.
-        memo = {}
-
-        def s(t, k):
-
-            if t < k:
-                return 0, np.zeros(self.k_params)
-            if k == 0:
-                return 1, 0
-
-            try:
-                return memo[(t, k)]
-            except KeyError:
-                pass
-
-            h = exb[t - 1]
-            a, b = s(t - 1, k)
-            c, e = s(t - 1, k - 1)
-            d = c * h * ex[t - 1, :]
-
-            u, v = a + c * h, b + d + e * h
-            memo[(t, k)] = (u, v)
-
-            return u, v
-
-        return s(self._groupsize[grp], self._n1[grp])
+        return log_mass[n_selected], None if x is None else mean[n_selected]
 
     def loglike_grp(self, grp, params):
+        pair = self._pair_contrasts[grp]
+        if pair is not None:
+            contrast, offset_diff = pair
+            delta = contrast @ params + offset_diff
+            if np.iscomplexobj(delta):
+                return -_complex_logaddexp(0, -delta)
+            return -np.logaddexp(0, -delta)
 
-        ofs = None
-        if hasattr(self, "offset"):
-            ofs = self._offset_grp[grp]
-
-        llg = np.dot(self._xy[grp], params)
-
-        if ofs is not None:
-            llg += self._endofs[grp]
-
-        llg -= np.log(self._denom(grp, params, ofs))
-
-        return llg
+        _, eta, n_selected, selected, _ = self._group_log_weights(grp, params)
+        log_z, _ = self._log_normalizer(eta, n_selected)
+        return eta[selected].sum() - log_z
 
     def score_grp(self, grp, params):
+        pair = self._pair_contrasts[grp]
+        if pair is not None:
+            contrast, offset_diff = pair
+            delta = contrast @ params + offset_diff
+            if np.iscomplexobj(delta):
+                return np.exp(-delta - _complex_logaddexp(0, -delta)) * contrast
+            return expit(-delta) * contrast
 
-        ofs = 0
-        if hasattr(self, "offset"):
-            ofs = self._offset_grp[grp]
-
-        d, h = self._denom_grad(grp, params, ofs)
-        return self._xy[grp] - h / d
+        x, eta, n_selected, selected, sign = self._group_log_weights(grp, params)
+        _, mean = self._log_normalizer(eta, n_selected, x=x)
+        return sign * (x[selected].sum(axis=0) - mean)
 
 
 class ConditionalPoisson(_ConditionalModel):

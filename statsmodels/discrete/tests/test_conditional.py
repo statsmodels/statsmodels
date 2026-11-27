@@ -1,7 +1,10 @@
+from itertools import combinations
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
+from scipy.special import gammaln, logsumexp
 
 from statsmodels.discrete.conditional_models import (
     ConditionalLogit,
@@ -10,6 +13,164 @@ from statsmodels.discrete.conditional_models import (
 )
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
+
+
+@pytest.mark.parametrize("method", ["loglike", "score"])
+@pytest.mark.parametrize("n_events", [1, 2, -1])
+@pytest.mark.parametrize("use_offset", [False, True])
+def test_logit_large_group(method, n_events, use_offset):
+    nobs = 1500
+    n_success = n_events if n_events > 0 else nobs - 1
+    exog = np.linspace(-1, 1, nobs)[:, None]
+    endog = np.zeros(nobs)
+    endog[:n_success] = 1
+    params = np.array([0.2])
+    offset = np.linspace(-0.3, 0.3, nobs) if use_offset else np.zeros(nobs)
+    model = ConditionalLogit(endog, exog, groups=np.zeros(nobs), offset=offset)
+
+    # The one-success, two-success and one-failure cases have closed forms.
+    # For two successes, sum_{i<j} w_i*w_j = ((sum w)**2 - sum w**2) / 2.
+    linear = exog @ params + offset
+    weights = np.exp(linear)
+    if n_success == 1:
+        denom = weights.sum()
+        mean_sum = weights @ exog / denom
+    elif n_success == 2:
+        denom = (weights.sum() ** 2 - (weights**2).sum()) / 2
+        mean_sum = (weights.sum() * (weights @ exog) - weights**2 @ exog) / denom
+    else:
+        inv_weights = 1 / weights
+        denom = np.exp(linear.sum()) * inv_weights.sum()
+        mean_sum = exog.sum(axis=0) - inv_weights @ exog / inv_weights.sum()
+    if method == "loglike":
+        expected = endog @ linear - np.log(denom)
+    else:
+        expected = endog @ exog - mean_sum
+    assert_allclose(getattr(model, method)(params), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("shift", [0.0, 300.0, -300.0])
+@pytest.mark.parametrize("beta", [0.0, 0.27])
+def test_logit_balanced_group_log_space(beta, shift):
+    # Compress the reference sum by the number of successes in the +1 block.
+    # Each count j represents C(1000, j)**2 equally weighted subsets.
+    block_size = 1000
+    exog = np.repeat([-1.0, 1.0], block_size)[:, None]
+    endog = np.zeros(2 * block_size)
+    endog[:400] = 1
+    endog[block_size : block_size + 600] = 1
+    offset = 0.125 * exog[:, 0] + shift
+    model = ConditionalLogit(endog, exog, groups=np.zeros(len(endog)), offset=offset)
+
+    counts = np.arange(block_size + 1)
+    log_comb = (
+        gammaln(block_size + 1)
+        - gammaln(counts + 1)
+        - gammaln(block_size - counts + 1)
+    )
+    subset_sum = 2 * counts - block_size
+    log_weights = 2 * log_comb + (beta + 0.125) * subset_sum
+    log_total = logsumexp(log_weights)
+    observed_sum = float((endog @ exog)[0])
+    expected = observed_sum * (beta + 0.125) - log_total
+    expected_score = observed_sum - np.exp(log_weights - log_total) @ subset_sum
+
+    assert_allclose(model.loglike(np.array([beta])), expected, rtol=1e-12)
+    assert_allclose(model.score(np.array([beta])), [expected_score], atol=1e-9)
+
+
+@pytest.mark.parametrize("shift", [0.0, 300.0, -300.0])
+@pytest.mark.parametrize("endog", [[1, 0], [0, 1]])
+def test_logit_matched_pair(endog, shift):
+    # The signed contrast must also work for unsigned design matrices.
+    exog = np.array([[2], [0]], dtype=np.uint8)
+    offset = np.array([0.25, -0.125]) + shift
+    model = ConditionalLogit(np.asarray(endog), exog, groups=np.zeros(2), offset=offset)
+    params = np.array([0.2])
+    # The likelihood of the observed outcome follows a two-choice softmax.
+    observed = int(np.argmax(endog))
+    linear = exog @ params + np.array([0.25, -0.125])
+    log_total = logsumexp(linear)
+    prob = np.exp(linear - log_total)
+    expected_score = exog[observed] - prob @ exog
+    expected_hess = -(prob @ exog[:, 0] ** 2 - (prob @ exog[:, 0]) ** 2)
+    assert_allclose(model.loglike(params), linear[observed] - log_total, atol=1e-14)
+    assert_allclose(model.score(params), expected_score, atol=1e-14)
+    complex_params = params + 1e-20j
+    assert_allclose(model.loglike(complex_params).imag / 1e-20, expected_score[0])
+    assert_allclose(model.score(complex_params).imag / 1e-20, [expected_hess])
+
+
+def test_logit_integer_group():
+    # With four equally likely rows, the mean sum is twice the population mean.
+    exog = np.arange(4, dtype=np.int16)[:, None]
+    model = ConditionalLogit(np.array([1, 0, 1, 0]), exog, groups=np.zeros(4))
+    params = np.array([0], dtype=np.int16)
+    assert_allclose(model.loglike(params), -np.log(6))
+    assert_allclose(model.score(params), [-1.0])
+
+
+@pytest.mark.parametrize("offset", [[-1e16, 0, 1, 2], [-1e16, 1e16, 1e16, 1e16]])
+@pytest.mark.parametrize("sign", [-1, 1])
+def test_logit_offset_outlier(offset, sign):
+    # The first row has negligible weight, so evaluate the other three rows.
+    exog = np.arange(4.0)[:, None]
+    endog = np.array([0, 0, 1, 0])
+    if sign == -1:
+        endog = 1 - endog
+    offset = np.array(offset)
+    params = np.array([0.2])
+    model = ConditionalLogit(
+        endog, exog, groups=np.zeros(4), offset=sign * offset
+    )
+    eta = (offset[1:] - offset[1:].max()) + exog[1:] @ params
+    log_total = logsumexp(eta)
+    expected_score = exog[2] - np.exp(eta - log_total) @ exog[1:]
+    assert_allclose(model.loglike(sign * params), eta[1] - log_total)
+    assert_allclose(model.score(sign * params), sign * expected_score)
+
+
+@pytest.mark.parametrize("n_success", [1, 2, 4, 5])
+@pytest.mark.parametrize("use_offset", [False, True])
+def test_logit_enumerated_likelihood(n_success, use_offset):
+    exog = np.column_stack((np.linspace(-1, 1, 6), [0, 1, -1, 0.5, 2, -0.5]))
+    endog = np.zeros(6)
+    endog[:n_success] = 1
+    params = np.array([0.2, -0.3])
+    offset = np.linspace(-0.4, 0.2, 6) if use_offset else np.zeros(6)
+    model = ConditionalLogit(endog, exog, groups=np.zeros(6), offset=offset)
+
+    # Enumerating every possible success subset is independent of the dynamic
+    # program. Its weighted covariate mean and covariance give score/Hessian.
+    subsets = np.array(list(combinations(range(6), n_success)))
+    subset_exog = exog[subsets].sum(axis=1)
+    linear = exog @ params + offset
+    weights = np.exp(linear[subsets].sum(axis=1))
+    mean_exog = weights @ subset_exog / weights.sum()
+    expected_score = endog @ exog - mean_exog
+    expected_hess = (
+        np.outer(mean_exog, mean_exog)
+        - (subset_exog.T * weights) @ subset_exog / weights.sum()
+    )
+    expected_ll = endog @ linear - np.log(weights.sum())
+    assert_allclose(model.loglike(params), expected_ll, rtol=1e-13)
+    assert_allclose(model.score(params), expected_score, rtol=1e-13, atol=1e-14)
+
+    for j in range(len(params)):
+        complex_params = params.astype(complex)
+        complex_params[j] += 1e-20j
+        assert_allclose(
+            model.loglike(complex_params).imag / 1e-20,
+            expected_score[j],
+            rtol=1e-12,
+            atol=1e-13,
+        )
+        assert_allclose(
+            model.score(complex_params).imag / 1e-20,
+            expected_hess[:, j],
+            rtol=1e-12,
+            atol=1e-13,
+        )
 
 
 @pytest.fixture(params=[ConditionalLogit, ConditionalPoisson, ConditionalMNLogit])
@@ -154,13 +315,6 @@ def test_logit_1d():
 
     model = ConditionalLogit(y, x, groups=g)
 
-    # Check the gradient for the denominator of the partial likelihood
-    for x in -1, 0, 1, 2:
-        params = np.r_[x,]
-        _, grad = model._denom_grad(0, params)
-        ngrad = approx_fprime(params, lambda x: model._denom(0, x)).squeeze()
-        assert_allclose(grad, ngrad)
-
     # Check the gradient for the loglikelihood
     for x in -1, 0, 1, 2:
         grad = approx_fprime(np.r_[x,], model.loglike).squeeze()
@@ -213,13 +367,6 @@ def test_logit_2d():
     x[:, 1] = x2
 
     model = ConditionalLogit(y, x, groups=g)
-
-    # Check the gradient for the denominator of the partial likelihood
-    for x in -1, 0, 1, 2:
-        params = np.r_[x, -1.5 * x]
-        _, grad = model._denom_grad(0, params)
-        ngrad = approx_fprime(params, lambda x: model._denom(0, x))
-        assert_allclose(grad, ngrad, rtol=1e-5)
 
     # Check the gradient for the loglikelihood
     for x in -1, 0, 1, 2:
