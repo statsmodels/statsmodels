@@ -2507,6 +2507,9 @@ class RegressionResults(base.LikelihoodModelResults):
                 mat = mat[idx]  # remove constant
                 if mat.size == 0:  # see  #3642
                     return np.nan
+            if np.isnan(self.cov_params(r_matrix=mat)).any():
+                # not identified, e.g. HC2/HC3 with leverage one, see #10659
+                return np.nan
             ft = self.f_test(mat)
             # using backdoor to set another attribute that we already have
             self._cache["f_pvalue"] = float(ft.pvalue)
@@ -2649,10 +2652,11 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Heteroscedasticity robust covariance matrix. See HC2_se.
         """
-        wexog = self.model.wexog
-        h = self._abat_diagonal(wexog, self.normalized_cov_params)
+        import statsmodels.stats.sandwich_covariance as sw
+
+        h, lev_one = sw._hc_leverage(self)
         self.het_scale = self.wresid**2 / (1 - h)
-        cov_HC2 = self._HCCM(self.het_scale)
+        cov_HC2 = sw._nan_lev_one_params(self, self._HCCM(self.het_scale), lev_one)
         return cov_HC2
 
     @cache_readonly
@@ -2660,10 +2664,11 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Heteroscedasticity robust covariance matrix. See HC3_se.
         """
-        wexog = self.model.wexog
-        h = self._abat_diagonal(wexog, self.normalized_cov_params)
+        import statsmodels.stats.sandwich_covariance as sw
+
+        h, lev_one = sw._hc_leverage(self)
         self.het_scale = (self.wresid / (1 - h)) ** 2
-        cov_HC3 = self._HCCM(self.het_scale)
+        cov_HC3 = sw._nan_lev_one_params(self, self._HCCM(self.het_scale), lev_one)
         return cov_HC3
 
     @cache_readonly
@@ -2707,6 +2712,12 @@ class RegressionResults(base.LikelihoodModelResults):
         then have another attribute `het_scale`, which is in this case is
         resid^(2)/(1-h_ii).
 
+        .. versionchanged:: 0.15.1
+
+           Observations with leverage one are dropped from the sandwich with a
+           ``ValueWarning``, and the variance of the parameters that depend on
+           them is ``nan``. Before, it depended on floating point rounding.
+
         """
         return np.sqrt(np.diag(self.cov_HC2))
 
@@ -2721,6 +2732,12 @@ class RegressionResults(base.LikelihoodModelResults):
         When HC3_se or cov_HC3 is called the RegressionResults instance will
         then have another attribute `het_scale`, which is in this case is
         resid^(2)/(1-h_ii)^(2).
+
+        .. versionchanged:: 0.15.1
+
+           Observations with leverage one are dropped from the sandwich with a
+           ``ValueWarning``, and the variance of the parameters that depend on
+           them is ``nan``. Before, it depended on floating point rounding.
 
         """
         return np.sqrt(np.diag(self.cov_HC3))

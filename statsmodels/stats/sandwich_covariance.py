@@ -104,10 +104,14 @@ for inference with clustered errors,” The Review of Economics and
 Statistics 90, no. 3 (2008): 414-427.
 
 """
+import warnings
+
 import numpy as np
+from scipy import linalg
 
 from statsmodels.stats.moment_helpers import se_cov
 from statsmodels.tools.grouputils import combine_indices, group_sums
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.validation import int_like, string_like
 
 __all__ = [
@@ -196,6 +200,83 @@ def _HCCM(results, scale):
     return H
 
 
+_LEV_ONE_TOL = np.sqrt(np.finfo(float).eps)
+
+
+def _hc_leverage(results):
+    """
+    Leverage for HC2 and HC3, with leverage-one observations set to zero
+
+    Observations with leverage one have a residual of exactly zero, so
+    ``e / (1 - h)`` is ``0 / 0``. Their leverage is set to zero so that they
+    drop out of the sandwich, and a ``ValueWarning`` is issued, see #10659.
+
+    Parameters
+    ----------
+    results : RegressionResults
+        Regression results instance; uses ``results.model.wexog``.
+
+    Returns
+    -------
+    h : ndarray
+        The diagonal of the hat matrix, with zero for leverage-one
+        observations.
+    lev_one : ndarray
+        Boolean array that is True for leverage-one observations.
+    """
+    from statsmodels.base.covtype import _stacklevel_outside_statsmodels
+
+    wexog = np.asarray(results.model.wexog)
+    # pivoted QR is accurate also for ill-conditioned designs, where
+    # x_i (X'X)^{-1} x_i' can be off from one by much more than eps
+    q, r, _ = linalg.qr(wexog, mode="economic", pivoting=True)
+    rank = getattr(results.model, "rank", None)
+    if rank is None:
+        rdiag = np.abs(np.diag(r))
+        rtol = max(wexog.shape) * np.finfo(float).eps
+        rank = int((rdiag > rdiag.max() * rtol).sum())
+    h = (q[:, :rank] ** 2).sum(1)
+    lev_one = h > 1 - _LEV_ONE_TOL
+    if lev_one.any():
+        warnings.warn(
+            f"Observations {np.flatnonzero(lev_one).tolist()} have leverage "
+            "one. The HC2/HC3 variance of parameters that depend on them is "
+            "not identified and is set to nan.",
+            ValueWarning,
+            stacklevel=_stacklevel_outside_statsmodels(),
+        )
+        h = np.where(lev_one, 0.0, h)
+    return h, lev_one
+
+
+def _nan_lev_one_params(results, cov, lev_one):
+    """
+    Set the covariance of parameters that use leverage-one observations to nan
+
+    Parameters
+    ----------
+    results : RegressionResults
+        Regression results instance; uses ``results.model.pinv_wexog``.
+    cov : ndarray
+        Covariance matrix of the parameters. It is changed in place.
+    lev_one : ndarray
+        Boolean array that is True for leverage-one observations.
+
+    Returns
+    -------
+    ndarray
+        ``cov`` with nan in the rows and columns of the parameters whose
+        estimate depends on a leverage-one observation. All other parameters
+        do not depend on these observations.
+    """
+    if lev_one.any():
+        pinv = np.abs(results.model.pinv_wexog)
+        affected = pinv[:, lev_one].max(1) > _LEV_ONE_TOL * pinv.max(1)
+        cov[affected, :] = np.nan
+        cov[:, affected] = np.nan
+    return cov
+
+
 def cov_hc0(results):
     """
     Heteroscedasticity robust covariance matrix, White's (1980) HC0
@@ -251,6 +332,12 @@ def cov_hc2(results):
     Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1) where
     h_ii = x_i(X.T X)^(-1)x_i.T. See statsmodels.RegressionResults.
 
+    .. versionchanged:: 0.15.1
+
+       Observations with leverage one are dropped from the sandwich with a
+       ``ValueWarning``, and the variance of the parameters that depend on
+       them is ``nan``. Before, it depended on floating point rounding.
+
     Parameters
     ----------
     results : result instance
@@ -263,16 +350,9 @@ def cov_hc2(results):
         parameter estimates.
     """
 
-    # probably could be optimized
-    h = np.diag(
-        np.dot(
-            results.model.exog,
-            np.dot(results.normalized_cov_params, results.model.exog.T),
-        )
-    )
-
-    het_scale = results.resid**2/(1-h)
-    cov_hc2_ = _HCCM(results, het_scale)
+    h, lev_one = _hc_leverage(results)
+    het_scale = results.resid**2 / (1 - h)
+    cov_hc2_ = _nan_lev_one_params(results, _HCCM(results, het_scale), lev_one)
     return cov_hc2_
 
 
@@ -282,6 +362,12 @@ def cov_hc3(results):
 
     Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
     where h_ii = x_i(X.T X)^(-1)x_i.T. See statsmodels.RegressionResults.
+
+    .. versionchanged:: 0.15.1
+
+       Observations with leverage one are dropped from the sandwich with a
+       ``ValueWarning``, and the variance of the parameters that depend on
+       them is ``nan``. Before, it depended on floating point rounding.
 
     Parameters
     ----------
@@ -295,16 +381,9 @@ def cov_hc3(results):
         parameter estimates.
     """
 
-    # above probably could be optimized to only calc the diag
-
-    h = np.diag(
-        np.dot(
-            results.model.exog,
-            np.dot(results.normalized_cov_params, results.model.exog.T),
-        )
-    )
+    h, lev_one = _hc_leverage(results)
     het_scale = (results.resid / (1 - h)) ** 2
-    cov_hc3_ = _HCCM(results, het_scale)
+    cov_hc3_ = _nan_lev_one_params(results, _HCCM(results, het_scale), lev_one)
     return cov_hc3_
 
 
