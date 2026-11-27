@@ -2,7 +2,6 @@
 
 from collections.abc import Mapping
 import copy
-import inspect
 import re
 import textwrap
 from typing import NamedTuple
@@ -137,7 +136,7 @@ class Parameter(NamedTuple):
     """
 
     name: str
-    type: type
+    type: str
     desc: list[str]
 
 
@@ -246,8 +245,6 @@ class NumpyDocString(Mapping):
 
             if name.startswith(".."):  # index section
                 yield name, data[1:]
-            elif len(data) < 2:
-                yield StopIteration
             else:
                 yield name, self._strip(data[2:])
 
@@ -324,8 +321,6 @@ class NumpyDocString(Mapping):
         def parse_item_name(text):
             """Match ':role:`name`' or 'name'"""
             m = self._func_rgx.match(text)
-            if not m:
-                raise ParseError(f"{text} is not a item name")
             role = m.group("role")
             name = m.group("name") if role else m.group("name2")
             return name, role, m.end()
@@ -375,8 +370,7 @@ class NumpyDocString(Mapping):
 
         out = {}
         section = section.split("::")
-        if len(section) > 1:
-            out["default"] = strip_each_in(section[1].split(","))[0]
+        out["default"] = strip_each_in(section[1].split(","))[0]
         for line in content:
             line_parts = line.split(":")
             if len(line_parts) > 2:
@@ -399,8 +393,7 @@ class NumpyDocString(Mapping):
                     continue
             break
 
-        if summary is not None:
-            self["Summary"] = summary
+        self["Summary"] = summary
 
         if not self._is_at_section():
             self["Extended Summary"] = self._read_to_next_section()
@@ -454,14 +447,6 @@ class NumpyDocString(Mapping):
                 self[section_name] = content
 
     def _error_location(self, msg):
-        if hasattr(self, "_obj"):
-            # we know where the docs came from:
-            try:
-                filename = inspect.getsourcefile(self._obj)
-            except TypeError:
-                filename = None
-            msg = msg + (f" in the docstring of {self._obj} in {filename}.")
-
         raise ValueError(msg)
 
     # string conversion routines
