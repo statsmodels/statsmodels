@@ -1,0 +1,6 @@
+- The details tables of ``summary_details`` and ``summary`` of the news
+  of state space models (``NewsResults``) showed a weight within
+  ``tolerance`` of one or zero as "1.0" or "0", for example a weight of
+  0.9 as "1.0" with ``tolerance=0.3``. Only weights that differ from one
+  or zero by rounding errors are shown that way; ``tolerance`` only
+  selects the rows. :pr:`11131`

@@ -1815,8 +1815,8 @@ def test_summary_details_groupby(source, groupby):
     for row, (_, value) in zip(values[1:], desired.iterrows(), strict=True):
         row = np.array(row)
         assert_equal(row[is_key], [str(x) for x in value[is_key]])
-        # The weights are rounded to 1.0 when they are within the tolerance
-        # of 1, otherwise all numbers are shown with 4 digits (atol for the
+        # The weights are shown as 1.0 when they are within 1e-10 of 1,
+        # otherwise all numbers are shown with 4 digits (atol for the
         # rounding to 4 digits)
         assert_allclose(row[~is_key].astype(float),
                         value[~is_key].astype(float), atol=5e-5)
@@ -1982,27 +1982,70 @@ def test_summary_details_single_impact_date():
     assert_("impact date = 2009Q4" in table.title)
 
 
-def test_summary_details_weights_below_tolerance():
-    # Weights smaller than the tolerance are shown as 0, while the impacts
-    # (larger than the tolerance) are shown
-    news = bivariate_news()
-    news.tolerance = 0.3
-    table = news.summary_details(sparsify=False)
+def bivariate_weight(source, impact_date, impacted, updated, scale=1.0,
+                     transition=((0.5, 0.1), (0.2, 0.9))):
+    # The weights of bivariate_news in closed form: the news of 2009Q3 (of
+    # both variables) has weights 0 on 2009Q2 (observed in both datasets), I
+    # on 2009Q3 and A**k on k periods later; the revisions of 2009Q2 (with
+    # the previous data) have weights A**k on k periods later. With the second
+    # variable multiplied by `scale`, each weight is multiplied by the ratio
+    # of the scales of the impacted and updated variables.
+    transition = np.array(transition)
+    variables = ["realgdp", "unemp"]
+    i, j = variables.index(impacted), variables.index(updated)
+    start = pd.Period("2009Q3" if source == "news" else "2009Q2", freq="Q")
+    k = (pd.Period(impact_date, freq="Q") - start).n
+    if k < 0:
+        return 0.0
+    weight = np.linalg.matrix_power(transition, k)[i, j]
+    return weight * (scale if i == 1 else 1.0) / (scale if j == 1 else 1.0)
+
+
+@pytest.mark.parametrize("source, kwargs", [
+    ("news", {}), ("revisions", {}),
+    # Without revision details
+    ("news", {"revisions_details_start": False}),
+    # The revisions of unemp, a variable without news
+    ("revisions", {"update": [1.0, np.nan]})],
+    ids=["news", "revisions", "news-no-revision-details",
+         "revisions-without-news"])
+@pytest.mark.parametrize("tolerance", [0, 1e-10, 0.3])
+def test_summary_details_weights_not_rounded_by_tolerance(source, kwargs,
+                                                          tolerance):
+    # The tolerance only selects the rows (those with an absolute impact
+    # larger than it). The weights 1 and 0 (up to rounding errors) are shown
+    # as "1.0" and "0", and the others with their values: with
+    # tolerance=0.3, the weight 0.9 is not shown as "1.0", nor the weights
+    # 0.1-0.28 of impacts above 0.3 as "0".
+    news = bivariate_news(**kwargs)
+    news.tolerance = tolerance
+    table = news.summary_details(source=source, sparsify=False,
+                                 float_format="%.4f")
     values = table_values(table)
-    details = news.details_by_impact
-    weight_col = values[0].index("weight")
-    impact_col = values[0].index("impact")
-    small = details[np.abs(details["weight"]) < 0.3]
-    assert_(len(small) > 0)
-    n_small = 0
+    details = (news.details_by_impact if source == "news"
+               else news.revision_details_by_impact)
+    assert_equal(len(values) - 1, len(details))
+    columns = values[0]
+    n_rounded = 0
     for row in values[1:]:
-        key = (row[4], row[5], row[0], row[1])
-        if key in small.index:
-            n_small += 1
-            impact = small.loc[key, "impact"]
-            assert_equal(row[weight_col], "0")
-            assert_equal(row[impact_col], f"{impact:.2f}")
-    assert_equal(n_small, len(small))
+        row = dict(zip(columns, row, strict=True))
+        date = row["update date" if source == "news" else "revision date"]
+        updated = row["updated variable" if source == "news"
+                      else "revised variable"]
+        k = (pd.Period(row["impact date"], freq="Q")
+             - pd.Period(date, freq="Q")).n
+        if k == 0 and row["impacted variable"] == updated:
+            assert_equal(row["weight"], "1.0")
+        elif k <= 0:
+            assert_equal(row["weight"], "0")
+        else:
+            desired = bivariate_weight(source, row["impact date"],
+                                       row["impacted variable"], updated)
+            # atol for the rounding to 4 digits
+            assert_allclose(float(row["weight"]), desired, rtol=0, atol=5e-5)
+            n_rounded += abs(desired - round(desired)) < tolerance
+    # Weights that the tolerance rounded to 1.0 or 0 before are in the table
+    assert_equal(n_rounded > 0, tolerance == 0.3)
 
 
 @pytest.mark.parametrize("sparsify", [True, False])
@@ -2390,8 +2433,8 @@ def test_summary_details_multiple_tables_by_impact(source, groupby):
                                    strict=True):
             row = np.array(row)
             assert_equal(row[is_key], [str(x) for x in value[is_key]])
-            # The weights are rounded to 1.0 when they are within the
-            # tolerance of 1 (atol for the rounding to 4 digits)
+            # The weights are shown as 1.0 when they are within 1e-10 of 1
+            # (atol for the rounding to 4 digits)
             assert_allclose(row[~is_key].astype(float),
                             value[~is_key].astype(float), rtol=0, atol=5e-5)
 
@@ -2765,3 +2808,89 @@ def test_revisions_details_start_float():
     res_upd = res_prev.apply(y)
     with pytest.raises(ValueError):
         res_upd.news(res_prev, comparison_type="previous", revisions_details_start=36.0)
+
+
+@pytest.mark.parametrize("source", ["news", "revisions"])
+def test_summary_details_weights_relative_to_scale(source):
+    # The model of bivariate_news with a negative effect of realgdp on unemp
+    # and unemp multiplied by 1e12: the weights of unemp on realgdp are about
+    # 1e-13 and those of realgdp on unemp about -1e11. A weight is shown as 0
+    # if it is smaller than 1e-10 times the largest absolute weight of the
+    # same pair of variables, so the small weights are shown with their
+    # values, and the rounding errors of the weights 0 of realgdp on unemp
+    # (about 1e-6) as "0".
+    scale = 1e12
+    transition = ((0.5, 0.1), (-0.2, 0.9))
+    endog = dta[["realgdp", "unemp"]].copy()
+    endog["realgdp"] = np.log(endog["realgdp"]).diff() * 400
+    endog = endog.iloc[1:]
+    endog["unemp"] *= scale
+    previous = endog.loc[:"2009Q2"].copy()
+    previous.iloc[-1] = 0.0
+    params = np.r_[0.5, 0.1 / scale, -0.2 * scale, 0.9, 1.0, 0.1 * scale,
+                   1.1 * scale]
+    res = varmax.VARMAX(previous, trend="n").smooth(params)
+    news = res.news(endog, start="2009Q2", end="2010Q1",
+                    revisions_details_start=True, tolerance=0)
+    table = news.summary_details(source=source, sparsify=False,
+                                 float_format="%.4g")
+    values = table_values(table)
+    columns = values[0]
+    n_small = n_zero = 0
+    for row in values[1:]:
+        row = dict(zip(columns, row, strict=True))
+        date = row["update date" if source == "news" else "revision date"]
+        updated = row["updated variable" if source == "news"
+                      else "revised variable"]
+        impacted = row["impacted variable"]
+        k = (pd.Period(row["impact date"], freq="Q")
+             - pd.Period(date, freq="Q")).n
+        if k == 0 and impacted == updated:
+            assert_equal(row["weight"], "1.0")
+        elif k <= 0:
+            assert_equal(row["weight"], "0")
+            n_zero += impacted == "unemp"
+        else:
+            desired = bivariate_weight(source, row["impact date"], impacted,
+                                       updated, scale=scale,
+                                       transition=transition)
+            # rtol for the rounding to 4 significant digits
+            assert_allclose(float(row["weight"]), desired, rtol=1e-3)
+            n_small += abs(desired) < 1e-10
+    assert_(n_small > 0)
+    assert_(n_zero > 0)
+
+
+@pytest.mark.parametrize("source", ["news", "revisions"])
+def test_summary_details_small_weights(source):
+    # AR(1) with phi = 0.001: the weights phi**k of the revision of 2009Q2
+    # and of the news of 2009Q3 on k periods later are shown with their
+    # values down to 1e-9. The weight 0 of the news on 2009Q2 is shown as
+    # "0" if its impact is not 0 because of rounding errors (it is left out
+    # otherwise)
+    phi = 1e-3
+    endog = dta["infl"]
+    previous = endog.loc[:"2009Q2"].copy()
+    previous.iloc[-1] = 0.0
+    res = sarimax.SARIMAX(previous).smooth([phi, 1.0])
+    news = res.news(endog, start="2009Q2", end="2010Q1",
+                    revisions_details_start=True, tolerance=0)
+    table = news.summary_details(source=source, sparsify=False,
+                                 float_format="%.4g")
+    values = table_values(table)
+    start = pd.Period("2009Q3" if source == "news" else "2009Q2", freq="Q")
+    weights = {}
+    for row in values[1:]:
+        row = dict(zip(values[0], row, strict=True))
+        k = (pd.Period(row["impact date"], freq="Q") - start).n
+        weights[k] = row["weight"]
+    if source == "news" and -1 in weights:
+        assert_equal(weights.pop(-1), "0")
+    assert_equal(sorted(weights), [0, 1, 2] if source == "news"
+                 else [0, 1, 2, 3])
+    for k, weight in weights.items():
+        if k == 0:
+            assert_equal(weight, "1.0")
+        else:
+            # rtol for the rounding to 4 significant digits
+            assert_allclose(float(weight), phi**k, rtol=1e-3)
