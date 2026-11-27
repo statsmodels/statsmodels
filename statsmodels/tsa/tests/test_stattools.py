@@ -3576,10 +3576,12 @@ def test_pacf_burg():
 
 
 def test_pacf_burg_error():
+    # zeros, not np.empty: the series is demeaned before nlags is checked,
+    # and uninitialized memory can hold nan and inf (a RuntimeWarning)
     with pytest.raises(ValueError):
-        pacf_burg(np.empty((20, 2)), 10)
+        pacf_burg(np.zeros((20, 2)), 10)
     with pytest.raises(ValueError):
-        pacf_burg(np.empty(100), 101)
+        pacf_burg(np.zeros(100), 101)
 
 
 def _column_input_cases():
