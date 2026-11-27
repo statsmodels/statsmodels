@@ -970,6 +970,18 @@ class VARMAXResults(MLEResults):
         Returns
         -------
         results : VARMAXResults
+
+        Notes
+        -----
+        The new model is initialized with the predicted state of the first new
+        period, so it uses the predicted timing convention.
+
+        .. versionchanged:: 0.15.1
+
+           With the filtered timing convention (``timing_init_filtered``),
+           the new results were one period late: the new model treated the
+           predicted state of the first new period as the filtered state of
+           the period before.
         """
         # If we have exog, then the last element of predicted_state and
         # predicted_state_cov are nan (since they depend on the exog associated
@@ -986,6 +998,9 @@ class VARMAXResults(MLEResults):
         kwargs.setdefault("trend_offset", self.nobs + self.model.trend_offset)
         mod = self.model.clone(endog, exog=exog, **kwargs)
 
+        # The initial state is the predicted state of the first new period,
+        # so the new model uses the predicted timing convention
+        mod.ssm.timing_init_filtered = False
         mod.ssm.initialization = Initialization(
             mod.k_states, "known", constant=initial_state,
             stationary_cov=initial_state_cov)

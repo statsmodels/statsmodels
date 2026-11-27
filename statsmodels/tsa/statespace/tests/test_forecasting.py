@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.statespace import sarimax
+from statsmodels.tsa.statespace import sarimax, varmax
 
 
 @pytest.mark.parametrize("data", ["list", "numpy", "range", "date", "period"])
@@ -83,3 +83,69 @@ def test_extend_kwargs_not_modified(model):
     actual = res.forecast(3, exog=exog[30:33], extend_kwargs=extend_kwargs)
     assert extend_kwargs == {}
     assert_allclose(actual, res.forecast(3, exog=exog[30:33]), rtol=1e-12)
+
+
+@pytest.mark.parametrize("timing_init_filtered", [False, True])
+def test_extend_append_apply_filtered_timing(timing_init_filtered):
+    # extend initializes the new model with the predicted state of the first
+    # new period. With the filtered timing convention, the new model treated
+    # it as the filtered state of the period before, so the extension was one
+    # period late. extend equals the last periods of the model of the whole
+    # sample; append and apply refilter their whole sample.
+    endog = np.array([1.0, 0.5, -0.3, 0.8, 1.2, 0.1, -0.4, 0.6, 0.9, 0.2, 0.4, 0.3])
+    params = [0.5, 1.0, 1.0]
+    # tolerance=0 so that the filter does not converge: with the filtered
+    # timing, a converged filter leaves its last predicted state covariance,
+    # from which the extension starts, at zero
+    kwargs = dict(
+        order=(1, 0, 0),
+        measurement_error=True,
+        tolerance=0,
+        timing_init_filtered=timing_init_filtered,
+    )
+    res = sarimax.SARIMAX(endog[:10], **kwargs).smooth(params)
+    full = sarimax.SARIMAX(endog, **kwargs).smooth(params)
+
+    ext = res.extend(endog[10:])
+    assert_allclose(ext.fittedvalues, full.fittedvalues[10:], rtol=1e-12)
+    assert_allclose(ext.llf_obs, full.llf_obs[10:], rtol=1e-12)
+    assert_allclose(ext.filtered_state, full.filtered_state[:, 10:], rtol=1e-12)
+    assert_allclose(ext.smoothed_state, full.smoothed_state[:, 10:], rtol=1e-12)
+    assert_allclose(
+        ext.smoothed_state_cov, full.smoothed_state_cov[..., 10:], rtol=1e-12
+    )
+
+    app = res.append(endog[10:])
+    assert_allclose(app.fittedvalues, full.fittedvalues, rtol=1e-12)
+    assert_allclose(app.smoothed_state, full.smoothed_state, rtol=1e-12)
+    app = res.append(endog[10:], copy_initialization=True)
+    assert_allclose(app.fittedvalues, full.fittedvalues, rtol=1e-12)
+    assert_allclose(app.smoothed_state, full.smoothed_state, rtol=1e-12)
+
+    new = np.array([0.3, -0.2, 0.5, 0.1])
+    fresh = sarimax.SARIMAX(new, **kwargs).smooth(params)
+    applied = res.apply(new)
+    assert_allclose(applied.fittedvalues, fresh.fittedvalues, rtol=1e-12)
+    assert_allclose(applied.smoothed_state, fresh.smoothed_state, rtol=1e-12)
+
+
+@pytest.mark.parametrize("timing_init_filtered", [False, True])
+def test_varmax_extend_filtered_timing(timing_init_filtered):
+    # VARMAXResults.extend does not call MLEResults.extend
+    rng = np.random.default_rng(20261124)
+    endog = rng.standard_normal((15, 2))
+    params = [0.1, -0.2, 0.5, 0.1, -0.2, 0.3, 1.0, 0.2, 0.8, 0.5, 0.4]
+    kwargs = dict(
+        order=(1, 0),
+        trend="c",
+        measurement_error=True,
+        tolerance=0,
+        timing_init_filtered=timing_init_filtered,
+    )
+    res = varmax.VARMAX(endog[:12], **kwargs).smooth(params)
+    full = varmax.VARMAX(endog, **kwargs).smooth(params)
+
+    ext = res.extend(endog[12:])
+    assert_allclose(ext.fittedvalues, full.fittedvalues[12:], rtol=1e-12)
+    assert_allclose(ext.llf_obs, full.llf_obs[12:], rtol=1e-12)
+    assert_allclose(ext.smoothed_state, full.smoothed_state[:, 12:], rtol=1e-12)
