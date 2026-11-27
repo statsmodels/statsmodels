@@ -844,3 +844,27 @@ def test_effectsize_2proportions_invalid_counts_raises():
     assert np.isfinite(eff).all()
     eff, var_eff = effectsize_2proportions(20, 20, 30, 30)
     assert np.isfinite(eff).all()
+
+
+
+@pytest.mark.parametrize("offset", [0.0, 2.0**40])
+def test_combine_effects_cochran_q_with_large_common_offset(offset):
+    # With unit variances, eff = offset + (-2, 0, 2) gives Q = 8
+    # and DerSimonian-Laird tau^2 = (8 - 2) / (3 - 1) = 3.
+    eff = np.array([-2.0, 0.0, 2.0]) + offset
+    res = combine_effects(eff, np.ones(3), method_re="dl")
+    assert_allclose(res.q, 8.0, rtol=0, atol=1e-6)
+    assert_allclose(res.tau2, 3.0, rtol=0, atol=1e-6)
+
+
+@pytest.mark.parametrize("offset", [0.0, 2.0**52, -(2.0**52)])
+@pytest.mark.parametrize(("variance", "expected_q"), [([1, 1], 0.5), ([1, 3], 0.25)])
+def test_combine_effects_cochran_q_resolves_sub_ulp_weighted_mean(
+    offset, variance, expected_q
+):
+    # With two effects, Q = (eff[1] - eff[0])**2 / (var[0] + var[1]).
+    # The mean at a large common offset may not itself be representable.
+    eff = np.array([offset, offset + 1])
+    res = combine_effects(eff, np.array(variance), method_re="dl")
+    assert_allclose(res.q, expected_q, rtol=1e-15, atol=0)
+    assert_equal(res.tau2, 0)
