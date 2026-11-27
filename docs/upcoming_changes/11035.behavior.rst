@@ -1,0 +1,6 @@
+- ``filter``, ``loglike`` and ``loglikeobs`` of ``KalmanFilter`` and ``smooth`` of
+  ``KalmanSmoother`` swapped the ``filter_timing`` and ``tolerance``
+  arguments: ``filter_timing=1`` ran with the model's timing and a
+  convergence tolerance of 1, and a given ``tolerance`` was used as the
+  timing. Both are used as given, so results of calls that pass either
+  argument change. :pr:`11035`

@@ -1,0 +1,7 @@
+- Options given to ``filter``, ``loglike``, ``loglikeobs`` or ``smooth``
+  of state space models reached the compiled filter, but the results and
+  the concentrated loglikelihood read the model's options:
+  ``FILTER_CONCENTRATED`` gave a loglikelihood without the scale terms,
+  ``INVERT_LU`` gave standardized forecast errors of zero, and
+  ``FILTER_COLLAPSED`` gave forecasts of the collapsed series. Results of
+  such calls change. :pr:`11036`
