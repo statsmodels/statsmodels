@@ -6,6 +6,12 @@ License: Simplified-BSD
 """
 
 from statsmodels.compat.pandas import MONTH_END
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
+import os
+from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -13,12 +19,14 @@ import pandas as pd
 import pytest
 from scipy.signal import lfilter
 
+import statsmodels
 from statsmodels.tools.sm_exceptions import (
     EstimationWarning,
     SpecificationWarning,
 )
 from statsmodels.tsa.statespace import (
     dynamic_factor,
+    mlemodel,
     sarimax,
     structural,
     varmax,
@@ -2161,3 +2169,163 @@ def test_time_varying_selection():
     assert_equal(mod["obs_cov"].shape, (mod.k_endog, mod.k_endog))
     assert_equal(mod["state_cov"].shape, (mod.ssm.k_posdef, mod.ssm.k_posdef))
     mod.simulate([], 10)
+
+
+SYSTEM_MATRICES = [
+    "design",
+    "obs_intercept",
+    "obs_cov",
+    "transition",
+    "state_intercept",
+    "selection",
+    "state_cov",
+]
+
+
+def _simulate_recursion(ssm, nsimulations, eps, eta, initial_state):
+    # y_t = d_t + Z_t a_t + eps_t and a_{t+1} = c_t + T_t a_t + R_t eta_t,
+    # starting from a_1 = initial_state; a time-invariant matrix has a single
+    # period
+    def matrix_at(name, t):
+        matrix = getattr(ssm, name)
+        return matrix[..., t if matrix.shape[-1] > 1 else 0]
+
+    obs = np.zeros((nsimulations, ssm.k_endog))
+    states = np.zeros((nsimulations, ssm.k_states))
+    state = np.asarray(initial_state, dtype=float)
+    for t in range(nsimulations):
+        states[t] = state
+        obs[t] = matrix_at("obs_intercept", t) + matrix_at("design", t) @ state
+        obs[t] += eps[t]
+        state = (
+            matrix_at("state_intercept", t)
+            + matrix_at("transition", t) @ state
+            + matrix_at("selection", t) @ eta[t]
+        )
+    return obs, states
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_simulate_fewer_periods_time_varying(missing):
+    # A simulation shorter than a time-varying model raised "Invalid
+    # time-varying dimension": the simulated model was built from the
+    # full-length matrices. It uses the first nsimulations periods, as a model
+    # built on those periods does. With missing data, the second simulated
+    # model (built for simulation smoothing) raised the same error.
+    nobs, nsimulations = 10, 5
+    endog = np.zeros((nobs, 2))
+    if missing:
+        endog[2, 0] = np.nan
+    mod = TVSS(endog)
+    rng = np.random.default_rng(3461)
+    # TVSS has a time-invariant state intercept
+    mod["state_intercept"] = rng.standard_normal((mod.k_states, nobs))
+    eps = rng.standard_normal((nsimulations, mod.k_endog))
+    eta = rng.standard_normal((nsimulations, mod.ssm.k_posdef))
+    initial_state = rng.standard_normal(mod.k_states)
+    shocks = dict(
+        measurement_shocks=eps, state_shocks=eta, initial_state=initial_state
+    )
+
+    actual = mod.ssm.simulate(nsimulations, **shocks)
+
+    first = mlemodel.MLEModel(
+        endog[:nsimulations],
+        k_states=mod.k_states,
+        k_posdef=mod.ssm.k_posdef,
+        initialization="diffuse",
+    )
+    for name in SYSTEM_MATRICES:
+        first.ssm[name] = getattr(mod.ssm, name)[..., :nsimulations]
+    desired = first.ssm.simulate(nsimulations, **shocks)
+    recursion = _simulate_recursion(mod.ssm, nsimulations, eps, eta, initial_state)
+    for i in range(2):
+        assert_allclose(actual[i], desired[i], rtol=1e-12)
+        assert_allclose(actual[i], recursion[i], rtol=1e-10)
+
+
+def _local_level_ar(endog):
+    mod = mlemodel.MLEModel(endog, k_states=1, k_posdef=1)
+    mod["design"] = [[1.0]]
+    mod["obs_intercept"] = [0.3]
+    mod["obs_cov"] = [[1.0]]
+    mod["transition"] = [[0.5]]
+    mod["state_intercept"] = [0.2]
+    mod["selection"] = [[1.0]]
+    mod["state_cov"] = [[1.0]]
+    mod.ssm.initialize_known([0.0], [[1.0]])
+    return mod
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_simulate_more_periods_than_model(missing):
+    # A time-invariant model can simulate more periods than it has. With
+    # missing data, the simulator copied nsimulations periods of the model's
+    # observations (reading past their end) into a second simulated model
+    # that a simulation does not use. The simulation equals that of the
+    # model extended to nsimulations periods.
+    nobs, nsimulations = 10, 25
+    endog = np.zeros(nobs)
+    if missing:
+        endog[3] = np.nan
+    mod = _local_level_ar(endog)
+    rng = np.random.default_rng(7310)
+    eps = rng.standard_normal((nsimulations, 1))
+    eta = rng.standard_normal((nsimulations, 1))
+    initial_state = rng.standard_normal(1)
+    shocks = dict(
+        measurement_shocks=eps, state_shocks=eta, initial_state=initial_state
+    )
+
+    actual = mod.ssm.simulate(nsimulations, **shocks)
+    extended = mod.ssm.extend(np.zeros((nsimulations - nobs, 1)))
+    assert_equal(extended.nobs, nsimulations)
+    desired = extended.simulate(nsimulations, **shocks)
+    recursion = _simulate_recursion(mod.ssm, nsimulations, eps, eta, initial_state)
+    for i in range(2):
+        assert_allclose(actual[i], desired[i], rtol=1e-12)
+        assert_allclose(actual[i], recursion[i], rtol=1e-10)
+
+
+SIMULATE_LONG_MISSING = """
+import numpy as np
+from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
+
+endog = np.arange(10.0)
+endog[3] = np.nan
+ssm = SimulationSmoother(k_endog=1, k_states=1, k_posdef=1)
+ssm.bind(endog)
+ssm["design"] = [[1.0]]
+ssm["obs_cov"] = [[1.0]]
+ssm["transition"] = [[0.5]]
+ssm["selection"] = [[1.0]]
+ssm["state_cov"] = [[1.0]]
+ssm.initialize_known([0.0], [[1.0]])
+obs, states = ssm.simulate(10**6, rng=0)
+assert obs.shape == (10**6, 1)
+print("simulated")
+"""
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Emscripten does not support processes")
+def test_simulate_much_longer_than_model_missing(tmp_path):
+    # With missing data, a simulation much longer than the model read far past
+    # the end of the model's observations and crashed the interpreter (an
+    # access violation on Windows), so this runs in a subprocess. The
+    # subprocess imports the statsmodels that runs the tests.
+    env = os.environ.copy()
+    root = str(Path(statsmodels.__file__).parent.parent)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [root] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])
+    )
+    res = subprocess.run(
+        [sys.executable, "-c", SIMULATE_LONG_MISSING],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "simulated" in res.stdout
