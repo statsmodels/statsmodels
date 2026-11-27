@@ -870,7 +870,8 @@ cdef class {{prefix}}KalmanFilter(object):
         """
         Perform an iteration of the Kalman filter
         """
-        cdef int inc = 1
+        cdef blas_int inc = 1
+        cdef blas_int k_states2 = self.k_states2
         cdef int filtered_mean_t = self.t
         cdef int filtered_cov_t = self.t
         cdef int predicted_mean_t = self.t
@@ -998,6 +999,12 @@ cdef class {{prefix}}KalmanFilter(object):
             self._predicted_state = &self.predicted_state[0, predicted_mean_t+1]
             self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_cov_t+1]
             self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_cov_t+1]
+            # A converged filter does not compute the predicted state
+            # covariance matrix (`post_convergence` copies the converged one at
+            # the start of each period), so copy it for the period after the
+            # sample
+            if self.converged:
+                blas.{{prefix}}copy(&k_states2, self._converged_predicted_state_cov, &inc, self._predicted_state_cov, &inc)
             self.prediction(self, self.model)
 
         # Check for convergence

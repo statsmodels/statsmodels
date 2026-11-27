@@ -24,7 +24,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
 import pytest
-from scipy.linalg import solve_discrete_lyapunov
+from scipy.linalg import solve_discrete_are, solve_discrete_lyapunov
 from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tsa.statespace import _kalman_filter, _representation
@@ -32,6 +32,7 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_CONSERVE,
     MEMORY_NO_FORECAST,
     MEMORY_NO_PREDICTED,
+    KalmanFilter,
 )
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
@@ -931,3 +932,96 @@ def test_prediction_results_clear():
     for attr in cached_attrs:
         assert_allclose(getattr(pred, attr), values_before[attr])
         assert hasattr(pred, "_" + attr)
+
+
+@pytest.mark.parametrize("filter_univariate", [False, True])
+@pytest.mark.parametrize("k_states", [1, 2])
+def test_filtered_timing_converged_last_predicted_state_cov(k_states, filter_univariate):
+    # With filtered timing, the predicted state covariance matrix for the
+    # period after the sample (the last column of predicted_state_cov) was
+    # left at zero once the filter had converged, since a converged filter
+    # does not compute it. It is the converged matrix, as without convergence
+    # (tolerance=0) and as the solution of the Riccati equation.
+    endog = np.random.default_rng(5820).standard_normal((50, k_states))
+    design = np.eye(k_states)
+    obs_cov = np.diag([1.0, 0.6][:k_states])
+    transition = np.array([[0.5, 0.1], [0.0, 0.3]])[:k_states, :k_states]
+    state_cov = np.array([[1.0, 0.2], [0.2, 0.5]])[:k_states, :k_states]
+    kf = KalmanFilter(k_states, k_states, k_posdef=k_states)
+    kf.bind(endog)
+    kf["design"] = design
+    kf["obs_cov"] = obs_cov
+    kf["transition"] = transition
+    kf["selection"] = np.eye(k_states)
+    kf["state_cov"] = state_cov
+    kf.initialize_known(np.zeros(k_states), np.eye(k_states))
+    kf.timing_init_filtered = True
+    kf.filter_univariate = filter_univariate
+
+    res = kf.filter()
+    assert res.converged
+    assert res.period_converged < kf.nobs - 1
+    kf.tolerance = 0
+    desired = kf.filter()
+    assert not desired.converged
+    riccati = solve_discrete_are(transition.T, design.T, state_cov, obs_cov)
+
+    actual = res.predicted_state_cov[..., -1]
+    assert_allclose(actual, desired.predicted_state_cov[..., -1], rtol=1e-8)
+    assert_allclose(actual, riccati, rtol=1e-8)
+    assert_allclose(
+        res.predicted_state[..., -1], desired.predicted_state[..., -1], rtol=1e-8
+    )
+
+
+@pytest.mark.parametrize("dynamic", [None, 2])
+def test_filtered_timing_prediction(dynamic):
+    # FilterResults.predict (forecasts, dynamic prediction, and so
+    # get_forecast and get_prediction) runs a filter on missing data that
+    # starts from the predicted state of its first period. With filtered
+    # timing that filter treated it as the filtered state of the period before,
+    # so the predictions were one period late. They equal those with the
+    # predicted timing and the closed form of an AR(1) observed with noise.
+    phi, sigma2, obs_var = 0.5, 1.0, 0.8
+    endog = np.random.default_rng(3029).standard_normal((20, 1))
+
+    def predict(filtered_timing):
+        kf = KalmanFilter(1, 1, k_posdef=1)
+        kf.bind(endog)
+        kf["design"] = [[1.0]]
+        kf["obs_cov"] = [[obs_var]]
+        kf["transition"] = [[phi]]
+        kf["selection"] = [[1.0]]
+        kf["state_cov"] = [[sigma2]]
+        # The stationary distribution, the same for alpha_0 and alpha_1
+        kf.initialize_known(np.zeros(1), [[sigma2 / (1 - phi**2)]])
+        kf.timing_init_filtered = filtered_timing
+        res = kf.filter()
+        if dynamic is None:
+            start, end = kf.nobs, kf.nobs + 3
+        else:
+            start, end = 10, 15
+        return res, res.predict(start=start, end=end, dynamic=dynamic)
+
+    res, pred = predict(True)
+    _, desired = predict(False)
+    assert_allclose(pred.forecasts, desired.forecasts, rtol=1e-10)
+    assert_allclose(pred.forecasts_error_cov, desired.forecasts_error_cov, rtol=1e-10)
+
+    # Closed form: from the filtered state a_{t|t} and its variance P_{t|t}
+    # of the last observed period t, the h-step prediction has mean
+    # phi^h a_{t|t} and variance phi^(2h) P_{t|t} + sigma2 (1 + phi^2 + ...
+    # + phi^(2(h-1))) + obs_var
+    last = res.nobs - 1 if dynamic is None else 11
+    steps = np.arange(1, 4)
+    mean = phi**steps * res.filtered_state[0, last]
+    var = (
+        phi ** (2 * steps) * res.filtered_state_cov[0, 0, last]
+        + sigma2 * (1 - phi ** (2 * steps)) / (1 - phi**2)
+        + obs_var
+    )
+    assert_allclose(pred.forecasts[0, -3:], mean, rtol=1e-10)
+    assert_allclose(pred.forecasts_error_cov[0, 0, -3:], var, rtol=1e-10)
+    if dynamic is not None:
+        # The first two periods are one-step-ahead predictions
+        assert_allclose(pred.forecasts[0, :2], res.forecasts[0, 10:12], rtol=1e-10)

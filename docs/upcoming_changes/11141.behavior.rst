@@ -1,0 +1,6 @@
+- With the filtered timing convention (``timing_init_filtered=True``),
+  the last column of ``predicted_state_cov`` of the Kalman filter
+  results (the period after the sample) was zero once the filter had
+  converged, and results computed from it, such as forecasts, used the
+  zero matrix. It is the converged predicted state covariance matrix.
+  :pr:`11141`
