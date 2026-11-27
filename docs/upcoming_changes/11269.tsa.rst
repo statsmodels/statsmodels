@@ -1,0 +1,4 @@
+- ``HoltWintersResults.forecast`` checks ``steps``: an integral float such as
+  3.0, or a 0-d integer array with a date index, is a number of steps (they
+  raised a KeyError or TypeError), and a bool raises a TypeError instead of
+  giving one forecast. :pr:`11269`
