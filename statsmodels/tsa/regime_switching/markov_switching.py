@@ -429,6 +429,11 @@ class MarkovSwitchingParams:
        IndexError. A bool is not a regime number, so that a tuple key such
        as ``(True, 'exog')`` raises an IndexError, as ``True`` alone did.
        It was regime 1.
+
+       The values of ``k_parameters``, ``k_params`` and the bounds of the
+       slices returned for a named type string are Python ints, as in the
+       example above. They were NumPy integers, which print as, for example,
+       ``np.int64(4)`` with NumPy 2.
     """
 
     def __init__(self, k_regimes):
@@ -469,7 +474,10 @@ class MarkovSwitchingParams:
         if _type is str:
             value = np.array(value, dtype=bool, ndmin=1)
             k_params = self.k_params
-            self.k_parameters[key] = value.size + np.sum(value) * (self.k_regimes - 1)
+            # np.sum gives a NumPy integer; keep the counts and slices Python ints
+            self.k_parameters[key] = int(
+                value.size + np.sum(value) * (self.k_regimes - 1)
+            )
             self.k_params += self.k_parameters[key]
             self.switching[key] = value
             self.slices_purpose[key] = np.s_[k_params : self.k_params]
