@@ -143,7 +143,7 @@ def to_table(data, bins=None):
     data : array_like, 2-Dim
         Data containing category assignment with subjects in rows and raters
         in columns.
-    bins : None, int or tuple of array_like, optional
+    bins : None, int or array_like, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
@@ -151,8 +151,10 @@ def to_table(data, bins=None):
         already assumed to be in integers, 0,1,2,...,n_cat-1. In this case,
         the returned array may contain columns with zero count, if no
         subject has been categorized with this level.
-        If bins are a tuple of two array_like, then the bins are directly
-        used by ``numpy.histogramdd``. This is useful if we want to merge
+        If bins are a 1-D array_like, then the same bin edges are used for
+        every rater. A sequence with one array_like of bin edges per rater
+        can be used to specify different edges. The bins are directly used
+        by ``numpy.histogramdd``. This is useful if we want to merge
         categories.
 
     Returns
@@ -160,8 +162,9 @@ def to_table(data, bins=None):
     arr : ndarray, (n_cat, n_cat)
         Contingency table that contains counts of category level with rater1
         in rows and rater2 in columns.
-    bins : ndarray
-        The bin edges used to construct the contingency table.
+    bins : ndarray or sequence of array_like
+        The bin edges used to construct the contingency table. For a single
+        shared set of edges, this is the object passed by the user.
 
     Notes
     -----
@@ -180,18 +183,25 @@ def to_table(data, bins=None):
         n_cat = len(cat_uni)
         data_ = cat_int.reshape(data.shape)
         bins_ = np.arange(n_cat+1) - 0.5
+        bins_hist = (bins_,) * n_cols
         # alternative implementation with double loop
         # tt = np.asarray([[(x == [i,j]).all(1).sum() for j in cat_uni]
         #                 for i in cat_uni] )
         # other altervative: unique rows and bincount
     elif np.isscalar(bins):
         bins_ = np.arange(bins+1) - 0.5
+        bins_hist = (bins_,) * n_cols
         data_ = data
     else:
         bins_ = bins
         data_ = data
+        first_bin = bins.iloc[0] if hasattr(bins, "iloc") else bins[0]
+        if np.ndim(first_bin) == 0:
+            bins_hist = (bins,) * n_cols
+        else:
+            bins_hist = bins
 
-    tt = np.histogramdd(data_, (bins_,)*n_cols)
+    tt = np.histogramdd(data_, bins_hist)
 
     return tt[0], bins_
 
