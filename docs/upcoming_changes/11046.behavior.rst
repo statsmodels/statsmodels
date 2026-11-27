@@ -1,0 +1,6 @@
+- ``get_smoothed_decomposition`` of state space results with
+  ``decomposition_of="smoothed_signal"`` and ``state_index`` used all
+  the states for the state intercept contributions, which gave wrong
+  values (or raised an error for some subsets of the states). They use
+  the states in ``state_index``, so these contributions change.
+  :pr:`11046`

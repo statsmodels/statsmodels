@@ -1935,6 +1935,13 @@ class SmootherResults(FilterResults):
             states are used, the contributions will not sum to the smoothed
             signal. Default is to use all states.
 
+            .. versionchanged:: 0.15.1
+
+               The state intercept contributions use only the states in
+               `state_index`, as the other contributions do. Before, their
+               weights were not subset, which gave wrong values or raised a
+               broadcasting error.
+
         Returns
         -------
         data_contributions : ndarray
@@ -2008,6 +2015,7 @@ class SmootherResults(FilterResults):
         if decomposition_of == "smoothed_signal" and state_index is not None:
             ZT = ZT[:, state_index, :]
             weights = weights[:, :, state_index]
+            state_intercept_weights = state_intercept_weights[:, :, state_index]
             prior_weights = prior_weights[:, state_index, :]
 
         # Convert the weights in terms of smoothed signal
