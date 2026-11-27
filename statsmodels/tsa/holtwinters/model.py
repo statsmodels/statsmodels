@@ -396,6 +396,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend" and "initial_seasonal.<j>" for
             j=0,...,m-1, where m is `seasonal_periods`, can be fixed too.
 
+            .. versionchanged:: 0.15.1
+
+               A fit with a fixed ``initial_seasonal.<j>`` no longer changes
+               the initial values stored on the model. It previously did,
+               which changed the results of later fits of the same model.
+
         Yields
         ------
         None
@@ -750,8 +756,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             phi = fixed.get("damping_trend", phi)
             l0 = fixed.get("initial_level", l0)
             b0 = fixed.get("initial_trend", b0)
-            for i in range(self.seasonal_periods):
-                s0[i] = fixed.get(f"initial_seasonal.{i}", s0[i])
+            # A new list, since s0 is the array of initial values stored on
+            # the model, which must not change
+            s0 = [
+                fixed.get(f"initial_seasonal.{i}", s0[i])
+                for i in range(self.seasonal_periods)
+            ]
         return sel, alpha, beta, gamma, phi, l0, b0, s0
 
     def _construct_bounds(self):
