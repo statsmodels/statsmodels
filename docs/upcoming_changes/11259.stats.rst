@@ -1,0 +1,2 @@
+- ``inter_rater.to_table`` now supports independent bin edges for each rater
+  and pandas Series with custom indices as shared bin edges. :pr:`11259`
