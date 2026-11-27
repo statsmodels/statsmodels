@@ -1,0 +1,4 @@
+- ``SVARResults`` shared their ``A`` and ``B`` with the model, so a later fit or
+  a call of ``loglike``, ``score`` or ``hessian`` changed the estimates
+  and structural responses of earlier results. Results keep their own
+  arrays. :pr:`10982`

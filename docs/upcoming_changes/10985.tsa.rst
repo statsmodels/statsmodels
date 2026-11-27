@@ -1,0 +1,3 @@
+- ``E`` entries in the matrix that ``svar_type`` of :class:`~statsmodels.tsa.vector_ar.svar_model.SVAR` does not
+  estimate raise a ``ValueError``; they silently estimated another
+  model or raised later. :pr:`10985`

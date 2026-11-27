@@ -1,0 +1,4 @@
+- ``Grouping.transform_slices`` raises a ``ValueError`` for an array that is
+  not 1-d or 2-d (it raised an ``UnboundLocalError`` or an ``IndexError``) or
+  that does not have ``nobs`` rows (it raised a bare ``Exception``).
+  :pr:`11244`
