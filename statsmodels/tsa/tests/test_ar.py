@@ -35,6 +35,7 @@ from statsmodels.tsa.ar_model import (
     InformationCriteria,
     ar_select_order,
 )
+from statsmodels.tsa.ardl import ARDL
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.deterministic import (
     DeterministicProcess,
@@ -1227,6 +1228,39 @@ def test_get_prediction_oos_start(start):
     assert_allclose(prediction.predicted_mean, expected_mean)
     assert_allclose(prediction.var_pred_mean, expected_var)
     pd.testing.assert_index_equal(prediction.predicted_mean.index, index[start:13])
+
+
+@pytest.mark.parametrize("model", [AutoReg, ARDL])
+@pytest.mark.parametrize(
+    "start,end,dynamic,first_recursive",
+    [
+        (4, 7, True, 4),
+        (4, 10, 2, 6),
+        (4, 10, "2000-07", 6),
+        (0, 8, np.bool_(True), 3),  # predictions start after hold_back
+        (4, 10, 0, 4),  # offset zero is distinct from False
+        (4, 10, np.bool_(False), 8),
+        (4, 10, 12, 8),  # there are no actual observations beyond the sample
+        (10, 12, True, 8),
+    ],
+)
+def test_dynamic_prediction_variance(model, start, end, dynamic, first_recursive):
+    y = [2.0, 7.0, 1.0, 3.0, -1.0, 5.0, 2.0, 4.0]
+    index = pd.date_range("2000-01-01", periods=len(y), freq="MS")
+    res = model(pd.Series(y, index=index), 1, hold_back=3).fit()
+    pred = res.get_prediction(start, end, dynamic=dynamic)
+    phi = res.params.iloc[1]
+
+    # For an AR(1), each recursive step adds a new innovation and carries
+    # forward phi times the preceding forecast error.
+    variance = res.sigma2
+    expected = []
+    for t in range(min(start, first_recursive), end + 1):
+        if t > first_recursive:
+            variance = res.sigma2 + phi**2 * variance
+        if t >= start:
+            expected.append(variance if t >= 3 else np.nan)
+    assert_allclose(pred.var_pred_mean, expected)
 
 
 def test_invalid_dynamic(ar2):

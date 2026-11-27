@@ -41,9 +41,7 @@ from statsmodels.tsa.ar_model import (
     InformationCriteria,
     sumofsq,
 )
-from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
-from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.tsatools import lagmat
 
 if TYPE_CHECKING:
@@ -1421,6 +1419,11 @@ class ARDLResults(AutoRegResults):
             Values after the end of the sample are never observed, so an
             offset beyond the end of the sample is the same as an offset at
             the first out-of-sample observation.
+
+            .. versionchanged:: 0.15.1
+
+               Prediction intervals accumulate forecast uncertainty from the
+               start of dynamic prediction, including in-sample steps.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created. If that
@@ -1473,19 +1476,7 @@ class ARDLResults(AutoRegResults):
             fixed=fixed,
             fixed_oos=fixed_oos,
         )
-        mean_var = np.full_like(mean, fill_value=self.sigma2)
-        mean_var[np.isnan(mean)] = np.nan
-        start = 0 if start is None else start
-        end = self.model.endog.shape[0] - 1 if end is None else end
-        _, _, oos, _ = self.model._get_prediction_index(start, end)
-        if oos > 0:
-            ar_params = self._lag_repr()
-            ma = arma2ma(ar_params, np.ones(1), lags=oos)
-            mean_var[-oos:] = (self.sigma2 * np.cumsum(ma**2))[-mean_var.shape[0] :]
-        if isinstance(mean, pd.Series):
-            mean_var = pd.Series(mean_var, index=mean.index)
-
-        return PredictionResults(mean, mean_var)
+        return self._prediction_results(mean, start, end, dynamic)
 
     @Substitution(predict_params=_predict_params)
     def plot_predict(

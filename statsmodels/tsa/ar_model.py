@@ -1541,6 +1541,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             Values after the end of the sample are never observed, so an
             offset beyond the end of the sample is the same as an offset at
             the first out-of-sample observation.
+
+            .. versionchanged:: 0.15.1
+
+               Prediction intervals accumulate forecast uncertainty from the
+               start of dynamic prediction, including in-sample steps.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -1558,19 +1563,30 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         mean = self.predict(
             start=start, end=end, dynamic=dynamic, exog=exog, exog_oos=exog_oos
         )
-        mean_var = np.full_like(mean, self.sigma2)
-        mean_var[np.isnan(mean)] = np.nan
+        return self._prediction_results(mean, start, end, dynamic)
+
+    def _prediction_results(self, mean, start, end, dynamic):
+        """Compute forecast variances from the first recursively predicted value."""
         start = 0 if start is None else start
-        end = self.model.endog.shape[0] - 1 if end is None else end
-        _, _, oos, _ = self.model._get_prediction_index(start, end)
-        if oos > 0:
-            ar_params = self._lag_repr()
-            ma = arma2ma(ar_params, np.ones(1), lags=oos)
-            # start can be after the first out-of-sample observation
-            mean_var[-oos:] = (self.sigma2 * np.cumsum(ma**2))[-mean_var.shape[0] :]
+        end = self._n_totobs - 1 if end is None else end
+        start, end, oos, _ = self.model._get_prediction_index(start, end)
+        first_recursive = self._n_totobs
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
+        if dynamic is not False and self._max_lag:
+            offset = self.model._parse_dynamic(dynamic, start)
+            first_recursive = min(first_recursive, max(start + offset, self._hold_back))
+
+        mean_var = np.full_like(mean, self.sigma2)
+        steps = end + oos - first_recursive + 1
+        if steps > 0:
+            ma = arma2ma(self._lag_repr(), np.ones(1), lags=steps)
+            variances = self.sigma2 * np.cumsum(ma**2)
+            # The requested window can start after the first recursive prediction.
+            mean_var[-steps:] = variances[-len(mean_var) :]
+        mean_var[np.isnan(mean)] = np.nan
         if isinstance(mean, pd.Series):
             mean_var = pd.Series(mean_var, index=mean.index)
-
         return PredictionResults(mean, mean_var)
 
     def forecast(self, steps=1, exog=None):
