@@ -339,6 +339,37 @@ def test_plots(close_figures):
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize(
+    "make_variables, names",
+    [
+        (lambda: ["m1"], ["m1"]),
+        (lambda: ("m1",), ["m1"]),
+        (lambda: (0, "pop"), ["const", "pop"]),
+        (lambda: iter(["pop", "m1"]), ["pop", "m1"]),
+    ],
+    ids=["list", "tuple", "tuple-mixed", "iterator"],
+)
+def test_plot_recursive_coefficient_variables(make_variables, names, close_figures):
+    # Names in a list were replaced by their positions, so the caller's list
+    # changed, and a tuple holding a name or an iterator raised a TypeError
+    exog = add_constant(dta[["m1", "pop"]])
+    res = RecursiveLS(endog, exog).fit()
+    variables = make_variables()
+    original = list(variables) if isinstance(variables, list) else None
+    fig = res.plot_recursive_coefficient(variables=variables)
+    if original is not None:
+        assert variables == original
+    assert len(fig.axes) == len(names)
+    for ax, name in zip(fig.axes, names, strict=True):
+        line = ax.get_lines()[0]
+        assert line.get_label() == f"Recursive estimates: {name}"
+        coef = res.recursive_coefficients.filtered[exog.columns.get_loc(name)]
+        ydata = line.get_ydata()
+        assert_allclose(ydata, coef[-len(ydata) :], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
     "variables",
     [1, np.int64(1), np.array(1), "x1", [np.int64(1)]],
     ids=["int", "int64", "0d-array", "name", "list"],

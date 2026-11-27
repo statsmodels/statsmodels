@@ -1,0 +1,2 @@
+- ``Initialization.unset`` raises a ValueError for an integer index equal to
+  ``k_states``, as ``set`` does; it did nothing. :pr:`11270`

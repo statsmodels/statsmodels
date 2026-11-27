@@ -2729,6 +2729,17 @@ class VECMResults:
                 )
                 summary.tables.append(table)
 
+        # Without cointegration there are no loading coefficients and no
+        # cointegration relations
+        if self.coint_rank == 0:
+            if not summary.tables:
+                raise ValueError(
+                    "The model has no estimated parameters to summarize: "
+                    "coint_rank is 0 and it has no lagged differences and no "
+                    "deterministic terms outside the cointegration relation."
+                )
+            return summary
+
         # ---------------------------------------------------------------------
         # Loading coefficients (alpha):
         a = self.alpha.flatten()
@@ -2742,10 +2753,9 @@ class VECMResults:
         a_names = self.model._load_coef_param_names
         alpha_masks = []
         for i in range(self.neqs):
-            if self.coint_rank > 0:
-                start = i * self.coint_rank
-                end = start + self.coint_rank
-                mask = np.arange(start, end)
+            start = i * self.coint_rank
+            end = start + self.coint_rank
+            mask = np.arange(start, end)
 
             # Create the table
             alpha_masks.append(mask)
@@ -2762,15 +2772,14 @@ class VECMResults:
         tvalues_coint_components = []
         pvalues_coint_components = []
         conf_int_coint_components = []
-        if self.coint_rank > 0:
-            coint_components.append(self.beta.T.flatten())
-            stderr_coint_components.append(self.stderr_beta.T.flatten())
-            tvalues_coint_components.append(self.tvalues_beta.T.flatten())
-            pvalues_coint_components.append(self.pvalues_beta.T.flatten())
-            conf_int = self.conf_int_beta(alpha=alpha)
-            lower = conf_int["lower"].T.flatten()
-            upper = conf_int["upper"].T.flatten()
-            conf_int_coint_components.append(np.column_stack((lower, upper)))
+        coint_components.append(self.beta.T.flatten())
+        stderr_coint_components.append(self.stderr_beta.T.flatten())
+        tvalues_coint_components.append(self.tvalues_beta.T.flatten())
+        pvalues_coint_components.append(self.pvalues_beta.T.flatten())
+        conf_int = self.conf_int_beta(alpha=alpha)
+        lower = conf_int["lower"].T.flatten()
+        upper = conf_int["upper"].T.flatten()
+        conf_int_coint_components.append(np.column_stack((lower, upper)))
         if self.det_coef_coint.size > 0:
             coint_components.append(self.det_coef_coint.flatten())
             stderr_coint_components.append(self.stderr_det_coef_coint.flatten())

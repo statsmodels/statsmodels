@@ -1,0 +1,5 @@
+- Correct docstrings in ``statsmodels.tsa.vector_ar``: ``VARResults.roots``
+  returns the roots, not their inverses; a stable VAR has its eigenvalues
+  inside the unit circle; ``ma_rep``, ``orth_ma_rep``, ``acf``, ``acorr`` and
+  ``var_acf`` return ``maxn + 1`` matrices; the default ``maxlags`` of
+  ``VAR.fit``; and the return value of ``test_inst_causality``. :pr:`10928`

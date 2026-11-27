@@ -1,0 +1,2 @@
+- ``MLEResults.news`` accepts a dataset as the comparison for a univariate
+  model when ``exog`` is longer than it; it raised a TypeError. :pr:`11273`

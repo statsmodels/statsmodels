@@ -3176,15 +3176,36 @@ def test_ardl_order_bool(value, form):
 
 
 @pytest.mark.parametrize(
+    "lags", [np.array(2), np.array(2.0)], ids=["0d-int", "0d-float"]
+)
+def test_ardl_lags_0d_array(lags):
+    # A 0-d array is a number of lags, as the number it holds is. It raised
+    # "iteration over a 0-d array". The int lags are the reference.
+    y, x = _int_like_ardl_data()
+    expected = ARDL(y, 2, x, 1).fit()
+    res = ARDL(y, lags, x, 1).fit()
+    assert res.model.ar_lags == [1, 2]
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
     "lags, order",
     [
         (2.0, 2),
         (np.int64(2), 2),
+        (np.array(2), 2),
         (2, 2.0),
         (2, np.array(2)),
         (2, {0: 2.0, 1: np.int32(2)}),
     ],
-    ids=["lags-float", "lags-int64", "order-float", "order-0d-array", "dict-float"],
+    ids=[
+        "lags-float",
+        "lags-int64",
+        "lags-0d-array",
+        "order-float",
+        "order-0d-array",
+        "dict-float",
+    ],
 )
 def test_uecm_lags_order_int_like(lags, order):
     # Integral floats and 0-d integer arrays are lags and orders, as an int

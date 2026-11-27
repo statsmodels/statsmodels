@@ -1,0 +1,4 @@
+- ``ProcessMLE`` accepts pandas objects for ``time``,
+  ``exog_scale``, ``exog_smooth`` and ``exog_noise``, as
+  documented; ``loglike``, ``score`` and ``fit`` raised for them.
+  :pr:`11230`

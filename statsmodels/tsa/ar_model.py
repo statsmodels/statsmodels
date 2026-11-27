@@ -116,6 +116,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behaves identically to 0.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d array that holds an integer is a number of lags, as an int
+           is. It raised a TypeError.
     trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
@@ -298,7 +303,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if lags is None:
             _lags: list[int] = []
             self._maxlag = 0
-        elif isinstance(lags, Iterable):
+        # A 0-d array is iterable, but holds a single number of lags
+        elif isinstance(lags, Iterable) and getattr(lags, "ndim", 1) > 0:
             _lags = []
             for lag in lags:
                 val = int_like(lag, "lags")

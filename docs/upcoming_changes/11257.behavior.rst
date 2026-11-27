@@ -1,0 +1,3 @@
+- ``StepFunction`` now returns the initial value at negative infinity for
+  left-continuous step functions, including supports with repeated negative
+  infinity values. :pr:`11257`

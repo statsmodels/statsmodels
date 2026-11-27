@@ -1,0 +1,3 @@
+- ``innovations`` in ``statsmodels.tsa.arima.estimators.innovations``
+  ignored ``demean=False`` and always used the autocovariances of the
+  demeaned series. It now passes ``demean`` to ``acovf``. :pr:`11235`

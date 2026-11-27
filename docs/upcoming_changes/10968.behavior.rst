@@ -1,0 +1,3 @@
+- A second ``fit`` of a :class:`~statsmodels.tsa.vector_ar.var_model.VAR` with exog repeated the exog names in the
+  model's ``exog_names`` for numpy data and raised for pandas data.
+  :pr:`10968`
