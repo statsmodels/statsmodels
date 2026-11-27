@@ -3913,3 +3913,130 @@ def test_bool_factor_arguments(value, arg):
     endog = _int_like_dfm_endog()
     with pytest.raises(ValueError, match=f"`{arg}` argument must"):
         dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "factor_blocks",
+        "global_factor_blocks",
+        "global_second_factor_block",
+        "global_idiosyncratic",
+        "global_mixed_frequency",
+    ],
+)
+def test_fit_em_nonstationary_restart_factor_blocks(case):
+    # As in test_fit_em_nonstationary_restart, with two blocks of factors or
+    # a global stationary initialization, which is the stationary
+    # initialization of each block of states (the transition and state
+    # covariance matrices are block diagonal). Every block of factors is
+    # checked, and the block whose autoregression is explosive after the
+    # first EM step is switched to diffuse. The result is that of a fit with
+    # the default initialization and this block diffuse from the start
+    rng = np.random.default_rng(3)
+    endog = _trend_data()
+    kwargs = {"standardize": False}
+    # The block that is switched and its states (the factor and its lags)
+    block, diffuse = "('0',)", (0, 1)
+    if case in ("factor_blocks", "global_factor_blocks"):
+        kwargs.update(factors=2, idiosyncratic_ar1=False)
+    elif case == "global_second_factor_block":
+        # A common factor in y1 and y2, and a trend only in y3: the block of
+        # the trend factor comes second
+        factor = rng.standard_normal(20)
+        noise = 0.1 * rng.standard_normal((20, 2))
+        endog = pd.DataFrame(
+            {"y1": factor + noise[:, 0], "y2": factor + noise[:, 1], "y3": endog["y1"]},
+            index=endog.index,
+        )
+        kwargs["factors"] = {"y1": ["f"], "y2": ["f"], "y3": ["t"]}
+        kwargs["idiosyncratic_ar1"] = False
+        block, diffuse = "('t',)", (1, 2)
+    elif case == "global_mixed_frequency":
+        kwargs["endog_quarterly"] = _quarterly_series(rng.standard_normal(6))
+        diffuse = (0, 5)
+    mod_kwargs = dict(kwargs)
+    if case.startswith("global"):
+        mod_kwargs["initialization"] = "stationary"
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, **mod_kwargs)
+    start_params = mod.start_params
+
+    msg = re.escape(repr([f"factor block: {block}"])) + ", and fitting was restarted"
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(EstimationWarning, match=msg):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res = mod.fit(maxiter=2, em_initialization=False)
+
+    # The same steps by hand (see test_fit_em_nonstationary_restart)
+    mod_diffuse = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        mod_diffuse.fit_em(start_params, maxiter=1, return_params=True)
+    mod_diffuse.ssm.initialization.set(diffuse, "diffuse")
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        res_diffuse = mod_diffuse.fit(
+            start_params, maxiter=2, em_initialization=False
+        )
+
+    assert_allclose(res.params, res_diffuse.params, rtol=1e-10)
+    assert_allclose(res.llf, res_diffuse.llf, rtol=1e-10)
+
+
+def test_fit_em_global_nonstationary_initialization():
+    # Without EM initialization, a global initialization that is not
+    # stationary has no states to switch to diffuse. So the first EM step is
+    # that with EM initialization, which changes the initialization only for
+    # the next steps
+    rng = np.random.default_rng(3)
+    endog = pd.DataFrame(
+        rng.standard_normal((20, 2)), index=_trend_data().index, columns=["m1", "m2"]
+    )
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog,
+        endog_quarterly=_quarterly_series(rng.standard_normal(6)),
+        initialization="approximate_diffuse",
+    )
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        params = mod.fit_em(maxiter=1, em_initialization=False, return_params=True)
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        desired = mod.fit_em(maxiter=1, return_params=True)
+    assert_allclose(params, desired, rtol=1e-12)
+    assert_equal(mod.ssm.initialization.initialization_type, "approximate_diffuse")
+
+
+def test_fit_em_nonstationary_restart_untransformed_start_params():
+    # With transformed=False, the start parameters are transformed once, also
+    # for the EM iterations after a restart (here the idiosyncratic AR(1) of
+    # y3 is switched to diffuse after the first step), so the result is that
+    # of the transformed start parameters
+    rng = np.random.default_rng(3)
+    trend = _trend_data()["y1"]
+    factor = rng.standard_normal(20)
+    noise = 0.1 * rng.standard_normal((20, 2))
+    endog = pd.DataFrame(
+        {"y1": factor + noise[:, 0], "y2": factor + noise[:, 1], "y3": trend},
+        index=trend.index,
+    )
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, standardize=False)
+    params = mod.start_params
+    unconstrained = mod.untransform_params(params)
+
+    msg = "idiosyncratic AR(1) for monthly variable: y3'], and fitting was restarted"
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(EstimationWarning, match=re.escape(msg)):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            desired = mod.fit_em(
+                params, maxiter=3, em_initialization=False, return_params=True
+            )
+    with pytest.warns(EstimationWarning, match=re.escape(msg)):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            actual = mod.fit_em(
+                unconstrained,
+                transformed=False,
+                maxiter=3,
+                em_initialization=False,
+                return_params=True,
+            )
+    # rtol: the start parameters agree only up to the rounding of the
+    # transformation and its inverse
+    assert_allclose(actual, desired, rtol=1e-7)
