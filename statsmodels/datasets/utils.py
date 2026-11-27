@@ -106,6 +106,11 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     exog_idx : int or array_like, optional
         The column index (or indices) of the exogenous variable(s). If
         None, all columns other than `endog_idx` are used.
+
+        .. versionchanged:: 0.15.1
+
+           An int selects a single column, and ``exog`` is a DataFrame with
+           that column. It raised an AttributeError.
     index_idx : int, optional
         The column index to use as the index of `data`, `endog` and
         `exog`. If None, the existing index is preserved.
@@ -134,6 +139,9 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
             exog = data[names[int(exog_idx)]].copy()
         else:
             exog = data[names[exog_idx]].copy()
+    if exog.ndim == 1:
+        # An int exog_idx selects a Series; exog is always a DataFrame
+        exog = exog.to_frame()
 
     if index_idx is not None:  # NOTE: will have to be improved for dates
         index = Index(data.iloc[:, index_idx])
