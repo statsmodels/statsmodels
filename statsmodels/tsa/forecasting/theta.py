@@ -619,7 +619,7 @@ class ThetaModelResults:
 
         Notes
         -----
-        The variance of the h-step forecast is assumed to follow from the
+        On the deseasonalized scale, the h-step forecast variance follows from the
         integrated Moving Average structure of the Theta model, an IMA(1,1)
         with moving average coefficient :math:`\alpha-1`, and so is
         :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
@@ -630,11 +630,15 @@ class ThetaModelResults:
            The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
            be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
            whenever :math:`\alpha < 1`, so the intervals were too wide after
-           the first step.
+           the first step. Multiplicative seasonal adjustment also scales the
+           interval half-width by the forecast period's seasonal factor.
         """
         model_alpha = self.params.iloc[1]
         sigma2_h = (1 + np.arange(steps) * model_alpha**2) * self.sigma2
         sigma_h = np.sqrt(sigma2_h)
+        if self._seasonal.size and self.model.method.startswith("mul"):
+            locs = (self._nobs + np.arange(steps)) % self._seasonal.size
+            sigma_h *= self._seasonal[locs]
         quantile = stats.norm.ppf(alpha / 2)
         predictions = self.forecast(steps, theta)
         return pd.DataFrame(
@@ -684,7 +688,7 @@ class ThetaModelResults:
 
         Notes
         -----
-        The variance of the h-step forecast is assumed to follow from the
+        On the deseasonalized scale, the h-step forecast variance follows from the
         integrated Moving Average structure of the Theta model, an IMA(1,1)
         with moving average coefficient :math:`\alpha-1`, and so is
         :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
@@ -695,7 +699,8 @@ class ThetaModelResults:
            The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
            be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
            whenever :math:`\alpha < 1`, so the intervals were too wide after
-           the first step.
+           the first step. Multiplicative seasonal adjustment also scales the
+           interval half-width by the forecast period's seasonal factor.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 

@@ -421,9 +421,11 @@ def test_prediction_interval_one_step(seasonal_y, use_mle):
     fcast = res.forecast(12, theta=3)
     pi = res.prediction_intervals(12, theta=3, alpha=0.1)
     assert list(pi.columns) == ["lower", "upper"]
-    # Symmetric about the forecast, and the one-step variance is sigma2
+    # The one-step variance on the deseasonalized scale is sigma2.
     assert_allclose((pi["lower"] + pi["upper"]) / 2, fcast, rtol=1e-12)
     half_width = stats.norm.ppf(0.95) * np.sqrt(res.sigma2)
+    season = seasonal_decompose(seasonal_y, model="mul", period=PERIOD).seasonal
+    half_width *= season[len(seasonal_y) % PERIOD]
     assert_allclose(pi["upper"].iloc[0] - fcast.iloc[0], half_width, rtol=1e-10)
 
 
@@ -497,31 +499,42 @@ def test_sigma2_deseasonalized(method):
 
 
 @pytest.mark.parametrize("use_mle", [True, False])
-@pytest.mark.parametrize("deseasonalize", [True, False])
-def test_prediction_intervals_ima_variance(use_mle, deseasonalize):
+@pytest.mark.parametrize("method", ["additive", "multiplicative", None])
+def test_prediction_intervals_ima_variance(use_mle, method):
     # The Theta model is an IMA(1,1) with drift whose moving average
     # coefficient is alpha - 1, so the psi weights after the first are alpha
     # and the h-step forecast variance is sigma2 * (1 + (h - 1) * alpha**2).
     # The drift does not change the variance. The reference is the forecast
     # variance of SARIMAX at the parameters of the Theta model, which has
-    # reached its steady state after 300 observations
+    # reached its steady state after the training sample
     rng = np.random.default_rng(1129)
     e = rng.standard_normal(301)
-    y = 10 + np.cumsum(0.1 + e[1:] - 0.6 * e[:-1])
-    res = ThetaModel(
-        y, period=4, deseasonalize=deseasonalize, use_test=False
-    ).fit(use_mle=use_mle)
+    y = 50 + np.cumsum(0.1 + e[1:] - 0.6 * e[:-1])[:-1]
+    if method is None:
+        model = ThetaModel(y, deseasonalize=False)
+        adjusted = y
+    else:
+        y *= np.resize([0.7, 1.1, 1.4, 0.8], len(y))
+        model = ThetaModel(y, period=4, method=method, use_test=False)
+        season = seasonal_decompose(y, model=method, period=4).seasonal
+        adjusted = y / season if method == "multiplicative" else y - season
+    res = model.fit(use_mle=use_mle)
     b0, alpha = res.params
     steps = 6
     pi = res.prediction_intervals(steps)
     half_width = (pi["upper"] - pi["lower"]) / 2
     variance = (half_width / stats.norm.ppf(0.975)) ** 2
 
-    ima = SARIMAX(y, order=(0, 1, 1), trend="c")
+    ima = SARIMAX(adjusted, order=(0, 1, 1), trend="c")
     ima_res = ima.filter([b0, alpha - 1, res.sigma2])
     expected = ima_res.get_forecast(steps).var_pred_mean
-    np.testing.assert_allclose(variance, expected, rtol=1e-8)
     closed_form = res.sigma2 * (1 + np.arange(steps) * alpha**2)
+    if method == "multiplicative":
+        # Var(s * X) = s**2 * Var(X) conditional on the seasonal factors.
+        factors = season[(len(y) + np.arange(steps)) % 4]
+        expected *= factors**2
+        closed_form *= factors**2
+    np.testing.assert_allclose(variance, expected, rtol=1e-8)
     np.testing.assert_allclose(variance, closed_form, rtol=1e-8)
     # The intervals are centered on the forecast
     center = (pi["upper"] + pi["lower"]) / 2
