@@ -3,7 +3,9 @@ from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
+import inspect
 from pathlib import Path
+import re
 import warnings
 
 import numpy as np
@@ -5172,6 +5174,60 @@ class TestLeybourneMcCabe:
         res = leybourne(mdl, regression="ct", arlags=3)
         res_np = leybourne(mdl, regression="ct", arlags=np.int64(3))
         assert_allclose(res_np[0:3], res[0:3])
+
+    @pytest.mark.parametrize(
+        "given, message",
+        [
+            (
+                {},
+                (
+                    "The defaults of leybourne.run will change from arlags=1 and "
+                    "method='mle' to arlags=None and method='ols', the defaults "
+                    "of leybourne(x),"
+                ),
+            ),
+            (
+                {"method": "ols"},
+                (
+                    "The default of leybourne.run will change from arlags=1 to "
+                    "arlags=None, the default of leybourne(x),"
+                ),
+            ),
+            (
+                {"arlags": 0},
+                (
+                    "The default of leybourne.run will change from method='mle' "
+                    "to method='ols', the default of leybourne(x),"
+                ),
+            ),
+        ],
+    )
+    def test_run_changing_defaults(self, given, message):
+        # run warns for each default that will change to the __call__ one,
+        # and uses the current default
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with pytest.warns(FutureWarning, match=re.escape(message)) as record:
+            res = leybourne.run(mdl, **given)
+        assert len(record) == 1
+        assert record[0].filename == __file__
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            expected = leybourne.run(mdl, **({"arlags": 1, "method": "mle"} | given))
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+
+    def test_run_future_defaults(self):
+        # leybourne(x) is run with the future defaults, without a warning
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = leybourne(mdl)
+            expected = leybourne.run(mdl, arlags=None, method="ols")
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+        signature = str(inspect.signature(leybourne.run))
+        assert "arlags=1," in signature
+        assert "method='mle'," in signature
 
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13

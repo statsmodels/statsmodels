@@ -1,0 +1,6 @@
+- The defaults ``arlags=1`` and ``method="mle"`` of ``leybourne.run`` are
+  deprecated: after statsmodels 0.17 is released they are ``arlags=None``
+  and ``method="ols"``, the defaults of
+  :func:`~statsmodels.tsa.stattools.leybourne` called as ``leybourne(x)``.
+  Leaving either unset in ``leybourne.run`` issues a ``FutureWarning``.
+  :pr:`11277`
