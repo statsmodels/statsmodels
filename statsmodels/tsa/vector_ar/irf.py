@@ -44,8 +44,8 @@ class BaseIRAnalysis:
 
     Parameters
     ----------
-    model : VAR, SVAR, or VECM instance
-        The fitted model used to compute impulse responses.
+    model : VARResults, SVARResults, or VECMResults
+        The fitted model results used to compute impulse responses.
     P : ndarray, optional
         The matrix used for orthogonalization, satisfying sigma_u = P P'.
         If None, computed as the Cholesky decomposition of the model's
@@ -123,9 +123,11 @@ class BaseIRAnalysis:
             return self.irfs
 
     def cov(self, *args, **kwargs):
+        """Not implemented in the base class."""
         raise NotImplementedError
 
     def cum_effect_cov(self, *args, **kwargs):
+        """Not implemented in the base class."""
         raise NotImplementedError
 
     @deprecate_kwarg("seed", "rng")
@@ -163,8 +165,8 @@ class BaseIRAnalysis:
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         subplot_params : dict, optional
-            To pass to subplot plotting functions. Example: if fonts are too big,
-            pass {'fontsize' : 8} or some number to your taste.
+            Only the key ``"fontsize"`` is used, as the font size of the
+            subplot titles. The default font size is 12.
         plot_params : dict, optional
             Properties of :class:`matplotlib.lines.Line2D` for the response
             curves, such as ``color`` and ``linewidth``. A key that is not a
@@ -207,17 +209,20 @@ class BaseIRAnalysis:
 
                seed has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
-        component : array_like of int, optional
+        component : ndarray of int, optional
             Index of the principal component to use for the Sims-Zha
             "sz1"/"sz2" (shape (neqs, neqs)) or "sz3" (length neqs) error
             bands. If None, the component with the largest eigenvalue is
             used for each element. Ignored unless ``stderr_type`` is
             "sz1", "sz2", or "sz3".
-        err_bands : ndarray of shape (2, periods + 1, neqs, neqs), optional
-            Pre-computed error bands. The first dimension contains the lower
-            and upper bounds of the confidence interval, respectively. If
-            provided, the internal calculation of standard errors is bypassed
-            and ``stderr_type`` is used only for plot formatting.
+        err_bands : ndarray, ErrorBand, or tuple of ndarray, optional
+            Pre-computed error bands, an array of shape
+            (2, periods + 1, neqs, neqs), an ``ErrorBand``, such as the one
+            returned by :meth:`errband_mc`, or a tuple of the lower and upper
+            bands. The first dimension contains the lower and upper bounds of
+            the confidence interval, respectively. If provided, the internal
+            calculation of standard errors is bypassed and ``stderr_type`` is
+            used only for plot formatting.
         """
         svar = self.svar
 
@@ -341,8 +346,8 @@ class BaseIRAnalysis:
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         subplot_params : dict, optional
-            To pass to subplot plotting functions. Example: if fonts are too big,
-            pass {'fontsize' : 8} or some number to your taste.
+            Only the key ``"fontsize"`` is used, as the font size of the
+            subplot titles. The default font size is 12.
         plot_params : dict, optional
             Properties of :class:`matplotlib.lines.Line2D` for the response
             curves, such as ``color`` and ``linewidth``. A key that is not a
@@ -378,11 +383,14 @@ class BaseIRAnalysis:
 
                seed has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
-        err_bands : ndarray of shape (2, periods + 1, neqs, neqs), optional
-            Pre-computed error bands. The first dimension contains the lower
-            and upper bounds of the confidence interval, respectively. If
-            provided, the internal calculation of standard errors is bypassed
-            and ``stderr_type`` is used only for plot formatting.
+        err_bands : ndarray, ErrorBand, or tuple of ndarray, optional
+            Pre-computed error bands, an array of shape
+            (2, periods + 1, neqs, neqs), an ``ErrorBand``, such as the one
+            returned by :meth:`cum_errband_mc`, or a tuple of the lower and
+            upper bands. The first dimension contains the lower and upper
+            bounds of the confidence interval, respectively. If provided, the
+            internal calculation of standard errors is bypassed and
+            ``stderr_type`` is used only for plot formatting.
         """
 
         if orth:
@@ -445,8 +453,8 @@ class IRAnalysis(BaseIRAnalysis):
 
     Parameters
     ----------
-    model : VAR, SVAR, or VECM instance
-        The fitted model used to compute impulse responses.
+    model : VARResults, SVARResults, or VECMResults
+        The fitted model results used to compute impulse responses.
     P : ndarray, optional
         The matrix used for orthogonalization, satisfying sigma_u = P P'.
         If None, computed as the Cholesky decomposition of the model's
@@ -463,6 +471,45 @@ class IRAnalysis(BaseIRAnalysis):
     vecm : bool, optional
         Flag indicating whether the model is a VECM. The default is
         False.
+
+    Attributes
+    ----------
+    irfs : ndarray
+        The impulse responses, the MA coefficient matrices, of shape
+        (periods + 1, neqs, neqs). ``irfs[h, i, j]`` is the response of
+        variable ``i`` at horizon ``h`` to a unit shock in variable ``j``.
+    orth_irfs : ndarray
+        The orthogonalized impulse responses ``irfs[h] @ P``, of shape
+        (periods + 1, neqs, neqs). Not available if `svar` is True.
+    svar_irfs : ndarray
+        The structural impulse responses ``irfs[h] @ P``, of shape
+        (periods + 1, neqs, neqs). Only available if `svar` is True.
+    cum_effects : ndarray
+        The cumulative impulse responses, the sums of ``irfs`` over the
+        horizons 0 to h, of shape (periods + 1, neqs, neqs).
+    orth_cum_effects : ndarray
+        The cumulative orthogonalized impulse responses. Not available if
+        `svar` is True.
+    svar_cum_effects : ndarray
+        The cumulative structural impulse responses. Only available if
+        `svar` is True.
+    lr_effects : ndarray
+        The long-run effects ``inv(I - A_1 - ... - A_p)``, the limit of
+        `cum_effects`, of shape (neqs, neqs). Not available if `vecm` is
+        True.
+    orth_lr_effects : ndarray
+        The orthogonalized long-run effects ``lr_effects @ P``. Not
+        available if `svar` or `vecm` is True.
+    svar_lr_effects : ndarray
+        The structural long-run effects ``lr_effects @ P``. Only available
+        if `svar` is True and `vecm` is False.
+    P : ndarray
+        The (neqs, neqs) matrix used for orthogonalization. For a
+        structural VAR, ``inv(A) @ B``.
+    periods : int
+        The number of periods after the impact period.
+    neqs : int
+        The number of variables.
 
     Notes
     -----
@@ -624,7 +671,8 @@ class IRAnalysis(BaseIRAnalysis):
             column of eigenvector/value to use for each error band. Note:
             the period of impulse (t=0) is not included when computing the
             principal component. If None, the column of the largest
-            eigenvalue is used for each element.
+            eigenvalue is used for each element. The eigenvalues are in the
+            order returned by :func:`scipy.linalg.eig`, which is not sorted.
 
             .. versionchanged:: 0.15.1
 
@@ -724,7 +772,8 @@ class IRAnalysis(BaseIRAnalysis):
             column of eigenvector/value to use for each error band. Note:
             the period of impulse (t=0) is not included when computing the
             principal component. If None, the column of the largest
-            eigenvalue is used for each element.
+            eigenvalue is used for each element. The eigenvalues are in the
+            order returned by :func:`scipy.linalg.eig`, which is not sorted.
 
             .. versionchanged:: 0.15.1
 
@@ -948,6 +997,15 @@ class IRAnalysis(BaseIRAnalysis):
 
     @cache_readonly
     def G(self):
+        """
+        Derivatives of the impulse responses with respect to the VAR
+        coefficients
+
+        A list of length ``periods`` whose element ``i - 1`` is the
+        (neqs ** 2, neqs ** 2 * lags) matrix
+        :math:`G_i = \\partial vec(\\Phi_i) / \\partial vec(A_1, \\dots, A_p)'`
+        of Lütkepohl (2005, p. 111).
+        """
         # Gi matrices as defined on p. 111
 
         K = self.neqs
@@ -1110,7 +1168,8 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         ndarray
-            The covariance matrix of the long-run effects.
+            The (neqs ** 2, neqs ** 2) covariance matrix of the vectorized
+            long-run effects.
         """
         lre = self.lr_effects
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)
@@ -1125,14 +1184,56 @@ class IRAnalysis(BaseIRAnalysis):
             return Finfty @ self.cov_a @ Finfty.T
 
     def stderr(self, orth=False):
+        """
+        Asymptotic standard errors of the impulse responses
+
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+
+        Returns
+        -------
+        ndarray
+            Array of shape (periods + 1, neqs, neqs). Element ``[h, i, j]``
+            is the standard error of the response of variable ``i`` at
+            horizon ``h`` to a shock in variable ``j``.
+        """
         return np.array([tsa.unvec(np.sqrt(np.diag(c))) for c in self.cov(orth=orth)])
 
     def cum_effect_stderr(self, orth=False):
+        """
+        Asymptotic standard errors of the cumulative impulse responses
+
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+
+        Returns
+        -------
+        ndarray
+            Array of shape (periods + 1, neqs, neqs), arranged as
+            ``cum_effects``.
+        """
         return np.array(
             [tsa.unvec(np.sqrt(np.diag(c))) for c in self.cum_effect_cov(orth=orth)]
         )
 
     def lr_effect_stderr(self, orth=False):
+        """
+        Asymptotic standard errors of the long-run effects
+
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+
+        Returns
+        -------
+        ndarray
+            Array of shape (neqs, neqs), arranged as ``lr_effects``.
+        """
         cov = self.lr_effect_cov(orth=orth)
         return tsa.unvec(np.sqrt(np.diag(cov)))
 
@@ -1141,6 +1242,14 @@ class IRAnalysis(BaseIRAnalysis):
 
     @cache_readonly
     def H(self):
+        """
+        Derivative of the orthogonalization matrix with respect to sigma_u
+
+        The (neqs ** 2, neqs * (neqs + 1) / 2) matrix
+        :math:`H = \\partial vec(P) / \\partial vech(\\Sigma_u)'` of
+        Lütkepohl (2005, Section 3.7), where ``P`` is the Cholesky factor of
+        sigma_u.
+        """
         k = self.neqs
         Lk = tsa.elimination_matrix(k)
         Kkk = tsa.commutation_matrix(k, k)
@@ -1155,4 +1264,5 @@ class IRAnalysis(BaseIRAnalysis):
         return np.dot(Lk.T, L.inv(B))
 
     def fevd_table(self):
+        """Not implemented."""
         raise NotImplementedError
