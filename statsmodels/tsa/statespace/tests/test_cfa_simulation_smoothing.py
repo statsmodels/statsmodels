@@ -13,7 +13,14 @@ import pytest
 from scipy.linalg import cho_solve_banded
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import dynamic_factor, sarimax, structural, varmax
+from statsmodels.tsa.statespace import (
+    dynamic_factor,
+    mlemodel,
+    sarimax,
+    structural,
+    varmax,
+)
+from statsmodels.tsa.statespace.initialization import Initialization
 
 current_path = Path(__file__).resolve().parent
 dta = datasets.macrodata.load_pandas().data
@@ -227,3 +234,88 @@ def test_cfa_rng(kind):
         explicit.simulate(variates.reshape(mod.k_states, mod.nobs, order="F"))
         assert_allclose(sim.simulated_state, same_seed.simulated_state, rtol=1e-13)
         assert_allclose(sim.simulated_state, explicit.simulated_state, rtol=1e-13)
+
+
+# Blocks of a block initialization of three states as (index, kind), in the
+# order in which they are set
+MIXED_INITIALIZATIONS = {
+    "diffuse-known": [((0, 1), "diffuse"), ((1, 3), "known")],
+    "known-diffuse": [((1, 3), "known"), ((0, 1), "diffuse")],
+    "known-diffuse-known": [((0, 1), "known"), ((1, 2), "diffuse"), ((2, 3), "known")],
+    "diffuse-known-known": [((1, 2), "diffuse"), ((2, 3), "known"), ((0, 1), "known")],
+}
+BLOCK_INITIALIZATIONS = {
+    **MIXED_INITIALIZATIONS,
+    "known": [((0, 3), "known")],
+    "diffuse": [((0, 3), "diffuse")],
+}
+
+
+def _mixed_initialization_model(blocks, known_scale=1.0):
+    endog = np.random.default_rng(4410).standard_normal((30, 2))
+    mod = mlemodel.MLEModel(endog, k_states=3, k_posdef=3)
+    mod["design"] = [[1.0, 0.5, 0.0], [0.3, 0.0, 1.0]]
+    mod["obs_cov"] = np.diag([0.8, 1.2])
+    mod["transition"] = [[0.9, 0.1, 0.0], [0.0, 0.5, 0.2], [0.1, 0.0, -0.4]]
+    mod["selection"] = np.eye(3)
+    mod["state_cov"] = np.diag([0.5, 1.0, 0.7])
+    # A known initialization of all states, of which the blocks are taken
+    constant = np.array([3.0, -1.0, 2.0])
+    cov = known_scale * np.array([[1.0, 0.3, 0.2], [0.3, 0.5, 0.1], [0.2, 0.1, 0.8]])
+    init = Initialization(3)
+    for (start, stop), kind in blocks:
+        if kind == "known":
+            init.set(
+                (start, stop),
+                "known",
+                constant=constant[start:stop],
+                stationary_cov=cov[start:stop, start:stop],
+            )
+        else:
+            init.set((start, stop), "diffuse")
+    mod.ssm.initialization = init
+    return mod
+
+
+@pytest.mark.parametrize("blocks", BLOCK_INITIALIZATIONS.values(),
+                         ids=BLOCK_INITIALIZATIONS.keys())
+def test_cfa_mixed_diffuse_initialization(blocks):
+    # With a block initialization in which some blocks are diffuse and others
+    # known, only the last block set decided whether the CFA treated the whole
+    # initial state as diffuse (prior precision zero) or as known (inverting a
+    # singular covariance matrix raised LinAlgError). The diffuse states have
+    # prior precision zero and the others the inverse of their covariance
+    # block, so the posterior moments equal those of the exact diffuse Kalman
+    # smoother (also when all or none of the states are diffuse).
+    mod = _mixed_initialization_model(blocks)
+    res = mod.ssm.smooth()
+    sim = mod.simulation_smoother(method="cfa")
+    # The smoother first runs with a known initialization of all states
+    initialization = mod.ssm.initialization
+    mod.ssm.initialize_known(np.zeros(3), np.eye(3))
+    sim.simulate(np.zeros((mod.k_states, mod.nobs)))
+    mod.ssm.initialization = initialization
+    sim.simulate(np.zeros((mod.k_states, mod.nobs)))
+
+    # The CFA and the Kalman smoother agree to about 1e-8 relative for this
+    # model, also with a known initialization of all states
+    assert_allclose(sim.posterior_mean, res.smoothed_state, rtol=1e-6)
+    assert_allclose(sim.simulated_state, res.smoothed_state, rtol=1e-6)
+    posterior_cov = np.array(
+        [
+            sim.posterior_cov[3 * t : 3 * (t + 1), 3 * t : 3 * (t + 1)]
+            for t in range(mod.nobs)
+        ]
+    ).transpose(1, 2, 0)
+    assert_allclose(posterior_cov, res.smoothed_state_cov, rtol=1e-6)
+
+
+@pytest.mark.parametrize("blocks", MIXED_INITIALIZATIONS.values(),
+                         ids=MIXED_INITIALIZATIONS.keys())
+def test_cfa_mixed_diffuse_initialization_singular_known(blocks):
+    # A known block with a singular covariance matrix raises, as a known
+    # initialization of the whole state does
+    mod = _mixed_initialization_model(blocks, known_scale=0.0)
+    sim = mod.simulation_smoother(method="cfa")
+    with pytest.raises(np.linalg.LinAlgError, match="Non-positive-definite initial"):
+        sim.simulate()
