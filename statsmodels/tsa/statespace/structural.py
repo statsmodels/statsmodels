@@ -1970,7 +1970,17 @@ class UnobservedComponentsResults(MLEResults):
     def summary(self, alpha=0.05, start=None):
         # Create the model name
 
-        model_name = [self.specification.trend_specification]
+        if self.specification.trend_specification is not None:
+            model_name = [self.specification.trend_specification]
+        elif self.specification.level:
+            # The only combination of level and trend components without a
+            # name that has a level: a stochastic level and a stochastic trend
+            # without an irregular component
+            model_name = ["stochastic level", "stochastic trend"]
+        else:
+            # No level or trend component: the name lists the other
+            # components only
+            model_name = []
 
         if self.specification.seasonal:
             seasonal_name = f"seasonal({self.specification.seasonal_periods:d})"

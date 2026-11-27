@@ -1,0 +1,5 @@
+- The summary of ``UnobservedComponents`` results showed
+  "Model: None" for models without a level or trend component (for
+  example ``autoregressive=1`` only) and for a stochastic level and a
+  stochastic trend without an irregular component. It lists the
+  components. :pr:`11121`
