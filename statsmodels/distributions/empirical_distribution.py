@@ -60,6 +60,12 @@ class StepFunction:
         Default is 'left'. Defines the shape of the intervals constituting the
         steps. 'right' correspond to [a, b) intervals and 'left' to (a, b].
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+       Left-continuous step functions now return ``ival`` at negative infinity
+       even when the support contains repeated negative infinity values.
+
     Examples
     --------
     >>> import numpy as np
@@ -101,7 +107,7 @@ class StepFunction:
         self.y = np.r_[ival, _y]
 
         if not sorted:
-            asort = np.argsort(self.x)
+            asort = np.argsort(self.x, kind="stable")
             self.x = np.take(self.x, asort, 0)
             self.y = np.take(self.y, asort, 0)
         self.n = self.x.shape[0]
@@ -109,6 +115,7 @@ class StepFunction:
     def __call__(self, time):
 
         tind = np.searchsorted(self.x, time, self.side) - 1
+        tind = np.maximum(tind, 0)
         return self.y[tind]
 
 
