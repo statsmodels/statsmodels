@@ -542,20 +542,28 @@ def test_to_table_per_rater_bins_three_raters():
         np.array([-0.5, 0.5, 1.5, 2.5]),
         np.array([-0.5, 0.5, 1.5, 2.5]),
     )
+    # The first rater has two categories and the others three. Each subject
+    # adds a count to the cell of its categories (rater 1, rater 2, rater 3).
     expected = np.zeros((2, 3, 3), dtype=int)
-    for row in data:
-        category = [
-            np.searchsorted(edges, value, side="right") - 1
-            for edges, value in zip(bins, row, strict=True)
-        ]
-        expected[tuple(category)] += 1
+    expected[0, 0, 0] = 1
+    expected[0, 1, 2] = 1
+    expected[1, 2, 2] = 1
+    expected[1, 2, 1] = 1
 
     table, returned_bins = to_table(data, bins)
 
     assert table.shape == (2, 3, 3)
     assert_equal(table, expected)
-    assert table.sum() == len(data)
     assert returned_bins is bins
+
+
+def test_to_table_bins_wrong_number_of_raters():
+    data = [[0, 0], [0, 2], [1, 1], [1, 2]]
+    edges = np.array([-0.5, 0.5, 1.5, 2.5])
+    with pytest.raises(ValueError):
+        to_table(data, (edges,))
+    with pytest.raises(ValueError):
+        to_table(data, (edges, edges, edges))
 
 
 def test_aggregate_raters():
