@@ -85,8 +85,12 @@ class Longley:
         # TODO: taken from Stata; not available in sm yet
         self.chi2 = 1981.711859508729
 
-        self.prsquared = 0.90
-        self.prsquared_cox_snell = 1.00
+        # prsquared values were recomputed after the fix for GH 9025:
+        # llnull now uses the scale of the null model instead of the
+        # scale of the full model, so the previous values, which were
+        # based on the full model scale, no longer apply
+        self.prsquared = 0.28273
+        self.prsquared_cox_snell = 0.99549
 
         # self.pearson_chi2 = 836424.1293162981   # from Stata (?)
         self.fittedvalues = np.array([
@@ -800,8 +804,10 @@ class Scotvote:
         # self.llf = -82.47352  # Very close to ours as is
         self.scale = 0.003584283
         self.pearson_chi2 = .0860228056
-        self.prsquared = 0.429
-        self.prsquared_cox_snell = 0.97971
+        # prsquared values were recomputed after the fix for GH 9025,
+        # see the note in the Longley results
+        self.prsquared = 0.25568
+        self.prsquared_cox_snell = 0.83175
         self.resids = glm_test_resids.scotvote_resids
         self.fittedvalues = np.array([
             57.80431482,  53.2733447, 50.56347993, 58.33003783,
