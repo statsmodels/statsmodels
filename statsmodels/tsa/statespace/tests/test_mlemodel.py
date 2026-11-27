@@ -445,7 +445,7 @@ def test_hessian_positional_flags():
     )
     actual = mod.hessian(params, True, "approx", None, False)
     assert_allclose(actual, desired, rtol=1e-14)
-    with pytest.raises(ValueError, match="zip"):
+    with pytest.raises(TypeError, match="At most 4 flags"):
         mod.hessian(params, True, "approx", None, False, False)
     kind = inspect.signature(MLEModel.hessian).parameters["average"].kind
     assert kind is inspect.Parameter.KEYWORD_ONLY
@@ -2960,6 +2960,38 @@ def test_news_comparison_with_longer_exog_3d_raises(varx1_data, ncols):
         res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
 
 
+@pytest.mark.parametrize("form", ["ndarray", "column", "list", "series"])
+def test_news_univariate_comparison_with_longer_exog(form):
+    # The extended comparison dataset took its columns from endog_names, which
+    # is the str "y" for a univariate model, and pandas rejected it
+    nobs = 15
+    rng = np.random.default_rng(20261126)
+    endog = rng.standard_normal(nobs + 1)
+    exog = rng.standard_normal(nobs + 2)
+    beta, phi = 0.5, 0.5
+    mod = sarimax.SARIMAX(endog[:nobs], exog=exog[:nobs], order=(1, 0, 0))
+    res = mod.smooth([beta, phi, 1.0])
+    comparison = {
+        "ndarray": endog,
+        "column": endog[:, None],
+        "list": endog.tolist(),
+        "series": pd.Series(endog),
+    }[form]
+    news = res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
+    # Regression with AR(1) errors u = y - beta * x, forecast for nobs + 1
+    # from u[nobs] (updated) and from u[nobs - 1] (previous)
+    u = endog - beta * exog[: nobs + 1]
+    post = beta * exog[nobs + 1] + phi * u[nobs]
+    prev = beta * exog[nobs + 1] + phi**2 * u[nobs - 1]
+    assert_allclose(news.post_impacted_forecasts.to_numpy().ravel(), [post], rtol=1e-12)
+    assert_allclose(news.prev_impacted_forecasts.to_numpy().ravel(), [prev], rtol=1e-12)
+    assert_allclose(news.total_impacts.to_numpy().ravel(), [post - prev], rtol=1e-12)
+    # The same news as from the updated results object
+    updated = res.apply(np.r_[endog, np.nan], exog=exog[: nobs + 2])
+    expected = res.news(updated, impact_date=nobs + 1)
+    assert_allclose(news.news, expected.news, rtol=1e-12)
+
+
 def test_news_time_varying_extends_updated_multivariate(varx1_data):
     # A VARX(1) is time-varying through exog in the state intercept. The
     # impact date is beyond the updated sample, so that the updated results
@@ -3231,3 +3263,108 @@ def test_forecast_bool_steps(method, steps):
     res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 1.0])
     with pytest.raises(KeyError):
         getattr(res, method)(steps)
+
+
+# The flags of each method in their positional order, each with a value that
+# differs from its default where the default matters
+_POSITIONAL_FLAGS = {
+    "loglike": [
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("complex_step", True),
+    ],
+    "loglikeobs": [
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("complex_step", True),
+    ],
+    "score": [
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("score_method", "harvey"),
+        ("approx_complex_step", False),
+        ("approx_centered", True),
+    ],
+    "score_obs": [
+        ("method", "approx"),
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("approx_complex_step", False),
+        ("approx_centered", True),
+    ],
+    "hessian": [
+        ("transformed", False),
+        ("hessian_method", "oim"),
+        ("approx_complex_step", False),
+        ("approx_centered", True),
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    "func, nflags",
+    [
+        (func, nflags)
+        for func, flags in _POSITIONAL_FLAGS.items()
+        for nflags in range(len(flags) + 1)
+    ],
+)
+def test_positional_flags_prefix(func, nflags):
+    # Any number of the leading flags can be given positionally, as in
+    # statsmodels 0.14. In 0.15.0, loglike, score and hessian raised unless
+    # all of their flags were given.
+    rng = np.random.default_rng(1180)
+    endog = 1.0 + rng.standard_normal(50)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend="c")
+    params = mod.untransform_params([1.0, 0.5, 4.0])
+    flags = _POSITIONAL_FLAGS[func][:nflags]
+    method = getattr(mod, func)
+    desired = method(params, **dict(flags))
+    actual = method(params, *[value for _, value in flags])
+    assert_allclose(actual, desired, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", list(_POSITIONAL_FLAGS))
+def test_positional_flags_too_many_raises(func):
+    rng = np.random.default_rng(1180)
+    mod = sarimax.SARIMAX(1.0 + rng.standard_normal(50), order=(1, 0, 0))
+    values = [value for _, value in _POSITIONAL_FLAGS[func]]
+    with pytest.raises(TypeError, match="positional"):
+        getattr(mod, func)([0.5, 4.0], *values, False)
+
+
+@pytest.mark.parametrize(
+    "func, nflags",
+    [
+        (func, nflags)
+        for func, flags in _POSITIONAL_FLAGS.items()
+        for nflags in range(1, len(flags))
+    ],
+)
+def test_positional_flags_rest_by_keyword(func, nflags):
+    # The flags that follow the positional ones can be given by keyword
+    rng = np.random.default_rng(1180)
+    endog = 1.0 + rng.standard_normal(50)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend="c")
+    params = mod.untransform_params([1.0, 0.5, 4.0])
+    flags = _POSITIONAL_FLAGS[func]
+    method = getattr(mod, func)
+    desired = method(params, **dict(flags))
+    actual = method(
+        params, *[value for _, value in flags[:nflags]], **dict(flags[nflags:])
+    )
+    assert_allclose(actual, desired, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", list(_POSITIONAL_FLAGS))
+def test_positional_flag_also_by_keyword_raises(func):
+    rng = np.random.default_rng(1180)
+    mod = sarimax.SARIMAX(1.0 + rng.standard_normal(50), order=(1, 0, 0))
+    name, value = _POSITIONAL_FLAGS[func][0]
+    if func in ("loglikeobs", "score_obs"):
+        # ordinary signatures: Python's own message
+        match = f"multiple values for argument '{name}'"
+    else:
+        match = f"^got multiple values for keyword argument '{name}'$"
+    with pytest.raises(TypeError, match=match):
+        getattr(mod, func)([0.5, 4.0], value, **{name: value})

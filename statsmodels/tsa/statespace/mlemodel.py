@@ -51,16 +51,26 @@ def _handle_args(names, defaults, *args, **kwargs):
         # the fit() method will pass a dictionary
         if isinstance(args[0], dict):
             flags = args[0]
-        # otherwise, a user may have just used positional arguments...
+        # otherwise, a user may have just used positional arguments, which
+        # can be any number of the leading flags
         else:
-            flags = dict(zip(names, args, strict=True))
-        output_args = [flags.get(names[i], defaults[i]) for i in range(len(names))]
+            if len(args) > len(names):
+                raise TypeError(
+                    f"At most {len(names)} flags can be given positionally "
+                    f"({', '.join(names)}), but {len(args)} were given."
+                )
+            flags = dict(zip(names[: len(args)], args, strict=True))
 
         for name in flags:
             if name in kwargs:
                 raise TypeError(
-                    f"loglike() got multiple values for keyword argument '{name}'"
+                    f"got multiple values for keyword argument '{name}'"
                 )
+        # the flags that were not given positionally can be given by keyword
+        output_args = [
+            flags[name] if name in flags else kwargs.pop(name, default)
+            for name, default in zip(names, defaults, strict=True)
+        ]
     else:
         output_args = [kwargs.pop(names[i], defaults[i]) for i in range(len(names))]
 
@@ -2759,6 +2769,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             the unit (1) impulse is given.
             Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`. Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               A custom impulse vector of shape `(1, 1)` works when
+               `k_posdef` is 1. It raised a ValueError.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custom `impulse` vectors. Default
@@ -4576,6 +4591,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             the unit (1) impulse is given.
             Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`. Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               A custom impulse vector of shape `(1, 1)` works when
+               `k_posdef` is 1. It raised a ValueError.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custom `impulse` vectors. Default
@@ -4717,7 +4737,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 comparison = pd.DataFrame(
                     np.concatenate([comparison, extra], axis=0),
                     index=ix,
-                    columns=self.model.endog_names,
+                    # endog_names is a str for a univariate model
+                    columns=np.atleast_1d(self.model.endog_names),
                 )
 
             # Get the results object
@@ -4817,6 +4838,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             An updated dataset with updated and/or revised data from which the
             news can be computed, or an updated or previous results object
             to use in computing the news.
+
+            .. versionchanged:: 0.15.1
+
+               A dataset for a univariate model works when `exog` has more
+               periods than the dataset. It raised a TypeError.
         impact_date : int, str, or datetime, optional
             A single specific period of impacts from news and revisions to
             compute. Can also be a date string to parse or a datetime type.

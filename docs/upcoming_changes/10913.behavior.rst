@@ -1,0 +1,4 @@
+- A fit of :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing`
+  inside ``fix_params`` with fixed ``initial_seasonal.<j>`` values
+  stored these values on the model, so later fits of the same model
+  used them. Later fits now equal those of a new model. :pr:`10913`

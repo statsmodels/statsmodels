@@ -1,0 +1,5 @@
+- The methods that ``SVARResults`` and ``SVARProcess`` inherit from VAR
+  (``forecast``, ``forecast_interval``, ``plot_forecast``, ``irf_resim``,
+  ``irf_errband_mc``, ``simulate_var``, ``fevd`` and ``reorder``) raised.
+  They work, and ``fevd`` gives the structural decomposition.
+  :pr:`10980`

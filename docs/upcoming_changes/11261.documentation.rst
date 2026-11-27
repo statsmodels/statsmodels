@@ -1,0 +1,3 @@
+- The Returns section of ``contrastfromcols`` gives the shape of the returned
+  contrast matrix, q x p (one contrast per row, (p,) for a single contrast),
+  instead of p x q. :pr:`11261`

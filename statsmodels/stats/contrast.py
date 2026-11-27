@@ -347,11 +347,11 @@ class Contrast:
 def contrastfromcols(L, D, pseudo=None):
     """
     From an n x p design matrix D and a matrix L, tries
-    to determine a p x q contrast matrix C which
+    to determine a q x p contrast matrix C which
     determines a contrast of full rank, i.e., the
     n x q matrix
 
-    dot(transpose(C), pinv(D))
+    dot(D, transpose(C))
 
     is full rank.
 
@@ -364,6 +364,9 @@ def contrastfromcols(L, D, pseudo=None):
     as a contrast matrix. In this case, this function returns an estimable
     contrast corresponding to the dot(D, L.T)
 
+    A 1-d L of length n is a single column, and a 1-d L of length p is a
+    single row of a contrast matrix. When n == p, a 1-d L is a column.
+
     Note that this always produces a meaningful contrast, not always
     with the intended properties because q is always non-zero unless
     L is identically 0. That is, it produces a contrast that spans
@@ -375,6 +378,12 @@ def contrastfromcols(L, D, pseudo=None):
         Matrix used to determine the contrast, either representing columns
         in the column space of D (if L.shape[0] == n) or a contrast matrix
         (if L.shape[1] == p).
+
+        .. versionchanged:: 0.15.1
+
+           A 1-d L of length p is a single contrast row; it raised an
+           IndexError. A scalar L or a 1-d L of another length raises a
+           ValueError instead of an IndexError.
     D : array_like
         The n x p design matrix.
     pseudo : ndarray, optional
@@ -384,15 +393,25 @@ def contrastfromcols(L, D, pseudo=None):
     Returns
     -------
     ndarray
-        The p x q contrast matrix C.
+        The q x p contrast matrix C, with one contrast in each row.
+        Dimensions of length 1 are removed, so that a single contrast
+        (q = 1) has shape (p,).
     """
     L = np.asarray(L)
     D = np.asarray(D)
 
     n, p = D.shape
 
-    if L.shape[0] != n and L.shape[1] != p:
-        raise ValueError("shape of L and D mismatched")
+    if L.ndim == 1:
+        valid = L.shape[0] in (n, p)
+    else:
+        valid = L.ndim == 2 and (L.shape[0] == n or L.shape[1] == p)
+    if not valid:
+        raise ValueError(
+            "L must be 2-d with L.shape[0] == n or L.shape[1] == p, or 1-d "
+            f"with length n or p, where D has shape (n, p) = {D.shape}. L has "
+            f"shape {L.shape}."
+        )
 
     if pseudo is None:
         pseudo = np.linalg.pinv(D)  # D^+ \approx= ((dot(D.T,D))^(-1),D.T)

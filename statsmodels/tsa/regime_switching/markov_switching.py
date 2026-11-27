@@ -377,14 +377,14 @@ class MarkovSwitchingParams:
 
     This implies the model has 7 parameters: 4 "regime_transition"-related
     parameters (2 parameters that each switch according to regimes) and 3
-    "exog"-related parameters (1 parameter that does not switch, and one 1 that
+    "exog"-related parameters (1 parameter that does not switch, and one that
     does).
 
     The order of parameters is then:
 
     1. The first "regime_transition" parameter, regime 0
     2. The first "regime_transition" parameter, regime 1
-    3. The second "regime_transition" parameter, regime 1
+    3. The second "regime_transition" parameter, regime 0
     4. The second "regime_transition" parameter, regime 1
     5. The first "exog" parameter
     6. The second "exog" parameter, regime 0
@@ -400,15 +400,15 @@ class MarkovSwitchingParams:
     In the above example, consider the following getters:
 
     >>> parameters[0]
-    array([0, 2, 4, 6])
+    array([0, 2, 4, 5])
     >>> parameters[1]
-    array([1, 3, 5, 6])
+    array([1, 3, 4, 6])
     >>> parameters['exog']
     slice(4, 7, None)
     >>> parameters[0, 'exog']
-    [4, 6]
+    [4, 5]
     >>> parameters[1, 'exog']
-    [4, 7]
+    [4, 6]
 
     Notice that in the last two examples, both lists of indexes include 4.
     That's because that is the index of the non-switching first "exog"
@@ -429,6 +429,11 @@ class MarkovSwitchingParams:
        IndexError. A bool is not a regime number, so that a tuple key such
        as ``(True, 'exog')`` raises an IndexError, as ``True`` alone did.
        It was regime 1.
+
+       The values of ``k_parameters``, ``k_params`` and the bounds of the
+       slices returned for a named type string are Python ints, as in the
+       example above. They were NumPy integers, which print as, for example,
+       ``np.int64(4)`` with NumPy 2.
     """
 
     def __init__(self, k_regimes):
@@ -469,7 +474,10 @@ class MarkovSwitchingParams:
         if _type is str:
             value = np.array(value, dtype=bool, ndmin=1)
             k_params = self.k_params
-            self.k_parameters[key] = value.size + np.sum(value) * (self.k_regimes - 1)
+            # np.sum gives a NumPy integer; keep the counts and slices Python ints
+            self.k_parameters[key] = int(
+                value.size + np.sum(value) * (self.k_regimes - 1)
+            )
             self.k_params += self.k_parameters[key]
             self.switching[key] = value
             self.slices_purpose[key] = np.s_[k_params : self.k_params]
@@ -640,8 +648,15 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         tol : float, optional
             The tolerance to use when checking that `probabilities` sums to
             one. Default is 1e-8.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           A call that raises a ValueError keeps the previous initialization.
+           It set the initialization to known without probabilities, so that
+           the model could no longer compute the initial probabilities.
         """
-        self._initialization = "known"
         # copy, so that the model does not share the caller's array
         probabilities = array_like(
             probabilities, "probabilities", dtype=None, shape=(None,)
@@ -652,6 +667,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             )
         if not np.abs(np.sum(probabilities) - 1) < tol:
             raise ValueError("Initial probabilities vector must sum to one.")
+        # Set only now, so that a failed call keeps the previous initialization
+        self._initialization = "known"
         self._initial_probabilities = probabilities
 
     def initial_probabilities(self, params, regime_transition=None):

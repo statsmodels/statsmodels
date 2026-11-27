@@ -84,6 +84,15 @@ class LocalProjectionsResults:
     """
     Results from a fitted :class:`LocalProjections` model.
 
+    Parameters
+    ----------
+    model : LocalProjections
+        The model instance.
+    irfs : ndarray
+        The estimated impulse responses, shape (H+1, n_endog, n_shock).
+    stderr : ndarray
+        The standard errors of `irfs`, with the same shape.
+
     Attributes
     ----------
     irfs : ndarray, shape (H+1, n_endog, n_shock)
@@ -142,17 +151,22 @@ class LocalProjectionsResults:
 
         Parameters
         ----------
-        impulse : int or str or None, optional
-            Index or name of the shock variable.  Plots all shocks if None.
-        response : int or str or None, optional
-            Index or name of the response variable.  Plots all responses
-            if None.
+        impulse : int or str, optional
+            Name of the shock variable, or its position in ``shock_idx``
+            (from 0 to n_shock - 1, not the column of ``endog``).  Plots
+            all shocks if None.
+        response : int or str, optional
+            Name or column index of the response variable.  Plots all
+            responses if None.
         alpha : float, optional
-            Significance level for confidence bands.
-        figsize : tuple or None, optional
-            Figure size passed to :func:`matplotlib.pyplot.subplots`.
-        n_cols : int or None, optional
-            Number of subplot columns.  If None, chosen automatically.
+            Significance level for confidence bands.  The default is 0.1,
+            giving 90% bands.
+        figsize : tuple of float, optional
+            Figure size passed to :func:`matplotlib.pyplot.subplots`.  If
+            None, 4 inches wide and 3 inches high per subplot.
+        n_cols : int, optional
+            Number of subplot columns.  If None, the number of plots, up to
+            3.
 
         Returns
         -------
@@ -245,24 +259,51 @@ class LocalProjections:
 
            A 0-d integer array is a column index, as an int is. It raised a
            TypeError. A bool raises a TypeError: True was the column index
-           1.
+           1. A sequence that holds a float, a bool or a str raises a
+           TypeError: [1.5], [True] and ["1"] were the column index 1. A
+           value that is neither an integer nor a sequence, such as 1.5, a
+           0-d float array or None, and a str such as "1", raise a TypeError
+           that says what shock_idx must be. The message was that the value
+           is not iterable, or for a str, that it contains "1".
     lags : int, optional
         Number of lagged values of *all* endog variables to include as
         controls.  Defaults to ``1``.
     horizons : int, optional
         Maximum IRF horizon :math:`H`.  Regressions are run for
         :math:`h = 0, 1, \ldots, H`.  Defaults to ``12``.
-    exog : array_like or None, optional
+    exog : array_like, optional
         Additional exogenous controls (e.g. time dummies, external
-        instruments), of shape (T, k).  Do **not** include a constant; it
-        is added automatically.
+        instruments), of shape (T, k), or (T,) for a single control.  Do
+        **not** include a constant or a time trend; set ``trend`` instead.
     trend : {"n", "c", "ct"}, optional
         Deterministic trend: 'n' adds no trend, 'c' adds a constant
         (default), and 'ct' adds a constant plus linear trend.
-    nw_lags : int or None, optional
+    nw_lags : int, optional
         Override the automatic Newey-West bandwidth.  When *None* (default)
         the bandwidth at horizon :math:`h` is
         ``max(h, ceil(4*(max(h,1)/100)^{2/9}))``.
+
+    Attributes
+    ----------
+    endog : ndarray
+        The endogenous variables as a float array of shape (T, n).
+    exog : ndarray or None
+        The exogenous controls as a float array of shape (T, k), or None.
+    shock_idx : list of int
+        The columns of ``endog`` used as shocks.
+    lags : int
+        The number of lags of ``endog`` used as controls.
+    horizons : int
+        The maximum horizon :math:`H`.
+    trend : str
+        The deterministic trend.
+    nw_lags : int or None
+        The Newey-West bandwidth override, or None for the automatic one.
+    endog_names : list of str
+        The column names if ``endog`` is a DataFrame, and "y0", "y1", ...
+        otherwise.
+    shock_names : list of str
+        The names of the shock variables.
 
     See Also
     --------
@@ -338,8 +379,23 @@ class LocalProjections:
 
         if is_int_like(shock_idx, strict=True):
             shock_idx_list = [int(shock_idx)]
+        elif isinstance(shock_idx, (str, bytes)) or not np.iterable(shock_idx):
+            # A str would be iterated by character, and other scalars failed
+            # with "'float' object is not iterable"
+            raise TypeError(
+                "shock_idx must be an int or a sequence of int, but it is "
+                f"{shock_idx!r}"
+            )
         else:
-            shock_idx_list = [int(val) for val in shock_idx]
+            shock_idx_list = []
+            for val in shock_idx:
+                # int() would truncate 1.5 and accept True or "1"
+                if not is_int_like(val, strict=True):
+                    raise TypeError(
+                        "shock_idx must be an int or a sequence of int, but it "
+                        f"contains {val!r}"
+                    )
+                shock_idx_list.append(int(val))
         for idx in shock_idx_list:
             if not (0 <= idx < n):
                 raise ValueError(
@@ -357,8 +413,8 @@ class LocalProjections:
         self.trend = trend
         self.nw_lags = nw_lags
 
+        # exog is already a 2-d float array from array_like
         if exog is not None:
-            exog = np.asarray(exog, dtype=float)
             if exog.shape[0] != t:
                 raise ValueError(
                     "exog must have the same number of rows as endog."

@@ -1,0 +1,4 @@
+- ``contrastfromcols`` accepts a 1-d ``L`` whose length is the number of
+  columns of ``D`` as a single contrast row; it raised an ``IndexError``
+  unless ``D`` was square. A scalar ``L`` or a 1-d ``L`` of another length
+  raises a ``ValueError`` that gives the accepted shapes. :pr:`11243`

@@ -742,6 +742,13 @@ class Grouping:
         sorted groups for the given index level. I.e., ``self.slices[0]``
         is the index where each observation is in the first (sorted)
         group.
+
+        .. versionchanged:: 0.15.1
+
+           The index of a group with a single member is a slice of length
+           one. It was an int, so that `transform_slices` passed the group's
+           row of a 2d array to the function as a 1d array, and its element
+           of a 1d array as a scalar.
         """
         # TODO: refactor this
         groups = self.index.get_level_values(level).unique()
@@ -749,7 +756,14 @@ class Grouping:
         if isinstance(self.index, MultiIndex):
             self.slices = [self.index.get_loc_level(x, level=level)[0] for x in groups]
         else:
-            self.slices = [self.index.get_loc(x) for x in groups]
+            self.slices = []
+            for x in groups:
+                loc = self.index.get_loc(x)
+                if isinstance(loc, (int, np.integer)):
+                    # get_loc returns the position of a value that occurs
+                    # once. A slice keeps the dimension of the selection.
+                    loc = slice(loc, loc + 1)
+                self.slices.append(loc)
 
     def count_categories(self, level=0):
         """
@@ -926,6 +940,12 @@ class Grouping:
         ----------
         array : array_like
             1d or 2d data to transform, with `self.nobs` rows.
+
+            .. versionchanged:: 0.15.1
+
+               An array with another number of dimensions or rows raises a
+               ValueError. It raised an UnboundLocalError, an IndexError or
+               a bare Exception.
         function : callable
             Function called as ``function(subset, group_idx, **kwargs)``
             for each group, where `subset` is the group's rows of
@@ -944,19 +964,26 @@ class Grouping:
 
         Raises
         ------
-        Exception
-            If `array` does not have `self.nobs` rows.
+        ValueError
+            If `array` is not 1d or 2d, or does not have `self.nobs` rows.
         """
         array = np.asarray(array)
+        if array.ndim not in (1, 2):
+            raise ValueError(
+                f"array must be 1d or 2d, but it has {array.ndim} dimensions"
+            )
         if array.shape[0] != self.nobs:
-            raise Exception("array does not have the same shape as index")
+            raise ValueError(
+                f"array must have nobs={self.nobs} rows, one for each element of "
+                f"the index, but it has {array.shape[0]}"
+            )
         # always reset because level is given. need to refactor this.
         self.get_slices(level=level)
         processed = []
         for s in self.slices:
             if array.ndim == 2:
                 subset = array[s, :]
-            elif array.ndim == 1:
+            else:
                 subset = array[s]
             processed.append(function(subset, s, **kwargs))
         processed = np.array(processed)

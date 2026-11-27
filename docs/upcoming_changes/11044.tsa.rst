@@ -1,0 +1,2 @@
+- ``smooth`` of ``KalmanSmoother`` raised a ``TypeError`` when ``filter_method`` was
+  given. :pr:`11044`

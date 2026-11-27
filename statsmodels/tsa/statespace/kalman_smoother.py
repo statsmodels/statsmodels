@@ -13,7 +13,11 @@ import numpy as np
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import string_like
 from statsmodels.tsa.statespace import initialization, tools
-from statsmodels.tsa.statespace.kalman_filter import FilterResults, KalmanFilter
+from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_UNIVARIATE,
+    FilterResults,
+    KalmanFilter,
+)
 from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.tools import (
     copy_index_matrix,
@@ -152,15 +156,16 @@ class KalmanSmoother(KalmanFilter):
         return None
 
     def _initialize_smoother(self, smoother_output=None, smooth_method=None,
-                             prefix=None, **kwargs):
+                             **kwargs):
         if smoother_output is None:
             smoother_output = self.smoother_output
         if smooth_method is None:
             smooth_method = self.smooth_method
 
-        # Make sure we have the required Kalman filter
+        # Make sure we have the required Kalman filter (for the prefix of the
+        # current representation matrices)
         prefix, dtype, create_filter, create_statespace = (
-            self._initialize_filter(prefix, **kwargs)
+            self._initialize_filter(**kwargs)
         )
 
         # Determine if we need to (re-)create the smoother
@@ -250,7 +255,7 @@ class KalmanSmoother(KalmanFilter):
         >>> import statsmodels.tsa.statespace.kalman_smoother as ks
         >>> mod = ks.KalmanSmoother(1,1)
         >>> mod.smoother_output
-        15
+        31
         >>> mod.set_smoother_output(smoother_output=0)
         >>> mod.smoother_state = True
         >>> mod.smoother_output
@@ -275,9 +280,10 @@ class KalmanSmoother(KalmanFilter):
         Parameters
         ----------
         smooth_method : int, optional
-            Bitmask value to set the filter method to. See notes for details.
+            Bitmask value to set the smoothing method to. See notes for
+            details.
         **kwargs
-            Keyword arguments may be used to influence the filter method by
+            Keyword arguments may be used to influence the smoothing method by
             setting individual boolean flags. See notes for details.
 
             .. versionchanged:: 0.15.1
@@ -310,9 +316,6 @@ class KalmanSmoother(KalmanFilter):
         but different computational implications, numerical stability
         implications, or internal timing assumptions.
 
-        Note that only the first method is available if using a Scipy version
-        older than 0.16.
-
         If the bitmask is set directly via the `smooth_method` argument, then
         the full method must be provided.
 
@@ -320,36 +323,30 @@ class KalmanSmoother(KalmanFilter):
         the lowercase of the method must be used as an argument name, and the
         value is the desired value of the boolean flag (True or False).
 
-        Note that the filter method may also be specified by directly modifying
-        the class attributes which are defined similarly to the keyword
-        arguments.
+        Note that the smoothing method may also be specified by directly
+        modifying the class attributes which are defined similarly to the
+        keyword arguments.
 
-        The default filtering method is SMOOTH_CONVENTIONAL.
+        The default smoothing method is 0, which selects the smoother from the
+        filter method: SMOOTH_UNIVARIATE if the univariate filter is used and
+        SMOOTH_CONVENTIONAL otherwise.
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> import statsmodels.tsa.statespace.kalman_smoother as ks
+        >>> mod = ks.KalmanSmoother(1,1)
         >>> mod.smooth_method
-        1
-        >>> mod.filter_conventional
+        0
+        >>> mod.set_smooth_method(smooth_alternative=True)
+        >>> mod.smooth_method
+        4
+        >>> mod.smooth_alternative
         True
-        >>> mod.filter_univariate = True
-        >>> mod.smooth_method
-        17
-        >>> mod.set_smooth_method(filter_univariate=False,
-        ...                       filter_collapsed=True)
-        >>> mod.smooth_method
-        33
-        >>> mod.set_smooth_method(smooth_method=1)
-        >>> mod.filter_conventional
+        >>> mod.set_smooth_method(smooth_method=ks.SMOOTH_CONVENTIONAL)
+        >>> mod.smooth_conventional
         True
-        >>> mod.filter_univariate
+        >>> mod.smooth_alternative
         False
-        >>> mod.filter_collapsed
-        False
-        >>> mod.filter_univariate = True
-        >>> mod.smooth_method
-        17
         """
         if smooth_method is not None:
             self.smooth_method = smooth_method
@@ -376,12 +373,11 @@ class KalmanSmoother(KalmanFilter):
                     continue
                 setattr(self, name, kwargs[name])
 
-    def _smooth(self, smoother_output=None, smooth_method=None, prefix=None,
-                complex_step=False, results=None, **kwargs):
+    def _smooth(self, smoother_output=None, smooth_method=None, **kwargs):
         # Initialize the smoother
         prefix, dtype, create_smoother, create_filter, create_statespace = (
             self._initialize_smoother(
-                smoother_output, smooth_method, prefix=prefix, **kwargs
+                smoother_output, smooth_method, **kwargs
             ))
 
         # Check that the filter and statespace weren't just recreated
@@ -399,7 +395,7 @@ class KalmanSmoother(KalmanFilter):
         return smoother
 
     def smooth(self, smoother_output=None, smooth_method=None, results=None,
-               run_filter=True, prefix=None, complex_step=False,
+               run_filter=None, prefix=None, complex_step=False,
                update_representation=True, update_filter=True,
                update_smoother=True, **kwargs):
         """
@@ -414,20 +410,50 @@ class KalmanSmoother(KalmanFilter):
             Determines which Kalman smoothing approach to use. Default is
             the smoother method specified by `smooth_method` in the current
             state space model.
+
+            .. versionchanged:: 0.15.1
+
+               `smooth_method` is used. Before, it was ignored and the
+               smoothing method of the model was always used. A method that
+               cannot be used with the filter method (univariate smoothing
+               without univariate filtering, or the reverse) is still
+               ignored, with a FutureWarning.
         results : type or object, optional
-            If a type, then that type is instantiated and returned with the
-            result of both filtering and smoothing.
-            If an object, then that object is updated with the smoothing data.
-            If None, then a SmootherResults object is returned with both
-            filtering and smoothing results.
+            Not used. A new object of the model's results class is always
+            returned.
+
+            .. deprecated:: 0.15.1
+
+               `results` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
         run_filter : bool, optional
-            Whether or not to run the Kalman filter prior to smoothing. Default
-            is True.
-        prefix : str
-            The prefix of the datatype. Usually only used internally.
+            Not used. The Kalman filter is always run before smoothing.
+
+            .. deprecated:: 0.15.1
+
+               `run_filter` has no effect. It is deprecated and will be
+               removed after statsmodels 0.17 is released.
+        prefix : str, optional
+            Not used. The prefix of the current representation matrices is
+            always used.
+
+            .. deprecated:: 0.15.1
+
+               `prefix` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
         complex_step : bool, optional
             Whether or not to compute the complex-step derivative. Default is
             False.
+
+            .. versionchanged:: 0.15.1
+
+               `complex_step` is passed to the Kalman filter. Before, it was
+               ignored, so that a stationary initialization of the state was
+               computed as for real parameters, which gave a wrong
+               complex-step derivative. The results no longer initialize the
+               state again, without complex step, after the filter has run,
+               which made the derivatives of the first period of the smoothed
+               state and of `initial_state_cov` wrong.
         update_representation : bool, optional
             Whether or not to update the state space representation with the
             current model's parameters. Default is True.
@@ -445,9 +471,38 @@ class KalmanSmoother(KalmanFilter):
         -------
         SmootherResults object
         """
+        unused = {"results": results, "run_filter": run_filter,
+                  "prefix": prefix}
+        for name, value in unused.items():
+            if value is not None:
+                warnings.warn(
+                    f"{name} has no effect in KalmanSmoother.smooth and is"
+                    " deprecated. It will be removed after statsmodels 0.17"
+                    " is released.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
 
         # Run the filter
-        kfilter = self._filter(**kwargs)
+        kfilter = self._filter(complex_step=complex_step, **kwargs)
+
+        # smooth_method was ignored, so smoothing used the model's method. A
+        # method that cannot smooth the output of this filter (the univariate
+        # smoother needs the univariate filter, and the univariate filter
+        # needs it) is still ignored.
+        if smooth_method:
+            univariate_filter = bool(kfilter.filter_method & FILTER_UNIVARIATE)
+            if bool(smooth_method & SMOOTH_UNIVARIATE) != univariate_filter:
+                warnings.warn(
+                    "smooth_method cannot be used with the filter method of "
+                    "this model (univariate smoothing requires univariate "
+                    "filtering, and univariate filtering requires univariate "
+                    "smoothing), and it is ignored. After statsmodels 0.17 "
+                    "is released, this will raise a ValueError.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+                smooth_method = None
 
         # Create the results object
         results = self.results_class(self)
@@ -463,7 +518,7 @@ class KalmanSmoother(KalmanFilter):
         # Run the smoother
         if smoother_output is None:
             smoother_output = self.smoother_output
-        smoother = self._smooth(smoother_output, results=results, **kwargs)
+        smoother = self._smooth(smoother_output, smooth_method, **kwargs)
 
         # Update the results
         if update_smoother:
@@ -588,7 +643,8 @@ class SmootherResults(FilterResults):
     scaled_smoothed_estimator_cov : ndarray
         The scaled smoothed estimator covariance matrices at each time period.
     smoothing_error : ndarray
-        The smoothing error covariance matrices at each time period.
+        The smoothing error :math:`u_t` (Durbin and Koopman, 2012, chapter
+        4.5) at each time period, shaped `(k_endog, nobs)`.
     smoothed_state : ndarray
         The smoothed state at each time period.
     smoothed_state_cov : ndarray
@@ -961,6 +1017,13 @@ class SmootherResults(FilterResults):
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
 
+            .. versionchanged:: 0.15.1
+
+               The result does not depend on earlier calls. Before, a cached
+               result computed without `extend_kwargs` was returned for
+               `extend_kwargs={}`, and the reverse, although their default
+               `end` differs if `lag < -1`.
+
         Returns
         -------
         acov : ndarray
@@ -981,20 +1044,19 @@ class SmootherResults(FilterResults):
               Cov(2, 2-lag), ..., Cov(lag, 0). Thus the first `lag` entries
               have all values set to NaN.
 
-            - If the model is time-invariant and `lag < -1` or if `lag` is
-              0 or -1, and the model is either time-invariant or time-varying,
-              then the returned array is shaped `(*, *, nobs)` and each
-              entry [:, :, t] contains Cov(t, t+j). Moreover, all entries are
-              available (i.e., there are no NaNs).
+            - If `lag` is 0 or -1 (and the model is either time-varying or
+              time-invariant), then the returned array is shaped
+              `(*, *, nobs)` and each entry [:, :, t] contains Cov(t, t+j).
+              Moreover, all entries are available (i.e., there are no NaNs).
 
-            - If the model is time-varying and `lag < -1` and `extend_kwargs`
-              is not provided, then the returned array is shaped
-              `(*, *, nobs - lag + 1)`.
+            - If `lag < -1` and `extend_kwargs` is not provided (and the
+              model is either time-varying or time-invariant), then the
+              returned array is shaped `(*, *, nobs + lag + 1)`.
 
-            - However, if the model is time-varying and `lag < -1`, then
-              `extend_kwargs` can be provided with `lag - 1` additional
-              matrices so that the returned array is shaped `(*, *, nobs)` as
-              usual.
+            - If `lag < -1` and `extend_kwargs` is provided, then the returned
+              array is shaped `(*, *, nobs)` as usual. For a time-invariant
+              model, `extend_kwargs={}` is enough, while a time-varying model
+              needs `-lag - 1` additional matrices.
 
             More generally, the dimension of the last axis will be
             `end - start`.
@@ -1017,13 +1079,13 @@ class SmootherResults(FilterResults):
 
         Based only on the "current" results object (i.e., the Kalman smoother
         applied to the sample), there is not enough information to compute
-        Cov(t, t+j) for the last `lag - 1` observations of the sample. However,
-        the values can be computed for these time points using the transition
-        equation of the state space representation, and so for time-invariant
-        state space models we do compute these values. For time-varying models,
-        this can also be done, but updated state space matrices for the
-        out-of-sample time points must be provided via the `extend_kwargs`
-        argument.
+        Cov(t, t+j) for the last `-lag - 1` observations of the sample.
+        However, the values can be computed for these time points using the
+        transition equation of the state space representation, which is done
+        if `extend_kwargs` is provided. For time-invariant state space models
+        an empty dictionary is enough, while for time-varying models updated
+        state space matrices for the out-of-sample time points must be
+        provided.
 
         See [1]_, Chapter 4.7, for all details about how these autocovariances
         are computed.
@@ -1040,10 +1102,11 @@ class SmootherResults(FilterResults):
                Time Series Analysis by State Space Methods: Second Edition.
                Oxford University Press.
         """
-        # We can cache the results for time-invariant models
+        # We can cache the results for time-invariant models (the default end
+        # depends on whether extend_kwargs is None)
         cache_key = None
         if extend_kwargs is None or len(extend_kwargs) == 0:
-            cache_key = (lag, t, start, end)
+            cache_key = (lag, t, start, end, extend_kwargs is None)
 
         # Short-circuit for a cache-hit
         if (cache_key is not None and
@@ -1679,8 +1742,8 @@ class SmootherResults(FilterResults):
 
         Parameters
         ----------
-        updates_ix : list of tuple
-            List of indices `(t, i)`, where `t` denotes a zero-indexed time
+        updates_ix : sequence of tuple of int
+            Sequence of indices `(t, i)`, where `t` denotes a zero-indexed time
             location and `i` denotes a zero-indexed endog variable.
         t : int, optional
             A specific period for which to compute the gain. Cannot be used

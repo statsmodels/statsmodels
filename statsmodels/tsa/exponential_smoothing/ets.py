@@ -232,7 +232,12 @@ class ETSModel(base.StateSpaceMLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`
+        The observed time-series process :math:`y`. A single column, an
+        (nobs, 1) array or a one-column DataFrame, is used as the series.
+
+        .. versionchanged:: 0.15.1
+
+           A single column is accepted. It used to raise a ValueError.
     error : {"add", "additive", "mul", "multiplicative"}, optional
         The error model. "add" (default) or "mul". "additive" and
         "multiplicative" are accepted as aliases for "add" and "mul".
@@ -297,6 +302,17 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_seasonal : array_like, optional
         The initial seasonal component. An array of length `seasonal_periods`.
         Only used if initialization is 'known'.
+
+        .. deprecated:: 0.15.1
+
+           A single value, which is used for all initial seasonal states, is
+           deprecated and will raise a ValueError after statsmodels 0.17 is
+           released. Other lengths raise a ValueError.
+
+        .. versionchanged:: 0.15.1
+
+           A single row or column is used as a 1-d array. A row was used in
+           reverse order.
     bounds : dict, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
@@ -515,6 +531,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal_periods, "seasonal_periods", optional=True
             )
             if seasonal_periods is None:
+                if self._index_freq is None:
+                    raise ValueError(
+                        "seasonal_periods must be given for a seasonal model if "
+                        "endog has no date index with a frequency."
+                    )
                 self.seasonal_periods = freq_to_period(self._index_freq)
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
@@ -596,6 +617,17 @@ class ETSModel(base.StateSpaceMLEModel):
         initial_seasonal : array_like, optional
             The initial seasonal component. An array of length
             `seasonal_periods`. Only used if initialization is 'known'.
+
+            .. deprecated:: 0.15.1
+
+               A single value, which is used for all initial seasonal states,
+               is deprecated and will raise a ValueError after statsmodels
+               0.17 is released. Other lengths raise a ValueError.
+
+            .. versionchanged:: 0.15.1
+
+               A single row or column is used as a 1-d array. A row was used
+               in reverse order.
         """
         self.initialization_method = string_like(
             initialization_method,
@@ -620,6 +652,32 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
+            if self.has_seasonal:
+                m = self.seasonal_periods
+                seasonal = np.asarray(initial_seasonal)
+                # A scalar or any array with a single value is broadcast to
+                # all seasonal states (a 0-d array raised an IndexError)
+                if seasonal.size == 1 and (
+                    seasonal.ndim > 0 or np.isscalar(initial_seasonal)
+                ):
+                    warnings.warn(
+                        "initial_seasonal has a single value, which is used "
+                        f"for all {m} initial seasonal states. This is "
+                        "deprecated and will raise a ValueError after "
+                        "statsmodels 0.17 is released. Pass an array of "
+                        "length seasonal_periods instead.",
+                        FutureWarning,
+                        stacklevel=3,
+                    )
+                elif seasonal.shape in ((1, m), (m, 1)):
+                    # A single row or column is used as a 1-d array (a row
+                    # was used in reverse order)
+                    initial_seasonal = seasonal.ravel()
+                elif seasonal.shape != (m,):
+                    raise ValueError(
+                        "initial_seasonal must have length seasonal_periods "
+                        f"({m}), got an array of shape {seasonal.shape}."
+                    )
         elif self.initialization_method == "heuristic":
             (
                 initial_level,
@@ -694,6 +752,7 @@ class ETSModel(base.StateSpaceMLEModel):
         else:
             if not isinstance(bounds, (dict, OrderedDict)):
                 raise ValueError("bounds must be a dictionary")
+            bounds = dict(bounds)
             for key in bounds:
                 if key not in self.param_names:
                     raise ValueError(f"Invalid key: {key} in bounds dictionary")
@@ -718,10 +777,13 @@ class ETSModel(base.StateSpaceMLEModel):
             ETS models have no exogenous variables.
         """
         endog = np.require(data.orig_endog, requirements="WC")
+        if endog.ndim == 2 and endog.shape[1] == 1:
+            # a single column: an (nobs, 1) array or a one-column DataFrame
+            endog = np.require(endog[:, 0], requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.require(data.orig_endog, requirements="WC", dtype=float)
+            endog = np.require(endog, requirements="WC", dtype=float)
         return endog, None
 
     @property
@@ -1042,6 +1104,16 @@ class ETSModel(base.StateSpaceMLEModel):
 
         The fit is performed using the L-BFGS algorithm.
 
+        .. versionchanged:: 0.15.1
+
+           A fit does not change the bounds of the model. Before, it added
+           the values of the fixed parameters, for example from
+           ``fix_params``, and of the parameters that are not estimated,
+           such as the initial states of a "heuristic" initialization, to
+           the bounds. They stayed fixed in later fits of the model, also
+           after ``set_initialization_method``, and the dictionary passed
+           as ``bounds`` was changed.
+
         Parameters
         ----------
         start_params : array_like, optional
@@ -1125,23 +1197,30 @@ class ETSModel(base.StateSpaceMLEModel):
             final_params = np.asarray(list(self._fixed_params.values()))
             mlefit = Bunch(params=start_params, mle_retvals=None, mle_settings=None)
         else:
-            internal_start_params = self._convert_and_bound_start_params(start_params)
-            bounds = self._setup_bounds()
+            # The bounds of the fixed parameters and of the parameters that
+            # are not in the model are added to a copy of the bounds, as they
+            # only apply to this fit
+            with self._use_copy_of_bounds():
+                internal_start_params = self._convert_and_bound_start_params(
+                    start_params
+                )
+                bounds = self._setup_bounds()
 
-            # check if we need to use the starred parameters
-            use_beta_star = "smoothing_trend" not in self.bounds
-            if use_beta_star:
-                internal_start_params[1] /= internal_start_params[0]
-            use_gamma_star = "smoothing_seasonal" not in self.bounds
-            if use_gamma_star:
-                internal_start_params[2] /= 1 - internal_start_params[0]
+                # check if we need to use the starred parameters
+                use_beta_star = "smoothing_trend" not in self.bounds
+                if use_beta_star:
+                    internal_start_params[1] /= internal_start_params[0]
+                use_gamma_star = "smoothing_seasonal" not in self.bounds
+                if use_gamma_star:
+                    internal_start_params[2] /= 1 - internal_start_params[0]
 
-            # check if we have fixed parameters and remove them from the
-            # parameter vector. The last initial seasonal is removed as well
-            # if it is computed from the other initial seasonals (see the
-            # implementation notes above); its value in `fixed_values` is
-            # updated in every call of `_loglike_internal`.
-            derive_last_seasonal = self._derive_last_initial_seasonal
+                # check if we have fixed parameters and remove them from the
+                # parameter vector. The last initial seasonal is removed as
+                # well if it is computed from the other initial seasonals (see
+                # the implementation notes above); its value in
+                # `fixed_values` is updated in every call of
+                # `_loglike_internal`.
+                derive_last_seasonal = self._derive_last_initial_seasonal
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
@@ -1306,6 +1385,16 @@ class ETSModel(base.StateSpaceMLEModel):
             yield
         finally:
             self.loglike = external_loglike
+
+    @contextlib.contextmanager
+    def _use_copy_of_bounds(self):
+        """Work on a copy of the bounds, restoring the bounds on exit"""
+        model_bounds = self.bounds
+        self.bounds = dict(model_bounds)
+        try:
+            yield
+        finally:
+            self.bounds = model_bounds
 
     def loglike(self, params, **kwargs):
         r"""
@@ -2372,6 +2461,11 @@ class ETSResults(base.StateSpaceMLEResults):
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
 
+            .. versionchanged:: 0.15.1
+
+               The predictions are labelled with `index`. It used to be
+               checked for its length and then ignored.
+
         Returns
         -------
         forecast : ndarray or Series
@@ -2410,7 +2504,7 @@ class ETSResults(base.StateSpaceMLEResults):
             y = y[ndiscard:]
 
         # Wrap data / squeeze where appropriate
-        return self.model._wrap_data(y, start, end_dynamic)
+        return self.model._wrap_data(y, start, end_dynamic, index=index)
 
     def get_prediction(
         self,
@@ -2457,11 +2551,23 @@ class ETSResults(base.StateSpaceMLEResults):
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
+
+            .. versionchanged:: 0.15.1
+
+               The predicted mean, the prediction intervals and the summary
+               frame are labelled with `index`. It used to be checked for
+               its length and then ignored.
         method : {"exact", "simulated"} or None, optional
             Method to use for calculating prediction intervals. 'exact'
             (default, if available) or 'simulated'. 'exact' is available
             for the models with additive errors and no multiplicative
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
+
+            .. deprecated:: 0.15.1
+
+               Other values are treated as "exact". This is deprecated and
+               they will raise a ValueError after statsmodels 0.17 is
+               released.
         simulate_repetitions : int, optional
             Number of simulation repetitions for calculating prediction
             intervals when ``method='simulated'``, at least 2. Default is
@@ -2633,6 +2739,11 @@ class PredictionResults:
         if available) or 'simulated'. 'exact' is available for the models
         with additive errors and no multiplicative components, "ANN", "AAN",
         "AAdN", "ANA", "AAA" and "AAdA".
+
+        .. deprecated:: 0.15.1
+
+           Other values are treated as "exact". This is deprecated and they
+           will raise a ValueError after statsmodels 0.17 is released.
     simulate_repetitions : int, optional
         Number of simulation repetitions for calculating prediction intervals
         when ``method='simulated'``, at least 2. Default is 1000.
@@ -2659,6 +2770,20 @@ class PredictionResults:
                 method = "exact"
             else:
                 method = "simulated"
+        else:
+            try:
+                string_like(
+                    method, "method", options=("exact", "simulated"), lower=False
+                )
+            except (TypeError, ValueError):
+                warnings.warn(
+                    'method must be "exact", "simulated" or None, got '
+                    f'{method!r}. Other values are treated as "exact". This is '
+                    "deprecated and will raise a ValueError after statsmodels "
+                    "0.17 is released.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
         self.method = method
 
         (
@@ -2830,7 +2955,11 @@ class PredictionResults:
         to_include = {}
         to_include["mean"] = self.predicted_mean
         if self.method == "simulated":
-            to_include["mean_numerical"] = np.mean(self.simulation_results, axis=1)
+            # the simulations are labelled with the model's index, not with
+            # an index given to get_prediction
+            to_include["mean_numerical"] = np.mean(
+                np.asarray(self.simulation_results), axis=1
+            )
         to_include["pi_lower"] = pred_int[:, 0]
         to_include["pi_upper"] = pred_int[:, 1]
 

@@ -1,0 +1,1 @@
+- ``hdrboxplot`` no longer modifies a caller-provided ``alpha`` list. :pr:`11256`
