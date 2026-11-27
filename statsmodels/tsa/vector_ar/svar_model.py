@@ -14,7 +14,7 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.validation import string_like
@@ -218,6 +218,15 @@ class SVAR(tsbase.TimeSeriesModel):
         override : bool, optional
             If True, returns estimates of A and B without checking
             order or rank condition
+
+            .. versionchanged:: 0.15.1
+
+               The rank condition uses the derivatives of the covariance of
+               the model, A^-1 B B' A^-1', at the starting values. The
+               derivatives with respect to B and the covariance were wrong,
+               so some identified models raised and some models that are
+               not identified, with free entries at the same position in A
+               and B, were estimated.
         maxiter : int, optional
             Number of iterations to perform in solution method
         maxfun : int, optional
@@ -438,6 +447,13 @@ class SVAR(tsbase.TimeSeriesModel):
         first estimated, then likelihood with structural parameters
         is estimated. It uses the residual covariance and the number of
         observations of the last call to `fit`.
+
+        .. versionchanged:: 0.15.1
+
+           The term of B is log(det(B) ** 2). It was the log of the
+           determinant of the elementwise square of B, which differs when B
+           is not triangular, so the log-likelihood and the estimates of
+           such models were wrong.
         """
 
         # TODO: this does not look robust if A or B is None
@@ -457,24 +473,20 @@ class SVAR(tsbase.TimeSeriesModel):
 
         W = np.dot(npl.inv(B), A)
         trc_in = np.dot(np.dot(W.T, W), sigma_u)
-        sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
-        b_slogdet = sign * b_logdet
+        # log(det(A) ** 2) and log(det(B) ** 2)
+        a_logdet = 2 * slogdet(A)[1]
+        b_logdet = 2 * slogdet(B)[1]
 
         likl = (
             -nobs
             / 2.0
-            * (
-                neqs * np.log(2 * np.pi)
-                - np.log(npl.det(A) ** 2)
-                + b_slogdet
-                + np.trace(trc_in)
-            )
+            * (neqs * np.log(2 * np.pi) - a_logdet + b_logdet + np.trace(trc_in))
         )
 
         return likl
 
     def score(self, AB_mask):
-        """
+        r"""
         Return the gradient of the loglike at AB_mask
 
         Parameters
@@ -490,17 +502,40 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        Return numerical gradient
-        """
-        loglike = self.loglike
-        if AB_mask.ndim > 1:
-            AB_mask = AB_mask.ravel()
-        grad = approx_fprime(AB_mask, loglike, epsilon=1e-8)
+        The gradient of the log-likelihood with respect to A and B is
 
-        # workaround shape of grad if only one parameter #9302
-        if AB_mask.size == 1 and grad.ndim == 2:
-            grad = grad.ravel()
-        return grad
+        .. math::
+
+           n (A^{-T} - B^{-T} W \Sigma_u), \quad
+           n B^{-T} (W \Sigma_u W^T - I), \quad W = B^{-1} A,
+
+        of which the entries of the unknown values are returned.
+
+        .. versionchanged:: 0.15.1
+
+           The gradient is computed analytically. It was computed with
+           forward differences with a step of 1e-8, whose error (about 1e-5
+           relative for the entries of a B of order 0.01) exceeded the
+           tolerance of the solvers of `fit` at the maximum: the default
+           "bfgs" solver could warn that the optimization did not converge,
+           depending on rounding, and "newton" stopped about 3e-5 (relative)
+           from the maximum. The estimates of `fit` change accordingly.
+        """
+        params = np.asarray(AB_mask, dtype=float).ravel()
+        A = np.array(self.A, dtype=float)
+        B = np.array(self.B, dtype=float)
+        A_len = int(self.A_mask.sum())
+        A[self.A_mask] = params[:A_len]
+        B[self.B_mask] = params[A_len:]
+
+        inv_A = npl.inv(A)
+        inv_B = npl.inv(B)
+        W = inv_B @ A
+        sigma_u = self.sigma_u
+        nobs = self.nobs
+        grad_A = nobs * (inv_A.T - inv_B.T @ W @ sigma_u)
+        grad_B = nobs * inv_B.T @ (W @ sigma_u @ W.T - np.eye(self.neqs))
+        return np.r_[grad_A[self.A_mask], grad_B[self.B_mask]]
 
     def hessian(self, AB_mask):
         """
@@ -587,7 +622,6 @@ class SVAR(tsbase.TimeSeriesModel):
         # while the rest follows Hamilton (1994)
 
         neqs = self.neqs
-        sigma_u = self.sigma_u
         A_mask = self.A_mask
         B_mask = self.B_mask
 
@@ -628,11 +662,15 @@ class SVAR(tsbase.TimeSeriesModel):
                     S_D[k, j_d] = 1
                     j_d += 1
 
-        # now compute J
+        # now compute J, the derivative of vech(sigma) with respect to the
+        # free entries of A and B, at the covariance of the model,
+        # sigma = A^-1 B B' A^-1'
         invA = npl.inv(A_solve)
-        J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
+        invA_B = np.dot(invA, B_solve)
+        sigma = np.dot(invA_B, invA_B.T)
+        J_p1i = np.dot(np.dot(D_pl, np.kron(sigma, invA)), S_B)
         J_p1 = -2.0 * J_p1i
-        J_p2 = np.dot(np.dot(D_pl, np.kron(invA, invA)), S_D)
+        J_p2 = 2.0 * np.dot(np.dot(D_pl, np.kron(invA_B, invA)), S_D)
 
         J = np.append(J_p1, J_p2, axis=1)
 

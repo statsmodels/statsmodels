@@ -270,8 +270,7 @@ def _fit_vars_model(name):
     ref = getattr(results_svar_vars, name)
     model = SVAR(_macro_data(), svar_type, A=A, B=B)
     # statsmodels does not normalize the signs as vars does, so start near the
-    # estimate of vars; newton's numerical derivatives stop it within about
-    # 2e-5 of the optimum
+    # estimate of vars
     res = model.fit(
         maxlags=3,
         solver="newton",
@@ -314,10 +313,9 @@ def test_vars_var_coefficients():
 def test_vars_estimates(name):
     model, res, ref = _fit_vars_model(name)
     _, A, B = VARS_MODELS[name]
-    # newton stops within about 2e-5 of the optimum (numerical derivatives)
-    # (where it stops depends on the platform)
-    assert_allclose(res.A, ref["A"], rtol=2e-3)
-    assert_allclose(res.B, ref["B"], rtol=2e-3)
+    # newton with the analytic score converges to the optimum (1e-11 here)
+    assert_allclose(res.A, ref["A"], rtol=1e-6)
+    assert_allclose(res.B, ref["B"], rtol=1e-6)
     a_mask = np.zeros((3, 3), dtype=bool) if A is None else A == "E"
     b_mask = np.zeros((3, 3), dtype=bool) if B is None else B == "E"
     assert_equal(res.A_mask, a_mask)
@@ -340,12 +338,9 @@ def test_vars_score(name):
     model, _, ref = _fit_vars_model(name)
     theta_fixed = _theta(model, ref["A_fixed"], ref["B_fixed"])
     expected = _theta(model, ref["score_A_fixed"], ref["score_B_fixed"])
-    # forward differences with a step of 1e-8 lose about
-    # eps * |loglike| / 1e-8 to rounding; the margin allows for other
-    # platforms, and a wrong score is off by much more
-    atol = 40 * np.finfo(float).eps * abs(ref["loglike_fixed"]) / 1e-8
+    # The score is analytic (agrees with vars to 4e-14 here)
     score = model.score(theta_fixed)
-    assert_allclose(score, expected, rtol=1e-3, atol=atol)
+    assert_allclose(score, expected, rtol=1e-10)
     # a column vector is accepted
     assert_allclose(model.score(theta_fixed[:, None]), score, rtol=1e-15)
 
@@ -430,9 +425,8 @@ def test_svar_lag_order_default_is_one():
     assert res.k_ar == 1
     assert_allclose(res.params, var_res.params, rtol=1e-10)
     assert_allclose(res.sigma_u, var_res.sigma_u, rtol=1e-10)
-    # newton stops within about 2e-5 of the Cholesky factor
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=2e-3)
+    # newton with the analytic score converges to the Cholesky factor
+    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=1e-6)
 
 
 @pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
@@ -452,9 +446,8 @@ def test_svar_trend(trend):
     assert_allclose(res.sigma_u, var_res.sigma_u, rtol=1e-10)
     assert res.k_trend == k_trend
     assert res.trendorder == {"n": None, "c": 0, "ct": 1, "ctt": 2}[trend]
-    # newton stops within about 2e-5 of the Cholesky factor
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=2e-3)
+    # newton with the analytic score converges to the Cholesky factor
+    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=1e-6)
     expected = _ma_coefs(res.coefs, 4) @ res.B
     # zero entries of the triangular Theta_0 are at rounding level
     assert_allclose(res.svar_ma_rep(4), expected, rtol=1e-10, atol=1e-15)
@@ -582,9 +575,8 @@ def test_svar_endog_forms(form):
     # the memory layout of endog can change the rounding
     assert_allclose(res.params, expected.params, rtol=1e-10)
     assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-10)
-    # newton stops within about 2e-5 of the optimum
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, expected.B, rtol=2e-3)
+    # newton with the analytic score converges to the optimum
+    assert_allclose(res.B, expected.B, rtol=1e-6)
     if form in ("list", "tuple"):
         assert res.names == ["y1", "y2", "y3"]
         assert res.dates is None
@@ -615,9 +607,8 @@ def test_svar_int_endog():
     assert res.params.dtype == np.float64
     assert_allclose(res.params, expected.params, rtol=1e-10)
     assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-10)
-    # newton stops within about 2e-5 of the optimum
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, expected.B, rtol=2e-3)
+    # newton with the analytic score converges to the optimum
+    assert_allclose(res.B, expected.B, rtol=1e-6)
 
 
 def test_svar_missing():
@@ -631,9 +622,8 @@ def test_svar_missing():
     start = 1.01 * np.linalg.cholesky(var_res.sigma_u)[dropped.B_mask]
     res_drop = dropped.fit(maxlags=2, solver="newton", B_guess=start)
     assert_allclose(res_drop.params, res.params, rtol=1e-10)
-    # newton stops within about 2e-5 of the optimum
-    # (where it stops depends on the platform)
-    assert_allclose(res_drop.B, res.B, rtol=2e-3)
+    # newton with the analytic score converges to the optimum
+    assert_allclose(res_drop.B, res.B, rtol=1e-6)
     with pytest.raises(MissingDataError):
         SVAR(with_nan, svar_type="B", B=_LOWER, missing="raise")
 
@@ -746,6 +736,125 @@ def test_fit_ic_verbose_and_unknown(capsys):
     assert f"Using {res.k_ar} based on bic criterion" in out
     with pytest.raises(ValueError, match="sic not recognized"):
         SVAR(data, "B", B=B).fit(maxlags=6, ic="sic")
+
+
+def _gdp_cons_dlog():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    return np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
+
+
+def _svar_gaussian_loglike(res, A, B):
+    # The Gaussian log-likelihood of the residuals, scaled so that their cross
+    # product is nobs * sigma_u, with the covariance A^-1 B B' A^-1' of the SVAR
+    from scipy import stats
+
+    invA_B = np.linalg.solve(A, B)
+    resid = res.resid * np.sqrt(res.nobs / res.df_resid)
+    return stats.multivariate_normal(cov=invA_B @ invA_B.T).logpdf(resid).sum()
+
+
+def _fit_may_not_converge(model, **kwargs):
+    # the ML fit may not converge, depending on the platform
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        return model.fit(maxlags=1, **kwargs)
+
+
+# R vars 1.6.1, realgdp and realcons of macrodata, VAR(1) with a constant:
+#   v <- VAR(y, p = 1, type = "const")
+#   s <- SVAR(v, Bmat = matrix(c(NA, NA, NA, 0), 2, 2), estmethod = "scoring",
+#             start = c(0.005, 0.004, 0.003), max.iter = 500,
+#             conv.crit = 1e-12, lrtest = FALSE)
+# and the log-likelihood of vars' "direct" method at B and at
+# B = [[0.006, 0.003], [0.004, 0]],
+#   -K obs / 2 log(2 pi) + obs / 2 log(det(A)^2) - obs / 2 log(det(B)^2)
+#   - obs / 2 tr(A' B'^-1 B^-1 A sigma), sigma = crossprod(resid(v)) / df
+R_NONTRI_B = np.array(
+    [[0.0048113950519561872, 0.0061513028826717508], [0.0066167894394091285, 0.0]]
+)
+R_NONTRI_LLF = 1461.5432209010482
+R_NONTRI_BFIX = np.array([[0.006, 0.003], [0.004, 0.0]])
+R_NONTRI_LLF_BFIX = 918.48509778844698
+
+
+@pytest.mark.parametrize(
+    "B, llf_r",
+    [(R_NONTRI_B, R_NONTRI_LLF), (R_NONTRI_BFIX, R_NONTRI_LLF_BFIX)],
+    ids=["estimate", "fixed"],
+)
+def test_loglike_nontriangular_b(B, llf_r):
+    # loglike used log det(B ** 2) of the elementwise square of B
+    mask = np.array([["E", "E"], ["E", 0]], dtype="U")
+    model = SVAR(_gdp_cons_dlog(), "B", B=mask)
+    res = _fit_may_not_converge(model, B_guess=[0.005, 0.006, 0.006])
+    llf = model.loglike(B[mask == "E"])
+    assert_allclose(llf, llf_r, rtol=1e-12)
+    assert_allclose(llf, _svar_gaussian_loglike(res, np.eye(2), B), rtol=1e-12)
+
+
+def test_loglike_a_with_determinant():
+    # an A-model whose A does not have a unit determinant
+    mask = np.array([["E", "E"], [0, "E"]], dtype="U")
+    model = SVAR(_gdp_cons_dlog(), "A", A=mask)
+    res = _fit_may_not_converge(model, A_guess=[160.0, -120.0, 150.0])
+    A = np.array([[150.0, -100.0], [0.0, 140.0]])
+    llf = model.loglike(A[mask == "E"])
+    assert_allclose(llf, _svar_gaussian_loglike(res, A, np.eye(2)), rtol=1e-12)
+
+
+def test_fit_nontriangular_b():
+    # The rank check rejected this identified model, and the wrong
+    # log-likelihood had no maximum near the estimate
+    mask = np.array([["E", "E"], ["E", 0]], dtype="U")
+    model = SVAR(_gdp_cons_dlog(), "B", B=mask)
+    res = _fit_may_not_converge(model, B_guess=[0.005, 0.006, 0.006])
+    # Unique up to the signs of the columns, to a tolerance for where the
+    # optimizer stops
+    assert_allclose(np.abs(res.B), R_NONTRI_B, rtol=1e-3)
+    # The model is just identified, so B B' is sigma_u at the estimate
+    assert_allclose(res.B @ res.B.T, res.sigma_u, rtol=1e-3)
+
+
+def test_fit_nontriangular_b_three_variables():
+    # A just-identified B-model that the rank check rejected, since B[0, 1]
+    # and B[1, 0] are both free
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    mask = np.array([["E", "E", "E"], ["E", "E", 0], [0, "E", 0]], dtype="U")
+    res = _fit_may_not_converge(SVAR(data, "B", B=mask))
+    # to a tolerance for where the optimizer stops
+    assert_allclose(res.B @ res.B.T, res.sigma_u, rtol=1e-3)
+
+
+@pytest.mark.parametrize(
+    "A, B, params, scale",
+    [
+        (
+            np.array([["E", 0], [0, 1]], dtype="U"),
+            np.array([["E", 0], [0, "E"]], dtype="U"),
+            [1.5, 0.006, 0.004],
+            [3.0, 3.0, 1.0],
+        ),
+        (
+            np.array([["E", 0], [0, 1]], dtype="U"),
+            np.array([["E", 0], ["E", 1]], dtype="U"),
+            [1.5, 0.006, 0.004],
+            [3.0, 3.0, 1.0],
+        ),
+    ],
+    ids=["diagonal-b", "lower-b"],
+)
+def test_fit_not_identified_free_a_and_b_entry(A, B, params, scale):
+    # Scaling A[0, 0] and B[0, 0] by the same factor leaves A^-1 B, and so the
+    # covariance, unchanged: the model is not identified (vars rejects it:
+    # "Free parameters at the same positions in Amat and Bmat"). The rank
+    # check accepted it.
+    model = SVAR(_gdp_cons_dlog(), "AB", A=A, B=B)
+    with pytest.raises(ValueError, match="Rank condition not met"):
+        model.fit(maxlags=1)
+    # the log-likelihood is flat along that direction
+    params = np.array(params)
+    scaled = params * np.array(scale)
+    assert_allclose(model.loglike(scaled), model.loglike(params), rtol=1e-12)
 
 
 def _svar_ab_model():
