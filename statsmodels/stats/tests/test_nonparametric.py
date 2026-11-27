@@ -1039,3 +1039,231 @@ def test_samplesize_rank_compare_onetail_invalid(
             nobs_ratio=nobs_ratio,
             alternative=alternative,
         )
+
+
+class TestDunnTest:
+
+    def test_dunn_basic(self):
+        # Reference values from R package dunn.test (CRAN: https://cran.r-project.org/package=dunn.test)
+        # Provenance:
+        # Generated with R 4.4.0:
+        # > library(dunn.test)
+        # > x <- c(1.2, 1.4, 1.8, 2.1, 2.3, 2.4, 2.8, 3.1, 3.5, 3.9, 4.1, 4.3, 4.4, 4.6, 4.9)
+        # > g <- factor(rep(c("G1", "G2", "G3"), each = 5))
+        # > res <- dunn.test(x, g, method = "bonferroni")
+        # > res$Z
+        # [1] -1.767767 -3.535534 -1.767767
+        # > res$P
+        # [1] 0.07709987 0.00040695 0.07709987
+        # > res$P.adjusted
+        # [1] 0.2312996 0.0012209 0.2312996
+        from statsmodels.stats.api import dunn_test
+
+        g1 = [1.2, 1.4, 1.8, 2.1, 2.3]
+        g2 = [2.4, 2.8, 3.1, 3.5, 3.9]
+        g3 = [4.1, 4.3, 4.4, 4.6, 4.9]
+
+        res = dunn_test(g1, g2, g3, p_adjust="bonferroni")
+
+        expected_z = np.array([
+            [0.0, -1.767767, -3.535534],
+            [1.767767, 0.0, -1.767767],
+            [3.535534, 1.767767, 0.0],
+        ])
+        assert_allclose(res.statistic.values, expected_z, atol=1e-5)
+
+        # Unadjusted p-values
+        expected_raw_p = [0.07709987, 0.00040695, 0.07709987]
+        assert_allclose(
+            res.comparison_table["p_value"].values, expected_raw_p, atol=1e-5
+        )
+
+        # Bonferroni-adjusted p-values (raw * 3 capped at 1.0)
+        expected_bonf_p = [0.2312996, 0.0012209, 0.2312996]
+        assert_allclose(
+            res.comparison_table["p_value_adj"].values, expected_bonf_p, atol=1e-5
+        )
+
+        # Rejection at alpha = 0.05
+        assert list(res.comparison_table["reject"].values) == [False, True, False]
+        assert_allclose(res.mean_ranks.values, [3.0, 8.0, 13.0])
+
+    def test_dunn_with_ties(self):
+        # Reference values with ties from R package dunn.test
+        # Provenance:
+        # > library(dunn.test)
+        # > x <- c(1, 2, 2, 3, 2, 3, 4, 4, 4, 5, 5, 6)
+        # > g <- factor(rep(c("G1", "G2", "G3"), each = 4))
+        # > res <- dunn.test(x, g, method = "holm")
+        # > res$Z
+        # [1] -1.197825 -2.844834 -1.647009
+        # > res$P
+        # [1] 0.230985 0.004443 0.099556
+        from statsmodels.stats.nonparametric import dunn_test
+
+        g1 = [1, 2, 2, 3]
+        g2 = [2, 3, 4, 4]
+        g3 = [4, 5, 5, 6]
+
+        res = dunn_test(g1, g2, g3, p_adjust="holm")
+
+        expected_z = [-1.197825, -2.844834, -1.647009]
+        assert_allclose(
+            res.comparison_table["z_stat"].values, expected_z, atol=1e-5
+        )
+        expected_raw_p = [0.230985, 0.004443, 0.099556]
+        assert_allclose(
+            res.comparison_table["p_value"].values, expected_raw_p, atol=1e-5
+        )
+
+    def test_dunn_calling_styles(self):
+        from statsmodels.stats.api import dunn_test
+
+        g1 = [1.2, 1.4, 1.8, 2.1, 2.3]
+        g2 = [2.4, 2.8, 3.1, 3.5, 3.9]
+        g3 = [4.1, 4.3, 4.4, 4.6, 4.9]
+
+        r1 = dunn_test(g1, g2, g3)
+        r2 = dunn_test([g1, g2, g3])
+        r3 = dunn_test({"A": g1, "B": g2, "C": g3})
+        r4 = dunn_test(pd.DataFrame({"A": g1, "B": g2, "C": g3}))
+        all_vals = np.concatenate([g1, g2, g3])
+        all_grps = np.repeat(["A", "B", "C"], 5)
+        r5 = dunn_test(all_vals, groups=all_grps)
+
+        # 2D numpy ndarray calling style
+        arr2d = np.column_stack([g1, g2, g3])
+        r6 = dunn_test(arr2d)
+
+        assert_allclose(r1.statistic.values, r2.statistic.values)
+        assert_allclose(r3.statistic.values, r4.statistic.values)
+        assert_allclose(r3.statistic.values, r5.statistic.values)
+        assert_allclose(r1.statistic.values, r6.statistic.values)
+        assert r3.group_names == ["A", "B", "C"]
+        assert r6.group_names == ["col_0", "col_1", "col_2"]
+
+    def test_dunn_p_adjust_methods(self):
+        from statsmodels.stats.api import dunn_test
+
+        g1 = [1, 2, 3]
+        g2 = [4, 5, 6]
+        g3 = [7, 8, 9]
+
+        for method in ["holm", "bonferroni", "fdr_bh", "sidak", "none", "", None]:
+            res = dunn_test(g1, g2, g3, p_adjust=method)
+            assert res.statistic.shape == (3, 3)
+            assert res.pvalues_adjusted.shape == (3, 3)
+            assert res.reject.shape == (3, 3)
+
+    def test_dunn_alternatives(self):
+        from statsmodels.stats.api import dunn_test
+
+        g1 = [1, 2, 3]
+        g2 = [4, 5, 6]
+        g3 = [7, 8, 9]
+
+        res_two = dunn_test(g1, g2, g3, alternative="two-sided")
+        res_larger = dunn_test(g1, g2, g3, alternative="larger")
+        res_smaller = dunn_test(g1, g2, g3, alternative="smaller")
+
+        # In g1 vs g2, z < 0
+        z12 = res_two.statistic.loc["G1", "G2"]
+        assert z12 < 0
+        # For z < 0: P(Z > z) > 0.5, P(Z < z) < 0.5
+        assert res_larger.comparison_table.loc[0, "p_value"] > 0.5
+        assert res_smaller.comparison_table.loc[0, "p_value"] < 0.5
+        assert_allclose(
+            res_larger.comparison_table.loc[0, "p_value"]
+            + res_smaller.comparison_table.loc[0, "p_value"],
+            1.0,
+            atol=1e-12,
+        )
+
+    def test_dunn_summary_and_repr(self):
+        from statsmodels.stats.api import dunn_test
+
+        g1 = [1, 2, 3]
+        g2 = [4, 5, 6]
+        g3 = [7, 8, 9]
+        res = dunn_test(g1, g2, g3)
+
+        frame = res.summary_frame()
+        assert list(frame.columns) == [
+            "group1",
+            "group2",
+            "z_stat",
+            "p_value",
+            "p_value_adj",
+            "reject",
+        ]
+        assert len(frame) == 3
+
+        summary_table = res.summary()
+        text = str(summary_table)
+        assert "Dunn's Pairwise Multiple Comparisons" in text
+        assert "G1 vs G2" in text
+        assert "G1 vs G3" in text
+        assert "G2 vs G3" in text
+
+        # Verify __str__ and __repr__
+        assert str(res) == text
+        assert repr(res) == text
+
+    def test_dunn_nan_handling(self):
+        from statsmodels.stats.api import dunn_test
+
+        # NaN in separate args
+        with pytest.raises(ValueError, match="NaN or missing values"):
+            dunn_test([1, 2, np.nan], [4, 5, 6])
+
+        # NaN in 1D array with groups
+        with pytest.raises(ValueError, match="NaN or missing values found in input data"):
+            dunn_test([1, np.nan, 3], groups=["A", "A", "B"])
+
+        # NaN in groups array
+        with pytest.raises(ValueError, match="NaN or null values found in `groups`"):
+            dunn_test([1, 2, 3], groups=["A", np.nan, "B"])
+
+        # NaN in 2D array
+        with pytest.raises(ValueError, match="NaN or missing values"):
+            dunn_test(np.array([[1.0, 2.0], [np.nan, 4.0]]))
+
+    def test_dunn_exceptions(self):
+        from statsmodels.stats.api import dunn_test
+
+        # < 2 groups
+        with pytest.raises(ValueError, match="at least 2 groups"):
+            dunn_test([1, 2, 3])
+
+        # Empty group
+        with pytest.raises(ValueError, match="0 observations"):
+            dunn_test([1, 2], [])
+
+        # Invalid alternative (caught by string_like)
+        with pytest.raises(ValueError, match="alternative must be one of"):
+            dunn_test([1, 2], [3, 4], alternative="invalid")
+
+        # Invalid p_adjust type
+        with pytest.raises(TypeError):
+            dunn_test([1, 2], [3, 4], p_adjust=123)
+
+        # Mismatched data and groups
+        with pytest.raises(ValueError, match="same length"):
+            dunn_test([1, 2, 3], groups=[1, 2])
+
+        # groups with len(samples) != 1
+        with pytest.raises(ValueError, match="When `groups` is provided"):
+            dunn_test([1, 2], [3, 4], groups=[1, 2])
+
+        # 2D data with groups
+        with pytest.raises(ValueError, match="must both be 1-dimensional"):
+            dunn_test(np.zeros((2, 2)), groups=[1, 2])
+
+        # Invalid sample input format
+        with pytest.raises(ValueError, match="Invalid sample input format"):
+            dunn_test(12345)
+
+        # list of non-arrays
+        with pytest.raises(ValueError, match="at least 2 groups"):
+            dunn_test([1])
+
