@@ -284,6 +284,14 @@ class ProcessMLE(base.LikelihoodModel):
 
         self._has_noise = exog_noise is not None
 
+        # The model keeps these as given; they are indexed by position below,
+        # so pandas objects are converted
+        self.time = np.asarray(self.time)
+        self.exog_scale = np.asarray(self.exog_scale)
+        self.exog_smooth = np.asarray(self.exog_smooth)
+        if self._has_noise:
+            self.exog_noise = np.asarray(self.exog_noise)
+
         # Create parameter names
         xnames = []
         if hasattr(exog, "columns"):
