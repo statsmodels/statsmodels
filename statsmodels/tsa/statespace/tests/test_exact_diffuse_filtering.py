@@ -54,6 +54,7 @@ from statsmodels.tools.sm_exceptions import ModelWarning, OutputWarning
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
+from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 from statsmodels.tsa.statespace.varmax import VARMAX
@@ -1059,3 +1060,142 @@ def test_exact_diffuse_negative_forecast_variance_clipped():
     # atol: zero by construction; without the clipping it would be -1
     assert_allclose(res.forecasts_error_cov[0, 0, 0], 0.0, atol=1e-12)
     assert_allclose(res.forecasts_error_cov[1, 1, 0], 1.0)
+
+
+def _exact_diffuse_posterior_cov(mod, diffuse):
+    # Joint posterior covariance matrix of the states (stacked by period),
+    # with the states written as linear functions of theta = (alpha_1, eta_1,
+    # ..., eta_{n-1}); the states in `diffuse` have prior precision zero, the
+    # others the inverse of their block of the initial state covariance
+    # matrix (a known initialization: constants do not matter here)
+    ssm = mod.ssm
+    nobs, k_states, k_posdef = mod.nobs, mod.k_states, ssm.k_posdef
+
+    def matrix(name, t):
+        value = getattr(ssm, name)
+        return value[..., t if value.shape[-1] > 1 else 0]
+
+    n_theta = k_states + (nobs - 1) * k_posdef
+    states = np.zeros((nobs, k_states, n_theta))
+    states[0, :, :k_states] = np.eye(k_states)
+    for t in range(nobs - 1):
+        start = k_states + t * k_posdef
+        states[t + 1] = matrix("transition", t) @ states[t]
+        states[t + 1, :, start : start + k_posdef] += matrix("selection", t)
+    precision = np.zeros((n_theta, n_theta))
+    known = [i for i in range(k_states) if i not in diffuse]
+    init_cov = ssm.initialization(model=ssm)[2]
+    precision[np.ix_(known, known)] = np.linalg.inv(init_cov[np.ix_(known, known)])
+    for t in range(nobs - 1):
+        start = k_states + t * k_posdef
+        block = slice(start, start + k_posdef)
+        precision[block, block] = np.linalg.inv(matrix("state_cov", t))
+    for t in range(nobs):
+        observed = ~np.isnan(mod.endog[t])
+        design = matrix("design", t)[observed] @ states[t]
+        obs_cov = matrix("obs_cov", t)[np.ix_(observed, observed)]
+        precision += design.T @ np.linalg.solve(obs_cov, design)
+    theta_cov = np.linalg.inv(precision)
+    stacked = states.reshape(nobs * k_states, n_theta)
+    return stacked @ theta_cov @ stacked.T
+
+
+def _diffuse_autocov_model(case):
+    rng = np.random.default_rng(1825)
+    nobs = 12
+    if case == "factor-lags":
+        # Like a factor in DynamicFactorMQ with more lags in the state than its
+        # AR order (quarterly data): a singular transition matrix and fewer
+        # shocks than states. The factor and its first lag are diffuse.
+        endog = rng.standard_normal((nobs, 3))
+        endog[0, 1:] = np.nan
+        mod = MLEModel(endog, k_states=3, k_posdef=1)
+        mod["design"] = [[1.0, 0.0, 0.0], [0.8, 0.4, 0.0], [0.5, 0.0, 0.3]]
+        mod["obs_cov"] = np.diag([0.6, 0.9, 1.2])
+        mod["transition"] = [[0.5, 0.3, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+        mod["selection"] = [[1.0], [0.0], [0.0]]
+        mod["state_cov"] = [[1.0]]
+        init = Initialization(3)
+        init.set((0, 2), "diffuse")
+        init.set((2, 3), "known", constant=[0.0], stationary_cov=[[1.0]])
+        mod.ssm.initialization = init
+        return mod, [0, 1]
+    k_endog = 2 if case == "bivariate" else 1
+    endog = rng.standard_normal((nobs, k_endog)).cumsum(axis=0)
+    if case in ("missing", "time-varying"):
+        endog[1] = np.nan
+    if case == "bivariate":
+        endog[1, 1] = np.nan
+    mod = MLEModel(endog, k_states=3, k_posdef=3)
+    # With two series, both observations of the first period are diffuse
+    mod["design"] = [[1.0, 0.0, 1.0], [0.5, 1.0, 0.0]][:k_endog]
+    mod["obs_cov"] = np.diag([0.7, 0.4][:k_endog])
+    mod["transition"] = [[1.0, 1.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.6]]
+    mod["selection"] = np.eye(3)
+    state_cov = np.diag([0.5, 0.2, 0.8])
+    if case == "time-varying":
+        state_cov = state_cov[..., None] * np.linspace(0.5, 1.5, nobs)
+    mod["state_cov"] = state_cov
+    # A local linear trend (diffuse) and a stationary AR(1) (known), except
+    # with two series and in the first case, where all states are diffuse
+    init = Initialization(3)
+    if case in ("diffuse", "bivariate"):
+        init.set(None, "diffuse")
+        diffuse = [0, 1, 2]
+    else:
+        init.set((0, 2), "diffuse")
+        init.set((2, 3), "known", constant=[0.5], stationary_cov=[[0.8 / 0.64]])
+        diffuse = [0, 1]
+    mod.ssm.initialization = init
+    return mod, diffuse
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "diffuse",
+        "partly-diffuse",
+        "missing",
+        "time-varying",
+        "bivariate",
+        "factor-lags",
+    ],
+)
+def test_smoothed_state_autocov_diffuse_periods(case):
+    # The smoothed state autocovariance Cov(alpha_{t+1}, alpha_t) was not
+    # computed in the exact diffuse periods: it kept the values of the array
+    # from the previous run (zero in a first run). It equals the joint
+    # posterior covariance of the states under the exact diffuse prior.
+    mod, diffuse = _diffuse_autocov_model(case)
+    # Earlier runs with a known initialization (the autocovariance is computed
+    # in every period) and with a diffuse initialization of all states (more
+    # diffuse periods) fill the arrays
+    initialization = mod.ssm.initialization
+    mod.ssm.initialize_known(np.zeros(mod.k_states), np.eye(mod.k_states))
+    mod.ssm.smooth()
+    mod.ssm.initialize_diffuse()
+    mod.ssm.smooth()
+    mod.ssm.initialization = initialization
+    res = mod.ssm.smooth()
+    assert res.nobs_diffuse > 1
+
+    k = mod.k_states
+    posterior_cov = _exact_diffuse_posterior_cov(mod, diffuse)
+    desired = np.array(
+        [
+            posterior_cov[(t + 1) * k : (t + 2) * k, t * k : (t + 1) * k]
+            for t in range(mod.nobs - 1)
+        ]
+    ).transpose(1, 2, 0)
+    # atol: some elements are zero in theory or several orders of magnitude
+    # smaller than the largest, and carry its rounding error (about 1e-12)
+    atol = 1e-10 * np.abs(desired).max()
+    assert_allclose(res.smoothed_state_autocov[..., :-1], desired, rtol=1e-8, atol=atol)
+    # The reference also gives the smoothed state covariance matrix
+    smoothed_state_cov = np.array(
+        [
+            posterior_cov[t * k : (t + 1) * k, t * k : (t + 1) * k]
+            for t in range(mod.nobs)
+        ]
+    ).transpose(1, 2, 0)
+    assert_allclose(res.smoothed_state_cov, smoothed_state_cov, rtol=1e-8, atol=atol)

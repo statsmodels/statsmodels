@@ -652,6 +652,11 @@ class SmootherResults(FilterResults):
     smoothed_state_autocov : ndarray
         The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
+
+        .. versionchanged:: 0.15.1
+
+           It is computed in the periods of an exact diffuse initialization,
+           where it was left at zero or at the values of an earlier run.
     smoothed_measurement_disturbance : ndarray
         The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
