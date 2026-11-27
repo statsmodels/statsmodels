@@ -528,10 +528,9 @@ class NewsResults:
         df = s.rename("impact").to_frame()
         df = df.reindex(["revision date", "revised variable", "impact"],
                         axis=1)
-        if self.revisions_details_start > 0:
-            df["revision date"] = (
-                self.updated.model._index[self.revisions_details_start - 1])
-            df["revised variable"] = "all prior revisions"
+        df["revision date"] = (
+            self.updated.model._index[self.revisions_details_start - 1])
+        df["revised variable"] = "all prior revisions"
         df = (df.set_index(["revision date", "revised variable"], append=True)
                 .reorder_levels([2, 3, 0, 1]))
         return df
@@ -993,10 +992,7 @@ class NewsResults:
                 impacts = impacts.applymap(
                     lambda num: "" if pd.isna(num) else float_format % num)
             impacts = impacts.reset_index()
-            try:
-                impacts[impacts.columns[0]] = impacts.iloc[:, 0].map(str)
-            except AttributeError:
-                impacts.iloc[:, 0] = impacts.iloc[:, 0].applymap(str)
+            impacts[impacts.columns[0]] = impacts.iloc[:, 0].map(str)
         else:
             impacts = impacts.reset_index()
             # Replace each column: setting strings into the date (or integer)
@@ -1252,13 +1248,12 @@ class NewsResults:
             # Convert everything to strings
             for key in [columns["current"], columns["prev"], columns["news"],
                         "weight", "impact"]:
-                if key in details:
-                    args = (
-                        # mark_ones
-                        key == "weight",
-                        # mark_zeroes
-                        key in ["weight", "impact"])
-                    details[key] = details[key].apply(str_format, args=args)
+                args = (
+                    # mark_ones
+                    key == "weight",
+                    # mark_zeroes
+                    key in ["weight", "impact"])
+                details[key] = details[key].apply(str_format, args=args)
             for key in [columns["update date"], "impact date"]:
                 if key in details:
                     details[key] = details[key].apply(str)
