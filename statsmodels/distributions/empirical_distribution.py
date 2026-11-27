@@ -63,8 +63,11 @@ class StepFunction:
     Notes
     -----
     .. versionchanged:: 0.15.1
-       Left-continuous step functions now return ``ival`` at negative infinity
-       even when the support contains repeated negative infinity values.
+       With ``side="left"``, evaluating the function at negative infinity
+       returns ``ival``; it returned the last value of ``y`` before. Repeated
+       values of an unsorted ``x`` are sorted stably, so the last of the tied
+       ``y`` is used for both values of ``side``; the result depended on the
+       sort algorithm before.
 
     Examples
     --------
