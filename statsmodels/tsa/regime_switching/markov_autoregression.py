@@ -28,7 +28,13 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     k_regimes : int
         The number of regimes.
     order : int
-        The order of the autoregressive lag polynomial.
+        The order of the autoregressive lag polynomial, at least 1.
+
+        .. versionchanged:: 0.15.1
+
+           An order below 1 raises ValueError. Before, ``order=0`` was
+           accepted, but ``fit``, ``transform_params`` and, with the
+           default index, ``predict`` failed.
     trend : {'n', 'c', 't', 'ct'}, optional
         Whether or not to include a trend. To include a constant, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
@@ -120,6 +126,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                  exog_tvtp=None, switching_ar=True, switching_trend=True,
                  switching_exog=False, switching_variance=False,
                  dates=None, freq=None, missing="none"):
+
+        if order < 1:
+            raise ValueError("The order of the autoregression must be at least 1.")
 
         # Properties
         self.switching_ar = switching_ar
@@ -281,19 +290,18 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                 params1[self.parameters[i, "exog"]] = coeffs[i]
 
         # Autoregressive
-        if self.order > 0:
-            if self._k_exog > 0:
-                ar_coeffs, variance = self._em_autoregressive(
-                    result, coeffs)
-            else:
-                ar_coeffs = self._em_exog(
-                    result, self.endog, self.exog_ar,
-                    self.parameters.switching["autoregressive"])
-                variance = self._em_variance(
-                    result, self.endog, self.exog_ar, ar_coeffs, tmp)
-            for i in range(self.k_regimes):
-                params1[self.parameters[i, "autoregressive"]] = ar_coeffs[i]
-            params1[self.parameters["variance"]] = variance
+        if self._k_exog > 0:
+            ar_coeffs, variance = self._em_autoregressive(
+                result, coeffs)
+        else:
+            ar_coeffs = self._em_exog(
+                result, self.endog, self.exog_ar,
+                self.parameters.switching["autoregressive"])
+            variance = self._em_variance(
+                result, self.endog, self.exog_ar, ar_coeffs, tmp)
+        for i in range(self.k_regimes):
+            params1[self.parameters[i, "autoregressive"]] = ar_coeffs[i]
+        params1[self.parameters["variance"]] = variance
 
         return result, params1
 
@@ -344,18 +352,13 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         # OLS for starting parameters
         endog = self.endog.copy()
-        if self._k_exog > 0 and self.order > 0:
+        if self._k_exog > 0:
             exog = np.c_[self.exog, self.exog_ar]
-        elif self._k_exog > 0:
-            exog = self.exog
-        elif self.order > 0:
+        else:
             exog = self.exog_ar
 
-        if self._k_exog > 0 or self.order > 0:
-            beta = np.dot(np.linalg.pinv(exog), endog)
-            variance = np.var(endog - np.dot(exog, beta))
-        else:
-            variance = np.var(endog)
+        beta = np.dot(np.linalg.pinv(exog), endog)
+        variance = np.var(endog - np.dot(exog, beta))
 
         # Regression coefficients
         if self._k_exog > 0:
@@ -367,13 +370,12 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                 params[self.parameters["exog"]] = beta[:self._k_exog]
 
         # Autoregressive
-        if self.order > 0:
-            if np.any(self.switching_ar):
-                for i in range(self.k_regimes):
-                    params[self.parameters[i, "autoregressive"]] = (
-                        beta[self._k_exog:] * (i / self.k_regimes))
-            else:
-                params[self.parameters["autoregressive"]] = beta[self._k_exog:]
+        if np.any(self.switching_ar):
+            for i in range(self.k_regimes):
+                params[self.parameters[i, "autoregressive"]] = (
+                    beta[self._k_exog:] * (i / self.k_regimes))
+        else:
+            params[self.parameters["autoregressive"]] = beta[self._k_exog:]
 
         # Variance
         if self.switching_variance:
