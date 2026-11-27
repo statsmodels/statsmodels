@@ -865,8 +865,13 @@ class KalmanFilter(Representation):
         # Initialize the filter
         prefix, dtype, create_filter, create_statespace = (
             self._initialize_filter(
-                filter_method, inversion_method, stability_method,
-                conserve_memory, filter_timing, tolerance, loglikelihood_burn
+                filter_method=filter_method,
+                inversion_method=inversion_method,
+                stability_method=stability_method,
+                conserve_memory=conserve_memory,
+                filter_timing=filter_timing,
+                tolerance=tolerance,
+                loglikelihood_burn=loglikelihood_burn,
             )
         )
         kfilter = self._kalman_filters[prefix]
@@ -927,6 +932,13 @@ class KalmanFilter(Representation):
         -----
         This function by default does not compute variables required for
         smoothing.
+
+        .. versionchanged:: 0.15.1
+
+           `filter_timing` and `tolerance` are used as given (also when
+           passed to `loglike`, `loglikeobs` and `smooth`). Before, they were
+           swapped, so that `filter_timing=1` ran with the model's timing and
+           a tolerance of 1, and a given `tolerance` was used as the timing.
         """
         # Handle memory conservation
         if conserve_memory is None:
