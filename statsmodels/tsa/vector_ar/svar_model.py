@@ -207,6 +207,14 @@ class SVAR(tsbase.TimeSeriesModel):
             "ctt" - constant, linear and quadratic trend
             "n" - no constant, no trend
             Note that these are prepended to the columns of the dataset.
+
+            .. versionchanged:: 0.15.1
+
+               The time trend of "ct" and "ctt" counts from the first
+               observation, as in VAR, so the coefficients of the constant,
+               and of the linear term for "ctt", are those of VAR. It counted
+               from the first observation after the lags. The other
+               estimates are unchanged.
         s_method : {'mle'}, optional
             Estimation method for structural parameters
 
@@ -386,6 +394,10 @@ class SVAR(tsbase.TimeSeriesModel):
         k_trend = util.get_trendorder(trend)
         y = self.endog
         z = util.get_var_endog(y, lags, trend=trend, has_constant="raise")
+        if k_trend > 1:
+            # Count the time trend from the first observation, as VAR does
+            time = np.arange(lags + 1.0, len(y) + 1)
+            z[:, :k_trend] = np.vander(time, k_trend, increasing=True)
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
@@ -968,6 +980,7 @@ class SVARResults(SVARProcess, VARResults):
 
         self.n_totobs, self.neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
+        self.trend = trend
         k_trend = util.get_trendorder(trend)
         if k_trend > 0:  # make this the polynomial trend order
             trendorder = k_trend - 1
@@ -1133,6 +1146,11 @@ class SVARResults(SVARProcess, VARResults):
         Notes
         -----
         Lütkepohl (2005) Appendix D
+
+        .. versionchanged:: 0.15.1
+
+           The replications are fitted with the trend of the results. They
+           were fitted with a constant, trend "c".
         """
         if orth:
             warnings.warn(
@@ -1194,7 +1212,9 @@ class SVARResults(SVARProcess, VARResults):
                     message="Maximum Likelihood optimization failed",
                     category=ConvergenceWarning,
                 )
-                sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
+                sres = smod.fit(
+                    maxlags=k_ar, A_guess=opt_A, B_guess=opt_B, trend=self.trend
+                )
             n_not_converged += not smod.mle_retvals["converged"]
 
             if i < 10:

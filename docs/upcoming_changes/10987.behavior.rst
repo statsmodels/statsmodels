@@ -1,0 +1,5 @@
+- With ``trend="ct"`` or ``"ctt"``, :class:`~statsmodels.tsa.vector_ar.svar_model.SVAR` counted the time trend from
+  the first estimation observation, so its constant (and the linear
+  term for ``"ctt"``) differed from VAR's. It counts from the first
+  observation as VAR does, and ``sirf_errband_mc`` refits with the
+  model's trend. :pr:`10987`
