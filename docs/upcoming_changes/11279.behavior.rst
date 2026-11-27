@@ -1,0 +1,7 @@
+- :meth:`~statsmodels.tsa.ar_model.AutoRegResults.get_prediction` and
+  :meth:`~statsmodels.tsa.ardl.ARDLResults.get_prediction` accumulate the
+  forecast variance from the first dynamically predicted observation. With an
+  in-sample ``dynamic`` start, every in-sample step used the one-step
+  variance and the accumulation restarted at the first out-of-sample
+  observation, so the prediction intervals of such calls are now wider.
+  :pr:`11279`
