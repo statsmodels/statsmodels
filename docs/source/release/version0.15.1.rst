@@ -492,6 +492,14 @@ New functions and methods
   Fay and Graubard (2001) and Morel, Bokossa and Neerchal (2003), with the
   constants ``b = 0.75``, ``d = 2`` and ``r = 1``. :issue:`1183`,
   :pr:`10794`
+- Add the bandwidth ``bw="isj"`` to ``KDEUnivariate.fit``, ``kdensity`` and
+  ``kdensityfft``, and the function
+  :func:`~statsmodels.nonparametric.bandwidths.bw_isj`. It is the improved
+  Sheather-Jones plug-in bandwidth of Botev, Grotowski and Kroese (2010) for
+  the Gaussian kernel, which does not use a normal reference distribution
+  and is also appropriate for multimodal densities. A ``RuntimeError`` is
+  raised if the fixed point equation that defines the bandwidth has no
+  solution, which is common in small samples. :issue:`7205`, :pr:`10809`
 
 Performance
 -----------

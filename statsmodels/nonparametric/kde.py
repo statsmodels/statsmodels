@@ -132,6 +132,10 @@ class KDEUnivariate:
             - "normal_reference" - C * A * nobs ** (-1/5.), where C is
               calculated from the kernel. Equivalent (up to 2 dp) to the
               "scott" bandwidth for gaussian kernels. See bandwidths.py
+            - "isj" - The improved Sheather-Jones plug-in bandwidth of
+              Botev et al. (2010), which does not use a normal reference
+              distribution. Only available for the gaussian kernel. See
+              :func:`~statsmodels.nonparametric.bandwidths.bw_isj`.
             - If a float is given, its value is used as the bandwidth.
             - If a callable is given, its return value is used.
               The callable should take exactly two parameters, i.e.,
@@ -387,6 +391,10 @@ def kdensity(
         - "normal_reference" - C * A * nobs ** (-1/5.), where C is
           calculated from the kernel. Equivalent (up to 2 dp) to the
           "scott" bandwidth for gaussian kernels. See bandwidths.py
+        - "isj" - The improved Sheather-Jones plug-in bandwidth of
+          Botev et al. (2010), which does not use a normal reference
+          distribution. Only available for the gaussian kernel. See
+          :func:`~statsmodels.nonparametric.bandwidths.bw_isj`.
         - If a float is given, its value is used as the bandwidth.
         - If a callable is given, its return value is used.
           The callable should take exactly two parameters, i.e.,
@@ -577,6 +585,10 @@ def kdensityfft(
         - "normal_reference" - C * A * nobs ** (-1/5.), where C is
           calculated from the kernel. Equivalent (up to 2 dp) to the
           "scott" bandwidth for gaussian kernels. See bandwidths.py
+        - "isj" - The improved Sheather-Jones plug-in bandwidth of
+          Botev et al. (2010), which does not use a normal reference
+          distribution. Only available for the gaussian kernel. See
+          :func:`~statsmodels.nonparametric.bandwidths.bw_isj`.
         - If a float is given, its value is used as the bandwidth.
         - If a callable is given, its return value is used.
           The callable should take exactly two parameters, i.e.,

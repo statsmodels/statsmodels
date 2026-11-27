@@ -124,6 +124,7 @@ helper functions for kernel bandwidths
 
    bw_scott
    bw_silverman
+   bw_isj
    select_bandwidth
 
 There are some examples for nonlinear functions in
