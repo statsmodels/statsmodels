@@ -38,7 +38,12 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
         Maximum moving average order. Default is 0.
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
-        fitting the ARMA coefficients. Default is True.
+        fitting the ARMA coefficients. Default is True. If False, the sample
+        autocovariances of `endog` as given are used.
+
+        .. versionchanged:: 0.15.1
+           ``demean=False`` was ignored before: the autocovariances of the
+           demeaned series were always used.
     ar_order : int or list of int, optional
         Autoregressive order. Default is 0. As for `ma_order`, a list gives
         the included lags, which must be the consecutive lags 1, ..., p.
