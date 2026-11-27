@@ -818,3 +818,21 @@ def test_plot_irfs_drawn(close_figures):
         assert len(fig.axes) == 2
         for j, ax in enumerate(fig.axes):
             check(ax, 1, j)
+
+
+@pytest.mark.parametrize(
+    "convert",
+    [lambda a: a, lambda a: a.astype(np.int64), lambda a: a.tolist()],
+    ids=["float", "int64", "list"],
+)
+def test_exog_is_2d_float(convert):
+    # array_like converts exog to a 2-d float array, so an integer array or a
+    # list gives the same exog and fit as the float array
+    rng = np.random.default_rng(20261127)
+    y = rng.standard_normal((80, 2))
+    exog = rng.integers(0, 5, size=(80, 2)).astype(float)
+    lp = LocalProjections(y, lags=1, horizons=2, exog=convert(exog))
+    assert lp.exog.dtype == np.float64
+    assert_allclose(lp.exog, exog, rtol=0)
+    expected = LocalProjections(y, lags=1, horizons=2, exog=exog).fit()
+    assert_allclose(lp.fit().irfs, expected.irfs, rtol=1e-12)
