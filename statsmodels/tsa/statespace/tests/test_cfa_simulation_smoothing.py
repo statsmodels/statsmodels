@@ -319,3 +319,111 @@ def test_cfa_mixed_diffuse_initialization_singular_known(blocks):
     sim = mod.simulation_smoother(method="cfa")
     with pytest.raises(np.linalg.LinAlgError, match="Non-positive-definite initial"):
         sim.simulate()
+
+
+def bivariate_model(endog=None, diffuse=False, **matrices):
+    if endog is None:
+        rng = np.random.default_rng(20261122)
+        endog = rng.standard_normal((40, 2)).cumsum(0) * 0.1 + rng.standard_normal(
+            (40, 2)
+        )
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = matrices.get("obs_cov", np.diag([1.0, 0.7]))
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["state_intercept"] = np.array([0.05, 0.02])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = matrices.get("state_cov", np.array([[0.5, 0.2], [0.2, 0.4]]))
+    if diffuse:
+        mod.ssm.initialize_diffuse()
+    else:
+        initial_state_cov = matrices.get("initial_state_cov", np.eye(2))
+        mod.ssm.initialize_known(np.array([0.3, -0.1]), initial_state_cov)
+    return mod
+
+
+def banded_to_dense(banded):
+    # Lower triangular matrix from its banded storage (diagonals in rows)
+    n = banded.shape[1]
+    dense = np.zeros((n, n))
+    for k in range(banded.shape[0]):
+        ix = np.arange(n - k)
+        dense[ix + k, ix] = banded[k, : n - k]
+    return dense
+
+
+def test_exact_diffuse():
+    # With exact diffuse initialization the prior precision of the initial
+    # state is zero, and the posterior moments equal the smoothed moments
+    mod = bivariate_model(diffuse=True)
+    res = mod.ssm.smooth()
+    assert res.nobs_diffuse > 0
+    sim = mod.simulation_smoother(method="cfa")
+    sim.simulate(np.zeros((mod.k_states, mod.nobs)))
+
+    # The algorithms differ in rounding, about 1e-10 here for entries of
+    # order one; atol for entries close to zero
+    assert_allclose(sim.posterior_mean, res.smoothed_state, rtol=1e-8, atol=1e-9)
+    assert_allclose(sim.simulated_state, res.smoothed_state, rtol=1e-8, atol=1e-9)
+    cov = sim.posterior_cov
+    for t in range(mod.nobs):
+        block = cov[2 * t : 2 * t + 2, 2 * t : 2 * t + 2]
+        assert_allclose(block, res.smoothed_state_cov[..., t], rtol=1e-8, atol=1e-9)
+
+
+def test_single_observation():
+    mod = bivariate_model(endog=np.zeros((1, 2)))
+    sim = mod.simulation_smoother(method="cfa")
+    with pytest.raises(NotImplementedError, match="single observation"):
+        sim.simulate()
+
+
+@pytest.mark.parametrize(
+    "name, match",
+    [
+        ("initial_state_cov", "Non-positive-definite initial state covariance"),
+        ("state_cov", "Non-positive-definite selected state covariance"),
+        ("obs_cov", "Non-positive-definite observation covariance"),
+    ],
+)
+def test_singular_covariance(name, match):
+    # A positive semi-definite covariance matrix with a zero variance has no
+    # Cholesky factor (the CFA needs its inverse); the KFS smoother works
+    mod = bivariate_model(**{name: np.diag([1.0, 0.0])})
+    assert np.all(np.isfinite(mod.ssm.smooth().smoothed_state))
+    sim = mod.simulation_smoother(method="cfa")
+    with pytest.raises(np.linalg.LinAlgError, match=match):
+        sim.simulate()
+
+
+def test_posterior_cov_and_update_posterior():
+    mod = bivariate_model()
+    res = mod.ssm.smooth()
+    sim = mod.simulation_smoother(method="cfa")
+    sim.simulate(np.zeros((mod.k_states, mod.nobs)))
+    mean = sim.posterior_mean
+
+    # L L' is the inverse of the posterior covariance, and its diagonal blocks
+    # are the smoothed state covariances; both properties are cached
+    for _ in range(2):
+        chol = banded_to_dense(sim.posterior_cov_inv_chol_sparse)
+        cov = sim.posterior_cov
+        # atol: the off-diagonal entries of the identity are zero
+        assert_allclose(cov @ (chol @ chol.T), np.eye(2 * mod.nobs), atol=1e-12)
+        for t in [0, 10, mod.nobs - 1]:
+            block = cov[2 * t : 2 * t + 2, 2 * t : 2 * t + 2]
+            # The algorithms differ in rounding; atol for small covariances
+            assert_allclose(
+                block, res.smoothed_state_cov[..., t], rtol=1e-8, atol=1e-9
+            )
+
+    # Without updating the posterior moments, a new draw is
+    # x = mean + (L')^{-1} u, with the posterior moments of the last update
+    variates = np.random.default_rng(1122).standard_normal((mod.k_states, mod.nobs))
+    sim.simulate(variates, update_posterior=False)
+    desired = mean.ravel(order="F") + np.linalg.solve(
+        chol.T, variates.ravel(order="F")
+    )
+    assert_allclose(sim.simulated_state, desired.reshape(2, -1, order="F"), rtol=1e-10)
+    assert sim.posterior_mean is mean

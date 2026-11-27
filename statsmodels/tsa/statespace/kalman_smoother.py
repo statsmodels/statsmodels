@@ -255,7 +255,7 @@ class KalmanSmoother(KalmanFilter):
         >>> import statsmodels.tsa.statespace.kalman_smoother as ks
         >>> mod = ks.KalmanSmoother(1,1)
         >>> mod.smoother_output
-        15
+        31
         >>> mod.set_smoother_output(smoother_output=0)
         >>> mod.smoother_state = True
         >>> mod.smoother_output
@@ -280,9 +280,10 @@ class KalmanSmoother(KalmanFilter):
         Parameters
         ----------
         smooth_method : int, optional
-            Bitmask value to set the filter method to. See notes for details.
+            Bitmask value to set the smoothing method to. See notes for
+            details.
         **kwargs
-            Keyword arguments may be used to influence the filter method by
+            Keyword arguments may be used to influence the smoothing method by
             setting individual boolean flags. See notes for details.
 
             .. versionchanged:: 0.15.1
@@ -315,9 +316,6 @@ class KalmanSmoother(KalmanFilter):
         but different computational implications, numerical stability
         implications, or internal timing assumptions.
 
-        Note that only the first method is available if using a Scipy version
-        older than 0.16.
-
         If the bitmask is set directly via the `smooth_method` argument, then
         the full method must be provided.
 
@@ -325,36 +323,30 @@ class KalmanSmoother(KalmanFilter):
         the lowercase of the method must be used as an argument name, and the
         value is the desired value of the boolean flag (True or False).
 
-        Note that the filter method may also be specified by directly modifying
-        the class attributes which are defined similarly to the keyword
-        arguments.
+        Note that the smoothing method may also be specified by directly
+        modifying the class attributes which are defined similarly to the
+        keyword arguments.
 
-        The default filtering method is SMOOTH_CONVENTIONAL.
+        The default smoothing method is 0, which selects the smoother from the
+        filter method: SMOOTH_UNIVARIATE if the univariate filter is used and
+        SMOOTH_CONVENTIONAL otherwise.
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> import statsmodels.tsa.statespace.kalman_smoother as ks
+        >>> mod = ks.KalmanSmoother(1,1)
         >>> mod.smooth_method
-        1
-        >>> mod.filter_conventional
+        0
+        >>> mod.set_smooth_method(smooth_alternative=True)
+        >>> mod.smooth_method
+        4
+        >>> mod.smooth_alternative
         True
-        >>> mod.filter_univariate = True
-        >>> mod.smooth_method
-        17
-        >>> mod.set_smooth_method(filter_univariate=False,
-        ...                       filter_collapsed=True)
-        >>> mod.smooth_method
-        33
-        >>> mod.set_smooth_method(smooth_method=1)
-        >>> mod.filter_conventional
+        >>> mod.set_smooth_method(smooth_method=ks.SMOOTH_CONVENTIONAL)
+        >>> mod.smooth_conventional
         True
-        >>> mod.filter_univariate
+        >>> mod.smooth_alternative
         False
-        >>> mod.filter_collapsed
-        False
-        >>> mod.filter_univariate = True
-        >>> mod.smooth_method
-        17
         """
         if smooth_method is not None:
             self.smooth_method = smooth_method
@@ -651,7 +643,8 @@ class SmootherResults(FilterResults):
     scaled_smoothed_estimator_cov : ndarray
         The scaled smoothed estimator covariance matrices at each time period.
     smoothing_error : ndarray
-        The smoothing error covariance matrices at each time period.
+        The smoothing error :math:`u_t` (Durbin and Koopman, 2012, chapter
+        4.5) at each time period, shaped `(k_endog, nobs)`.
     smoothed_state : ndarray
         The smoothed state at each time period.
     smoothed_state_cov : ndarray
@@ -1749,8 +1742,8 @@ class SmootherResults(FilterResults):
 
         Parameters
         ----------
-        updates_ix : list of tuple
-            List of indices `(t, i)`, where `t` denotes a zero-indexed time
+        updates_ix : sequence of tuple of int
+            Sequence of indices `(t, i)`, where `t` denotes a zero-indexed time
             location and `i` denotes a zero-indexed endog variable.
         t : int, optional
             A specific period for which to compute the gain. Cannot be used

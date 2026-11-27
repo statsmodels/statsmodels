@@ -214,7 +214,7 @@ def companion_matrix(polynomial):
     If the coefficients provided are matrices :math:`(C_0, C_1, \dots, C_p)`,
     each of shape :math:`(m, m)`, then the companion matrix is an
     :math:`nm \times nm` matrix formed with the elements in the first column
-    defined as :math:`\phi_i = -C_0^{-1} C_i', i \in 1, \dots, p`.
+    defined as :math:`\phi_i = -(C_0^{-1} C_i)', i \in 1, \dots, p`.
 
     It is important to understand the expected signs of the coefficients. A
     typical AR(p) model is written as:
@@ -323,8 +323,9 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
 
     Returns
     -------
-    differenced : ndarray
-        The differenced array.
+    differenced : ndarray, Series, or DataFrame
+        The differenced array. Will be a Series or DataFrame if `series` is a
+        pandas object.
     """
     pandas = _is_using_pandas(series, None)
     differenced = np.asanyarray(series) if not pandas else series
@@ -367,9 +368,9 @@ def concat(series, axis=0, allow_mix=False):
 
     Returns
     -------
-    concatenated : array or DataFrame
-        The concatenated array. Will be a DataFrame if series are pandas
-        objects.
+    concatenated : ndarray, Series, or DataFrame
+        The concatenated array. Will be a Series or DataFrame if the series are
+        pandas objects.
     """
     is_pandas = np.r_[[_is_using_pandas(s, None) for s in series]]
     ndim = np.r_[[np.ndim(s) for s in series]]
@@ -447,7 +448,14 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
         polynomial (in which case the coefficients are coefficient matrices),
         a tuple or list of matrices should be passed.
     threshold : float, optional
-        Allowed threshold for `is_invertible` to return True. Default is 1.
+        Allowed threshold for `is_invertible` to return True. Default is
+        1 - 1e-10.
+
+    Returns
+    -------
+    bool
+        Whether all eigenvalues of the companion matrix of the polynomial
+        are smaller than `threshold` in absolute value.
 
     See Also
     --------
@@ -509,7 +517,7 @@ def solve_discrete_lyapunov(a, q, complex_step=False):
 
     Parameters
     ----------
-    a : array_like
+    a : ndarray
         The matrix on the left-hand side, usually the transition matrix.
     q : array_like
         The matrix on the right-hand side, usually the selected state
@@ -1559,8 +1567,8 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
         `k_endog` x `k_endog * order`.
     error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
-        `k_endog` x `k_endog`. This is used as input in the algorithm even if
-        is not transformed by it (when `transform_variance` is False).
+        `k_endog` x `k_endog`. This is used as input in the algorithm even
+        though it is not transformed by it.
 
     Returns
     -------
@@ -1629,9 +1637,9 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
         The expected number of rows.
     ncols : int
         The expected number of columns.
-    nobs : int
+    nobs : int or None
         The number of observations (used to validate the last dimension of a
-        time-varying matrix)
+        time-varying matrix). If None, a time-varying matrix is not allowed.
 
     Raises
     ------
@@ -1678,9 +1686,9 @@ def validate_vector_shape(name, shape, nrows, nobs):
         the vector is time-varying) 2.
     nrows : int
         The expected number of rows (elements of the vector).
-    nobs : int
+    nobs : int or None
         The number of observations (used to validate the last dimension of a
-        time-varying vector)
+        time-varying vector). If None, a time-varying vector is not allowed.
 
     Raises
     ------
@@ -1815,7 +1823,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
         The matrix to copy to. Must have shape (n, m, nobs).
     missing : array_like of bool
         The vector of missing indices. Must have shape (k, nobs) where `k = n`
-        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+        if `missing_rows is True` and `k = m` if `missing_cols is True`.
     missing_rows : bool, optional
         Whether or not the rows of the matrix are a missing dimension. Default
         is False.
@@ -1859,7 +1867,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
 
 def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     """
-    Reorder the elements of a time-varying vector where all non-missing
+    Copy the elements of a time-varying vector where all non-missing
     values are in the first elements of the vector.
 
     Parameters
@@ -1905,8 +1913,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
 def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
                       is_diagonal=False, inplace=False, prefix=None):
     """
-    Copy the rows or columns of a time-varying matrix where all non-index
-    values are in the upper left corner of the matrix.
+    Copy the indexed rows or columns of a time-varying matrix.
 
     Parameters
     ----------
@@ -1917,7 +1924,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
         The matrix to copy to. Must have shape (n, m, nobs).
     index : array_like of bool
         The vector of index indices. Must have shape (k, nobs) where `k = n`
-        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+        if `index_rows is True` and `k = m` if `index_cols is True`.
     index_rows : bool, optional
         Whether or not the rows of the matrix are a index dimension. Default
         is False.
@@ -1961,8 +1968,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
 
 def copy_index_vector(a, b, index, inplace=False, prefix=None):
     """
-    Reorder the elements of a time-varying vector where all non-index
-    values are in the first elements of the vector.
+    Copy the indexed elements of a time-varying vector.
 
     Parameters
     ----------
@@ -2117,7 +2123,7 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
 
     Parameters
     ----------
-    polynomial_trend : array_like
+    polynomial_trend : ndarray
         Array containing the coefficients of the polynomial, where non-zero
         entries indicate that the associated degree term should be included
         in the trend data, in order of increasing degree. See
