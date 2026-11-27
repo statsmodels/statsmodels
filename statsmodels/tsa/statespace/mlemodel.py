@@ -51,16 +51,26 @@ def _handle_args(names, defaults, *args, **kwargs):
         # the fit() method will pass a dictionary
         if isinstance(args[0], dict):
             flags = args[0]
-        # otherwise, a user may have just used positional arguments...
+        # otherwise, a user may have just used positional arguments, which
+        # can be any number of the leading flags
         else:
-            flags = dict(zip(names, args, strict=True))
-        output_args = [flags.get(names[i], defaults[i]) for i in range(len(names))]
+            if len(args) > len(names):
+                raise TypeError(
+                    f"At most {len(names)} flags can be given positionally "
+                    f"({', '.join(names)}), but {len(args)} were given."
+                )
+            flags = dict(zip(names[: len(args)], args, strict=True))
 
         for name in flags:
             if name in kwargs:
                 raise TypeError(
-                    f"loglike() got multiple values for keyword argument '{name}'"
+                    f"got multiple values for keyword argument '{name}'"
                 )
+        # the flags that were not given positionally can be given by keyword
+        output_args = [
+            flags[name] if name in flags else kwargs.pop(name, default)
+            for name, default in zip(names, defaults, strict=True)
+        ]
     else:
         output_args = [kwargs.pop(names[i], defaults[i]) for i in range(len(names))]
 

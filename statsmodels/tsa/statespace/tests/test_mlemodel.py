@@ -445,7 +445,7 @@ def test_hessian_positional_flags():
     )
     actual = mod.hessian(params, True, "approx", None, False)
     assert_allclose(actual, desired, rtol=1e-14)
-    with pytest.raises(ValueError, match="zip"):
+    with pytest.raises(TypeError, match="At most 4 flags"):
         mod.hessian(params, True, "approx", None, False, False)
     kind = inspect.signature(MLEModel.hessian).parameters["average"].kind
     assert kind is inspect.Parameter.KEYWORD_ONLY
@@ -3263,3 +3263,108 @@ def test_forecast_bool_steps(method, steps):
     res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 1.0])
     with pytest.raises(KeyError):
         getattr(res, method)(steps)
+
+
+# The flags of each method in their positional order, each with a value that
+# differs from its default where the default matters
+_POSITIONAL_FLAGS = {
+    "loglike": [
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("complex_step", True),
+    ],
+    "loglikeobs": [
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("complex_step", True),
+    ],
+    "score": [
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("score_method", "harvey"),
+        ("approx_complex_step", False),
+        ("approx_centered", True),
+    ],
+    "score_obs": [
+        ("method", "approx"),
+        ("transformed", False),
+        ("includes_fixed", True),
+        ("approx_complex_step", False),
+        ("approx_centered", True),
+    ],
+    "hessian": [
+        ("transformed", False),
+        ("hessian_method", "oim"),
+        ("approx_complex_step", False),
+        ("approx_centered", True),
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    "func, nflags",
+    [
+        (func, nflags)
+        for func, flags in _POSITIONAL_FLAGS.items()
+        for nflags in range(len(flags) + 1)
+    ],
+)
+def test_positional_flags_prefix(func, nflags):
+    # Any number of the leading flags can be given positionally, as in
+    # statsmodels 0.14. In 0.15.0, loglike, score and hessian raised unless
+    # all of their flags were given.
+    rng = np.random.default_rng(1180)
+    endog = 1.0 + rng.standard_normal(50)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend="c")
+    params = mod.untransform_params([1.0, 0.5, 4.0])
+    flags = _POSITIONAL_FLAGS[func][:nflags]
+    method = getattr(mod, func)
+    desired = method(params, **dict(flags))
+    actual = method(params, *[value for _, value in flags])
+    assert_allclose(actual, desired, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", list(_POSITIONAL_FLAGS))
+def test_positional_flags_too_many_raises(func):
+    rng = np.random.default_rng(1180)
+    mod = sarimax.SARIMAX(1.0 + rng.standard_normal(50), order=(1, 0, 0))
+    values = [value for _, value in _POSITIONAL_FLAGS[func]]
+    with pytest.raises(TypeError, match="positional"):
+        getattr(mod, func)([0.5, 4.0], *values, False)
+
+
+@pytest.mark.parametrize(
+    "func, nflags",
+    [
+        (func, nflags)
+        for func, flags in _POSITIONAL_FLAGS.items()
+        for nflags in range(1, len(flags))
+    ],
+)
+def test_positional_flags_rest_by_keyword(func, nflags):
+    # The flags that follow the positional ones can be given by keyword
+    rng = np.random.default_rng(1180)
+    endog = 1.0 + rng.standard_normal(50)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), trend="c")
+    params = mod.untransform_params([1.0, 0.5, 4.0])
+    flags = _POSITIONAL_FLAGS[func]
+    method = getattr(mod, func)
+    desired = method(params, **dict(flags))
+    actual = method(
+        params, *[value for _, value in flags[:nflags]], **dict(flags[nflags:])
+    )
+    assert_allclose(actual, desired, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", list(_POSITIONAL_FLAGS))
+def test_positional_flag_also_by_keyword_raises(func):
+    rng = np.random.default_rng(1180)
+    mod = sarimax.SARIMAX(1.0 + rng.standard_normal(50), order=(1, 0, 0))
+    name, value = _POSITIONAL_FLAGS[func][0]
+    if func in ("loglikeobs", "score_obs"):
+        # ordinary signatures: Python's own message
+        match = f"multiple values for argument '{name}'"
+    else:
+        match = f"^got multiple values for keyword argument '{name}'$"
+    with pytest.raises(TypeError, match=match):
+        getattr(mod, func)([0.5, 4.0], value, **{name: value})
