@@ -385,29 +385,28 @@ def test_hdr_multiple_alpha(close_figures):
 @pytest.mark.slow
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_hdr_alpha_repeated(close_figures):
-    alpha = [0.8]
+@pytest.mark.parametrize("make_alpha", [list, tuple, np.array])
+def test_hdr_alpha_reused(close_figures, make_alpha):
+    # A reused alpha must not collect the levels of an earlier call, here the
+    # threshold of the first call: the second call returns the extra quantiles
+    # of a call with a fresh alpha.
+    alpha = make_alpha([0.8])
+    kwargs = {"rng": 12345, "kernel_rng": 1234567}
     try:
         # Pool() forks, which warns when the process is threaded (platform dependent)
         with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
-            _, first = hdrboxplot(data, alpha=alpha, rng=12345, kernel_rng=1234567)
-        assert alpha == [0.8]
-
+            hdrboxplot(data, alpha=alpha, threshold=0.93, **kwargs)
         with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
-            _, second = hdrboxplot(data, alpha=alpha, rng=12345, kernel_rng=1234567)
-        assert alpha == [0.8]
-
-        for attr in (
-            "median",
-            "hdr_50",
-            "hdr_90",
-            "extra_quantiles",
-            "outliers",
-            "outliers_idx",
-        ):
-            assert_allclose(getattr(first, attr), getattr(second, attr))
+            _, reused = hdrboxplot(data, alpha=alpha, threshold=0.95, **kwargs)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
+            _, fresh = hdrboxplot(data, alpha=[0.8], threshold=0.95, **kwargs)
     except OSError:
         pytest.xfail("Multiprocess randomly crashes in Windows testing")
+
+    assert list(alpha) == [0.8]
+    assert np.shape(reused.extra_quantiles) == np.shape(fresh.extra_quantiles)
+    assert_allclose(reused.extra_quantiles, fresh.extra_quantiles)
+    assert_equal(reused.outliers_idx, fresh.outliers_idx)
 
 
 @pytest.mark.skipif(
