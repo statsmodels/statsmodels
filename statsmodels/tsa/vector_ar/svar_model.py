@@ -908,6 +908,14 @@ class SVARResults(SVARProcess, VARResults):
     fittedvalues : ndarray
     fpe : float
     intercept : ndarray
+        The constant of the VAR, zeros for trend "n".
+
+        .. versionchanged:: 0.15.1
+
+           With trend "n" it is zeros. It was the first row of params, the
+           coefficients of the first lag of the first variable, which mean,
+           intercept_longrun, simulate_var and sirf_errband_mc used as the
+           intercept.
     info_criteria : dict of str to float
     k_ar : int
         Order of VAR process
@@ -976,7 +984,7 @@ class SVARResults(SVARProcess, VARResults):
         reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
 
         # Need to transpose each coefficient matrix
-        intercept = self.params[0]
+        intercept = self.params[0] if k_trend > 0 else np.zeros(self.neqs)
         coefs = reshaped.swapaxes(1, 2).copy()
 
         # SVAR components
