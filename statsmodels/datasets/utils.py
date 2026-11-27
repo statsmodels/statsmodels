@@ -97,15 +97,20 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     data : DataFrame
         The full dataset, with variables as columns.
     endog_idx : int, str, or array_like, optional
-        The column index (or indices) of the endogenous variable(s). A str
-        is the label of a single column.
+        The column index (or indices) of the endogenous variable(s), as
+        positions. A str is the label of a single column, and an array_like
+        that does not hold only integers holds column labels.
 
         .. versionchanged:: 0.15.1
 
            A NumPy integer is a column position, as an int is. A bool is
            not: True was the column at position 1. A str selects the column
            with that label as a Series, as an int does. It raised an
-           AttributeError.
+           AttributeError. An array_like of integers holds column positions,
+           as an int and ``exog_idx`` do. It was used as column labels, so
+           ``[0, 1]`` raised a KeyError for a DataFrame with str column
+           names, and for integer column names that differ from their
+           positions, ``[0]`` selected a different column from ``0``.
     exog_idx : int or array_like, optional
         The column index (or indices) of the exogenous variable(s). If
         None, all columns other than `endog_idx` are used.
@@ -130,7 +135,18 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         endog_name = names[int(endog_idx)]
         endog = data[endog_name].copy()
     else:
-        endog = data.loc[:, endog_idx].copy()
+        key = endog_idx
+        # A tuple is a single label for MultiIndex columns
+        if np.iterable(endog_idx) and not isinstance(endog_idx, (str, bytes, tuple)):
+            values = list(endog_idx)
+            if values and all(is_int_like(v, strict=True) for v in values):
+                # Integers are column positions, as an int and exog_idx are.
+                # They were passed to .loc as labels.
+                key = names[[int(v) for v in values]]
+            elif iter(endog_idx) is endog_idx:
+                # list() consumed an iterator
+                key = values
+        endog = data.loc[:, key].copy()
         # A single label, such as a str, selects a Series
         endog_name = endog.name if endog.ndim == 1 else list(endog.columns)
     if exog_idx is None:

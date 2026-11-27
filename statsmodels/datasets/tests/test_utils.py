@@ -209,3 +209,83 @@ def test_process_pandas_str_endog_idx(exog_idx, exog_names, index_idx):
     if index_idx is None:
         pd.testing.assert_series_equal(dataset.endog, data["b"])
         pd.testing.assert_frame_equal(dataset.exog, data[exog_names])
+
+
+@pytest.mark.parametrize(
+    "endog_idx",
+    [
+        [1, 2],
+        np.array([1, 2]),
+        [np.int64(1), np.array(2)],
+        range(1, 3),
+        pd.Index([1, 2]),
+    ],
+    ids=["list", "array", "numpy-ints", "range", "index"],
+)
+@pytest.mark.parametrize("exog_idx", [None, [3, 0]], ids=["exog-None", "exog-list"])
+def test_process_pandas_int_sequence_endog_idx(endog_idx, exog_idx):
+    # Integers in a sequence are column positions, as an int and exog_idx
+    # are. They were passed to .loc as labels, which raised a KeyError for
+    # str column names. The labels of the same columns are the reference.
+    data = _process_pandas_data()
+    dataset = utils.process_pandas(data, endog_idx=endog_idx, exog_idx=exog_idx)
+    by_label = utils.process_pandas(data, endog_idx=["b", "c"], exog_idx=exog_idx)
+    assert dataset.endog_name == by_label.endog_name == ["b", "c"]
+    pd.testing.assert_frame_equal(dataset.endog, data[["b", "c"]])
+    exog_names = ["a", "d"] if exog_idx is None else ["d", "a"]
+    assert dataset.exog_name == by_label.exog_name == exog_names
+    pd.testing.assert_frame_equal(dataset.exog, data[exog_names])
+
+
+@pytest.mark.parametrize("position", [0, 3, -1])
+def test_process_pandas_one_position_list_matches_int(position):
+    # [k] selects the same column as k, as a DataFrame
+    data = _process_pandas_data()
+    scalar = utils.process_pandas(data, endog_idx=position)
+    listed = utils.process_pandas(data, endog_idx=[position])
+    assert listed.endog_name == [scalar.endog_name]
+    pd.testing.assert_frame_equal(listed.endog, scalar.endog.to_frame())
+    pd.testing.assert_frame_equal(listed.exog, scalar.exog)
+
+
+def test_process_pandas_int_sequence_endog_idx_int_columns():
+    # With integer column names that differ from their positions, 0 was the
+    # column at position 0 but [0] was the column named 0
+    data = pd.DataFrame(np.arange(12.0).reshape(4, 3), columns=[2, 0, 1])
+    scalar = utils.process_pandas(data, endog_idx=0)
+    listed = utils.process_pandas(data, endog_idx=[0])
+    assert scalar.endog_name == 2
+    assert listed.endog_name == [2]
+    pd.testing.assert_series_equal(listed.endog[2], scalar.endog)
+    assert listed.exog_name == scalar.exog_name == [0, 1]
+
+
+@pytest.mark.parametrize(
+    "make_idx",
+    [
+        lambda: ["b", "c"],
+        lambda: np.array(["b", "c"]),
+        lambda: pd.Index(["b", "c"]),
+        lambda: iter(["b", "c"]),
+        lambda: [False, True, True, False],
+    ],
+    ids=["list", "array", "index", "iterator", "bool-mask"],
+)
+def test_process_pandas_label_sequence_endog_idx(make_idx):
+    # A sequence that does not hold only integers, such as the labels that
+    # star98 passes, selects by label, as before
+    data = _process_pandas_data()
+    dataset = utils.process_pandas(data, endog_idx=make_idx())
+    assert dataset.endog_name == ["b", "c"]
+    pd.testing.assert_frame_equal(dataset.endog, data[["b", "c"]])
+    assert dataset.exog_name == ["a", "d"]
+
+
+def test_process_pandas_int_sequence_endog_idx_out_of_range():
+    # A position past the last column raises an IndexError, as an int does.
+    # It raised a KeyError for a missing label.
+    data = _process_pandas_data()
+    with pytest.raises(IndexError):
+        utils.process_pandas(data, endog_idx=4)
+    with pytest.raises(IndexError):
+        utils.process_pandas(data, endog_idx=[0, 4])
