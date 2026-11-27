@@ -232,7 +232,12 @@ class ETSModel(base.StateSpaceMLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`
+        The observed time-series process :math:`y`. A single column, an
+        (nobs, 1) array or a one-column DataFrame, is used as the series.
+
+        .. versionchanged:: 0.15.1
+
+           A single column is accepted. It used to raise a ValueError.
     error : {"add", "additive", "mul", "multiplicative"}, optional
         The error model. "add" (default) or "mul". "additive" and
         "multiplicative" are accepted as aliases for "add" and "mul".
@@ -297,6 +302,17 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_seasonal : array_like, optional
         The initial seasonal component. An array of length `seasonal_periods`.
         Only used if initialization is 'known'.
+
+        .. deprecated:: 0.15.1
+
+           A single value, which is used for all initial seasonal states, is
+           deprecated and will raise a ValueError after statsmodels 0.17 is
+           released. Other lengths raise a ValueError.
+
+        .. versionchanged:: 0.15.1
+
+           A single row or column is used as a 1-d array. A row was used in
+           reverse order.
     bounds : dict, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
@@ -515,6 +531,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal_periods, "seasonal_periods", optional=True
             )
             if seasonal_periods is None:
+                if self._index_freq is None:
+                    raise ValueError(
+                        "seasonal_periods must be given for a seasonal model if "
+                        "endog has no date index with a frequency."
+                    )
                 self.seasonal_periods = freq_to_period(self._index_freq)
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
@@ -596,6 +617,17 @@ class ETSModel(base.StateSpaceMLEModel):
         initial_seasonal : array_like, optional
             The initial seasonal component. An array of length
             `seasonal_periods`. Only used if initialization is 'known'.
+
+            .. deprecated:: 0.15.1
+
+               A single value, which is used for all initial seasonal states,
+               is deprecated and will raise a ValueError after statsmodels
+               0.17 is released. Other lengths raise a ValueError.
+
+            .. versionchanged:: 0.15.1
+
+               A single row or column is used as a 1-d array. A row was used
+               in reverse order.
         """
         self.initialization_method = string_like(
             initialization_method,
@@ -620,6 +652,32 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
+            if self.has_seasonal:
+                m = self.seasonal_periods
+                seasonal = np.asarray(initial_seasonal)
+                # A scalar or any array with a single value is broadcast to
+                # all seasonal states (a 0-d array raised an IndexError)
+                if seasonal.size == 1 and (
+                    seasonal.ndim > 0 or np.isscalar(initial_seasonal)
+                ):
+                    warnings.warn(
+                        "initial_seasonal has a single value, which is used "
+                        f"for all {m} initial seasonal states. This is "
+                        "deprecated and will raise a ValueError after "
+                        "statsmodels 0.17 is released. Pass an array of "
+                        "length seasonal_periods instead.",
+                        FutureWarning,
+                        stacklevel=3,
+                    )
+                elif seasonal.shape in ((1, m), (m, 1)):
+                    # A single row or column is used as a 1-d array (a row
+                    # was used in reverse order)
+                    initial_seasonal = seasonal.ravel()
+                elif seasonal.shape != (m,):
+                    raise ValueError(
+                        "initial_seasonal must have length seasonal_periods "
+                        f"({m}), got an array of shape {seasonal.shape}."
+                    )
         elif self.initialization_method == "heuristic":
             (
                 initial_level,
@@ -718,10 +776,13 @@ class ETSModel(base.StateSpaceMLEModel):
             ETS models have no exogenous variables.
         """
         endog = np.require(data.orig_endog, requirements="WC")
+        if endog.ndim == 2 and endog.shape[1] == 1:
+            # a single column: an (nobs, 1) array or a one-column DataFrame
+            endog = np.require(endog[:, 0], requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.require(data.orig_endog, requirements="WC", dtype=float)
+            endog = np.require(endog, requirements="WC", dtype=float)
         return endog, None
 
     @property
@@ -2451,6 +2512,12 @@ class ETSResults(base.StateSpaceMLEResults):
             (default, if available) or 'simulated'. 'exact' is available
             for the models with additive errors and no multiplicative
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
+
+            .. deprecated:: 0.15.1
+
+               Other values are treated as "exact". This is deprecated and
+               they will raise a ValueError after statsmodels 0.17 is
+               released.
         simulate_repetitions : int, optional
             Number of simulation repetitions for calculating prediction
             intervals when ``method='simulated'``, at least 2. Default is
@@ -2622,6 +2689,11 @@ class PredictionResults:
         if available) or 'simulated'. 'exact' is available for the models
         with additive errors and no multiplicative components, "ANN", "AAN",
         "AAdN", "ANA", "AAA" and "AAdA".
+
+        .. deprecated:: 0.15.1
+
+           Other values are treated as "exact". This is deprecated and they
+           will raise a ValueError after statsmodels 0.17 is released.
     simulate_repetitions : int, optional
         Number of simulation repetitions for calculating prediction intervals
         when ``method='simulated'``, at least 2. Default is 1000.
@@ -2648,6 +2720,20 @@ class PredictionResults:
                 method = "exact"
             else:
                 method = "simulated"
+        else:
+            try:
+                string_like(
+                    method, "method", options=("exact", "simulated"), lower=False
+                )
+            except (TypeError, ValueError):
+                warnings.warn(
+                    'method must be "exact", "simulated" or None, got '
+                    f'{method!r}. Other values are treated as "exact". This is '
+                    "deprecated and will raise a ValueError after statsmodels "
+                    "0.17 is released.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
         self.method = method
 
         (

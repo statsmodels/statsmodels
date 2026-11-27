@@ -1,0 +1,3 @@
+- A known ``initial_seasonal`` of :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` given as a single row was
+  used in reverse order. It is used in order, so results for such
+  input change. :pr:`10937`
