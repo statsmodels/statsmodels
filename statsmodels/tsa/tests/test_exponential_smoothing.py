@@ -3269,7 +3269,7 @@ def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
     # np.False_ equals 0, so it was taken as "dynamic from the start"
     rng = np.random.default_rng(20261126)
     y = pd.Series(10 + np.cumsum(rng.standard_normal(80)))
-    res = ETSModel(y, error="add", trend="add").fit(disp=False)
+    res = ETSModel(y, error="add", trend="add").fit(disp=False, param_index="integer")
     pred = res.predict(start=20, end=60, dynamic=dynamic)
     assert_allclose(pred, res.predict(start=20, end=60, dynamic=expected), rtol=1e-12)
     other = res.predict(start=20, end=60, dynamic=not expected)
