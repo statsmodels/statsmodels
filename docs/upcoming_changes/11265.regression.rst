@@ -1,0 +1,3 @@
+- ``RollingRegressionResults.plot_recursive_coefficient`` accepts any iterable
+  of variables, such as a generator or a set; it raised a TypeError.
+  :pr:`11265`
