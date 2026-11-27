@@ -3446,6 +3446,18 @@ def test_missing_drop_simulate():
     assert_allclose(sim, expected, rtol=1e-12)
 
 
+# Fixed smoothing parameters for the use_boxcox tests, which compare two
+# models that are the same once use_boxcox is converted. Fitted by the
+# optimizer, the two did not stop at the same point on the Azure macOS runners
+# (fitted values up to 3e-8 apart).
+_BOXCOX_FIXED = {
+    "smoothing_level": 0.3,
+    "smoothing_trend": 0.1,
+    "smoothing_seasonal": 0.2,
+    "optimized": False,
+}
+
+
 @pytest.mark.parametrize(
     "use_boxcox, expected",
     [
@@ -3461,15 +3473,19 @@ def test_use_boxcox_numpy_scalars(austourists, use_boxcox, expected):
     # A NumPy float is a fixed lambda and a NumPy int is used as a bool, as a
     # Python float and int are; a float32 lambda and an int64 raised TypeError
     kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
-    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit()
-    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit()
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
     assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
     if expected is False:
         assert res.params["lamda"] is None
     else:
         assert_allclose(res.params["lamda"], ref.params["lamda"], rtol=1e-12)
     if not isinstance(expected, bool):
-        assert res.params["lamda"] == expected
+        assert_allclose(res.params["lamda"], expected, rtol=1e-12)
 
 
 @pytest.mark.parametrize(
@@ -3480,7 +3496,11 @@ def test_use_boxcox_numpy_scalars(austourists, use_boxcox, expected):
 def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
     # A NumPy bool raised "use_boxcox must be True, False, 'log' or a float."
     kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
-    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit()
-    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit()
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
     assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
     assert res.params["use_boxcox"] is expected
