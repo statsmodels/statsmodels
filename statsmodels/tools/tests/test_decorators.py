@@ -176,6 +176,25 @@ def test_cache_writable(cachename):
     assert len(calls) == 2
 
 
+@pytest.mark.parametrize("cachename", [None, "_other_cache"])
+@pytest.mark.parametrize("cache", ["missing", None], ids=["no-cache", "cache-none"])
+def test_cache_writable_set_before_get(cachename, cache):
+    # Setting the value before the first access creates the cache, as the
+    # first access does
+    class Example:
+        @cache_writable(cachename=cachename)
+        def c(self):
+            return 2
+
+    store = "_cache" if cachename is None else cachename
+    ex = Example()
+    if cache is None:
+        setattr(ex, store, None)
+    ex.c = 5
+    assert getattr(ex, store) == {"c": 5}
+    assert ex.c == 5
+
+
 def dummy_factory(msg, remove_version, warning):
     class Dummy:
         y = deprecated_alias(

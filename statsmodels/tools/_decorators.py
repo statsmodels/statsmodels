@@ -123,9 +123,12 @@ class CachedWritableAttribute(CachedAttribute):
     """Descriptor that caches an attribute and permits reassignment"""
 
     def __set__(self, obj, value):
-        _cache = getattr(obj, self.cachename)
-        name = self.name
-        _cache[name] = value
+        # Create the cache if needed, as __get__ does
+        _cache = getattr(obj, self.cachename, None)
+        if _cache is None:
+            _cache = {}
+            setattr(obj, self.cachename, _cache)
+        _cache[self.name] = value
 
 
 class _cache_readonly(property):
