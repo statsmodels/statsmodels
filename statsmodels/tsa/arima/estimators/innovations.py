@@ -39,8 +39,9 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
         fitting the ARMA coefficients. Default is True.
-    ar_order : int, optional
-        Autoregressive order. Default is 0.
+    ar_order : int or list of int, optional
+        Autoregressive order. Default is 0. As for `ma_order`, a list gives
+        the included lags, which must be the consecutive lags 1, ..., p.
 
         .. versionadded:: 0.15.1
     m : int, optional
@@ -68,6 +69,17 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
             `SARIMAXSpecification` instance corresponding to the input
             arguments.
 
+    Raises
+    ------
+    ValueError
+        If `ar_order` or `ma_order` is negative, or is a list of lags that
+        are not consecutive (1, ..., p and 1, ..., q). If `ar_order` is
+        positive or `m` is given, also if ``ar_order + ma_order <= m < nobs``
+        does not hold; with the default `m` this happens when `nobs` is not
+        larger than ``ar_order + ma_order``.
+    TypeError
+        If `m` is not an integer.
+
     Notes
     -----
     The primary reference is [1]_, section 5.1.3.
@@ -92,14 +104,27 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
 
     For a pure MA(q) model this gives :math:`\theta_j = \hat \theta_{m,j}`.
 
-    The estimate of the variance is :math:`\hat v_m`. Another estimate is the
-    mean of the squared standardized one-step prediction errors of the
-    fitted model, which the R package itsmr reports. We do not compute it
-    here because our fast implementation of the innovations algorithm is
-    only valid for stationary processes, and the estimated AR coefficients
-    may imply a non-stationary process. See
-    test_innovations::test_innovations_arma_itsmr for an example of how to
-    compute this variance manually.
+    The estimate of the variance is :math:`\hat \sigma^2 = \hat v_m`, the
+    one-step prediction error variance of the MA(m) model. It is also defined
+    when the estimated ARMA coefficients imply a non-stationary process. The
+    R package itsmr instead reports the mean squared standardized one-step
+    prediction error of the fitted ARMA model,
+
+    .. math::
+
+        \tilde \sigma^2 = \frac{1}{n} \sum_{t=1}^{n}
+        \frac{(X_t - \hat X_t)^2}{r_{t-1}},
+
+    where :math:`X_t` is the (demeaned) series, :math:`\hat X_t` is the
+    one-step prediction of :math:`X_t` from the fitted ARMA model with
+    innovations variance 1, and :math:`r_{t-1}` is the mean squared error of
+    that prediction. With the demeaned series `x` and the estimates `p`, it
+    is ``np.mean(u ** 2 / v)`` for ``u, v = arma_innovations(x,
+    p.ar_params, p.ma_params, sigma2=1)``, using
+    :func:`~statsmodels.tsa.innovations.arma_innovations.arma_innovations`,
+    which requires a stationary process. For an ARMA(1, 1) model of the Lake
+    Huron series with the default `m`, :math:`\hat v_m` is 0.4532 and
+    :math:`\tilde \sigma^2` is 0.4757.
 
     The default recursion level ``m = 17`` for models with AR terms is the
     default of the ITSM2000 program that accompanies [1]_, which [1]_ uses
