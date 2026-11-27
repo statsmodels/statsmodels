@@ -244,6 +244,13 @@ class SVAR(tsbase.TimeSeriesModel):
         -----
         Lütkepohl pp. 146-153
         Hamilton pp. 324-336
+
+        .. versionchanged:: 0.15.1
+
+           The results hold their own A and B. They were the arrays of the
+           model, so a later fit, or a call of loglike, score or hessian,
+           changed the A and B, and the structural responses, of earlier
+           results.
         """
         if method is not None and not (
             isinstance(method, str) and method.lower() == "ols"
@@ -434,8 +441,8 @@ class SVAR(tsbase.TimeSeriesModel):
         """
 
         # TODO: this does not look robust if A or B is None
-        A = self.A
-        B = self.B
+        A = self.A.copy()
+        B = self.B.copy()
         A_mask = self.A_mask
         B_mask = self.B_mask
         A_len = len(A[A_mask])
@@ -543,8 +550,8 @@ class SVAR(tsbase.TimeSeriesModel):
         # TODO: this could stand a refactor
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A = self.A
-        B = self.B
+        A = self.A.copy()
+        B = self.B.copy()
         A_len = len(A[A_mask])
 
         A[A_mask] = start_params[:A_len]
