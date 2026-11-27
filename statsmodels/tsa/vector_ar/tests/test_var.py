@@ -2561,6 +2561,158 @@ def test_causality_bool_float(value, call):
             res.test_inst_causality(value)
 
 
+@pytest.mark.parametrize("use_pandas", [False, True])
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_var_refit_exog_names(use_pandas, trend):
+    # Each fit of a model with exog uses the original exog names
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = np.random.default_rng(7).standard_normal((y.shape[0], 1))
+    if use_pandas:
+        y = pd.DataFrame(y, columns=names)
+        exog = pd.DataFrame(exog, columns=["x"])
+        endog_names, exog_name = names, "x"
+    else:
+        endog_names, exog_name = ["y1", "y2", "y3"], "x1"
+    mod = VAR(y, exog=exog)
+    trend_names = ["const", "trend"][: len(trend)]
+    for lags in (1, 2, 2, 1):
+        res = mod.fit(lags, trend=trend)
+        lag_names = [f"L{i}.{name}" for i in range(1, lags + 1) for name in endog_names]
+        expected = trend_names + [exog_name] + lag_names
+        assert mod.exog_names == expected
+        assert list(mod.data.cov_names) == [
+            (xname, yname) for xname in expected for yname in endog_names
+        ]
+        fresh = VAR(y, exog=exog).fit(lags, trend=trend)
+        assert_allclose(np.asarray(res.params), np.asarray(fresh.params), rtol=1e-12)
+        if use_pandas:
+            assert list(res.params.index) == expected
+            assert list(res.cov_params().index.get_level_values(0)) == [
+                name for name in expected for _ in range(3)
+            ]
+
+
+def _var_predict_written_out(y, params, lags, k_trend, start, end, exog=None):
+    # Predictions of the zero-indexed observations start, ..., end:
+    # y_t = B_d' d_t + B_x' x_t + sum_i B_i' y_{t-i} with the trend terms
+    # d_t = (1, t + 1, (t + 1) ** 2)[:k_trend] and exog x_t, using the data
+    # in the sample and the forecasts after it
+    k = y.shape[1]
+    k_det = k_trend + (0 if exog is None else exog.shape[1])
+    path = list(y)
+    predictions = []
+    for t in range(lags, end + 1):
+        value = np.array([1.0, t + 1.0, (t + 1.0) ** 2])[:k_trend] @ params[:k_trend]
+        if exog is not None:
+            value = value + exog[t] @ params[k_trend:k_det]
+        for i in range(1, lags + 1):
+            value = value + path[t - i] @ params[k_det + (i - 1) * k : k_det + i * k]
+        if t >= y.shape[0]:
+            path.append(value)
+        predictions.append(value)
+    return np.array(predictions[start - lags :])
+
+
+def _var_predict_data():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    return np.diff(np.log(data.to_numpy()), axis=0)
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("lags", [1, 2])
+@pytest.mark.parametrize(
+    "start, end, from_n",
+    [
+        (-3, 3, True),  # in and out of sample
+        (-3, 1, True),  # end - start twice the out-of-sample length gave []
+        (1, 3, True),  # start after the sample
+        (0, 0, True),  # only the first forecast
+        (10, 11, False),  # in sample, as many rows as "ct" has trend terms
+        (None, None, False),  # all in-sample predictions
+    ],
+)
+def test_var_predict_trend_out_of_sample(trend, lags, start, end, from_n):
+    y = _var_predict_data()
+    n = y.shape[0]
+    if from_n:
+        # start and end count from n, the number of observations
+        start, end = n + start, n + end
+    mod = VAR(y)
+    res = mod.fit(lags, trend=trend)
+    params = np.asarray(res.params)
+    pred = mod.predict(params, start=start, end=end, lags=lags, trend=trend)
+    first = lags if start is None else start
+    last = n - 1 if end is None else end
+    expected = _var_predict_written_out(y, params, lags, res.k_trend, first, last)
+    assert pred.shape == (last - first + 1, 3)
+    assert_allclose(pred, expected, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "trend, expected",
+    [
+        # R vars 1.6.1 (R 4.6.2), y the log differences of realgdp,
+        # realcons and realinv of macrodata, n = 202:
+        # tt2 <- matrix((1:n)^2, ncol = 1, dimnames = list(NULL, "tt2"))
+        # est <- VAR(y, p = 2, type = "both", exogen = tt2)
+        # fut <- matrix((n + 1:3)^2, ncol = 1, dimnames = list(NULL, "tt2"))
+        # predict(est, n.ahead = 3, dumvar = fut)
+        (
+            "ctt",
+            [
+                [0.0037595019294891351, 0.0039060752482694737, -0.00054302873264010232],
+                [0.0038690994873518459, 0.0059887554230986474, -0.014483391087102813],
+                [0.0038982522979758593, 0.0052554488093068032, -0.0098882455177141532],
+            ],
+        ),
+        # predict(VAR(y, p = 2, type = "none"), n.ahead = 3)
+        (
+            "n",
+            [
+                [0.0042356792144035028, 0.0025459148324905199, 0.017484669325280769],
+                [0.0036601381578146145, 0.0039065028527603849, 0.004524250872569008],
+                [0.0028099951813873075, 0.0027067133561361513, 0.0062816370863210888],
+            ],
+        ),
+    ],
+)
+def test_var_predict_out_of_sample_r(trend, expected):
+    y = _var_predict_data()
+    n = y.shape[0]
+    mod = VAR(y)
+    res = mod.fit(2, trend=trend)
+    pred = mod.predict(res.params, start=n, end=n + 2, lags=2, trend=trend)
+    assert_allclose(pred, expected, rtol=1e-7)
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct"])
+def test_var_predict_exog(trend):
+    y = _var_predict_data()
+    n = y.shape[0]
+    exog = np.random.default_rng(1122).standard_normal((n, 2))
+    mod = VAR(y, exog=exog)
+    res = mod.fit(2, trend=trend)
+    params = np.asarray(res.params)
+    pred = mod.predict(params, start=5, end=n - 1, lags=2, trend=trend)
+    expected = _var_predict_written_out(y, params, 2, res.k_trend, 5, n - 1, exog)
+    assert_allclose(pred, expected, rtol=1e-8)
+    with pytest.raises(ValueError, match="cannot forecast out of sample with exog"):
+        mod.predict(params, start=n - 1, end=n + 1, lags=2, trend=trend)
+
+
+def test_var_predict_start_before_lags():
+    y = _var_predict_data()
+    n = y.shape[0]
+    mod = VAR(y)
+    for lags in (1, 2):
+        params = mod.fit(lags).params
+        # start=0 and end=n-1 with one lag returned n copies of a fitted value
+        with pytest.raises(ValueError, match="start must be at least lags"):
+            mod.predict(params, start=lags - 1, end=n - 1, lags=lags)
+
+
 @pytest.mark.parametrize("centered", [False, True])
 def test_seasonal_dummies_negative_raises(centered):
     with pytest.raises(ValueError, match="n_seasons must be non-negative"):

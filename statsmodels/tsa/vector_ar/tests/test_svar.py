@@ -857,6 +857,52 @@ def test_fit_not_identified_free_a_and_b_entry(A, B, params, scale):
     assert_allclose(model.loglike(scaled), model.loglike(params), rtol=1e-12)
 
 
+def _svar_ab_model():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+    B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+    return SVAR(data, svar_type="AB", A=A, B=B)
+
+
+def test_results_keep_a_b_after_refit():
+    # The results held the A and B arrays of the model, so a second fit
+    # overwrote the estimates of the first results
+    from .results import results_svar_st
+
+    stata = results_svar_st.results_svar1_small
+    model = _svar_ab_model()
+    res = model.fit(maxlags=3)
+    model.fit(maxlags=1)
+    fresh = _svar_ab_model().fit(maxlags=3)
+    assert_allclose(res.A, fresh.A, rtol=1e-12)
+    assert_allclose(res.B, fresh.B, rtol=1e-12)
+    assert_allclose(res.svar_ma_rep(4), fresh.svar_ma_rep(4), rtol=1e-12)
+    # Stata's estimates, to a tolerance for where the optimizer stops
+    assert_allclose(res.A, stata.A, rtol=1e-3)
+    assert_allclose(np.abs(res.B), stata.B, rtol=1e-3)
+
+
+def test_results_keep_a_b_after_loglike():
+    # loglike, and so score and hessian, wrote the parameters into the A and
+    # B of the model, which the results shared
+    model = _svar_ab_model()
+    res = model.fit(maxlags=3)
+    fresh = _svar_ab_model().fit(maxlags=3)
+    params = np.r_[res.A[res.A_mask], res.B[res.B_mask]]
+    other = params + 0.5
+    model.loglike(other)
+    model.score(other)
+    model.hessian(other)
+    assert_allclose(res.A, fresh.A, rtol=1e-12)
+    assert_allclose(res.B, fresh.B, rtol=1e-12)
+    assert_allclose(res.svar_ma_rep(4), fresh.svar_ma_rep(4), rtol=1e-12)
+    # The model keeps its restrictions, NaN for the estimated entries
+    nan = np.nan
+    assert_allclose(model.A, [[1, 0, 0], [nan, 1, 0], [nan, nan, 1]])
+    assert_allclose(model.B, [[nan, 0, 0], [0, nan, 0], [0, 0, nan]])
+
+
 def _svar_lower_b():
     mdata = statsmodels.datasets.macrodata.load_pandas().data
     data = np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
