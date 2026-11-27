@@ -1,0 +1,6 @@
+- ``statsmodels.datasets.utils.process_pandas`` reads a sequence of
+  integers in ``endog_idx`` as column positions, as it does an int and
+  ``exog_idx``. It used them as labels, so ``[0, 1]`` raised a KeyError
+  for str column names, and for integer column names that differ from
+  their positions, ``[0]`` selected a different column from ``0``. A
+  sequence of labels still selects by label. :pr:`11287`
