@@ -1,0 +1,6 @@
+- In-sample prediction (``get_prediction`` and ``predict``) of the
+  results of state space models ignored keyword arguments that the
+  state space model does not use, which raise a ``TypeError`` in
+  dynamic prediction and forecasting. They are deprecated in
+  in-sample prediction, emit a ``FutureWarning`` and will raise a
+  ``TypeError`` after statsmodels 0.17 is released. :pr:`11185`

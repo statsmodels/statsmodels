@@ -12,6 +12,7 @@ from warnings import warn
 
 import numpy as np
 
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.validation import is_bool_like, is_int_like
 
@@ -2001,6 +2002,14 @@ class FilterResults(FrozenRepresentation):
             sample, a (`k_endog` x 10) matrix must be provided with the new
             intercept values.
 
+            .. deprecated:: 0.15.1
+
+               Keyword arguments that the state space model does not use
+               raise a TypeError in dynamic prediction and out-of-sample
+               forecasting, but in-sample prediction ignored them. There,
+               they are deprecated and will raise a TypeError after
+               statsmodels 0.17 is released.
+
         Returns
         -------
         results : kalman_filter.PredictionResults
@@ -2085,6 +2094,9 @@ class FilterResults(FrozenRepresentation):
         if ndynamic == 0 and nforecast == 0:
             results = self
             oos_results = None
+            # The keyword arguments are only used to rerun the filter, which
+            # raises for unknown ones
+            _warn_unknown_kwargs(self.model, kwargs)
         # If we have dynamic prediction or forecasting, then we need to
         # re-apply the Kalman filter
         else:
@@ -2478,6 +2490,55 @@ class PredictionResults(FilterResults):
                 self._compute_forecasts(self.smoothed_state,
                                         self.smoothed_state_cov))
         return self._smoothed_forecasts_cov
+
+
+def _warn_unknown_kwargs(model, kwargs):
+    """
+    Warn about prediction keyword arguments that the state space model rejects
+
+    Dynamic prediction and out-of-sample forecasting rerun the filter with an
+    extended model of the class of `model`, created with the keyword
+    arguments of ``FilterResults.predict``, whose constructor raises a
+    TypeError for keyword arguments that it does not use. In-sample
+    prediction does not use them; this creates a model of the same class with
+    them to apply the same check.
+
+    Parameters
+    ----------
+    model : Representation
+        The state space model of the results.
+    kwargs : dict
+        The keyword arguments of ``FilterResults.predict``.
+    """
+    # The extended model accepts the system matrices, and takes its dimensions
+    # from `model` and its initialization from predict, so these keyword
+    # arguments never fail its check
+    used = (set(model.shapes) - {"obs"}) | {
+        "k_endog",
+        "k_states",
+        "k_posdef",
+        "initialization",
+        "constant",
+        "stationary_cov",
+    }
+    check = {key: val for key, val in kwargs.items() if key not in used}
+    if not check:
+        return
+    try:
+        type(model)(model.k_endog, model.k_states, model.k_posdef, **check)
+    except (TypeError, ValueError) as exc:
+        # Invalid values of known keyword arguments raise other errors, which
+        # are left to the filter rerun
+        if str(exc).startswith("Unknown keyword arguments"):
+            warn(
+                f"{exc} In-sample prediction ignores keyword arguments that "
+                "the state space model does not use, while dynamic prediction "
+                "and forecasting raise a TypeError for them. They are "
+                "deprecated and will raise a TypeError after statsmodels 0.17 "
+                "is released.",
+                FutureWarning,
+                stacklevel=_stacklevel_outside_statsmodels(),
+            )
 
 
 def _check_dynamic(dynamic, start, end, nobs):
