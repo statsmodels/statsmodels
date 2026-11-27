@@ -477,8 +477,9 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         If both are None, then the simple kappa is computed.
         See wt for the case when wt is not None.
         If weights is two dimensional, then it is directly used as a weight
-        matrix. For computing the variance of kappa, the maximum of the
-        weights is assumed to be smaller or equal to one.
+        matrix. Kappa and its variances do not depend on the scale of the
+        weights: weights multiplied by a nonzero number give the same
+        results.
         TODO: fix conflicting definitions in the 2-Dim case for.
         One dimensional weights have one value for each category, so their
         length is the number of rows and columns of table. Two dimensional
@@ -489,10 +490,17 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
            One dimensional weights of another length raise a ValueError.
            Weights of length 1 were broadcast and gave nan, or a kappa of
            zero up to rounding with ``wt="toeplitz"``. Linear and quadratic
-           weights whose first and last values are equal raise a
-           ValueError. They gave nan with a RuntimeWarning. A 1 x 1 table
-           with these weights gives nan, as with other weights, without the
-           RuntimeWarning.
+           weights are scaled by the range of the scores, max - min, so they
+           lie between 0 and 1. They were scaled by the last minus the first
+           score, so the weights in the results exceeded 1 for scores that
+           are not monotone and were negative for decreasing linear scores;
+           kappa and its variances are the same. Scores whose first and last
+           values are equal but that are not all equal, such as [0, 1, 0],
+           give a weighted kappa. They gave nan with a RuntimeWarning.
+           Scores that are all equal raise a ValueError. A 1 x 1 table with
+           these weights gives nan, as with other weights, without the
+           RuntimeWarning. Weights that are not finite raise a ValueError.
+           They gave a kappa of nan.
     return_results : bool, optional
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -526,8 +534,9 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     Weights for 'linear' and 'quadratic' are interpreted as scores for the
     categories, the weights in the computation are based on the pairwise
-    difference between the scores, divided by the difference between the
-    last and the first score, which therefore must not be equal.
+    difference between the scores, divided by the range of the scores, the
+    largest minus the smallest, so that the scores must not all be equal.
+    For increasing scores, the range is the last minus the first score.
     Weights for 'toeplitz' are interpreted as weighted distance. The
     distance only depends on how many levels apart two entries in the table
     are but not on the levels themselves.
@@ -651,6 +660,8 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         # weights follows the Wikipedia definition, not the SAS, which is 1 -
         kind = "Weighted"
         weights = np.asarray(weights, float)
+        if not np.isfinite(weights).all():
+            raise ValueError("weights must be finite")
         if weights.ndim == 1:
             if weights.shape[0] != table.shape[0]:
                 raise ValueError(
@@ -659,17 +670,19 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
                     f"{weights.shape[0]}"
                 )
             # Linear and quadratic weights divide the score differences by the
-            # difference between the last and the first score
-            scale = weights[-1] - weights[0]
+            # range of the scores, so that the largest weight is 1. The last
+            # minus the first score gave weights above 1 for scores that are
+            # not monotone, and negative linear weights for decreasing scores
+            scale = np.ptp(weights)
             if scale == 0 and weights.shape[0] == 1:
                 # A table with one category has no differences to scale
                 scale = 1.0
             elif scale == 0 and wt in ["ca", "linear", "fc", "quadratic", None]:
                 raise ValueError(
-                    "the first and last 1-d weights must differ with linear or "
-                    "quadratic weights, since the differences between the "
-                    "weights are divided by weights[-1] - weights[0], but both "
-                    f"are {weights[0]}"
+                    "1-d weights must not all be equal with linear or quadratic "
+                    "weights, since the differences between the weights are "
+                    "divided by their range, max - min, but they are all "
+                    f"{weights[0]}"
                 )
             if wt in ["ca", "linear", None]:
                 weights = np.abs(weights[:, None] - weights) / scale
