@@ -314,6 +314,24 @@ def test_empty_section(section):
 
 
 @pytest.mark.parametrize(
+    "section, content, parsed",
+    [
+        ("Parameters", "x : int\n    The x.", [Parameter("x", "int", ["The x."])]),
+        ("Returns", "float\n    The value.", [Parameter("", "float", ["The value."])]),
+        ("Notes", "Some notes.", ["Some notes."]),
+    ],
+    ids=["parameters", "returns", "notes"],
+)
+def test_blank_line_after_underline(section, content, parsed):
+    # A blank line between the underline and the content of a section is
+    # dropped, and does not give an entry without name and type
+    underline = "-" * len(section)
+    nds = NumpyDocString(f"Summary.\n\n{section}\n{underline}\n\n{content}\n")
+    assert nds[section] == parsed
+    assert str(nds) == f"\nSummary.\n\n{section}\n{underline}\n{content}\n"
+
+
+@pytest.mark.parametrize(
     "index, parsed, expected",
     [
         (

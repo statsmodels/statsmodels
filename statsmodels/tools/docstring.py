@@ -215,16 +215,9 @@ class NumpyDocString(Mapping):
         return l2.startswith(("-" * len(l1), "=" * len(l1)))
 
     def _strip(self, doc):
-        i = 0
-        j = 0
-        for line in doc:
-            if line.strip():
-                break
-
-        for line in doc[::-1]:
-            if line.strip():
-                break
-
+        # Number of blank lines at the start and at the end
+        i = next((k for k, line in enumerate(doc) if line.strip()), len(doc))
+        j = next((k for k, line in enumerate(reversed(doc)) if line.strip()), 0)
         return doc[i : len(doc) - j]
 
     def _read_to_next_section(self):
