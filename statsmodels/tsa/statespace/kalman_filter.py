@@ -2183,6 +2183,11 @@ class PredictionResults(FilterResults):
         Number of observations in the predicted series; this is not necessarily
         the same as the number of observations in the original model from which
         prediction was performed.
+
+        .. versionchanged:: 0.15.1
+
+           `npredictions` is `end - start`. It was `start - end`, a negative
+           number.
     start : int
         Zero-indexed observation number at which to start prediction,
         i.e., the first predict will be at `start`; this is relative to the
@@ -2258,7 +2263,7 @@ class PredictionResults(FilterResults):
         self.oos_results = oos_results
 
         # Save prediction ranges
-        self.npredictions = start - end
+        self.npredictions = end - start
         self.start = start
         self.end = end
         self.nstatic = nstatic
@@ -2272,9 +2277,9 @@ class PredictionResults(FilterResults):
         self._smoothed_signal = None
         self._smoothed_signal_cov = None
         self._filtered_forecasts = None
-        self._filtered_forecasts_error_cov = None
+        self._filtered_forecasts_cov = None
         self._smoothed_forecasts = None
-        self._smoothed_forecasts_error_cov = None
+        self._smoothed_forecasts_cov = None
 
     def clear(self):
         attributes = (["endog"] + self.representation_attributes
