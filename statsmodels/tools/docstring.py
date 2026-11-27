@@ -224,9 +224,8 @@ class NumpyDocString(Mapping):
         section = self._doc.read_to_next_empty_line()
 
         while not self._is_at_section() and not self._doc.eof():
-            if not self._doc.peek(-1).strip():  # previous line was empty
-                section += [""]
-
+            # The read stopped at an empty line, which is kept
+            section += [""]
             section += self._doc.read_to_next_empty_line()
 
         return section
