@@ -490,6 +490,74 @@ def test_to_table():
     assert_equal(res5[0].sum(-1), res0)
 
 
+@pytest.mark.parametrize(
+    "bins",
+    [
+        None,
+        3,
+        [-0.5, 0.5, 1.5, 2.5],
+        (-0.5, 0.5, 1.5, 2.5),
+        np.array([[-0.5, 0.5, 1.5, 2.5], [-0.5, 0.5, 1.5, 2.5]]),
+        (
+            np.array([-0.5, 0.5, 1.5]),
+            np.array([-0.5, 0.5, 1.5, 2.5]),
+        ),
+    ],
+    ids=["none", "integer", "shared-list", "shared-tuple", "array", "per-rater"],
+)
+def test_to_table_bins(bins):
+    data = [[0, 0], [0, 2], [1, 1], [1, 2]]
+    expected = np.array([[1, 0, 1], [0, 1, 1], [0, 0, 0]])
+    if bins is not None and not np.isscalar(bins) and np.ndim(bins[0]) > 0:
+        if len(bins[0]) == 3:
+            expected = expected[:2]
+
+    table, returned_bins = to_table(data, bins)
+
+    assert_equal(table, expected)
+    assert table.sum() == len(data)
+    if bins is None or np.isscalar(bins):
+        assert isinstance(returned_bins, np.ndarray)
+        assert_equal(returned_bins, np.arange(4) - 0.5)
+    else:
+        # Preserve the existing API: return the original bins object.
+        assert returned_bins is bins
+
+
+def test_to_table_shared_bins_series_custom_index():
+    data = [[0, 0], [0, 2], [1, 1], [1, 2]]
+    bins = pd.Series([-0.5, 0.5, 1.5, 2.5], index=[10, 20, 30, 40])
+    expected = np.array([[1, 0, 1], [0, 1, 1], [0, 0, 0]])
+
+    table, returned_bins = to_table(data, bins)
+
+    assert_equal(table, expected)
+    assert returned_bins is bins
+
+
+def test_to_table_per_rater_bins_three_raters():
+    data = [[0, 0, 0], [0, 1, 2], [1, 2, 2], [1, 2, 1]]
+    bins = (
+        np.array([-0.5, 0.5, 1.5]),
+        np.array([-0.5, 0.5, 1.5, 2.5]),
+        np.array([-0.5, 0.5, 1.5, 2.5]),
+    )
+    expected = np.zeros((2, 3, 3), dtype=int)
+    for row in data:
+        category = [
+            np.searchsorted(edges, value, side="right") - 1
+            for edges, value in zip(bins, row, strict=True)
+        ]
+        expected[tuple(category)] += 1
+
+    table, returned_bins = to_table(data, bins)
+
+    assert table.shape == (2, 3, 3)
+    assert_equal(table, expected)
+    assert table.sum() == len(data)
+    assert returned_bins is bins
+
+
 def test_aggregate_raters():
     data = diagnoses
     data_, categories = aggregate_raters(data)
