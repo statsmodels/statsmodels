@@ -542,6 +542,12 @@ class HoltWintersResults(Results):
                        L_t\quad\text{else}
                    \end{cases}
 
+        .. versionchanged:: 0.15.1
+
+           The trend coefficient :math:`\beta` in the simulation equations is
+           ``smoothing_level * smoothing_trend``, as implied by the fitted
+           Holt-Winters recursion. Previously it was ``smoothing_trend``.
+
         References
         ----------
         .. [1] Hyndman, R.J., & Athanasopoulos, G. (2018) *Forecasting:
@@ -707,7 +713,7 @@ class HoltWintersResults(Results):
 
             y[t, :] = y0 + eta * eps[t, :]
             lvl[t, :] = l0 + alpha * (mul_error * l0 + kappa_l) * eps[t, :]
-            b[t, :] = b0 + beta * (mul_error * b0 + kappa_b) * eps[t, :]
+            b[t, :] = b0 + alpha * beta * (mul_error * b0 + kappa_b) * eps[t, :]
             s[t, :] = s0 + gamma * (mul_error * s0 + kappa_s) * eps[t, :]
 
         if use_boxcox:

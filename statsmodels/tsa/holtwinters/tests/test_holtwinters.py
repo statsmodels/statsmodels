@@ -1719,7 +1719,8 @@ def test_simulate_expected_r(
         damped_trend=damped,
     ).fit(
         smoothing_level=state["alpha"],
-        smoothing_trend=state["beta"],
+        # R reports the coefficient on the innovation in the trend equation.
+        smoothing_trend=state["beta"] / state["alpha"],
         smoothing_seasonal=state["gamma"],
         damping_trend=state["phi"],
         optimized=False,
@@ -1741,6 +1742,40 @@ def test_simulate_expected_r(
     sim = fit.simulate(4, repetitions=1, error=error, random_errors=innov)
 
     assert_almost_equal(expected, sim.values, 5)
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+@pytest.mark.parametrize("error", ["add", "mul"])
+def test_simulate_fitted_innovations(austourists, trend, error):
+    res = ExponentialSmoothing(
+        austourists,
+        trend=trend,
+        seasonal="add",
+        seasonal_periods=4,
+        damped_trend=True,
+        initialization_method="known",
+        initial_level=40,
+        initial_trend=0.5 if trend == "add" else 1.01,
+        initial_seasonal=[2, -3, 0, 1],
+    ).fit(
+        smoothing_level=0.4,
+        smoothing_trend=0.25,
+        smoothing_seasonal=0.2,
+        damping_trend=0.9,
+        optimized=False,
+    )
+    # Starting at the fitted state and replaying the observed innovations
+    # must reproduce the observations at every subsequent step.
+    start = 12
+    observed = np.asarray(austourists)[start:]
+    fitted = np.asarray(res.fittedvalues)[start:]
+    innovations = observed - fitted
+    if error == "mul":
+        innovations /= fitted
+    simulated = res.simulate(
+        len(observed), anchor=start, error=error, random_errors=innovations[:, None]
+    )
+    assert_allclose(simulated, observed)
 
 
 def test_simulate_keywords(austourists):
