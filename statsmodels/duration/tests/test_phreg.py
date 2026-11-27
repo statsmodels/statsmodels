@@ -15,6 +15,7 @@ from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
 # All the R results
 from .results import (
     results_phreg_residuals as residual_results,
+    results_phreg_weights as weights_results,
     survival_enet_r_results,
     survival_r_results,
 )
@@ -676,12 +677,13 @@ def test_residuals_sums(name):
 
 
 @pytest.mark.parametrize(
-    "kwds", [{"weights": "w"}, {"event": "status"}, {"tie": "efron"}, {"groups": "g"}]
+    "kwds",
+    [{"freq_weights": "w"}, {"event": "status"}, {"tie": "efron"}, {"groups": "g"}],
 )
 def test_unknown_init_kwargs_warn(kwds):
-    # PHReg used to swallow unknown keywords silently, e.g. ``weights``
-    # (not supported) or ``event`` (a typo for ``status``), and returned the
-    # unweighted / uncensored fit without notice. Other models warn (GH 7741).
+    # PHReg used to swallow unknown keywords silently, e.g. ``event`` (a typo
+    # for ``status``), and returned the uncensored fit without notice. Other
+    # models warn (GH 7741).
     rng = np.random.default_rng(0)
     n = 20
     time = rng.exponential(size=n)
@@ -708,6 +710,7 @@ def test_known_init_kwargs_no_warning():
             "s": rng.integers(0, 2, n),
             "e": np.zeros(n),
             "o": np.zeros(n),
+            "w": np.ones(n),
         }
     )
     with warnings.catch_warnings():
@@ -721,6 +724,7 @@ def test_known_init_kwargs_no_warning():
             offset=df.o,
             ties="efron",
             missing="drop",
+            weights=df.w,
         )
         mod_f = PHReg.from_formula(
             "time ~ x + z",
@@ -730,6 +734,7 @@ def test_known_init_kwargs_no_warning():
             strata="s",
             offset="o",
             ties="efron",
+            weights="w",
         )
         # A keyword that leaks into the init keywords of a model that is
         # re-created by statsmodels, e.g. from the formula interface or by
@@ -737,3 +742,177 @@ def test_known_init_kwargs_no_warning():
         for m in (mod, mod_f):
             PHReg(m.endog, m.exog, **m._get_init_kwds())
             m.fit_regularized(alpha=0.05, refit=True)
+
+
+def _weights_model(case, weights="w"):
+    d = weights_results.data
+    exog = np.column_stack([d["x"], d["z"]])
+    names = {"strata": "g", "offset": "off", "entry": "entry"}
+    kwds = {k: d[v] for k, v in names.items() if case[k]}
+    return PHReg(
+        d["time"], exog, d["status"], ties=case["ties"], weights=d[weights], **kwds
+    )
+
+
+@pytest.mark.parametrize("name", list(weights_results.results))
+def test_weights_r(name):
+    # GH 2717. Case weights with the Breslow and Efron approximation of ties,
+    # with strata, an offset and entry times. The reference values are from
+    # R survival 3.5.8 coxph(..., weights = w), see results_phreg_weights.
+    case = weights_results.results[name]
+    mod = _weights_model(case)
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, case["coef"], rtol=1e-7)
+    assert_allclose(res.cov_params(), case["var"], rtol=1e-7)
+    assert_allclose(res.llf, case["loglik"][1], rtol=1e-10)
+    assert_allclose(mod.loglike(np.zeros(2)), case["loglik"][0], rtol=1e-10)
+    score = mod.score(np.zeros(2))
+    score_test = score @ np.linalg.solve(-mod.hessian(np.zeros(2)), score)
+    assert_allclose(score_test, case["score_test"], rtol=1e-9)
+
+    # robust covariance with a group for each observation
+    nobs = len(mod.endog)
+    res = mod.fit(groups=np.arange(nobs), disp=0)
+    assert_allclose(res.cov_params(), case["var_robust"], rtol=1e-7)
+
+    if "var_cluster" not in case:
+        return
+    res = mod.fit(groups=weights_results.data["cl"], disp=0)
+    assert_allclose(res.cov_params(), case["var_cluster"], rtol=1e-7)
+    # The residuals use the weighted risk sets and are not multiplied by the
+    # case weights, as resid.coxph with weighted=FALSE. atol for the Schoenfeld
+    # residuals of an event that is alone in its risk set, which are 0.
+    assert_allclose(res.score_residuals, case["resid_score"], rtol=1e-7)
+    assert_allclose(res.martingale_residuals, case["resid_martingale"], rtol=1e-7)
+    assert_allclose(
+        res.schoenfeld_residuals, case["resid_schoenfeld"], rtol=1e-7, atol=1e-10
+    )
+
+
+@pytest.mark.parametrize("entry", [False, True])
+def test_weights_baseline_hazard_increments(entry):
+    # The increments of the Breslow baseline cumulative hazard are the
+    # weighted number of failures over the weighted risk set, as in R
+    # survfit.coxph. ``baseline_cumulative_hazard`` is at the failure times
+    # the sum of the increments up to the previous failure time, so only its
+    # differences are compared, see results_phreg_weights.
+    name = "breslow_entry" if entry else "breslow"
+    ref = weights_results.baseline_increments[name]
+    mod = _weights_model(weights_results.results[name])
+    time, cumhaz, _ = mod.fit(disp=0).baseline_cumulative_hazard[0]
+    assert_equal(time, ref["time"])
+    assert_allclose(np.diff(cumhaz), ref["increment"][:-1], rtol=1e-7)
+
+
+def test_weights_integer_replication():
+    # With the Breslow approximation of ties, integer weights give the same
+    # fit as replicating the observations. This does not hold for the Efron
+    # approximation, which uses the mean weight of the tied failures, as R.
+    case = weights_results.results["breslow_strata_offset_entry"]
+    d = weights_results.data
+    mod = _weights_model(case, weights="wi")
+    rep = np.repeat(np.arange(len(d["wi"])), d["wi"].astype(np.intp))
+    mod_rep = PHReg(
+        d["time"][rep],
+        np.column_stack([d["x"], d["z"]])[rep],
+        d["status"][rep],
+        strata=d["g"][rep],
+        offset=d["off"][rep],
+        entry=d["entry"][rep],
+    )
+    params = np.array([0.3, -0.2])
+    assert_allclose(mod.loglike(params), mod_rep.loglike(params), rtol=1e-12)
+    assert_allclose(mod.score(params), mod_rep.score(params), rtol=1e-12)
+    assert_allclose(mod.hessian(params), mod_rep.hessian(params), rtol=1e-12)
+
+    res = mod.fit(disp=0)
+    res_rep = mod_rep.fit(disp=0)
+    assert_allclose(res.params, res_rep.params, rtol=1e-10)
+    assert_allclose(res.bse, res_rep.bse, rtol=1e-10)
+    for name in ["score_residuals", "martingale_residuals", "schoenfeld_residuals"]:
+        assert_allclose(
+            getattr(res, name)[rep], getattr(res_rep, name), rtol=1e-10, atol=1e-12
+        )
+    for bch, bch_rep in zip(
+        res.baseline_cumulative_hazard, res_rep.baseline_cumulative_hazard, strict=True
+    ):
+        assert_allclose(bch[1], bch_rep[1], rtol=1e-10)
+
+    # The penalty of fit_regularized is relative to the number of
+    # observations, so the replicated data need a smaller alpha.
+    res = mod.fit_regularized(alpha=0.05, L1_wt=0.5)
+    res_rep = mod_rep.fit_regularized(alpha=0.05 * len(d["wi"]) / len(rep), L1_wt=0.5)
+    assert_allclose(res.params, res_rep.params, rtol=1e-6)
+
+
+@pytest.mark.parametrize("ties", ["breslow", "efron"])
+def test_weights_ones_and_zeros(ties):
+    d = weights_results.data
+    exog = np.column_stack([d["x"], d["z"]])
+    arrays = {"strata": d["g"], "offset": d["off"], "entry": d["entry"]}
+    groups = d["cl"]
+
+    # weights of one give the same results as no weights
+    mod = PHReg(d["time"], exog, d["status"], ties=ties, **arrays)
+    res = mod.fit(groups=groups, disp=0)
+    weights = np.ones(len(d["time"]))
+    mod1 = PHReg(d["time"], exog, d["status"], ties=ties, weights=weights, **arrays)
+    res1 = mod1.fit(groups=groups, disp=0)
+    assert_equal(res1.params, res.params)
+    assert_equal(res1.cov_params(), res.cov_params())
+    assert_equal(res1.martingale_residuals, res.martingale_residuals)
+
+    # observations with weight zero are not used
+    w = d["w"].copy()
+    w[::4] = 0
+    keep = w > 0
+    mod0 = PHReg(d["time"], exog, d["status"], ties=ties, weights=w, **arrays)
+    res0 = mod0.fit(groups=groups, disp=0)
+    mod = PHReg(
+        d["time"][keep],
+        exog[keep],
+        d["status"][keep],
+        ties=ties,
+        weights=w[keep],
+        **{k: v[keep] for k, v in arrays.items()},
+    )
+    res = mod.fit(groups=groups[keep], disp=0)
+    assert_allclose(res0.params, res.params, rtol=1e-12)
+    assert_allclose(res0.cov_params(), res.cov_params(), rtol=1e-12)
+    assert np.all(np.isnan(res0.score_residuals[~keep]))
+    assert np.all(np.isnan(res0.martingale_residuals[~keep]))
+    assert_allclose(res0.martingale_residuals[keep], res.martingale_residuals)
+
+
+def test_weights_formula():
+    d = weights_results.data
+    df = pd.DataFrame(d)
+    # a missing weight drops the observation
+    df.loc[3, "w"] = np.nan
+    mod = PHReg.from_formula(
+        "time ~ x + z", df, status="status", strata="g", weights="w", ties="efron"
+    )
+    assert_equal(mod.weights, df["w"].drop(3).to_numpy())
+    keep = df.index != 3
+    mod_arr = PHReg(
+        df["time"][keep],
+        df[["x", "z"]][keep],
+        df["status"][keep],
+        strata=df["g"][keep],
+        weights=df["w"][keep],
+        ties="efron",
+    )
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, mod_arr.fit(disp=0).params, rtol=1e-12)
+    assert_allclose(res.llf, mod_arr.loglike(res.params), rtol=1e-12)
+
+
+@pytest.mark.parametrize("bad", [-1.0, np.inf, np.nan])
+def test_weights_invalid(bad):
+    d = weights_results.data
+    w = d["w"].copy()
+    w[5] = bad
+    with pytest.raises(ValueError, match="weights must be finite and non-negative"):
+        PHReg(d["time"], d["x"], d["status"], weights=w, missing="none")
+    with pytest.raises(ValueError, match="weights and endog must have the same"):
+        PHReg(d["time"], d["x"], d["status"], weights=w[:5], missing="none")

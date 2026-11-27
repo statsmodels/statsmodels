@@ -26,7 +26,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
@@ -95,31 +95,37 @@ _predict_transform_docstring = """
         through the formula before forming the prediction."""
 
 
-def _tie_terms(xp0, xp1, xp0d, xp1d, ndeath, efron):
+def _tie_terms(xp0, xp1, xp0d, xp1d, ndeath, wdeath, efron):
     """
     Terms of the Breslow or Efron approximation at one failure time
 
     With ties the Efron approximation uses ``ndeath`` steps j = 0, ..., ndeath
     - 1 in which the subjects that fail at the time have the weight 1 - f_j
     in the risk set, with f_j = j / ndeath. The increment of the cumulative
-    hazard in step j is ``1 / denom_j`` and the average of the covariates is
-    ``xbar_j``. The Breslow approximation has one step with f = 0 and the
-    hazard ``ndeath / denom``.
+    hazard in step j is ``(wdeath / ndeath) / denom_j``, the mean case weight
+    of the failing subjects over ``denom_j``, and the average of the
+    covariates is ``xbar_j``. The Breslow approximation has one step with
+    f = 0 and the hazard ``wdeath / denom``.
 
     Parameters
     ----------
     xp0 : float
-        Sum of the hazard multipliers of the subjects in the risk set.
-    xp1 : ndarray
-        Sum of the hazard multipliers times the covariates of the subjects
+        Sum of the hazard multipliers times the case weights of the subjects
         in the risk set.
+    xp1 : ndarray
+        Sum of the hazard multipliers times the case weights times the
+        covariates of the subjects in the risk set.
     xp0d : float
-        Sum of the hazard multipliers of the subjects that fail at the time.
-    xp1d : ndarray
-        Sum of the hazard multipliers times the covariates of the subjects
+        Sum of the hazard multipliers times the case weights of the subjects
         that fail at the time.
+    xp1d : ndarray
+        Sum of the hazard multipliers times the case weights times the
+        covariates of the subjects that fail at the time.
     ndeath : int
         The number of subjects that fail at the time.
+    wdeath : float
+        The sum of the case weights of the subjects that fail at the time,
+        ``ndeath`` without case weights.
     efron : bool
         If True, the Efron approximation is used, otherwise the Breslow
         approximation.
@@ -143,19 +149,21 @@ def _tie_terms(xp0, xp1, xp0d, xp1d, ndeath, efron):
     """
     if not efron:
         xbar = xp1 / xp0
-        h = ndeath / xp0
+        h = wdeath / xp0
         return h, h * xbar, 0.0, np.zeros_like(xbar), xbar
 
     f = np.arange(ndeath, dtype=np.float64) / ndeath
     denom = xp0 - f * xp0d
     xbar_j = (xp1[None, :] - np.outer(f, xp1d)) / denom[:, None]
-    haz = 1.0 / denom
+    haz = (wdeath / ndeath) / denom
     return haz.sum(), haz @ xbar_j, (f * haz).sum(), (f * haz) @ xbar_j, xbar_j.mean(0)
 
 
 class PHSurvivalTime:
 
-    def __init__(self, time, status, exog, strata=None, entry=None, offset=None):
+    def __init__(
+        self, time, status, exog, strata=None, entry=None, offset=None, weights=None
+    ):
         """
         Represent a collection of survival times with possible
         stratification and left truncation
@@ -184,6 +192,9 @@ class PHSurvivalTime:
             than or equal to `time`.
         offset : ndarray, optional
             An optional array of offsets
+        weights : ndarray, optional
+            Non-negative case weights. Observations with weight zero are
+            not used. If None, all observations have weight one.
         """
 
         # Default strata
@@ -204,6 +215,12 @@ class PHSurvivalTime:
             sth[k].append(i)
         stratum_rows = [np.asarray(sth[k], dtype=np.int32) for k in stu]
         stratum_names = stu
+
+        # Observations with zero weight do not contribute to the fit.
+        if weights is not None:
+            stratum_rows = [ix[weights[ix] > 0] for ix in stratum_rows]
+        else:
+            weights = np.ones(len(time))
 
         # Remove strata with no events
         ix = [i for i, ix in enumerate(stratum_rows) if status[ix].sum() > 0]
@@ -255,6 +272,7 @@ class PHSurvivalTime:
         self.exog_s = self._split(exog)
         self.status_s = self._split(status)
         self.entry_s = self._split(entry)
+        self.weights_s = self._split(weights)
 
         # Precalculate some indices needed to fit Cox models.
         # Distinct failure times within a stratum are always taken to
@@ -368,12 +386,19 @@ class PHReg(model.LikelihoodModel):
         Array of offset values
     missing : str, optional
         The method used to handle missing data
+    weights : array_like, optional
+        Non-negative case weights, for example inverse probability of
+        treatment weights or survey weights. The partial log-likelihood, its
+        score and Hessian, and the robust covariance are weighted as in R's
+        ``survival::coxph``. Observations with weight zero are not used. If
+        None, all observations have weight one.
+
+        .. versionadded:: 0.15.1
     **kwargs
         Extra arguments that are used to set model properties when using the
         formula interface, for example ``hasconst``. Any other keyword
         argument is not used by the model and raises a ``ValueWarning``.
-        Common mistakes are ``weights``, which ``PHReg`` does not support,
-        and ``event``, which is called ``status`` here.
+        A common mistake is ``event``, which is called ``status`` here.
 
     Notes
     -----
@@ -381,8 +406,20 @@ class PHReg(model.LikelihoodModel):
     explicit or implicit intercept.  The effect of an intercept is
     not identified using the partial likelihood approach.
 
-    `endog`, `status`, `strata`, `entry`, and the first dimension
-    of `exog` all must have the same length.
+    `endog`, `status`, `strata`, `entry`, `weights`, and the first
+    dimension of `exog` all must have the same length.
+
+    With case weights, the Efron approximation for tied failure times uses
+    the mean weight of the subjects that fail at a time, as R does. The model
+    based covariance is the inverse of the weighted information matrix. It is
+    not adjusted for the weights, so with weights that are not frequency
+    weights, for example inverse probability weights, the robust covariance
+    of ``fit(groups=...)`` is usually more appropriate. With one group for
+    each observation it equals the robust covariance of R's
+    ``coxph(..., robust=TRUE)``. The score, martingale and Schoenfeld
+    residuals use the weighted risk sets, but are not multiplied by the case
+    weight of the observation, as in ``residuals.coxph`` with its default
+    ``weighted=FALSE``.
 
     The inclusive entry boundary differs from the ``(start, stop]``
     convention used by R's ``survival::Surv`` counting-process response.
@@ -402,12 +439,12 @@ class PHReg(model.LikelihoodModel):
         offset=None,
         ties="breslow",
         missing="drop",
+        weights=None,
         **kwargs,
     ):
 
         # Unknown keywords would otherwise be swallowed silently, e.g.
-        # ``weights`` (not supported) or ``event`` (a typo for ``status``),
-        # see GH 7741
+        # ``event`` (a typo for ``status``), see GH 7741
         self._check_kwargs(kwargs)
 
         # Default is no censoring
@@ -421,6 +458,7 @@ class PHReg(model.LikelihoodModel):
             entry=entry,
             strata=strata,
             offset=offset,
+            weights=weights,
             missing=missing,
             **kwargs,
         )
@@ -435,9 +473,21 @@ class PHReg(model.LikelihoodModel):
             self.strata = np.asarray(self.strata)
         if self.offset is not None:
             self.offset = np.asarray(self.offset)
+        self.weights = array_like(self.weights, "weights", optional=True)
+        if self.weights is not None:
+            if len(self.weights) != len(self.endog):
+                raise ValueError("weights and endog must have the same length")
+            if not np.all(np.isfinite(self.weights)) or np.any(self.weights < 0):
+                raise ValueError("weights must be finite and non-negative")
 
         self.surv = PHSurvivalTime(
-            self.endog, self.status, self.exog, self.strata, self.entry, self.offset
+            self.endog,
+            self.status,
+            self.exog,
+            self.strata,
+            self.entry,
+            self.offset,
+            self.weights,
         )
         self.nobs = len(self.endog)
         self.groups = None
@@ -465,6 +515,7 @@ class PHReg(model.LikelihoodModel):
         ties="breslow",
         missing="drop",
         *args,
+        weights=None,
         **kwargs,
     ):
         """
@@ -501,6 +552,11 @@ class PHReg(model.LikelihoodModel):
             The method used to handle missing data
         args : extra arguments
             These are passed to the model
+        weights : array_like or str, optional
+            Non-negative case weights, or the name of the column of `data`
+            that contains them. See `PHReg`.
+
+            .. versionadded:: 0.15.1
         kwargs : extra keyword arguments
             These are passed to the model with one exception: ``eval_env``,
             the namespace in which variables of the formula that are not in
@@ -534,6 +590,8 @@ class PHReg(model.LikelihoodModel):
             strata = data[strata]
         if isinstance(offset, str):
             offset = data[offset]
+        if isinstance(weights, str):
+            weights = data[weights]
 
         import re
 
@@ -557,6 +615,7 @@ class PHReg(model.LikelihoodModel):
             entry=entry,
             strata=strata,
             offset=offset,
+            weights=weights,
             subset=subset,
             ties=ties,
             missing=missing,
@@ -647,6 +706,8 @@ class PHReg(model.LikelihoodModel):
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
         where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
+        With case weights, loglike is the weighted log partial likelihood,
+        and n is the number of observations, not the sum of the weights.
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
@@ -768,13 +829,14 @@ class PHReg(model.LikelihoodModel):
 
             uft_ix = surv.ufailt_ix[stx]
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
             nuft = len(uft_ix)
 
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0 = 0.0
 
@@ -787,7 +849,7 @@ class PHReg(model.LikelihoodModel):
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
-                like += (linpred[ix] - np.log(xp0)).sum()
+                like += (w[ix] * (linpred[ix] - np.log(xp0))).sum()
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -821,11 +883,12 @@ class PHReg(model.LikelihoodModel):
 
             # exog and linear predictor for this stratum
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0 = 0.0
 
@@ -841,11 +904,14 @@ class PHReg(model.LikelihoodModel):
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
-                like += linpred[ix].sum()
+                like += (w[ix] * linpred[ix]).sum()
 
+                # Each step of the Efron approximation has the mean weight
+                # of the cases that fail at this point.
                 m = len(ix)
+                meanwt = w[ix].sum() / m
                 J = np.arange(m, dtype=np.float64) / m
-                like -= np.log(xp0 - J * xp0f).sum()
+                like -= meanwt * np.log(xp0 - J * xp0f).sum()
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -885,11 +951,12 @@ class PHReg(model.LikelihoodModel):
 
             # exog and linear predictor for the stratum
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0, xp1 = 0.0, 0.0
 
@@ -905,7 +972,7 @@ class PHReg(model.LikelihoodModel):
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
-                grad += (exog_s[ix, :] - xp1 / xp0).sum(0)
+                grad += (w[ix][:, None] * (exog_s[ix, :] - xp1 / xp0)).sum(0)
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -944,11 +1011,12 @@ class PHReg(model.LikelihoodModel):
 
             # exog and linear predictor of the stratum
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0, xp1 = 0.0, 0.0
 
@@ -970,15 +1038,16 @@ class PHReg(model.LikelihoodModel):
                     xp1f = (e_linpred[ixf][:, None] * v).sum(0)
 
                     # Consider all cases that fail at this point.
-                    grad += v.sum(0)
+                    grad += (w[ixf][:, None] * v).sum(0)
 
                     m = len(ixf)
+                    meanwt = w[ixf].sum() / m
                     J = np.arange(m, dtype=np.float64) / m
                     numer = xp1 - np.outer(J, xp1f)
                     denom = xp0 - np.outer(J, xp0f)
                     ratio = numer / denom
                     rsum = ratio.sum(0)
-                    grad -= rsum
+                    grad -= meanwt * rsum
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -1016,12 +1085,13 @@ class PHReg(model.LikelihoodModel):
             nuft = len(uft_ix)
 
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
 
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0, xp1, xp2 = 0.0, 0.0, 0.0
 
@@ -1038,7 +1108,7 @@ class PHReg(model.LikelihoodModel):
                     xp2 += np.einsum("ij,ik,i->jk", v, v, elx)
 
                 # Account for all cases that fail at this point.
-                m = len(uft_ix[i])
+                m = w[uft_ix[i]].sum()
                 hess += m * (xp2 / xp0 - np.outer(xp1, xp1) / xp0**2)
 
                 # Update for new cases entering the risk set.
@@ -1076,12 +1146,13 @@ class PHReg(model.LikelihoodModel):
         for stx in range(surv.nstrat):
 
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
 
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0, xp1, xp2 = 0.0, 0.0, 0.0
 
@@ -1109,12 +1180,13 @@ class PHReg(model.LikelihoodModel):
 
                 # Account for all cases that fail at this point.
                 m = len(uft_ix[i])
+                meanwt = w[uft_ix[i]].sum() / m
                 J = np.arange(m, dtype=np.float64) / m
                 c0 = xp0 - J * xp0f
-                hess += xp2 * np.sum(1 / c0)
-                hess -= xp2f * np.sum(J / c0)
+                hess += meanwt * xp2 * np.sum(1 / c0)
+                hess -= meanwt * xp2f * np.sum(J / c0)
                 mat = (xp1[None, :] - np.outer(J, xp1f)) / c0[:, None]
-                hess -= np.einsum("ij,ik->jk", mat, mat)
+                hess -= meanwt * np.einsum("ij,ik->jk", mat, mat)
 
                 # Update for new cases entering the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -1149,6 +1221,8 @@ class PHReg(model.LikelihoodModel):
         This function uses the `groups` argument to determine groups
         within which observations may be dependent.  The covariance
         matrix is calculated using the Huber-White "sandwich" approach.
+        With case weights, the score residuals are multiplied by the case
+        weights before they are summed within the groups.
         """
 
         if self.groups is None:
@@ -1162,6 +1236,8 @@ class PHReg(model.LikelihoodModel):
         # observations that are not used have NaN residuals and do not
         # contribute to the score
         score_obs = np.where(np.isnan(score_obs), 0.0, score_obs)
+        if self.weights is not None:
+            score_obs = score_obs * self.weights[:, None]
 
         # Collapse
         grads = {}
@@ -1230,7 +1306,10 @@ class PHReg(model.LikelihoodModel):
         -----
         The score residuals use the approximation for tied failure times of
         the model, Breslow or Efron. Their sum over the observations is the
-        score of the partial likelihood.
+        score of the partial likelihood. With case weights, the residuals use
+        the weighted risk sets but are not multiplied by the case weights, as
+        in R's ``residuals.coxph``, and their sum weighted by the case weights
+        is the score.
 
         Observations that are not used, for example observations in a
         stratum with no observed events, have undefined score residuals, and
@@ -1248,6 +1327,7 @@ class PHReg(model.LikelihoodModel):
 
             uft_ix = surv.ufailt_ix[stx]
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
             nuft = len(uft_ix)
             strat_ix = surv.stratum_rows[stx]
 
@@ -1256,6 +1336,8 @@ class PHReg(model.LikelihoodModel):
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
+            # the risk sets are weighted, the residuals are not
+            we_linpred = e_linpred * w
 
             first, last = self._risk_range(stx)
             resid_s = np.zeros(exog_s.shape, dtype=np.float64)
@@ -1265,17 +1347,19 @@ class PHReg(model.LikelihoodModel):
 
                 at_risk = np.flatnonzero((first <= i) & (i <= last))
                 e_risk = e_linpred[at_risk]
+                we_risk = we_linpred[at_risk]
                 x_risk = exog_s[at_risk, :]
 
                 ix = uft_ix[i]
-                xp0d = e_linpred[ix].sum()
-                xp1d = np.dot(e_linpred[ix], exog_s[ix, :])
+                xp0d = we_linpred[ix].sum()
+                xp1d = np.dot(we_linpred[ix], exog_s[ix, :])
                 h, hx, hf, hxf, xbar = _tie_terms(
-                    e_risk.sum(),
-                    np.dot(e_risk, x_risk),
+                    we_risk.sum(),
+                    np.dot(we_risk, x_risk),
                     xp0d,
                     xp1d,
                     len(ix),
+                    w[ix].sum(),
                     efron,
                 )
 
@@ -1320,6 +1404,7 @@ class PHReg(model.LikelihoodModel):
 
             uft_ix = surv.ufailt_ix[stx]
             exog_s = surv.exog_s[stx]
+            w = surv.weights_s[stx]
             nuft = len(uft_ix)
             strat_ix = surv.stratum_rows[stx]
 
@@ -1328,6 +1413,8 @@ class PHReg(model.LikelihoodModel):
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
+            # the risk sets are weighted, the residuals are not
+            we_linpred = e_linpred * w
 
             first, last = self._risk_range(stx)
             # cumulative hazard of each subject while it is at risk
@@ -1336,17 +1423,18 @@ class PHReg(model.LikelihoodModel):
             for i in range(nuft):
 
                 at_risk = np.flatnonzero((first <= i) & (i <= last))
-                e_risk = e_linpred[at_risk]
+                we_risk = we_linpred[at_risk]
 
                 ix = uft_ix[i]
-                xp0d = e_linpred[ix].sum()
+                xp0d = we_linpred[ix].sum()
                 # only the hazard is needed, not the averages of the covariates
                 h, _, hf, _, _ = _tie_terms(
-                    e_risk.sum(),
+                    we_risk.sum(),
                     np.zeros(1),
                     xp0d,
                     np.zeros(1),
                     len(ix),
+                    w[ix].sum(),
                     efron,
                 )
                 cumhaz[at_risk] += h
@@ -1372,7 +1460,8 @@ class PHReg(model.LikelihoodModel):
             averages[stx][i,:] is a row vector containing the weighted
             average values (for all the covariates) of at-risk
             subjects at the i^th largest observed failure time in
-            stratum `stx`, using the hazard multipliers as weights.
+            stratum `stx`, using the hazard multipliers times the case
+            weights as weights.
 
         Notes
         -----
@@ -1409,7 +1498,7 @@ class PHReg(model.LikelihoodModel):
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
             linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * surv.weights_s[stx]
 
             # Iterate backward through the unique failure times.
             for i in range(nuft)[::-1]:
@@ -1458,7 +1547,9 @@ class PHReg(model.LikelihoodModel):
 
         Notes
         -----
-        Uses the Nelson-Aalen estimator.
+        Uses the Nelson-Aalen estimator. With case weights, the increment at
+        a failure time is the weighted number of failures over the weighted
+        sum of the hazard multipliers of the risk set.
         """
 
         # TODO: some disagreements with R, not the same algorithm but
@@ -1475,10 +1566,11 @@ class PHReg(model.LikelihoodModel):
             exog_s = surv.exog_s[stx]
             nuft = len(uft_ix)
 
+            w = surv.weights_s[stx]
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
                 linpred += surv.offset_s[stx]
-            e_linpred = np.exp(linpred)
+            e_linpred = np.exp(linpred) * w
 
             xp0 = 0.0
             h0 = np.zeros(nuft, dtype=np.float64)
@@ -1492,7 +1584,7 @@ class PHReg(model.LikelihoodModel):
 
                 # Account for all cases that fail at this point.
                 ix = uft_ix[i]
-                h0[i] = len(ix) / xp0
+                h0[i] = w[ix].sum() / xp0
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -1900,6 +1992,8 @@ class PHRegResults(base.LikelihoodModelResults):
         A matrix containing the Schoenfeld residuals
 
         Schoenfeld residuals for censored observations are set to zero.
+        With case weights, the averages of the risk sets are weighted by the
+        case weights, and the residuals are not multiplied by them.
         """
 
         surv = self.model.surv
@@ -1944,7 +2038,9 @@ class PHRegResults(base.LikelihoodModelResults):
         Efron approximation for ties of the model. The residuals of a stratum
         add up to 0 at the estimated parameters. Observations that are not
         used, for example observations in a stratum without events, have NaN
-        residuals.
+        residuals. With case weights, the cumulative hazard uses the weighted
+        risk sets, the residuals are not multiplied by the case weights, and
+        their sum weighted by the case weights is 0.
         """
         return self.model._martingale_residuals(self.params)
 
