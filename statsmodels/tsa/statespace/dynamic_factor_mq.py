@@ -3982,9 +3982,19 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             constructing the impacts of revisions and news. For example, if
             `state_index=[0, 1]` is passed, then only the impacts to the
             observed variables arising from the impacts to the first two
-            states will be returned. If the string "common" is passed and the
-            model includes idiosyncratic AR(1) components, news will only be
-            computed based on the common states. Default is to use all states.
+            states will be returned. If the string "common" is passed, news
+            will only be computed based on the common states, that is, the
+            factors and their lags, without the idiosyncratic states. Default
+            is to use all states.
+
+            .. versionchanged:: 0.15.1
+
+               "common" selects the factor states of every model. It
+               selected the first ``k_states - k_endog`` states, which are
+               the factor states only in models of monthly data with
+               idiosyncratic AR(1) terms. In other models, they included
+               idiosyncratic states or left out factor states, or news
+               raised an IndexError.
         return_raw : bool, optional
             Whether or not to return only the specific output or a full
             results object. Default is to return a full results object.
@@ -4026,9 +4036,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                In Handbook of economic forecasting, vol. 2, pp. 195-237.
                Elsevier, 2013.
         """
-        if state_index == "common":
-            state_index = (
-                np.arange(self.model.k_states - self.model.k_endog))
+        if isinstance(state_index, str) and state_index == "common":
+            # The factors and their lags come first in the state vector
+            state_index = np.arange(self.model._s.k_states_factors)
 
         news_results = super().news(
             comparison, impact_date=impact_date,

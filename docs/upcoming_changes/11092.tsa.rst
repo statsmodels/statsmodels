@@ -1,0 +1,3 @@
+- ``DynamicFactorMQResults.news`` raised a ``ValueError`` for an
+  ndarray ``state_index`` with more than one element (a list
+  worked). :pr:`11092`
