@@ -405,7 +405,8 @@ class TestVAR_measurement_error(CheckLutkepohl):
             assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
             assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
             assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
-            assert re.search(f"measurement_variance +{params[-(i + 1)]:.4g}", table)
+            meas_var = params[i - self.model.k_endog]
+            assert re.search(f"measurement_variance +{meas_var:.4g}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -1670,3 +1671,30 @@ def test_univariate():
     assert_allclose(res.llf, res_sarimax.llf, rtol=1e-12)
     titles = [table.title for table in res.summary().tables]
     assert "Results for equation inv" in titles
+
+
+@pytest.mark.parametrize("k_endog", [2, 3])
+def test_summary_measurement_variance_equation(k_endog):
+    # Each equation table shows the measurement variance of its own equation,
+    # the parameter measurement_variance.<name> (the last k_endog parameters).
+    # The variances differ and are exact at the four decimals of the table.
+    rng = np.random.default_rng(20261201)
+    names = ["inv", "inc", "consump"][:k_endog]
+    endog = pd.DataFrame(rng.standard_normal((40, k_endog)), columns=names)
+    mod = varmax.VARMAX(endog, order=(1, 0), trend="c", measurement_error=True)
+    meas = np.array([0.125, 0.25, 0.5])[:k_endog]
+    params = np.r_[
+        np.zeros(k_endog),
+        0.2 * np.eye(k_endog).ravel(),
+        np.ones(k_endog * (k_endog + 1) // 2),
+        meas,
+    ]
+    res = mod.smooth(params)
+    tables = {str(table.title): table for table in res.summary().tables}
+    for name in names:
+        table = tables[f"Results for equation {name}"]
+        rows = [row for row in table.data if row[0].strip() == "measurement_variance"]
+        assert len(rows) == 1
+        expected = res.params[f"measurement_variance.{name}"]
+        assert_allclose(float(rows[0][1]), expected, rtol=1e-12)
+    assert_allclose(res.params.iloc[-k_endog:], meas, rtol=1e-12)

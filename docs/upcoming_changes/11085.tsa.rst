@@ -1,0 +1,5 @@
+- The summary of ``VARMAX`` models with ``measurement_error=True`` and
+  two or more series showed the measurement variance of another
+  equation in the table of each equation (with three series, those of
+  the first and the last equation were swapped). Each table shows the
+  measurement variance of its own equation. :pr:`11085`
