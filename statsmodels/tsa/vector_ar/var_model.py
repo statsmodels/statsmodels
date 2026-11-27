@@ -750,6 +750,8 @@ class VAR(TimeSeriesModel):
         # Set by fit()/_estimate_var(), once the lag order is known
         self.nobs = None
         self.k_trend = None
+        # fit replaces exog_names with the names of all regressors
+        self._orig_exog_names = self.exog_names
 
     def predict(self, params, start=None, end=None, lags=1, trend="c"):
         """
@@ -914,6 +916,13 @@ class VAR(TimeSeriesModel):
         Notes
         -----
         See Lütkepohl pp. 146-153 for implementation details.
+
+        .. versionchanged:: 0.15.1
+
+           Fitting a model with exog more than once gives the names of the
+           first fit. Each fit added the regressor names again, which made
+           the model's ``exog_names`` wrong and pandas results raise an
+           error.
         """
         lags = maxlags
         trend = string_like(
@@ -959,7 +968,7 @@ class VAR(TimeSeriesModel):
             lags = 1
 
         k_trend = util.get_trendorder(trend)
-        orig_exog_names = self.exog_names
+        orig_exog_names = self._orig_exog_names
         self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = self.n_totobs - lags
 
