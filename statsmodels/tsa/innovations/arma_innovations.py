@@ -16,6 +16,13 @@ The model's autoregressive parameters (ar_params) indicate that the process
 """
 
 
+def _prefix_dtype(prefix):
+    if prefix not in prefix_dtype_map:
+        valid = ", ".join(f'"{key}"' for key in prefix_dtype_map)
+        raise ValueError(f"prefix must be one of {valid}, got {prefix!r}.")
+    return prefix_dtype_map[prefix]
+
+
 def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
                      normalize=False, prefix=None):
     """
@@ -32,13 +39,14 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params : array_like, optional
         Moving average parameters.
     sigma2 : float, optional
-        The ARMA innovation variance. Default is 1.
+        The ARMA innovation variance, which must be positive. Default is 1.
     normalize : bool, optional
         Whether or not to normalize the returned innovations. Default is False.
-    prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+    prefix : {"s", "d", "c", "z"}, optional
+        The BLAS prefix associated with the datatype: single or double
+        precision, real ("s", "d") or complex ("c", "z"). Default is to find
+        the best datatype based on given input. This argument is typically
+        only used internally.
 
     Returns
     -------
@@ -67,7 +75,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     if prefix is None:
         prefix, dtype, _ = find_best_blas_type(
             [endog, ar_params, ma_params, np.array(sigma2)])
-    dtype = prefix_dtype_map[prefix]
+    dtype = _prefix_dtype(prefix)
 
     # Make arrays contiguous for BLAS calls
     endog = np.asfortranarray(endog, dtype=dtype)
@@ -76,6 +84,11 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
     ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
+    if not sigma2.real > 0:
+        # 0 or NaN would give a misleading "non-stationary" error below
+        raise ValueError(
+            f"sigma2 must be a positive innovation variance, got {sigma2}."
+        )
     # The lag polynomials are built from the converted parameters, so that
     # they have the dtype that matches the prefix
     ar = np.r_[1, -ar_params]
@@ -133,10 +146,11 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
         Moving average parameters.
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
-    prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+    prefix : {"s", "d", "c", "z"}, optional
+        The BLAS prefix associated with the datatype: single or double
+        precision, real ("s", "d") or complex ("c", "z"). Default is to find
+        the best datatype based on given input. This argument is typically
+        only used internally.
 
     Returns
     -------
@@ -163,10 +177,11 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
         Moving average parameters.
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
-    prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+    prefix : {"s", "d", "c", "z"}, optional
+        The BLAS prefix associated with the datatype: single or double
+        precision, real ("s", "d") or complex ("c", "z"). Default is to find
+        the best datatype based on given input. This argument is typically
+        only used internally.
 
     Returns
     -------
@@ -182,7 +197,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     if prefix is None:
         prefix, dtype, _ = find_best_blas_type(
             [endog, ar_params, ma_params, np.array(sigma2)])
-    dtype = prefix_dtype_map[prefix]
+    dtype = _prefix_dtype(prefix)
 
     endog = np.ascontiguousarray(endog, dtype=dtype)
     # The Cython routines need writable arrays, so read-only parameters (for
