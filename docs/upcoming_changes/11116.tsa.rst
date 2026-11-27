@@ -1,0 +1,6 @@
+- ``kalman_gain`` of the filter results of state space models raised
+  an ``IndexError``, or returned wrong values for samples of two or
+  three periods, when memory conservation had been used to avoid
+  storing the Kalman gain and the predicted state or forecast error
+  covariance matrices (for example ``memory_conserve=True``). It
+  raises a ``ValueError`` that says so. :pr:`11116`

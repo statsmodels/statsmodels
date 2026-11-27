@@ -1876,8 +1876,24 @@ class FilterResults(FrozenRepresentation):
 
     @property
     def kalman_gain(self):
-        """Kalman gain matrices"""
+        """
+        Kalman gain matrices
+
+        .. versionchanged:: 0.15.1
+
+           Raises ValueError if memory conservation was used to avoid storing
+           the Kalman gain and either the predicted state or the forecast error
+           covariance matrices. It raised IndexError, or returned wrong values
+           for short samples.
+        """
         if self._kalman_gain is None:
+            # The gain is computed from the covariance matrices of every period
+            if self.memory_no_predicted_cov or self.memory_no_forecast_cov:
+                raise ValueError(
+                    "The Kalman gain is not available if memory conservation"
+                    " has been used to avoid storing it and the predicted"
+                    " state or forecast error covariance matrices."
+                )
             # k x n
             self._kalman_gain = np.zeros(
                 (self.k_states, self.k_endog, self.nobs), dtype=self.dtype)

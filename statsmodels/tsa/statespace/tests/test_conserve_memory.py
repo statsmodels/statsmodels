@@ -359,3 +359,37 @@ def test_invalid_fittedvalues_resid_predict():
             res.predict(dynamic=True)
         with pytest.raises(ValueError, match=message):
             res.predict(start=endog.index[10], dynamic=True)
+
+
+@pytest.mark.parametrize(
+    "conserve_memory",
+    [
+        MEMORY_CONSERVE,
+        MEMORY_NO_GAIN | MEMORY_NO_PREDICTED_COV,
+        MEMORY_NO_GAIN | MEMORY_NO_FORECAST_COV,
+    ],
+    ids=["conserve", "no-gain-predicted-cov", "no-gain-forecast-cov"],
+)
+@pytest.mark.parametrize("nobs", [2, 20])
+def test_kalman_gain_not_stored(conserve_memory, nobs):
+    # Without the stored Kalman gain, the gain is computed from the predicted
+    # state and forecast error covariance matrices of every period. If those
+    # were not stored either, this raised IndexError (a sample of 20 periods)
+    # or gave wrong values (2 periods), from the matrices of other periods
+    endog = dta["infl"].iloc[:nobs]
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1))
+    res = mod.filter([0.5, 0.2, 2.0], conserve_memory=conserve_memory)
+    with pytest.raises(ValueError, match="The Kalman gain is not available"):
+        _ = res.filter_results.kalman_gain
+
+
+@pytest.mark.parametrize("nobs", [2, 20])
+def test_kalman_gain_computed(nobs):
+    # With the covariance matrices, the gain that was not stored is computed,
+    # and it equals the gain stored by the filter
+    endog = dta["infl"].iloc[:nobs]
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1))
+    desired = mod.filter([0.5, 0.2, 2.0]).filter_results.kalman_gain
+    res = mod.filter([0.5, 0.2, 2.0], conserve_memory=MEMORY_NO_GAIN)
+    assert res.filter_results._kalman_gain is None
+    assert_allclose(res.filter_results.kalman_gain, desired, rtol=1e-10)
