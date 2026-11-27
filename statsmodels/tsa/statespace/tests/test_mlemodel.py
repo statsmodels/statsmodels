@@ -3368,3 +3368,44 @@ def test_positional_flag_also_by_keyword_raises(func):
         match = f"^got multiple values for keyword argument '{name}'$"
     with pytest.raises(TypeError, match=match):
         getattr(mod, func)([0.5, 4.0], value, **{name: value})
+
+
+@pytest.mark.parametrize("k_endog", [1, 2])
+def test_news_dataset_with_longer_exog(k_endog):
+    # A dataset that is shorter than `exog` is extended with missing values.
+    # This raised a TypeError for a univariate model, whose `endog_names` is a
+    # string. The model with one variable is a regression with AR(1) errors,
+    # y_t = b x_t + u_t, u_t = phi u_{t-1} + e_t, and the one with two is a
+    # VAR(1) with exog, y_t = A y_{t-1} + B x_t + e_t. Observing y_10 changes
+    # the forecast of y_11 by phi (u_10 - phi u_9), and by
+    # A (y_10 - A y_9 - B x_10).
+    rng = np.random.default_rng(1234)
+    exog = rng.standard_normal(12)
+    if k_endog == 1:
+        endog = rng.standard_normal(11)
+        beta, phi = 0.5, 0.6
+        res = sarimax.SARIMAX(endog[:10], exog=exog[:10], order=(1, 0, 0)).smooth(
+            [beta, phi, 1.0]
+        )
+        resid = endog - beta * exog[:11]
+        desired = phi * (resid[10] - phi * resid[9])
+    else:
+        endog = rng.standard_normal((11, 2))
+        ar = np.array([[0.5, 0.1], [0.2, 0.3]])
+        beta = np.array([0.5, -0.5])
+        mod = varmax.VARMAX(endog[:10], exog=exog[:10], order=(1, 0), trend="n")
+        res = mod.smooth(np.r_[ar.ravel(), beta, 1.0, 0.0, 1.0])
+        desired = ar @ (endog[10] - ar @ endog[9] - beta * exog[10])
+    news = res.news(endog, exog=exog, impact_date=11)
+    assert_allclose(news.total_impacts.to_numpy().ravel(), desired, rtol=1e-10)
+    endog_names = res.model.endog_names
+    if k_endog == 1:
+        endog_names = [endog_names]
+    assert list(news.total_impacts.columns) == endog_names
+    # The same as the news from results for the dataset extended by hand
+    if k_endog == 1:
+        extended = np.r_[endog, np.nan]
+    else:
+        extended = np.r_[endog, np.full((1, 2), np.nan)]
+    other = res.news(res.apply(extended, exog=exog), impact_date=11)
+    assert_allclose(news.total_impacts, other.total_impacts, rtol=1e-12)
