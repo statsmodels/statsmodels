@@ -1,0 +1,3 @@
+- The summary of ``DynamicFactorMQ`` results from ``fit`` with an
+  optimizer other than the EM algorithm (for example
+  ``method="lbfgs"``) raised an ``AttributeError``. :pr:`11091`

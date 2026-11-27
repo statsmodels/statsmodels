@@ -4506,7 +4506,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         extra_top_right = []
         mle_retvals = getattr(self, "mle_retvals", None)
         mle_settings = getattr(self, "mle_settings", None)
-        if mle_settings is not None and mle_settings.method == "em":
+        # The settings of an EM fit are a Bunch with method "em", those of
+        # other optimizers a dict without "method"
+        if mle_settings is not None and mle_settings.get("method") == "em":
             extra_top_right += [("EM Iterations", [f"{mle_retvals.iter}"])]
 
         # Get the basic summary tables
