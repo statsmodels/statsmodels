@@ -1,0 +1,4 @@
+- :class:`~statsmodels.regression.process_regression.ProcessMLE` drops the
+  rows with a missing value from all of its arrays, in ``from_formula`` and
+  with ``missing="drop"``. It raised an error, or dropped the wrong rows,
+  whenever a value was missing. :issue:`11231`, :pr:`11255`
