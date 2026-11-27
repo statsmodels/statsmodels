@@ -693,8 +693,16 @@ class RecursiveLSResults(MLEResults):
 
             .. versionchanged:: 0.15.1
 
+               A list is no longer modified: names in it were replaced by
+               their positions. A tuple that holds a name, and an iterable
+               without a length such as a generator, work; they raised a
+               TypeError.
+
+            .. versionchanged:: 0.15.1
+
                A 0-d integer array selects a variable, as the integer it
                holds does. A bool raises a TypeError.
+
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
         legend_loc : str, optional
@@ -717,6 +725,9 @@ class RecursiveLSResults(MLEResults):
             variables = [variables]
         elif is_int_like(variables, strict=True):
             variables = [int(variables)]
+        else:
+            variables = list(variables)
+
         k_variables = len(variables)
 
         # If a string was given for `variable`, try to get it from exog names
