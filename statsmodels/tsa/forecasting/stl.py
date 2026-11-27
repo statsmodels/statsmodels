@@ -4,6 +4,7 @@ from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
 from typing import Any
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ import pandas as pd
 from statsmodels.base.data import PandasData
 from statsmodels.iolib.summary import SimpleTable, Summary
 from statsmodels.tools.docstring import Docstring, Parameter, indent
+from statsmodels.tools.validation import array_like, is_bool_like, is_int_like
 from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
@@ -243,16 +245,25 @@ class STLForecastResults:
         self._result = result
         self._model = model
         self._model_result = model_result
-        self._endog = np.asarray(endog)
+        self._endog = array_like(endog, "endog", ndim=1, dtype=None)
         self._nobs = self._endog.shape[0]
-        self._index = getattr(endog, "index", pd.RangeIndex(self._nobs))
+        self._index = getattr(endog, "index", None)
+        if not isinstance(self._index, pd.Index):
+            # No index, or not a pandas one, such as the method list.index
+            self._index = pd.RangeIndex(self._nobs)
         if not (
             isinstance(self._index, (pd.DatetimeIndex, pd.PeriodIndex))
             or is_int_index(self._index)
         ):
             try:
-                self._index = pd.to_datetime(self._index)
-            except ValueError:
+                with warnings.catch_warnings():
+                    # pandas warns before failing on an index of non-dates
+                    warnings.filterwarnings(
+                        "ignore", "Could not infer format", UserWarning
+                    )
+                    self._index = pd.to_datetime(self._index)
+            except (TypeError, ValueError):
+                # TypeError for values that cannot be dates, e.g. tuples
                 self._index = pd.RangeIndex(self._nobs)
 
     @property
@@ -374,8 +385,13 @@ class STLForecastResults:
             start, end, self._nobs, self._index, data=data
         )
 
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = get_index_loc(dynamic, self._index)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
             dynamic = dynamic - start
         elif dynamic is True:
             dynamic = 0
@@ -443,6 +459,12 @@ class STLForecastResults:
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
             must be an integer. Default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, and a 0-d integer
+               array are a number of steps, as an int is. They are passed to
+               the model as an int. A bool is not a number of steps.
         **kwargs
             Additional arguments may be required for forecasting beyond the
             end of the sample. These arguments are passed into the time
@@ -453,8 +475,13 @@ class STLForecastResults:
         forecast : ndarray or Series
             Out of sample forecasts
         """
+        if is_int_like(steps):
+            steps = int(steps)
         forecast = self._model_result.forecast(steps=steps, **kwargs)
         index = forecast.index if isinstance(forecast, pd.Series) else None
+        if not is_int_like(steps):
+            # A date: the model has forecast up to and including it
+            steps = len(forecast)
         return forecast + self._seasonal_forecast(steps, index)
 
     def get_prediction(
@@ -508,8 +535,6 @@ class STLForecastResults:
             var_pred_mean = pred.var_pred_mean
         except (AttributeError, NotImplementedError):
             # Allow models that do not return var_pred_mean
-            import warnings
-
             warnings.warn(
                 "The variance of the predicted mean is not available using "
                 f"the {self.model.__class__.__name__} model class.",

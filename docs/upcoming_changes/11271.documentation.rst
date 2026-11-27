@@ -1,0 +1,2 @@
+- The example in the ``MarkovSwitchingParams`` docstring shows the indexes the
+  getters return and the right order of the parameters. :pr:`11271`

@@ -1,0 +1,5 @@
+- For time series models whose dates have no frequency, an ``end`` key
+  that matches several dates (for example ``"2000-01"``) stopped at the
+  first of them, and a key with no date in its period ended at the next
+  date. Prediction ends at the last match, or at the previous date, so
+  results for these keys change. :pr:`10943`

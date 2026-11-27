@@ -59,7 +59,13 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.validation import bool_like, float_like, int_like, string_like
+from statsmodels.tools.validation import (
+    bool_like,
+    float_like,
+    int_like,
+    is_int_like,
+    string_like,
+)
 
 from . import _prediction as pred
 
@@ -1700,7 +1706,13 @@ class GLSAR(GLS):
 
         If an array is provided, it specifies initial values for the
         autoregressive coefficients. The length of the array determines
-        the AR order.
+        the AR order. A float, such as ``1.0``, is a single coefficient.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d integer array, such as ``np.array(2)``, is an order, as the
+           integer it holds is. Before, it was a coefficient. A bool (or an
+           array of bools) raises a ``TypeError``: ``True`` was an order of 1.
     {base._missing_param_doc + base._extra_param_doc}
 
     Notes
@@ -1759,7 +1771,12 @@ class GLSAR(GLS):
         self, endog, exog=None, rho=1, missing="none", hasconst=None, **kwargs
     ):
         # this looks strange, interpreting rho as order if it is int
-        if isinstance(rho, (int, np.integer)):
+        if np.asarray(rho).dtype.kind == "b":
+            raise TypeError(
+                "rho must be an int (the AR order) or the AR coefficients, not a bool"
+            )
+        # strict: a float such as 1.0 is an AR coefficient, not an order
+        if is_int_like(rho, strict=True):
             self.order = int(rho)
             self.rho = np.zeros(self.order, np.float64)
         else:

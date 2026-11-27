@@ -1,0 +1,4 @@
+- ``x13_arima_analysis`` with ``speconly=True`` raised ``X13NotFoundError``
+  when the X-13 binary was not found, although it only writes the
+  specification. It returns the specification without looking up the
+  binary. :pr:`11069`

@@ -2566,8 +2566,8 @@ class GeneralizedPoisson(CountModel):
 
         if exposure is None:
             exposure = getattr(self, "exposure", 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
+        else:
+            exposure = np.log(np.asarray(exposure))
 
         if offset is None:
             offset = getattr(self, "offset", 0)
@@ -2588,9 +2588,7 @@ class GeneralizedPoisson(CountModel):
         elif which == "prob":
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog) + 1))
-            mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)[
-                :, None
-            ]
+            mu = np.exp(linpred)[:, None]
             return genpoisson_p.pmf(y_values, mu, params[-1], self.parameterization + 1)
         else:
             raise ValueError("keyword 'which' not recognized")
@@ -3832,6 +3830,9 @@ class NegativeBinomial(CountModel):
             **kwargs,
         )
         self.loglike_method = loglike_method
+        # params hold alpha, not log(alpha); fit switches this on while it
+        # optimizes over log(alpha) and off again before it returns
+        self._transparams = False
         self._initialize()
         if loglike_method in ["nb2", "nb1"]:
             self.exog_names.append("alpha")
@@ -3847,12 +3848,10 @@ class NegativeBinomial(CountModel):
             self.hessian = self._hessian_nb2
             self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
-            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == "nb1":
             self.hessian = self._hessian_nb1
             self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
-            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == "geometric":
             self.hessian = self._hessian_geom
             self.score = self._score_geom
@@ -3935,6 +3934,12 @@ class NegativeBinomial(CountModel):
 
         where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
         For the geometric, :math:`\alpha=0` as well.
+
+        .. versionchanged:: 0.15.1
+
+           Outside of `fit`, the last element of `params` is :math:`\alpha` for
+           ``loglike_method`` nb1 and nb2. It was read as :math:`\ln\alpha` in
+           a new model instance and in the model of unpickled results.
         """
         llf = np.sum(self.loglikeobs(params))
         return llf
@@ -4227,11 +4232,12 @@ class NegativeBinomial(CountModel):
 
         # Note: do not let super handle robust covariance because it has
         # transformed params
+        # newton and ncg step in alpha space, the other methods in log(alpha)
+        use_lnalpha = self.loglike_method.startswith("nb") and method not in [
+            "newton",
+            "ncg",
+        ]
         self._transparams = False  # always define attribute
-        if self.loglike_method.startswith("nb") and method not in ["newton", "ncg"]:
-            self._transparams = True  # in case same Model instance is refit
-        elif self.loglike_method.startswith("nb"):  # method is newton/ncg
-            self._transparams = False  # because we need to step in alpha space
 
         if start_params is None:
             # Use poisson fit as first guess.
@@ -4256,7 +4262,7 @@ class NegativeBinomial(CountModel):
                     res_poi.predict(), res_poi.resid, df_resid=res_poi.df_resid
                 )
                 start_params = np.append(start_params, max(0.05, a))
-        elif self._transparams is True:
+        elif use_lnalpha:
             # transform user provided start_params dispersion, see #3918
             start_params = np.array(start_params, copy=True)
             start_params[-1] = np.log(start_params[-1])
@@ -4266,21 +4272,25 @@ class NegativeBinomial(CountModel):
             def callback(*x):
                 return x
 
-        mlefit = super().fit(
-            start_params=start_params,
-            maxiter=maxiter,
-            method=method,
-            disp=disp,
-            full_output=full_output,
-            callback=callback,
-            **kwargs,
-        )
+        try:
+            self._transparams = use_lnalpha
+            mlefit = super().fit(
+                start_params=start_params,
+                maxiter=maxiter,
+                method=method,
+                disp=disp,
+                full_output=full_output,
+                callback=callback,
+                **kwargs,
+            )
+        finally:
+            # params hold alpha outside of the optimization, also if it raised
+            self._transparams = False
         if optim_kwds_prelim is not None:
             mlefit.mle_settings["optim_kwds_prelim"] = optim_kwds_prelim
         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith("nb"):
             # mlefit is a wrapped counts results
-            self._transparams = False  # do not need to transform anymore now
             # change from lnalpha to alpha
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
@@ -5041,8 +5051,8 @@ class NegativeBinomialP(CountModel):
 
         if exposure is None:
             exposure = getattr(self, "exposure", 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
+        else:
+            exposure = np.log(np.asarray(exposure))
 
         if offset is None:
             offset = getattr(self, "offset", 0)
@@ -5064,7 +5074,7 @@ class NegativeBinomialP(CountModel):
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog) + 1))
 
-            mu = self.predict(params, exog, exposure, offset)
+            mu = np.exp(linpred)
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(y_values, size[:, None], prob[:, None])
         else:

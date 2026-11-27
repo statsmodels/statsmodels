@@ -19,7 +19,7 @@ import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import is_bool_like, is_int_like, string_like
 
 # Obtain b splines from patsy
 
@@ -1101,8 +1101,8 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
             self.x = x
 
         self.nobs, self.k_variables = self.x.shape
-        if isinstance(include_intercept, bool):
-            self.include_intercept = [include_intercept] * self.k_variables
+        if is_bool_like(include_intercept, strict=True):
+            self.include_intercept = [bool(include_intercept)] * self.k_variables
         else:
             self.include_intercept = include_intercept
 
@@ -1237,6 +1237,12 @@ class BSplines(AdditiveGamSmoother):
     degree : int or sequence of int
         degree(s) of the spline; the same length and type rules apply as
         to `df`
+
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer or a float with an integral value, such as 3.0,
+           is accepted for `df` and `degree` as an int is. A bool raises a
+           TypeError.
     include_intercept : bool, optional
         If False, then the basis functions are transformed so that they
         do not include a constant. This avoids perfect collinearity if
@@ -1307,12 +1313,12 @@ class BSplines(AdditiveGamSmoother):
     """
     def __init__(self, x, df, degree, include_intercept=False,
                  constraints=None, variable_names=None, knot_kwds=None):
-        if isinstance(degree, int):
-            self.degrees = np.array([degree], dtype=int)
+        if is_int_like(degree):
+            self.degrees = np.array([int(degree)], dtype=int)
         else:
             self.degrees = degree
-        if isinstance(df, int):
-            self.dfs = np.array([df], dtype=int)
+        if is_int_like(df):
+            self.dfs = np.array([int(df)], dtype=int)
         else:
             self.dfs = df
         self.knot_kwds = knot_kwds

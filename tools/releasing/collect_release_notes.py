@@ -183,6 +183,45 @@ def collect(notes_path, items):
     return {key: len(new) for _, key, new in targets}
 
 
+def render_pending(items):
+    """
+    reST for the fragments that are not yet in the release notes.
+
+    The documentation build includes this at the end of the release notes of
+    the release in progress, so that the development documentation shows
+    every change. Once the fragments are collected, it is only a comment.
+    """
+    lines = [
+        ".. Generated from docs/upcoming_changes by docs/source/conf.py.",
+        "",
+    ]
+    by_key = {}
+    for _, key, path in items:
+        if key in SECTIONS:
+            text = path.read_bytes().decode("utf-8").rstrip("\n")
+            by_key.setdefault(key, []).extend(text.split("\n"))
+    if not by_key:
+        return "\n".join(lines) + "\n"
+    title = "Changes not yet collected into the notes above"
+    lines += [
+        title,
+        "=" * len(title),
+        "",
+        (
+            "These changes were merged after the notes above were last "
+            "updated. They are moved into the sections above when the release "
+            "is made."
+        ),
+        "",
+    ]
+    for key, (top, sub) in SECTIONS.items():
+        if key not in by_key:
+            continue
+        head = f"{sub} ({top})" if sub else top
+        lines += [head, "-" * len(head), "", *by_key[key], ""]
+    return "\n".join(lines)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("notes", nargs="?", help="release notes file to update")

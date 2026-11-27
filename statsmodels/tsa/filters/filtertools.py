@@ -421,6 +421,24 @@ def convolution_filter(x, filt, nsides=2):
         Linear filter coefficients in reverse time-order. Should have the
         same number of dimensions as x though if 1d and ``x`` is 2d will be
         coerced to 2d.
+
+        .. versionchanged:: 0.15.1
+
+           A filt with one row and one column per column of ``x``, shape
+           (1, nvars), filters each column of ``x`` with its own coefficient,
+           as any 2d filt with one column per column of ``x`` does.
+           Previously its coefficients were convolved across the columns of
+           ``x``, which returned one column of different values. A filt with
+           more than one row, and more than one but fewer columns than
+           ``x``, raises a ValueError instead of an IndexError.
+
+        .. deprecated:: 0.15.1
+
+           A filt with more than one column, but not one column per column of
+           ``x``, warns and returns the same result as before: the first
+           nvars columns of filt if it has more than one row, and a
+           convolution across the columns of ``x`` if it has one row. This
+           will raise a ValueError in statsmodels 0.17.0.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
         coefficients. If 1, the filter coefficients are for past values only.
@@ -439,6 +457,24 @@ def convolution_filter(x, filt, nsides=2):
         The values that the filter cannot compute at the ends are NaN. A
         Series or DataFrame ``x`` returns a Series or DataFrame with the
         index and the name or columns of ``x``.
+
+    Raises
+    ------
+    ValueError
+        If filt has more than one column, but not one column per column of
+        ``x``, and either has more than one row and fewer columns than
+        ``x``, or has one row and more columns than ``x`` while ``x`` has
+        more than one row.
+
+    Warns
+    -----
+    FutureWarning
+        If filt has more than one column, but not one column per column of
+        ``x``, and either has more than one row and more columns than ``x``,
+        or has one row and fewer columns than ``x`` (or ``x`` has one row).
+        The result does not filter each column of ``x`` with its own column
+        of filt. This is deprecated and will raise a ValueError in
+        statsmodels 0.17.0.
 
     Notes
     -----
@@ -484,9 +520,33 @@ def convolution_filter(x, filt, nsides=2):
     x = array_like(x, "x", maxdim=2)
     filt = array_like(filt, "filt", ndim=x.ndim)
 
-    if filt.ndim == 1 or min(filt.shape) == 1:
+    # a 2d filt with more than one column has a lag polynomial per column
+    by_column = filt.ndim == 2 and filt.shape[1] > 1
+    if by_column and filt.shape[1] != x.shape[1]:
+        nobs, nvar = x.shape
+        nlags, ncols = filt.shape
+        msg = (
+            "filt must have one column, or one column per column of x, but "
+            f"filt has {ncols} columns and x has {nvar}"
+        )
+        if nlags == 1 and (ncols < nvar or nobs == 1):
+            # a filt with one row was convolved across the columns of x
+            by_column = False
+        elif nlags == 1 or ncols < nvar:
+            # these raised a ValueError from scipy or an IndexError
+            raise ValueError(msg)
+        # the loop below ignores the extra columns of a filt with more rows
+        warnings.warn(
+            f"{msg}. The result does not filter each column of x with its "
+            "own column of filt. This is deprecated and will raise a "
+            "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
+    if not by_column:
         result = signal.convolve(x, filt, mode="valid")
-    else:  # filt.ndim == 2
+    else:
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
@@ -511,17 +571,43 @@ def miso_lfilter(ar, ma, x, useic=False):
         The coefficients of autoregressive lag polynomial including lag zero,
         ar(L) in the expression ar(L)y_t.
     ma : array_like
-        The coefficient of the moving average lag polynomial, ma(L) in
-        ma(L)x_t. Must have the same number of dimensions as ``x``;
-        currently only 2d is supported.
+        The coefficients of the moving average lag polynomial, ma(L) in
+        ma(L)x_t, with one row per lag and one column per column of ``x``.
+        A 1-d ``ma`` is a single column.
     x : array_like
-        The 2-d input data series, time in rows, variables in columns.
+        The input data series, time in rows, variables in columns. A 1-d
+        ``x`` is a single variable.
+
+        .. versionchanged:: 0.15.1
+
+           ``x``, ``ar`` and ``ma`` are converted with ``array_like``, so a
+           list or tuple ``x``, a column ``ar`` and a 1-d ``x`` or ``ma``
+           work where they raised, and ``useic`` can be an ndarray. A 2-d
+           ``ma`` without one column per column of a 2-d ``x`` is
+           deprecated.
     useic : array_like or bool, optional
         Initial conditions for the AR filter, as accepted by
         ``scipy.signal.lfiltic``: the values of the filtered series before
         the first observation in reverse time order (``useic[0]`` is
         ``y[-1]``), of length ``ar.shape[0] - 1``. Use the default, False,
         for zero initial conditions.
+
+        .. versionchanged:: 0.15.1
+
+           Without AR lags, ``ar = [1.0]``, there are no initial conditions,
+           and a non-zero ``useic`` is ignored, as values beyond
+           ``ar.shape[0] - 1`` are, where it raised a ValueError. A scalar
+           ``useic`` is the initial value ``y[-1]``, with zero for any
+           further lags, where it raised an IndexError for one AR lag (and
+           a ValueError for any number of lags with scipy 1.16 or later).
+
+        .. deprecated:: 0.15.1
+
+           ``useic=True`` is not a set of initial values. With two or more
+           AR lags it is used as ``y[-1] = 1``, with zero for the further
+           lags, as before, but this is deprecated and will raise a
+           ValueError in statsmodels 0.17.0. With no or one AR lag, where it
+           raised an error from scipy, it raises a ValueError.
 
     Returns
     -------
@@ -530,9 +616,28 @@ def miso_lfilter(ar, ma, x, useic=False):
     inp : ndarray, 1d
         The combined input series.
 
+    Raises
+    ------
+    ValueError
+        If ``ma`` or ``x`` is 1-d and ``ma`` does not have one column per
+        column of ``x``, or if ``useic`` is True and ``ar`` has no or one AR
+        lag.
+
+    Warns
+    -----
+    FutureWarning
+        If ``ma`` and ``x`` are 2-d and ``ma`` does not have one column per
+        column of ``x``. The result does not filter each column of ``x`` with
+        its own column of ``ma``. This is deprecated and will raise a
+        ValueError in statsmodels 0.17.0.
+    FutureWarning
+        If ``useic`` is True and ``ar`` has two or more AR lags. True is used
+        as ``y[-1] = 1``, with zero for the further lags. This is deprecated
+        and will raise a ValueError in statsmodels 0.17.0.
+
     Notes
     -----
-    currently for 2d inputs only, no choice of axis
+    x is filtered along its rows, there is no choice of axis
     Use of signal.lfilter requires that ar lag polynomial contains
     floating point numbers
     does not cut off invalid starting and final values
@@ -544,8 +649,42 @@ def miso_lfilter(ar, ma, x, useic=False):
     with shapes y (nobs,), x (nobs, nvars), ar (narlags,), and
     ma (narlags, nvars).
     """
-    ma = array_like(ma, "ma")
-    ar = array_like(ar, "ar")
+    # a 2-d ma and x with different numbers of columns ran before, so they
+    # are deprecated rather than rejected
+    both_2d = np.ndim(ma) == 2 and np.ndim(x) == 2
+    ma = array_like(ma, "ma", ndim=2)
+    ar = array_like(ar, "ar", ndim=1)
+    # dtype=None keeps complex x complex, as before
+    x = array_like(x, "x", ndim=2, dtype=None)
+    if ma.shape[1] != x.shape[1]:
+        msg = (
+            "ma must have one column per column of x, but ma has "
+            f"{ma.shape[1]} columns and x has {x.shape[1]}"
+        )
+        if not both_2d:
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. The result does not filter each column of x with its "
+            "own column of ma. This is deprecated and will raise a "
+            "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if isinstance(useic, (bool, np.bool_)) and useic:
+        msg = (
+            "useic must be False or the initial values of the filtered "
+            "series, not True"
+        )
+        if ar.shape[0] <= 2:
+            # this raised an error from scipy
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. True is used as y[-1] = 1, with zero for the further "
+            "lags. This is deprecated and will raise a ValueError in "
+            "statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
     inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
     #  inp2 = signal.convolve(x, ma[:,::-1])[:, x.shape[1]-1]
@@ -554,9 +693,11 @@ def miso_lfilter(ar, ma, x, useic=False):
     # cut of extra values at end
 
     # TODO: initialize also x for correlate
-    if useic:
-        return signal.lfilter([1], ar, inp,
-                              zi=signal.lfiltic(np.array([1., 0.]), ar,
-                                                useic))[0][:nobs], inp[:nobs]
+    # useic can be an ndarray; all-zero values are the default zero values
+    if np.any(useic):
+        # b = [1.0] as in lfilter, so that zi has len(ar) - 1 values, also
+        # for ar = [1.0]. A scalar useic is y[-1], and lfiltic needs it 1-d.
+        zi = signal.lfiltic([1.0], ar, np.atleast_1d(useic))
+        return signal.lfilter([1], ar, inp, zi=zi)[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]

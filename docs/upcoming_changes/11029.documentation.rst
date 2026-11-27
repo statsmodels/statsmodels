@@ -1,0 +1,6 @@
+- Correct docstrings of ``MLEModel`` and ``MLEResults``: the return values
+  of ``fit``, ``filter``, ``smooth``, ``loglike`` and the information
+  matrices, the positional flags of ``score`` and ``hessian``, references to
+  methods that do not exist, the order of parameters, the return types for
+  pandas data, the chi-squared form of ``test_heteroskedasticity``, and the
+  values of ``information_set``. :pr:`11029`

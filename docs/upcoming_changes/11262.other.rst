@@ -1,0 +1,4 @@
+- ``Grouping.transform_slices`` with a plain (non-Multi) index passes a group
+  with one member as a block of one row. It passed a 1-d row, which raised a
+  ValueError or, for a unique index, silently summed across columns.
+  :pr:`11262`

@@ -772,6 +772,17 @@ Generalized linear models and discrete models
   a ``nan`` log-likelihood for ``p=1.8``. ``score_test`` with a tuple
   ``exog_extra`` also changes. The results for ``p=1`` and ``p=2`` are not
   changed. :pr:`10737`
+- ``loglike``, ``loglikeobs``, ``score`` and ``hessian`` of
+  ``NegativeBinomial`` with ``loglike_method="nb2"`` or ``"nb1"`` used the
+  last element of ``params`` as ``log(alpha)`` instead of ``alpha`` in a model
+  instance that was not fit, and in the model of results that were pickled
+  and unpickled. For example, ``NegativeBinomial(endog, exog).loglike(params)``
+  differed from ``llf`` of the results with these ``params``, and ``score`` was
+  not zero at the maximum likelihood estimate. Results that were pickled
+  before ``llf`` was first used computed it from the unpickled model, so
+  ``llf``, ``aic``, ``bic``, ``llr``, ``prsquared`` and ``summary`` were
+  incorrect after unpickling. ``fit`` and the results computed by ``fit`` are
+  not changed. :pr:`10947`
 - ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
   a ``ValueError`` (array broadcasting) if ``at`` is ``"overall"`` or
   ``"all"``, and whenever the number of regressors differs from the number of
@@ -811,6 +822,20 @@ Generalized linear models and discrete models
   raised. :pr:`10792`
 - ``summary`` of the marginal effects of ``GEE`` results raised a
   ``ValueError``. :pr:`10792`
+- ``exposure`` is used correctly in ``TruncatedLFPoisson``,
+  ``TruncatedLFNegativeBinomialP`` and ``TruncatedLFGeneralizedPoisson``, and
+  in ``predict(which="prob")`` of ``ZeroInflatedPoisson``,
+  ``ZeroInflatedNegativeBinomialP`` and ``ZeroInflatedGeneralizedPoisson``.
+  The log of the exposure was taken twice, which gave a ``nan``
+  log-likelihood or wrong parameters if an exposure is smaller than 1 and
+  raised a ``ValueError`` for an array exposure in the negative binomial and
+  generalized Poisson versions. ``ZeroInflatedPoisson`` ignored the exposure
+  in ``predict(which="prob")``. A model with ``exposure=e`` now gives the
+  same results as with ``offset=np.log(e)``.
+  ``predict`` of ``NegativeBinomialP`` and ``GeneralizedPoisson`` always takes
+  the log of an ``exposure`` that is passed, as ``Poisson`` does, so an
+  explicit ``exposure=0`` now gives ``log(0)`` instead of being treated as no
+  exposure. :issue:`8842`, :pr:`10505`
 
 Mixed models and imputation
 ---------------------------
@@ -1742,3 +1767,5 @@ Time series
   :pr:`10309`, :pr:`10359`, :pr:`10323`, :pr:`10305`, :pr:`10304`
 - The smoothing and damping parameters of ``ExponentialSmoothing.fit`` have to
   be in [0, 1]. :pr:`10387`
+
+.. include:: _upcoming_changes.rst

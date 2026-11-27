@@ -3,7 +3,9 @@ from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
+import inspect
 from pathlib import Path
+import re
 import warnings
 
 import numpy as np
@@ -3678,6 +3680,12 @@ def test_innovations_errors():
         innovations_algo(acovf, rtol="none")
 
 
+def test_innovations_algo_negative_rtol():
+    acovf = np.array([1.81, -0.9])
+    with pytest.raises(ValueError, match="rtol must be a non-negative float"):
+        innovations_algo(acovf, rtol=-1.0)
+
+
 def test_innovations_filter_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma**2, ma])
@@ -4113,7 +4121,8 @@ class TestZivotAndrews(SetupZivotAndrews):
         res = zivot_andrews(self.fail_mdl, autolag=autolag)
         assert res[3] == 1
 
-    # following tests compare results to R package urca.ur.za (1.13-0)
+    # following tests compare results to R package urca.ur.za (1.13-0). R
+    # counts observations from 1, so its break point is bpidx + 1.
     def test_rgnp_case(self):
         res = zivot_andrews(self.fail_mdl, maxlag=8, regression="c", autolag=None)
         assert_allclose([res[0], res[1], res[4]], [-5.57615, 0.00312, 20], rtol=1e-3)
@@ -4144,7 +4153,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         res = zivot_andrews(mdl, maxlag=12, regression="t", autolag="t-stat")
         assert_allclose(
             [res[0], res[1], res[3], res[4]],
-            [-3.02761, 0.63993, 12, 102],
+            [-3.02761, 0.63993, 12, 101],
             rtol=1e-3,
         )
 
@@ -4800,26 +4809,27 @@ def test_za_break_tvalues_blocks(regression):
     [
         ("gnpdef", "ct", 8, -4.29645992991322, 41),
         ("stkprc", "ct", 5, -4.4188005626248, 65),
-        ("rgnpq", "t", 5, -3.15090901781973, 89),
+        ("rgnpq", "t", 5, -3.15090901781973, 88),
         ("rgnpq", "ct", 8, -4.51449473135603, 71),
         # without lagged differences, maxlag=0
         ("rgnp", "c", 0, -3.29267887535406, 20),
-        ("rgnp", "t", 0, -2.78828925514759, 24),
+        ("rgnp", "t", 0, -2.78828925514759, 23),
         ("rgnp", "ct", 0, -3.46782210885675, 20),
         ("gnpdef", "c", 0, -3.35278702063666, 37),
-        ("gnpdef", "t", 0, -2.00884754207356, 45),
+        ("gnpdef", "t", 0, -2.00884754207356, 44),
         ("gnpdef", "ct", 0, -3.49680587365043, 40),
         ("stkprc", "c", 0, -3.98489915452376, 82),
-        ("stkprc", "t", 0, -3.86734171259623, 72),
+        ("stkprc", "t", 0, -3.86734171259623, 71),
         ("stkprc", "ct", 0, -4.74799191482552, 59),
         ("rgnpq", "c", 0, -2.81646348557215, 130),
-        ("rgnpq", "t", 0, -2.57626456915402, 85),
+        ("rgnpq", "t", 0, -2.57626456915402, 84),
         ("rgnpq", "ct", 0, -3.16574448254965, 67),
     ],
 )
 def test_zivot_andrews_r_reference(name, regression, lags, statistic, bpidx):
-    # urca 1.3.4, ur.za(x, model, lag). The break point of R is bpidx + 1 for
-    # "c" and "ct" and bpidx for "t". The minimum is inside the default trim.
+    # urca 1.3.4, ur.za(x, model, lag). Both report the last observation
+    # before the break, which R counts from 1, so its break point is
+    # bpidx + 1 for all three models. The minimum is inside the default trim.
     x = _za_series(name, None, None)
     res = zivot_andrews(x, maxlag=lags, regression=regression, autolag=None)
     assert res[3] == lags
@@ -4968,7 +4978,8 @@ def _za_deterministic(t, p, regression):
 def _za_direct(x, lags, regression, periods):
     # The statistic and break index from one OLS fit per break period, with
     # the regressors built directly: Delta x_t, t = lags + 1, ..., nobs - 1,
-    # on the deterministic terms, x_{t-1} and the lagged differences
+    # on the deterministic terms, x_{t-1} and the lagged differences. The
+    # break index is the last observation where the break dummies are zero.
     nobs = x.shape[0]
     dx = np.diff(x)
     t = np.arange(lags + 1, nobs, dtype=float)
@@ -4979,7 +4990,9 @@ def _za_direct(x, lags, regression, periods):
         exog = np.column_stack(cols + [x[lags : nobs - 1]] + lagged)
         tvalues.append(OLS(dx[lags:], exog).fit().tvalues[len(cols)])
     loc = int(np.argmin(tvalues))
-    return tvalues[loc], periods[loc] - 1
+    dummies = _za_deterministic(np.arange(nobs, dtype=float), periods[loc], regression)
+    nonzero = np.flatnonzero(np.any(np.column_stack(dummies[2:]) != 0, axis=1))
+    return tvalues[loc], nonzero[0] - 1
 
 
 class _ZivotAndrewsPeriods(ZivotAndrewsUnitRoot):
@@ -4996,13 +5009,16 @@ def test_zivot_andrews_candidate_periods(regression):
     # regression. The terms are integers, so the rank is not borderline.
     nobs = 40
     x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    # the break of period p is after observation p - 2 for "t", one earlier
+    # than for "c" and "ct", so its trimmed periods are one later
+    shift = int(regression == "t")
     for trim, lags in [(0.0, 0), (0.0, 3), (0.05, 8), (0.15, 8)]:
         za = _ZivotAndrewsPeriods()
         za(x, trim=trim, maxlag=lags, regression=regression, autolag=None)
         t = np.arange(lags + 1, nobs, dtype=float)
         trimcnt = int(nobs * trim)
         expected = []
-        for p in range(trimcnt + 1, nobs - trimcnt + 1):
+        for p in range(trimcnt + 1 + shift, min(nobs - trimcnt + shift, nobs) + 1):
             cols = _za_deterministic(t, p, regression)
             if np.linalg.matrix_rank(np.column_stack(cols)) == len(cols):
                 expected.append(p)
@@ -5025,7 +5041,8 @@ def test_zivot_andrews_direct_regressions(regression):
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 200, rng)
     res = zivot_andrews(x, maxlag=4, regression=regression, autolag=None)
-    periods = np.arange(31, 171)
+    shift = int(regression == "t")
+    periods = np.arange(31 + shift, 171 + shift)
     statistic, bpidx = _za_direct(x, 4, regression, periods)
     assert_allclose(res[0], statistic, rtol=1e-8)
     assert res[4] == bpidx
@@ -5037,7 +5054,10 @@ def _za_check_skipped(x, trim, lags, regression):
     nobs = x.shape[0]
     trimcnt = int(nobs * trim)
     first, last = _ZA_VALID[regression](nobs, lags)
-    periods = np.arange(max(trimcnt + 1, first), min(nobs - trimcnt, last) + 1)
+    shift = int(regression == "t")
+    periods = np.arange(
+        max(trimcnt + 1 + shift, first), min(nobs - trimcnt + shift, last) + 1
+    )
     kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
     res = zivot_andrews(x, **kwargs)
     statistic, bpidx = _za_direct(x, lags, regression, periods)
@@ -5078,6 +5098,21 @@ def test_zivot_andrews_lags_beyond_trim(regression):
     # degenerate. The statistic was NaN for "c" (with a RuntimeWarning).
     x = np.random.default_rng(24).standard_normal(24).cumsum()
     _za_check_skipped(x, 0.15, 8, regression)
+
+
+@pytest.mark.parametrize("trim", [0.1, 0.15, 0.25])
+def test_zivot_andrews_same_trimmed_breaks(trim):
+    # The three models consider the same trimmed candidate breaks, from
+    # observation trimcnt to nobs - trimcnt - 1 (the last observation before
+    # the break), when the lags are too few to make any of them collinear
+    nobs = 62
+    x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    trimcnt = int(nobs * trim)
+    expected = np.arange(trimcnt, nobs - trimcnt)
+    for regression, before in (("c", 1), ("t", 2), ("ct", 1)):
+        za = _ZivotAndrewsPeriods()
+        za(x, trim=trim, maxlag=1, regression=regression, autolag=None)
+        assert_equal(np.asarray(za.periods) - before, expected)
 
 
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
@@ -5133,6 +5168,66 @@ class TestLeybourneMcCabe:
             leybourne(fail_mdl, arlags=250)
         with pytest.raises(ValueError):
             leybourne(fail_mdl, arlags="error")
+
+    def test_numpy_integer_arlags(self):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(mdl, regression="ct", arlags=3)
+        res_np = leybourne(mdl, regression="ct", arlags=np.int64(3))
+        assert_allclose(res_np[0:3], res[0:3])
+
+    @pytest.mark.parametrize(
+        "given, message",
+        [
+            (
+                {},
+                (
+                    "The defaults of leybourne.run will change from arlags=1 and "
+                    "method='mle' to arlags=None and method='ols', the defaults "
+                    "of leybourne(x),"
+                ),
+            ),
+            (
+                {"method": "ols"},
+                (
+                    "The default of leybourne.run will change from arlags=1 to "
+                    "arlags=None, the default of leybourne(x),"
+                ),
+            ),
+            (
+                {"arlags": 0},
+                (
+                    "The default of leybourne.run will change from method='mle' "
+                    "to method='ols', the default of leybourne(x),"
+                ),
+            ),
+        ],
+    )
+    def test_run_changing_defaults(self, given, message):
+        # run warns for each default that will change to the __call__ one,
+        # and uses the current default
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with pytest.warns(FutureWarning, match=re.escape(message)) as record:
+            res = leybourne.run(mdl, **given)
+        assert len(record) == 1
+        assert record[0].filename == __file__
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            expected = leybourne.run(mdl, **({"arlags": 1, "method": "mle"} | given))
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+
+    def test_run_future_defaults(self):
+        # leybourne(x) is run with the future defaults, without a warning
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = leybourne(mdl)
+            expected = leybourne.run(mdl, arlags=None, method="ols")
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+        signature = str(inspect.signature(leybourne.run))
+        assert "arlags=1," in signature
+        assert "method='mle'," in signature
 
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13
@@ -5206,6 +5301,39 @@ class TestLeybourneMcCabe:
         y = rg.standard_normal(250)
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
+
+    @pytest.mark.parametrize(
+        "convert",
+        [
+            lambda x: x[:, 0],
+            lambda x: x[:, 0].tolist(),
+            lambda x: pd.Series(x[:, 0]),
+            pd.DataFrame,
+        ],
+        ids=["1d", "list", "series", "dataframe"],
+    )
+    def test_array_like_inputs(self, convert):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(convert(mdl), regression="ct")
+        # verified against Matlab 9.13, as in test_baa_results
+        assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
+        res_col = leybourne(mdl, regression="ct")
+        assert_allclose(res[0], res_col[0], rtol=1e-10)
+        assert res[2] == res_col[2]
+
+    @pytest.mark.parametrize(
+        "shape, match",
+        [
+            ((60, 2), r"x is required to have shape \(\*, 1\)"),
+            ((1, 60), r"x is required to have shape \(\*, 1\)"),
+            ((60, 1, 1), "x must have ndim <= 2"),
+        ],
+        ids=["two-columns", "row", "3d"],
+    )
+    def test_not_one_column_raises(self, shape, match):
+        x = np.random.default_rng(0).standard_normal(shape)
+        with pytest.raises(ValueError, match=match):
+            leybourne(x)
 
 
 def test_acovf_all_missing():
@@ -5563,3 +5691,28 @@ def test_grangercausalitytests_maxlag_forms(gc_data, maxlag, lags):
         assert_allclose(
             res[lag][0]["ssr_ftest"], expected[lag][0]["ssr_ftest"], rtol=1e-12
         )
+
+
+@pytest.mark.parametrize(
+    "arlags",
+    [np.int64(2), np.int32(2), np.array(2), 2.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+def test_leybourne_int_like_arlags(arlags):
+    # A 0-d integer array or an integral float is a number of AR terms, as an
+    # int is. They raised a ValueError. The int result is the reference.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    expected = leybourne(x, arlags=2)
+    res = leybourne(x, arlags=arlags)
+    assert_allclose(res[:2], expected[:2], rtol=1e-12)
+    assert res[2] == 2
+    assert type(res[2]) is int
+
+
+@pytest.mark.parametrize("arlags", [True, np.True_], ids=["True", "np.True_"])
+def test_leybourne_bool_arlags(arlags):
+    # A bool is not a number of AR terms. True raised a TypeError from a
+    # later step.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    with pytest.raises(ValueError, match="arlags must be an integer"):
+        leybourne(x, arlags=arlags)

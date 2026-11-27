@@ -14,7 +14,7 @@ from statsmodels.base.wrapper import (
     union_dicts,
 )
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import int_like, is_int_like, string_like
 
 
 class HoltWintersResults(Results):
@@ -232,6 +232,13 @@ class HoltWintersResults(Results):
             The number of out of sample forecasts from the end of the
             sample.
 
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, is a number of
+               steps, as an int is, and so is a 0-d integer array with a date
+               index. They raised a KeyError or a TypeError. A bool raises a
+               TypeError: True was one step without a date index.
+
         Returns
         -------
         forecast : ndarray or Series
@@ -239,8 +246,9 @@ class HoltWintersResults(Results):
             past the sample if `endog` is a pandas object, otherwise an
             ndarray.
         """
+        steps = int_like(steps, "steps")
         freq = getattr(self.model._index, "freq", 1)
-        if not isinstance(freq, int) and isinstance(
+        if not is_int_like(freq) and isinstance(
             self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
         ):
             start = self.model._index[-1] + freq

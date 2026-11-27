@@ -1,0 +1,4 @@
+- The ``initial_state`` description of ``KalmanFilter.simulate`` said
+  that the initial state is not included in the simulated states and
+  that zeros are used without an initialization. It is the first
+  simulated state, and the model must be initialized. :pr:`11159`

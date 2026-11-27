@@ -1,0 +1,2 @@
+- The docstrings of ``FormulaManager`` match what its methods
+  accept and return. :pr:`11222`

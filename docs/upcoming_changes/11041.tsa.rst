@@ -1,0 +1,5 @@
+- ``Initialization.set`` of state space models accepts an
+  ``Initialization`` object for all the states (``index=None``), and so
+  does ``Initialization(k_states, other)``, as documented; they raised a
+  ``ValueError``. A failed ``set`` no longer leaves the initialization
+  partly changed. :pr:`11041`

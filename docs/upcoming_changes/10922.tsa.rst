@@ -1,0 +1,5 @@
+- :class:`~statsmodels.tsa.base.prediction.PredictionResults` raised
+  for a DataFrame predicted mean in ``conf_int`` and ``summary_frame``,
+  and raised a ``TypeError`` from scipy for ``dist="t"`` without
+  ``df``. A DataFrame mean is supported, and a missing ``df`` raises a
+  ``ValueError``. :pr:`10922`

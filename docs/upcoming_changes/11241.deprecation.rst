@@ -1,0 +1,4 @@
+- Passing an integer argument as a container holding one value (a size-1
+  ndarray, Series or DataFrame), or as a ``Decimal`` or ``Fraction``, is
+  deprecated. It gives the same result as before with a ``FutureWarning``,
+  and will raise a ``TypeError`` in statsmodels 0.17. :pr:`11241`

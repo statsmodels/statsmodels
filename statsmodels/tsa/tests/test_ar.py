@@ -16,10 +16,12 @@ import pandas as pd
 from pandas import Index, Series, date_range, period_range
 from pandas.testing import assert_series_equal
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tools.sm_exceptions import (
     EstimationWarning,
     SpecificationWarning,
@@ -477,11 +479,16 @@ def test_parameterless_autoreg(close_figures):
             "append",
         ):
             continue
-        attr = getattr(res, attr)
-        if callable(attr):
-            attr()
+        value = getattr(res, attr)
+        if callable(value):
+            if attr == "test_serial_correlation":
+                # The default model_df will change
+                with pytest.warns(FutureWarning, match="default model_df"):
+                    value()
+            else:
+                value()
         else:
-            assert isinstance(attr, object)
+            assert isinstance(value, object)
 
 
 def test_predict_errors():
@@ -1603,6 +1610,38 @@ def test_autoreg_lags_sequence_forms(lags):
 
 
 @pytest.mark.parametrize(
+    "lags",
+    [np.array(2), np.array(2, dtype=np.int32), np.array(2.0)],
+    ids=["0d-int64", "0d-int32", "0d-float"],
+)
+def test_autoreg_lags_0d_array(lags):
+    # A 0-d array is a number of lags, as the number it holds is. It is
+    # iterable, so it raised "iteration over a 0-d array"
+    y, _ = _contract_ar_data()
+    res = AutoReg(y, lags).fit()
+    reg = np.column_stack([np.ones(118), y[1:-1], y[:-2]])
+    expected = np.linalg.lstsq(reg, y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    assert res.ar_lags == [1, 2]
+
+
+@pytest.mark.parametrize(
+    "lags, exception, match",
+    [
+        (np.array(True), TypeError, "lags must be integer_like"),
+        (np.array(2.5), TypeError, "lags must be integer_like"),
+        (np.array(-1), ValueError, "lags must be a non-negative scalar"),
+    ],
+    ids=["0d-bool", "0d-non-integral", "0d-negative"],
+)
+def test_autoreg_lags_0d_array_invalid(lags, exception, match):
+    # A 0-d array is checked as the number it holds
+    y, _ = _contract_ar_data()
+    with pytest.raises(exception, match=match):
+        AutoReg(y, lags)
+
+
+@pytest.mark.parametrize(
     "trend, names",
     [
         ("n", ["y.L1"]),
@@ -1690,3 +1729,240 @@ def test_autoreg_dynamic_predict_start_by_hand(start):
     expected = path[start : end + 1].copy()
     expected[: max(2 - start, 0)] = np.nan
     assert_allclose(pred, expected, rtol=1e-10)
+
+
+RANGE_INDEXES = [pd.RangeIndex(2, 42), pd.RangeIndex(10, 90, 2), pd.RangeIndex(40, 0, -1)]
+RANGE_INDEX_IDS = ["start", "step", "decreasing"]
+
+
+def _range_index_oos(index, nobs, steps):
+    # The RangeIndex extended by steps observations
+    start = index.start + nobs * index.step
+    return pd.RangeIndex(start, start + steps * index.step, index.step)
+
+
+@pytest.mark.parametrize("index", RANGE_INDEXES, ids=RANGE_INDEX_IDS)
+def test_autoreg_range_index_labels(index):
+    # The default end was the last label of the index used as a location, so
+    # fittedvalues and get_prediction raised, predict() included forecasts
+    # (with shifted values) or stopped early, and forecasts were labelled as
+    # if the index were 0, 1, ..., nobs - 1
+    rng = np.random.default_rng(20261204)
+    nobs = 40
+    y = rng.standard_normal(nobs).cumsum()
+    res = AutoReg(pd.Series(y, index=index), 2, trend="ct").fit()
+    # The same model on the default index
+    expected = AutoReg(pd.Series(y), 2, trend="ct").fit()
+    oos_index = _range_index_oos(index, nobs, 3)
+
+    fitted = res.fittedvalues
+    pd.testing.assert_index_equal(fitted.index, index[2:])
+    assert_allclose(fitted.to_numpy(), expected.fittedvalues.to_numpy(), rtol=1e-10)
+    pred = res.predict()
+    pd.testing.assert_index_equal(pred.index, index)
+    assert_allclose(pred.to_numpy(), expected.predict().to_numpy(), rtol=1e-10)
+    pred_res = res.get_prediction()
+    pd.testing.assert_index_equal(pred_res.predicted_mean.index, index)
+    expected_var = expected.get_prediction().var_pred_mean.to_numpy()
+    assert_allclose(pred_res.var_pred_mean.to_numpy(), expected_var, rtol=1e-10)
+    fcast = res.forecast(3)
+    pd.testing.assert_index_equal(fcast.index, oos_index)
+    assert_allclose(fcast.to_numpy(), expected.forecast(3).to_numpy(), rtol=1e-10)
+    # In and out of sample
+    pred = res.predict(start=nobs - 2, end=nobs + 2)
+    pd.testing.assert_index_equal(pred.index, index[-2:].append(oos_index))
+    expected_pred = expected.predict(start=nobs - 2, end=nobs + 2).to_numpy()
+    assert_allclose(pred.to_numpy(), expected_pred, rtol=1e-10)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("index", RANGE_INDEXES, ids=RANGE_INDEX_IDS)
+def test_autoreg_range_index_plot_predict(index, close_figures):
+    # The default end was the last label of the index used as a location
+    rng = np.random.default_rng(20261205)
+    nobs = 40
+    y = rng.standard_normal(nobs).cumsum()
+    res = AutoReg(pd.Series(y, index=index), 2).fit()
+    expected = AutoReg(pd.Series(y), 2).fit()
+    fig = res.plot_predict()
+    ax = fig.axes[0]
+    line = ax.get_lines()[0]
+    np.testing.assert_array_equal(line.get_xdata(), index.to_numpy())
+    assert_allclose(line.get_ydata(), expected.predict().to_numpy(), rtol=1e-10)
+    # Without forecasts, there is no confidence band
+    assert len(ax.collections) == 0
+    with pytest.raises(ValueError, match="in_sample is False but there are no"):
+        res.plot_predict(in_sample=False)
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(rng.standard_normal(500).cumsum(), index=index)
+    res = AutoReg(y, 1).fit()
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.index, index[10:])
+
+
+def _ljung_box_reference(resid, nlags, model_df):
+    # The Ljung-Box statistic, its test degree of freedom and p-value
+    lb = acorr_ljungbox(resid, lags=nlags, model_df=model_df)
+    df = np.maximum(np.arange(1, nlags + 1) - model_df, 0)
+    pvalue = np.full(nlags, np.nan)
+    pvalue[df > 0] = stats.chi2.sf(lb["lb_stat"].to_numpy()[df > 0], df[df > 0])
+    return lb["lb_stat"].to_numpy(), pvalue, df
+
+
+@pytest.mark.parametrize("lags", [None, 1, 6])
+@pytest.mark.parametrize("model_df", [None, "regressors", "ar", 0, 2])
+def test_test_serial_correlation_ljung_box(lags, model_df):
+    # The statistics were all NaN since 0.14.0
+    rng = np.random.default_rng(20261121)
+    nobs = 250
+    y = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.4 * y[t - 1] - 0.3 * y[t - 2] + e[t]
+    res = AutoReg(y, 2, trend="c").fit()
+    if model_df is None:
+        with pytest.warns(FutureWarning, match="default model_df will change"):
+            sc = res.test_serial_correlation(lags=lags)
+    else:
+        sc = res.test_serial_correlation(lags=lags, model_df=model_df)
+
+    # The residuals of the regression on a constant and two lags
+    x = np.column_stack([np.ones(nobs - 2), y[1:-1], y[:-2]])
+    resid = OLS(y[2:], x).fit().resid
+    # Default lags: min(10, nobs // 5) of the 248 residuals. The default
+    # model_df, "regressors", is df_model, the three parameters; "ar" is the
+    # two autoregressive lags.
+    nlags = 10 if lags is None else lags
+    mdf = {None: 3, "regressors": 3, "ar": 2}.get(model_df, model_df)
+    stat, pvalue, df = _ljung_box_reference(resid, nlags, mdf)
+
+    assert list(sc.columns) == ["Ljung-Box", "LB P-value", "DF"]
+    assert sc.index.name == "Lag"
+    assert_allclose(sc.index, np.arange(1, nlags + 1))
+    assert_allclose(sc["Ljung-Box"], stat, rtol=1e-8)
+    assert_allclose(sc["LB P-value"], pvalue, rtol=1e-8)
+    assert_allclose(sc["DF"], df)
+    assert np.isfinite(sc["LB P-value"]).sum() == np.sum(df > 0)
+
+
+def test_test_serial_correlation_model_df_options():
+    # The FutureWarning for the default points at the caller, "ar" without
+    # autoregressive lags is 0, and other strings raise
+    rng = np.random.default_rng(20261124)
+    y = rng.standard_normal(120)
+    res = AutoReg(y, [1, 3], trend="c").fit()
+    with pytest.warns(FutureWarning, match="default model_df will change") as rec:
+        res.test_serial_correlation(lags=6)
+    assert rec[0].filename == __file__
+    resid = res.resid
+    lb = acorr_ljungbox(resid, lags=6, model_df=2)
+    assert_allclose(
+        res.test_serial_correlation(lags=6, model_df="ar")["Ljung-Box"],
+        lb["lb_stat"],
+        rtol=1e-12,
+    )
+    assert_allclose(
+        res.test_serial_correlation(lags=6, model_df="ar")["DF"],
+        np.maximum(np.arange(1, 7) - 2, 0),
+    )
+    res0 = AutoReg(y, 0, trend="c").fit()
+    sc_ar = res0.test_serial_correlation(lags=6, model_df="ar")
+    sc_zero = res0.test_serial_correlation(lags=6, model_df=0)
+    pd.testing.assert_frame_equal(sc_ar, sc_zero)
+    with pytest.raises(ValueError, match="model_df"):
+        res.test_serial_correlation(model_df="lags")
+
+
+def test_diagnostic_summary_serial_correlation():
+    # The serial correlation table was missing since 0.14.0; its rows are
+    # the lags with a positive test degree of freedom
+    rng = np.random.default_rng(20261122)
+    nobs = 300
+    y = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.6 * y[t - 1] + e[t]
+    res = AutoReg(y, 1, trend="ct").fit()
+    tab = res.diagnostic_summary().tables[0]
+    assert tab.title == "Test of No Serial Correlation"
+    rows = np.array([[cell.data for cell in row] for row in tab[1:]], dtype=float)
+
+    x = np.column_stack([np.ones(nobs - 1), np.arange(2, nobs + 1), y[:-1]])
+    resid = OLS(y[1:], x).fit().resid
+    # Ten lags (299 // 5 > 10) and three parameters: lags 4, ..., 10
+    stat, pvalue, df = _ljung_box_reference(resid, 10, 3)
+    assert_allclose(rows[:, 0], np.arange(4, 11))
+    assert_allclose(rows[:, 1], stat[3:], rtol=1e-8)
+    assert_allclose(rows[:, 2], pvalue[3:], rtol=1e-8)
+    assert_allclose(rows[:, 3], df[3:])
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(3), np.int32(3), np.array(3), 3.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_autoreg_forecast_int_like_steps(steps, use_pandas):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They were the location of the last forecast, which raised.
+    rng = np.random.default_rng(20261126)
+    y = rng.standard_normal(100)
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=100, freq="MS"))
+    res = AutoReg(y, 2).fit()
+    fcast = res.forecast(steps)
+    # The AR(2) recursion by hand
+    const, phi1, phi2 = np.asarray(res.params)
+    path = list(np.asarray(y)[-2:])
+    for _ in range(3):
+        path.append(const + phi1 * path[-1] + phi2 * path[-2])
+    assert_allclose(np.asarray(fcast), path[2:], rtol=1e-10)
+    if use_pandas:
+        expected = pd.date_range("2008-05-01", periods=3, freq="MS")
+        pd.testing.assert_index_equal(fcast.index, expected)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_autoreg_forecast_bool_steps(steps, use_pandas):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises.
+    rng = np.random.default_rng(20261126)
+    y = rng.standard_normal(100)
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=100, freq="MS"))
+    res = AutoReg(y, 2).fit()
+    with pytest.raises(TypeError if use_pandas else KeyError):
+        res.forecast(steps)
+
+
+NUMPY_BOOLS = [
+    (np.True_, True),
+    (np.False_, False),
+    (np.array(True), True),
+    (np.array(False), False),
+]
+NUMPY_BOOL_IDS = ["np.True_", "np.False_", "0-d True", "0-d False"]
+
+
+@pytest.mark.parametrize("dynamic, expected", NUMPY_BOOLS, ids=NUMPY_BOOL_IDS)
+def test_predict_dynamic_numpy_bool(ar2, dynamic, expected):
+    # A NumPy bool was taken as an integer offset: np.False_ as 0 (all
+    # predictions dynamic) and np.True_ as 1 (dynamic from the second one)
+    res = AutoReg(ar2, 2, trend="c").fit()
+    pred = res.predict(start=10, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=10, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=10, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-3

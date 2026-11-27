@@ -33,7 +33,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import nan_dot, recipr
-from statsmodels.tools.validation import bool_like, float_like
+from statsmodels.tools.validation import bool_like, float_like, is_int_like
 
 ERROR_INIT_KWARGS = False
 
@@ -196,12 +196,22 @@ class Model:
         *args
             Additional positional argument that are passed to the model.
         **kwargs
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with one exception: ``eval_env``,
+            the namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, and an integer k is the namespace k
+            stack frames above ``from_formula``. -1 is an empty namespace,
+            and a dict maps names to values.
+
+            .. versionchanged:: 0.15.1
+
+               ``eval_env`` means the same in every model. Before, an
+               integer referred to one stack frame lower in models whose
+               ``from_formula`` calls their parent's (for example GEE, PHReg
+               and MixedLM, where 2 was the calling namespace) and one frame
+               higher in ``RollingOLS`` (where 0 was). A bool raises a
+               TypeError (True was 1), and a 0-d integer array is the
+               integer it holds.
 
         Returns
         -------
@@ -224,8 +234,8 @@ class Model:
             eval_env = 2
         elif eval_env == -1:
             eval_env = mgr.get_empty_eval_env()
-        elif isinstance(eval_env, int):
-            eval_env += 1  # we're going down the stack again
+        elif is_int_like(eval_env, strict=True):
+            eval_env = int(eval_env) + 1  # we're going down the stack again
         missing = kwargs.get("missing", "drop")
         if missing == "none":  # with patsy it's drop or raise. let's raise.
             missing = "raise"
@@ -2204,7 +2214,18 @@ class LikelihoodModelResults(Results):
 
         This computes joined Wald tests for the hypothesis that all
         coefficients corresponding to a `term` are zero.
-        `Terms` are defined by the underlying formula or by string matching.
+        `Terms` are defined by the underlying formula. Without a formula,
+        every parameter is a term of its own, named by the model's
+        ``param_names`` if the model has them (for example, state space
+        models) and otherwise by the names of the exog columns.
+
+        .. versionchanged:: 0.15.1
+
+           Without a formula, the terms of models that have ``param_names``
+           are their parameters. Before, the names of the exog columns were
+           used as the names of the first parameters, which mislabelled the
+           tests if the coefficients of exog were not the first parameters,
+           and models without exog raised.
 
         Parameters
         ----------
@@ -2212,7 +2233,7 @@ class LikelihoodModelResults(Results):
             If true, then terms that consist only of a single column and,
             therefore, refers only to a single parameter is skipped.
             If false, then all terms are included.
-        extra_constraints : list[tuple], optional
+        extra_constraints : list of tuple, optional
             Additional constraints to test, given as a list of (name,
             constraint_matrix) tuples in the same form as the automatically
             generated term constraints. Note that this input has not been
@@ -2266,9 +2287,6 @@ class LikelihoodModelResults(Results):
             combine_terms = []
         model_spec = getattr(result.model.data, "model_spec", None)
 
-        if model_spec is None and extra_constraints is None:
-            raise ValueError("no constraints, nothing to do")
-
         identity = np.eye(len(result.params))
         constraints = []
         combined = defaultdict(list)
@@ -2294,8 +2312,13 @@ class LikelihoodModelResults(Results):
             for cname in combine_terms:
                 combined_constraints.append((cname, np.vstack(combined[cname])))
         else:
-            # check by exog/params names if there is no formula info
-            for col, name in enumerate(result.model.exog_names):
+            # Without formula info, every parameter is a term. Models whose
+            # parameters are not only the coefficients of exog (state space
+            # models, for example) name them in param_names.
+            param_names = getattr(result.model, "param_names", None)
+            if param_names is None:
+                param_names = result.model.exog_names
+            for col, name in enumerate(param_names):
                 constraint_matrix = np.atleast_2d(identity[col])
 
                 # check if in combined

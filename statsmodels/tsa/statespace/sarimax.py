@@ -105,7 +105,7 @@ class SARIMAX(MLEModel):
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters estimated
         by maximum likelihood by one, but standard errors will then not
-        be available for the scale parameter.
+        be available for the scale parameter. Default is False.
     trend_offset : int, optional
         The offset at which to start time trend values. Default is 1, so that
         if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
@@ -120,10 +120,9 @@ class SARIMAX(MLEModel):
     freq : str, optional
         If no index is given by `endog` or `exog`, the frequency of the
         time-series may be specified here as a Pandas offset or offset string.
-    missing : str, optional
-        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
-        checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised. Default is 'none'.
+    missing : {'none', 'drop', 'raise'}, optional
+        If 'none', no nan checking is done. If 'drop', any observations with
+        nans are dropped. If 'raise', an error is raised. Default is 'none'.
     validate_specification : bool, optional
         Whether or not to validate the model specification. Default is True.
     validate_exog : bool, optional
@@ -181,7 +180,7 @@ class SARIMAX(MLEModel):
         lowest degree to highest. Initialized with ones, unless a coefficient
         is constrained to be zero (in which case it is zero).
     polynomial_seasonal_ar : ndarray
-        Array containing seasonal moving average lag
+        Array containing seasonal autoregressive lag
         polynomial lags, ordered from lowest degree
         to highest. Initialized with ones, unless a
         coefficient is constrained to be zero (in which
@@ -667,7 +666,23 @@ class SARIMAX(MLEModel):
                                        idx[1][-self._k_exog:])
 
     def initialize_default(self, approximate_diffuse_variance=None):
-        """Initialize default"""
+        """
+        Initialize the state vector with the default initialization
+
+        The differencing and state regression states have a diffuse
+        initialization and, if `enforce_stationarity` is True, the ARMA states
+        have the stationary initialization (otherwise all states are
+        diffuse). With approximate diffuse initialization, the
+        `loglikelihood_burn` is set to the number of diffuse states unless it
+        was given to the constructor.
+
+        Parameters
+        ----------
+        approximate_diffuse_variance : float, optional
+            The initial variance of the diffuse states if `use_exact_diffuse`
+            is False. Default is the `initial_variance` of the state space
+            representation.
+        """
         if approximate_diffuse_variance is None:
             approximate_diffuse_variance = self.ssm.initial_variance
         if self.use_exact_diffuse:
@@ -847,6 +862,24 @@ class SARIMAX(MLEModel):
         return selection
 
     def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : array_like, optional
+            Array of exogenous regressors, shaped nobs x k.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        SARIMAX
+        """
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
@@ -1335,7 +1368,7 @@ class SARIMAX(MLEModel):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Constrained parameters used in likelihood evaluation.
 
         Notes
@@ -1439,7 +1472,7 @@ class SARIMAX(MLEModel):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Unconstrained parameters used by the optimizer.
 
         Notes
@@ -1576,8 +1609,9 @@ class SARIMAX(MLEModel):
 
         Returns
         -------
-        params : array_like
-            Array of parameters.
+        params : ndarray
+            Array of parameters (transformed, if `transformed` is False, and
+            including any fixed parameters).
         """
         params = self.handle_params(params, transformed=transformed,
                                     includes_fixed=includes_fixed)
@@ -1800,9 +1834,9 @@ class SARIMAX(MLEModel):
             tmp_endog = np.zeros((out_of_sample, self.k_endog))
             tmp_exog = exog
 
-        # Create extended model
-        if extend_kwargs is None:
-            extend_kwargs = {}
+        # Create extended model (from a copy of `extend_kwargs`, so that the
+        # defaults set below do not change the caller's dict)
+        extend_kwargs = {} if extend_kwargs is None else dict(extend_kwargs)
         if not self.simple_differencing and self.k_trend > 0:
             extend_kwargs.setdefault(
                 "trend_offset", self.trend_offset + self.nobs)
@@ -1837,10 +1871,21 @@ class SARIMAXResults(MLEResults):
     ----------
     model : SARIMAX instance
         The fitted model instance
+    params : ndarray
+        Fitted parameters
+    filter_results : FilterResults or SmootherResults
+        The underlying state space model and Kalman filter (and smoother)
+        output
+    cov_type : str, optional
+        The method for calculating the covariance matrix of parameter
+        estimates. See `MLEModel.fit` for a description of available options.
+    **kwargs
+        Additional keyword arguments used to initialize the results object,
+        for example `cov_kwds`.
 
     Attributes
     ----------
-    specification : dictionary
+    specification : Bunch
         Dictionary including all attributes from the SARIMAX model instance.
     polynomial_ar : ndarray
         Array containing autoregressive lag polynomial coefficients,
@@ -1954,7 +1999,37 @@ class SARIMAXResults(MLEResults):
         self._data_attr_model.extend(["orig_endog", "orig_exog"])
 
     def extend(self, endog, exog=None, **kwargs):
-        kwargs.setdefault("trend_offset", self.nobs + 1)
+        """
+        Recreate the results object for new data that extends the original data
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        **kwargs
+            Keyword arguments passed to `MLEResults.extend` (for example,
+            `fit_kwargs`) or used to modify model specification arguments
+            when creating the new model object. By default, the time trend
+            continues from the end of the sample (`trend_offset`) and the
+            check that `exog` does not duplicate a constant trend is not
+            repeated (`validate_exog=False`).
+
+        Returns
+        -------
+        results
+            Updated Results object, that includes results only for the new
+            dataset.
+
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
+        """
+        # The time trend continues from the end of this sample, which starts
+        # at the model's trend_offset (itself shifted if the results were
+        # extended before)
+        kwargs.setdefault("trend_offset", self.model.trend_offset + self.nobs)
         # GH 8991. The specification was already validated when the original
         # model was created, and `extend` cannot change it. Only the constant-
         # `exog` check can misfire when re-run on the new data alone: `exog`
@@ -1978,7 +2053,7 @@ class SARIMAXResults(MLEResults):
     def arfreq(self):
         """
         (array) Frequency of the roots of the reduced form autoregressive
-        lag polynomial
+        lag polynomial, or None if the model has no autoregressive roots
         """
         z = self.arroots
         if not z.size:
@@ -1989,7 +2064,7 @@ class SARIMAXResults(MLEResults):
     def mafreq(self):
         """
         (array) Frequency of the roots of the reduced form moving average
-        lag polynomial
+        lag polynomial, or None if the model has no moving average roots
         """
         z = self.maroots
         if not z.size:

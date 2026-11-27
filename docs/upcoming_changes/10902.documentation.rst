@@ -1,0 +1,3 @@
+- The development documentation shows the release notes in progress,
+  including the changes of pull requests whose notes are not yet collected,
+  instead of only the last release. :pr:`10902`

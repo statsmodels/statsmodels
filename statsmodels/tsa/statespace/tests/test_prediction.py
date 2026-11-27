@@ -703,3 +703,21 @@ def test_predicted_filtered_dynamic_varmax(use_exog, trend):
     )
     assert_allclose(p1.predicted_mean, p2.predicted_mean)
     assert_allclose(p1.var_pred_mean, p2.var_pred_mean)
+
+
+@pytest.mark.parametrize(
+    "dynamic, expected",
+    [(np.True_, True), (np.False_, False), (np.array(False), False)],
+    ids=["np.True_", "np.False_", "0-d False"],
+)
+def test_get_prediction_dynamic_numpy_bool(dynamic, expected):
+    # The Kalman filter compared dynamic with `is True` and `is False`, so a
+    # NumPy bool was an integer offset: np.False_ made every prediction dynamic
+    rng = np.random.default_rng(20261126)
+    y = np.cumsum(rng.standard_normal(100)) * 0.2 + rng.standard_normal(100)
+    res = sarimax.SARIMAX(y, order=(2, 0, 0)).smooth([0.5, 0.3, 1.0])
+    pred = res.get_prediction(start=20, end=80, dynamic=dynamic).predicted_mean
+    ref = res.get_prediction(start=20, end=80, dynamic=expected).predicted_mean
+    assert_allclose(pred, ref, rtol=1e-12)
+    other = res.get_prediction(start=20, end=80, dynamic=not expected)
+    assert np.max(np.abs(pred - other.predicted_mean)) > 1e-3

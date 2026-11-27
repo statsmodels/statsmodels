@@ -1,0 +1,7 @@
+- ``extend_kwargs`` in
+  :meth:`~statsmodels.tsa.statespace.varmax.VARMAXResults.get_prediction`,
+  and so in ``get_forecast``, ``forecast`` and ``predict`` of
+  :class:`~statsmodels.tsa.statespace.varmax.VARMAX` results, raised
+  "TypeError: got multiple values for keyword argument
+  'extend_kwargs'". It is passed to the model of the forecast
+  periods, as for the other state space models. :pr:`11167`

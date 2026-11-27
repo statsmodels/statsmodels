@@ -1,0 +1,3 @@
+- ``predict`` and ``get_prediction`` of ``ETSResults`` ignored ``index``, so
+  predictions kept the model's dates. They are labelled with
+  ``index``. :pr:`10934`

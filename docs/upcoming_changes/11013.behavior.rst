@@ -1,0 +1,10 @@
+- ``MixedLMResults.bse_re`` and the standard errors of the random effects
+  variances, covariances and variance components in
+  ``MixedLMResults.summary`` were off by about a factor of the square root of
+  ``scale``, because they were computed for these parameters divided by
+  ``scale``. They are now the standard errors of ``cov_re`` and ``vcomp``,
+  include the uncertainty of ``scale``, and change with the square of the
+  units of the dependent variable. For the ``dietox`` random intercept model
+  in the documentation, the standard error of the group variance is 6.94
+  instead of 2.15. The standard errors of the fixed effects do not change.
+  :issue:`2231`, :pr:`11013`

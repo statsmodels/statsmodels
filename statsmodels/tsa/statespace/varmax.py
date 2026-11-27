@@ -44,9 +44,9 @@ class VARMAX(MLEModel):
         The observed time-series process :math:`y`, shaped nobs x k_endog.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
-    order : iterable
+    order : sequence of int, optional
         The (p,q) order of the model for the number of AR and MA parameters to
-        use.
+        use. Default is (1, 0).
     trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
@@ -80,7 +80,7 @@ class VARMAX(MLEModel):
 
     Attributes
     ----------
-    order : iterable
+    order : sequence of int
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
     trend : {'n', 'c', 't', 'ct'} or iterable
@@ -91,20 +91,19 @@ class VARMAX(MLEModel):
         iterable defining the non-zero polynomial exponents to include, in
         increasing order. For example, `[1,1,0,1]` denotes
         :math:`a + bt + ct^3`.
-    error_cov_type : {'diagonal', 'unstructured'}, optional
+    error_cov_type : {'diagonal', 'unstructured'}
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
-        requires it to be a diagonal matrix (uncorrelated errors). Default is
-        "unstructured".
-    measurement_error : bool, optional
+        requires it to be a diagonal matrix (uncorrelated errors).
+    measurement_error : bool
         Whether or not to assume the endogenous observations `endog` were
-        measured with error. Default is False.
-    enforce_stationarity : bool, optional
+        measured with error.
+    enforce_stationarity : bool
         Whether or not to transform the AR parameters to enforce stationarity
-        in the autoregressive component of the model. Default is True.
-    enforce_invertibility : bool, optional
+        in the autoregressive component of the model.
+    enforce_invertibility : bool
         Whether or not to transform the MA parameters to enforce invertibility
-        in the moving average component of the model. Default is True.
+        in the moving average component of the model.
 
     Notes
     -----
@@ -550,13 +549,16 @@ class VARMAX(MLEModel):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
 
         Notes
         -----
-        Constrains the factor transition to be stationary and variances to be
+        Constrains the autoregressive coefficients to be stationary if
+        `enforce_stationarity` is True, the moving average coefficients to be
+        invertible if `enforce_invertibility` is True, and the variances
+        (with diagonal error covariance and measurement error) to be
         positive.
         """
         unconstrained = np.array(unconstrained, ndmin=1)
@@ -633,7 +635,7 @@ class VARMAX(MLEModel):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
         constrained = np.array(constrained, ndmin=1)
@@ -879,17 +881,32 @@ class VARMAXResults(MLEResults):
     ----------
     model : VARMAX instance
         The fitted model instance
+    params : ndarray
+        Fitted parameters
+    filter_results : FilterResults or SmootherResults
+        The underlying state space model and Kalman filter (and smoother)
+        output
+    cov_type : str, optional
+        The method for calculating the covariance matrix of parameter
+        estimates. See `MLEModel.fit` for a description of available options.
+    cov_kwds : dict, optional
+        A dictionary of arguments affecting covariance matrix computation.
+    **kwargs
+        Additional keyword arguments used to initialize the results object.
 
     Attributes
     ----------
-    specification : dictionary
+    specification : Bunch
         Dictionary including all attributes from the VARMAX model instance.
-    coefficient_matrices_var : ndarray
+    coefficient_matrices_var : ndarray or None
         Array containing autoregressive lag polynomial coefficient matrices,
-        ordered from lowest degree to highest.
-    coefficient_matrices_vma : ndarray
+        ordered from lowest degree to highest, shaped
+        (k_ar, k_endog, k_endog). None if the model has no autoregressive
+        component.
+    coefficient_matrices_vma : ndarray or None
         Array containing moving average lag polynomial coefficients,
-        ordered from lowest degree to highest.
+        ordered from lowest degree to highest, shaped (k_ma, k_endog, k_endog).
+        None if the model has no moving average component.
 
     See Also
     --------
@@ -1061,7 +1078,7 @@ class VARMAXResults(MLEResults):
     @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
                        information_set="predicted", index=None, exog=None,
-                       **kwargs):
+                       extend_kwargs=None, **kwargs):
         if start is None:
             start = 0
 
@@ -1072,13 +1089,8 @@ class VARMAXResults(MLEResults):
         # Normalize `exog`
         exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
 
-        # Handle trend offset for extended model
-        extend_kwargs = {}
-        if self.model.k_trend > 0:
-            extend_kwargs["trend_offset"] = (
-                self.model.trend_offset + self.nobs)
-
-        # Get the prediction
+        # Get the prediction (the trend offset of the extended model defaults
+        # to the period after the sample, unless `extend_kwargs` sets it)
         with (
             self._set_final_exog(exog),
             self._set_final_predicted_state(exog, out_of_sample),
@@ -1100,6 +1112,9 @@ class VARMAXResults(MLEResults):
             iloc = self.nobs
         else:
             iloc, _, _ = self.model._get_index_loc(anchor)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(iloc, slice):
+                iloc = iloc.start
 
         if iloc < 0:
             iloc = self.nobs + iloc

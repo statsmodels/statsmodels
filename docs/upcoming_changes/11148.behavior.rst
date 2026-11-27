@@ -1,0 +1,7 @@
+- ``ETSResults.predict`` and ``get_prediction`` of
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` with a
+  ``dynamic`` before ``start`` (a negative offset or an earlier date)
+  returned more predictions than the periods from ``start`` to ``end``
+  with numpy data, and raised a ``ValueError`` about their number with
+  pandas data. They raise a ``ValueError`` that says that dynamic
+  prediction cannot begin before ``start``. :pr:`11148`

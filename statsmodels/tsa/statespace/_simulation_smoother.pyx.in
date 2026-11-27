@@ -247,11 +247,24 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp2 = &self.tmp2[0,0]
 
     def __reduce__(self):
-        args = (self.model, self.model.filter_method, self.model.inversion_method,
-                self.model.stability_method, self.model.conserve_memory, self.model.filter_timing,
-                self.model.tolerance, self.model.loglikelihood_burn, self.simulated_smoother.smoother_output,
-                self.simulation_output, self.nobs, self.pretransformed_variates)
+        # The filter settings are those of the simulated Kalman filter. nobs
+        # is passed only if it was given, since a given nobs means simulation
+        # without smoothing.
+        args = (self.model, self.simulated_kfilter.filter_method,
+                self.simulated_kfilter.inversion_method,
+                self.simulated_kfilter.stability_method,
+                self.simulated_kfilter.conserve_memory,
+                self.simulated_kfilter.filter_timing,
+                self.simulated_kfilter.tolerance,
+                self.simulated_kfilter.loglikelihood_burn,
+                self.simulated_smoother.smoother_output,
+                self.simulation_output,
+                self.nobs if self.simulate_only else -1)
         state = {
+            'pretransformed_measurement_disturbance_variates': self.pretransformed_measurement_disturbance_variates,
+            'pretransformed_state_disturbance_variates': self.pretransformed_state_disturbance_variates,
+            'pretransformed_initial_state_variates': self.pretransformed_initial_state_variates,
+            'fixed_initial_state': self.fixed_initial_state,
             'measurement_disturbance_variates': np.array(self.measurement_disturbance_variates, copy=True, order='F'),
             'state_disturbance_variates': np.array(self.state_disturbance_variates, copy=True, order='F'),
             'initial_state_variates': np.array(self.initial_state_variates, copy=True, order='F'),
@@ -267,6 +280,10 @@ cdef class {{prefix}}SimulationSmoother(object):
         return (self.__class__, args, state)
 
     def __setstate__(self, state):
+        self.pretransformed_measurement_disturbance_variates = state['pretransformed_measurement_disturbance_variates']
+        self.pretransformed_state_disturbance_variates = state['pretransformed_state_disturbance_variates']
+        self.pretransformed_initial_state_variates = state['pretransformed_initial_state_variates']
+        self.fixed_initial_state = state['fixed_initial_state']
         self.measurement_disturbance_variates = state['measurement_disturbance_variates']
         self.state_disturbance_variates = state['state_disturbance_variates']
         self.initial_state_variates = state['initial_state_variates']
@@ -278,6 +295,7 @@ cdef class {{prefix}}SimulationSmoother(object):
         self.tmp0 = state['tmp0']
         self.tmp2 = state['tmp2']
         self.tmp1 = state['tmp1']
+        self._reinitialize_temp_pointers()
 
     cdef void _reinitialize_temp_pointers(self) except *:
         self._tmp0 = &self.tmp0[0,0]
@@ -285,15 +303,15 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp2 = &self.tmp2[0,0]
 
     cpdef draw_measurement_disturbance_variates(self, rng):
-        self.measurement_disturbance_variates = rng.normal(size=self.n_measurement_disturbance_variates)
+        self.measurement_disturbance_variates = rng.normal(size=self.n_measurement_disturbance_variates).astype({{dtype}})
         self.pretransformed_measurement_disturbance_variates = False
 
     cpdef draw_state_disturbance_variates(self, rng):
-        self.state_disturbance_variates = rng.normal(size=self.n_state_disturbance_variates)
+        self.state_disturbance_variates = rng.normal(size=self.n_state_disturbance_variates).astype({{dtype}})
         self.pretransformed_state_disturbance_variates = False
 
     cpdef draw_initial_state_variates(self, rng):
-        self.initial_state_variates = rng.normal(size=self.n_initial_state_variates)
+        self.initial_state_variates = rng.normal(size=self.n_initial_state_variates).astype({{dtype}})
         self.pretransformed_initial_state_variates = False
         self.fixed_initial_state = False
 
@@ -620,7 +638,7 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         # alpha_{t+1} = T_t alpha_t + \\#
         if self.model.identity_transition:
-            blas.{{prefix}}axpy(&k_states, &alpha, input_state, &inc, state, &inc)
+            blas.{{prefix}}axpy(&k_states, &alpha, input_state, &inc, state, &inc)  # pragma: no cover
         else:
             blas.{{prefix}}gemv("N", &k_states, &k_states,
                                 &alpha, &self.model.transition[0,0,transition_t], &k_states,

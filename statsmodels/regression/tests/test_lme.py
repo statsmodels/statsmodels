@@ -1,5 +1,6 @@
 """Tests for linear mixed effects models."""
 from statsmodels.compat.platform import PLATFORM_OSX
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import csv
 from pathlib import Path
@@ -1080,6 +1081,121 @@ def test_bse_re_numpy_data(with_exog_re):
     assert type(bse_re) is np.ndarray
     assert bse_re.shape == ((3,) if with_exog_re else (1,))
     assert_equal(bse_re, result._results.bse_re)
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("unit", [1, 1000])
+def test_bse_re_balanced_closed_form(reml, unit):
+    # In a balanced one-way model the likelihood depends on the variances
+    # through lam1 = scale + m * var and scale, whose estimates are
+    # independent scaled chi-squares, which gives a closed form.  The
+    # standard error of the variance is in the units of y squared.
+    n_groups, m = 30, 6
+    rng = np.random.default_rng(1234)
+    groups = np.repeat(np.arange(n_groups), m)
+    y = 2 + np.repeat(rng.normal(size=n_groups), m) + rng.normal(size=n_groups * m)
+    y *= unit
+    gmean = np.bincount(groups, y) / m
+    msw = ((y - gmean[groups]) ** 2).sum() / (n_groups * (m - 1))
+    df1 = n_groups - 1 if reml else n_groups
+    lam1 = m * ((gmean - y.mean()) ** 2).sum() / df1
+    se = np.sqrt(2 * lam1**2 / df1 + 2 * msw**2 / (n_groups * (m - 1))) / m
+
+    result = MixedLM(y, np.ones((len(y), 1)), groups).fit(reml=reml)
+    assert_allclose(result.cov_re[0, 0], (lam1 - msw) / m, rtol=1e-4)
+    assert_allclose(result.bse_re, [se], rtol=1e-4)
+    std_err = result.summary().tables[1]["Std.Err."].iloc[-1]
+    assert std_err == f"{result.bse_re[0]:.3f}"
+
+
+# nlme 3.1.164, results/mixedlm_bse_re.R: the delta method applied to the
+# inverse numerical Hessian.  The last element is the standard error of scale.
+_bse_re_nlme = {
+    ("dietox", True): [6.93892, 0.572654],
+    ("dietox", False): [6.79487, 0.571566],
+    ("dietox_slope", True): [3.65815, 0.375361, 0.0769966, 0.318847],
+    ("dietox_slope", False): [3.58228, 0.367594, 0.0754, 0.318846],
+    ("pastes", True): [2.34932, 2.77545, 0.175059],
+    ("pastes", False): [2.06273, 2.77539, 0.175059],
+}
+
+
+@pytest.mark.parametrize("case, reml", sorted(_bse_re_nlme))
+def test_bse_re_nlme(case, reml):
+    rdir = Path(__file__).resolve().parent.joinpath("results")
+    if case == "pastes":
+        data = pd.read_csv(rdir.joinpath("pastes.csv"))
+        model = MixedLM.from_formula(
+            "strength ~ 1",
+            data,
+            groups="batch",
+            re_formula="1",
+            vc_formula={"cask": "0 + cask"},
+        )
+    else:
+        data = pd.read_csv(rdir.joinpath("dietox.csv"))
+        re_formula = "1 + Time" if case == "dietox_slope" else "1"
+        model = MixedLM.from_formula(
+            "Weight ~ Time", data, groups="Pig", re_formula=re_formula
+        )
+    result = model.fit(reml=reml)
+    assert_allclose(result.bse_re, _bse_re_nlme[case, reml][:-1], rtol=1e-3)
+    std_err = result.summary().tables[1]["Std.Err."].iloc[model.k_fe :]
+    assert std_err.tolist() == [f"{x:.3f}" for x in result.bse_re]
+
+
+def _bse_re_units_data():
+    rng = np.random.default_rng(8)
+    n_groups, m = 40, 8
+    group = np.repeat(np.arange(n_groups), m)
+    sub = np.tile(np.arange(m) % 4, n_groups)
+    sub2 = rng.integers(0, 3, size=n_groups * m)
+    x = rng.normal(size=n_groups * m)
+    y = (
+        1
+        + 0.5 * x
+        + np.repeat(rng.normal(size=n_groups), m)
+        + 0.7 * rng.normal(size=4)[sub]
+        + 0.5 * rng.normal(size=3)[sub2]
+        + rng.normal(size=n_groups * m)
+    )
+    return pd.DataFrame({"y": y, "x": x, "g": group, "sub": sub, "sub2": sub2})
+
+
+@pytest.mark.parametrize("case", ["intercept_vc", "vc_only", "two_vc"])
+def test_bse_re_units(case):
+    # the standard errors of the variances are in the units of y squared and
+    # the ones of the fixed effects in the units of y, also for variance
+    # components without a random intercept and for two of them
+    data = _bse_re_units_data()
+    kwds = {"re_formula": "1", "vc_formula": {"sub": "0 + C(sub)"}}
+    if case == "vc_only":
+        kwds["re_formula"] = "0"
+    elif case == "two_vc":
+        kwds["vc_formula"] = {"sub": "0 + C(sub)", "sub2": "0 + C(sub2)"}
+
+    out = []
+    for unit in (1, 10):
+        df = data.assign(y=unit * data["y"])
+        model = MixedLM.from_formula("y ~ x", df, groups="g", **kwds)
+        result = model.fit(reml=True)
+        assert np.all(np.isfinite(result.bse_re))
+        out.append((result.bse_re.to_numpy(), result.bse_fe.to_numpy()))
+    assert_allclose(out[1][0], 100 * out[0][0], rtol=1e-3)
+    assert_allclose(out[1][1], 10 * out[0][1], rtol=1e-3)
+
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM, reason="np.sqrt does not warn for a negative value on WASM"
+)
+def test_bse_re_negative_variance_warns():
+    # a variance that is not positive gives a nan, with the warning of sqrt
+    data = _bse_re_units_data()
+    result = MixedLM.from_formula("y ~ x", data, groups="g").fit()
+    result._results._cov_vparams = -np.eye(1)
+    with pytest.warns(RuntimeWarning, match="invalid value"):
+        bse_re = result.bse_re
+    assert np.all(np.isnan(bse_re))
 
 
 def test_random_effects():

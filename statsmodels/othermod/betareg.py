@@ -22,7 +22,7 @@ from statsmodels.base.model import (
 )
 import statsmodels.base.wrapper as wrap
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.formula.formulatools import advance_eval_env
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.genmod import families
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools._decorators import cache_readonly
@@ -166,11 +166,22 @@ class BetaModel(GenericLikelihoodModel):
         exog_precision_formula : str, optional
             The formula specifying the model for the precision. If None,
             then the precision model only has a constant term (see the
-            `exog_precision` parameter of `BetaModel`).
+            `exog_precision` parameter of `BetaModel`). It is evaluated with
+            the same data and ``eval_env`` as ``formula``.
+
+            .. versionchanged:: 0.15.1
+
+               Variables that are not in ``data`` are looked up in the
+               namespace that ``eval_env`` selects. Before, they were not
+               found.
         *args
             Additional positional arguments passed to the model.
         **kwargs
-            Additional keyword arguments passed to the model.
+            Additional keyword arguments passed to the model, except
+            ``subset``, the rows of ``data`` to use, and ``eval_env``, the
+            namespace in which variables of the formulas that are not in
+            ``data`` are looked up, as in
+            :meth:`statsmodels.base.model.Model.from_formula`.
 
         Returns
         -------
@@ -179,11 +190,14 @@ class BetaModel(GenericLikelihoodModel):
         if exog_precision_formula is not None:
 
             mgr = FormulaManager()
-            if "subset" in kwargs:
-                d = data.ix[kwargs["subset"]]
-                Z = mgr.get_matrices(exog_precision_formula, d, pandas=False)
-            else:
-                Z = mgr.get_matrices(exog_precision_formula, data, pandas=False)
+            subset = kwargs.get("subset")
+            precision_data = data if subset is None else data.loc[subset]
+            Z = mgr.get_matrices(
+                exog_precision_formula,
+                precision_data,
+                eval_env=get_matrices_eval_env(kwargs.get("eval_env")),
+                pandas=False,
+            )
             kwargs["exog_precision"] = Z
         advance_eval_env(kwargs)
         return super().from_formula(formula, data, *args, **kwargs)

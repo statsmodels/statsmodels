@@ -1,0 +1,6 @@
+- Correct docstrings in ``statsmodels.tsa.vector_ar.svar_model``: what ``A``
+  and ``B`` of ``SVAR`` accept, that ``maxlags`` of ``SVAR.fit`` is the lag
+  order unless ``ic`` is given, the order of the start values and of the
+  parameters of ``loglike``, ``score`` and ``hessian``, the attributes of
+  ``SVARResults``, and that ``sirf_errband_mc`` returns quantiles of the
+  structural responses. :pr:`10953`

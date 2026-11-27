@@ -1,0 +1,7 @@
+- ``predict`` of :class:`~statsmodels.tsa.vector_ar.var_model.VAR` raised out of sample for trends other than
+  ``"c"`` and with exog, returned an empty array for some ranges, and
+  returned wrong values for a start of 0 with one lag and for
+  ``"ct"``/``"ctt"`` with as many rows as trend terms. Predictions are
+  computed with the regressors of ``fit``; a start before the first
+  fitted observation and forecasts with exog raise a ``ValueError``.
+  :pr:`10966`

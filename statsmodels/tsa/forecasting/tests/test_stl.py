@@ -2,6 +2,7 @@ from statsmodels.compat.pandas import MONTH_END
 
 import datetime as dt
 import re
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -83,6 +84,7 @@ def test_equivalence_forecast(data, config, horizon, close_figures):
     fit_kwarg = {}
     if model is ETSModel:
         fit_kwarg["disp"] = False
+        fit_kwarg["param_index"] = "integer"
     res = mod.fit(**fit_kwarg)
     stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 
@@ -396,3 +398,220 @@ def test_summary_stl_configuration(data):
     for row, key in zip(rows, right, strict=True):
         assert row[2].lower().startswith(key.replace("_", " "))
         assert row[3] == str(config[key])
+
+
+def _seasonal_data():
+    rng = np.random.default_rng(20261120)
+    t = np.arange(120)
+    y = 10 + 0.05 * t + 2 * np.sin(2 * np.pi * t / 12)
+    return y + rng.standard_normal(120)
+
+
+def _stl_ar_reference(y, start, steps):
+    # STL of the values, an AR(2) with a constant fit to the deseasonalized
+    # values, and the seasonal component of the last period repeated out of
+    # sample. Returns the forecasts and the predictions from start
+    stl_res = STL(y, period=12).fit()
+    seasonal = np.asarray(stl_res.seasonal)
+    deseasonalized = np.asarray(stl_res.trend + stl_res.resid)
+    ar_res = AutoReg(deseasonalized, lags=2, trend="c").fit()
+    oos_seasonal = np.resize(seasonal[-12:], steps)
+    forecast = ar_res.forecast(steps) + oos_seasonal
+    end = y.shape[0] + steps - 1
+    predicted = ar_res.predict(start, end)
+    predicted = predicted + np.r_[seasonal[start:], oos_seasonal]
+    return forecast, predicted
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_sequence_endog(container):
+    y = _seasonal_data()
+    endog = container(y.tolist())
+    model_kwargs = {"lags": 2, "trend": "c"}
+    stlf = STLForecast(endog, AutoReg, model_kwargs=model_kwargs, period=12)
+    res = stlf.fit()
+    forecast, predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(res.forecast(14), forecast, rtol=1e-10)
+    pred = res.get_prediction(100, 133)
+    assert_allclose(pred.predicted_mean, predicted, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_one_column_endog(form):
+    # An (n, 1) column or a one-column DataFrame gives the results of the
+    # 1-d data
+    y = _seasonal_data()
+    if form == "column":
+        endog = y[:, None]
+    else:
+        index = pd.date_range("2000-01-01", periods=120, freq="MS")
+        endog = pd.DataFrame({"y": y}, index=index)
+    model_kwargs = {"lags": 2, "trend": "c"}
+    stlf = STLForecast(endog, AutoReg, model_kwargs=model_kwargs, period=12)
+    res = stlf.fit()
+    forecast, predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(res.forecast(14), forecast, rtol=1e-10)
+    pred = res.get_prediction(100, 133)
+    assert_allclose(pred.predicted_mean, predicted, rtol=1e-10)
+
+
+class _ValuesAR:
+    # An AR(2) with a constant fit to the values of endog, without its index
+    def __init__(self, endog):
+        self._model = AutoReg(np.asarray(endog), lags=2, trend="c")
+
+    def fit(self):
+        return self._model.fit()
+
+
+def test_non_date_index_no_warning():
+    # An index that does not hold dates is replaced by a RangeIndex without
+    # the warning that pandas gives when it cannot infer a date format. The
+    # model ignores the index, so any warning comes from STLForecast
+    y = _seasonal_data()
+    endog = pd.Series(y, index=[f"obs{i}" for i in range(120)])
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        res = STLForecast(endog, _ValuesAR, period=12).fit()
+        forecast = res.forecast(14)
+        pred = res.get_prediction(100, 133)
+    assert [str(w.message) for w in record] == []
+    expected_forecast, expected_predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(forecast, expected_forecast, rtol=1e-10)
+    assert_allclose(pred.predicted_mean, expected_predicted, rtol=1e-10)
+
+
+@pytest.mark.parametrize("kind", ["multiindex", "tuples", "bool"])
+def test_index_values_not_dates(kind):
+    # pandas raises a TypeError, not a ValueError, for index values that
+    # cannot be dates; the index is replaced by a RangeIndex
+    y = _seasonal_data()
+    loc = np.arange(120)
+    if kind == "multiindex":
+        index = pd.MultiIndex.from_arrays([loc // 12, loc % 12])
+    elif kind == "tuples":
+        index = pd.Index([(i // 12, i % 12) for i in loc], tupleize_cols=False)
+    else:
+        index = pd.Index(loc % 2 == 0)
+    endog = pd.Series(y, index=index)
+    res = STLForecast(endog, _ValuesAR, period=12).fit()
+    expected_forecast, expected_predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(res.forecast(14), expected_forecast, rtol=1e-10)
+    pred = res.get_prediction(100, 133)
+    assert_allclose(pred.predicted_mean, expected_predicted, rtol=1e-10)
+
+
+@pytest.mark.parametrize("index_type", ["datetime", "period", "no_freq"])
+@pytest.mark.parametrize("date_type", ["str", "datetime", "timestamp", "datetime64"])
+def test_forecast_date_steps(index_type, date_type):
+    # A date gives the forecasts up to and including it: those of the model
+    # fit to the deseasonalized data plus the seasonal component of the last
+    # period repeated. The model infers the frequency of an index without
+    # one, so the number of steps is taken from its forecast
+    rng = np.random.default_rng(20261120)
+    t = np.arange(120)
+    y = 10 + 0.05 * t + 2 * np.sin(2 * np.pi * t / 12)
+    y = y + rng.standard_normal(120)
+    if index_type == "period":
+        index = pd.period_range("2000-01", periods=120, freq="M")
+    else:
+        index = pd.date_range("2000-01-01", periods=120, freq="MS")
+        if index_type == "no_freq":
+            index = pd.DatetimeIndex(index.to_list())
+    date = pd.Timestamp("2010-03-01")
+    if date_type == "str":
+        date = "2010-03-01"
+    elif date_type == "datetime":
+        date = date.to_pydatetime()
+    elif date_type == "datetime64":
+        date = date.to_datetime64()
+    model_kwargs = {"order": (1, 0, 0), "trend": "c"}
+    stlf = STLForecast(
+        pd.Series(y, index=index), ARIMA, model_kwargs=model_kwargs, period=12
+    )
+    if index_type == "no_freq":
+        with pytest.warns(ValueWarning, match="No frequency information"):
+            res = stlf.fit()
+    else:
+        res = stlf.fit()
+    forecast = res.forecast(date)
+
+    stl_res = STL(y, period=12).fit()
+    seasonal = np.asarray(stl_res.seasonal)
+    deseasonalized = np.asarray(stl_res.trend + stl_res.resid)
+    ar = ARIMA(deseasonalized, order=(1, 0, 0), trend="c")
+    ar_res = ar.filter(np.asarray(res.model_result.params))
+    expected = ar_res.forecast(3) + seasonal[-12:-9]
+    assert_allclose(forecast, expected, rtol=1e-10)
+    if index_type == "period":
+        assert forecast.index[-1] == pd.Period("2010-03", freq="M")
+    else:
+        assert forecast.index[-1] == pd.Timestamp("2010-03-01")
+
+
+def test_get_prediction_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    seasonal = np.tile([1.0, 2.0, 0.0, -1.0, -2.0, 0.5, -0.5], 72)[:500]
+    y = pd.Series(seasonal + rng.standard_normal(500).cumsum(), index=index)
+    mod = STLForecast(y, ARIMA, model_kwargs={"order": (1, 0, 0)}, period=7)
+    res = mod.fit(fit_kwargs={"method": "yule_walker"})
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.get_prediction(start=10, dynamic="2001-04")
+    expected = res.get_prediction(start=10, dynamic=loc - 10)
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(17), np.array(17), 17.0],
+    ids=["int64", "0d-array", "float"],
+)
+@pytest.mark.parametrize("form", ["ndarray", "series"])
+def test_forecast_int_like_steps(monthly, form, steps):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They are passed to the model as an int.
+    x = _stl_form(monthly, form)
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    locs = np.arange(NOBS, NOBS + 17)
+    expected = ar_res.forecast(17) + _seasonal_by_hand(seasonal, NOBS, locs)
+    assert_allclose(np.asarray(res.forecast(steps)), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(monthly, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises for a date index.
+    x = _stl_form(monthly, "series")
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    with pytest.raises(TypeError):
+        res.forecast(steps)
+
+
+@pytest.mark.parametrize(
+    "dynamic, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_get_prediction_dynamic_numpy_bool(dynamic, expected):
+    # A NumPy bool reached the integer checks: np.True_ was an offset of 1
+    # and np.False_ an offset of 0 (dynamic from the start)
+    rng = np.random.default_rng(20261126)
+    t = np.arange(96)
+    y = pd.Series(
+        10 + np.sin(2 * np.pi * t / 12) + np.cumsum(0.3 * rng.standard_normal(96)),
+        index=pd.date_range("2000-01-01", periods=96, freq=MONTH_END),
+    )
+    res = STLForecast(y, AutoReg, model_kwargs={"lags": 2}, period=12).fit()
+    pred = res.get_prediction(start=40, end=80, dynamic=dynamic).predicted_mean
+    ref = res.get_prediction(start=40, end=80, dynamic=expected).predicted_mean
+    assert_allclose(pred, ref, rtol=1e-12)
+    other = res.get_prediction(start=40, end=80, dynamic=not expected)
+    assert np.max(np.abs(pred - other.predicted_mean)) > 1e-3

@@ -1493,3 +1493,38 @@ def test_ar2arma_2d_raises(shape):
     ar_des = _as_2d(np.r_[1.0, -0.8, np.zeros(38)], shape)
     with pytest.raises(ValueError, match=_raises_2d("ar_des", np.shape(ar_des))):
         ar2arma(ar_des, p=2, q=1, n=40)
+
+
+@pytest.mark.parametrize(
+    "worN",
+    [np.array(0), np.array(-1), np.int64(0)],
+    ids=["0d-array-0", "0d-array-neg", "int64-0"],
+)
+def test_arma_periodogram_worN_int_like_not_positive(worN):
+    # A 0-d integer array is a number of frequencies, as scipy.signal.freqz
+    # takes it, so 0 or a negative value raises. np.array(0) gave empty
+    # arrays.
+    with pytest.raises(ValueError, match="worN must be a positive integer"):
+        arma_periodogram([1.0, -0.5], [1.0, 0.4], worN=worN, normalization="2pi")
+
+
+@pytest.mark.parametrize(
+    "worN, freq",
+    [
+        (np.array(4), np.linspace(0, np.pi, 4, endpoint=False)),
+        (np.int32(4), np.linspace(0, np.pi, 4, endpoint=False)),
+        (2.0, np.array([2.0])),
+        (0.0, np.array([0.0])),
+    ],
+    ids=["0d-array", "int32", "float", "float-zero"],
+)
+def test_arma_periodogram_worN_int_like(worN, freq):
+    # An integer is a number of frequencies. A float is a frequency (worN is
+    # strict), also an integral float such as 2.0 or 0.0.
+    ar, ma = [1.0, -0.5], [1.0, 0.4]
+    w, sd = arma_periodogram(ar, ma, worN=worN, normalization="2pi")
+    assert_allclose(w, freq, rtol=1e-15)
+    z = np.exp(-1j * freq)
+    poly = np.polynomial.polynomial.polyval
+    expected = np.abs(poly(z, ma)) ** 2 / np.abs(poly(z, ar)) ** 2 / (2 * np.pi)
+    assert_allclose(sd, expected, rtol=1e-12)

@@ -12,6 +12,7 @@ from scipy import stats
 
 from statsmodels.tsa.forecasting.theta import ThetaModel
 from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import acf
 from statsmodels.tsa.tests._contract import series_forms
 
@@ -461,3 +462,149 @@ def test_forecast_trend_closed_form(alpha):
     np.testing.assert_allclose(comp.ses, one_step, rtol=1e-12)
     expected_forecast = 0.5 * expected + one_step
     np.testing.assert_allclose(res.forecast(7), expected_forecast, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["additive", "multiplicative", None])
+def test_sigma2_deseasonalized(method):
+    # Without MLE, sigma2 is estimated from an IMA(1,1) with drift fit to the
+    # deseasonalized data, which the forecasts and the MLE estimates use.
+    # method=None does not deseasonalize. The data are an IMA(1,1) with drift
+    # plus a seasonal pattern
+    rng = np.random.default_rng(20261120)
+    e = rng.standard_normal(121)
+    t = np.arange(120)
+    y = 50 + np.cumsum(0.3 + e[1:] - 0.5 * e[:-1])
+    y = y + 5 * np.sin(2 * np.pi * t / 12)
+    if method is None:
+        model = ThetaModel(y, deseasonalize=False)
+        deseasonalized = y
+    else:
+        model = ThetaModel(y, period=12, use_test=False, method=method)
+        seasonal = seasonal_decompose(y, model=method, period=12).seasonal
+        if method == "multiplicative":
+            deseasonalized = y / seasonal
+        else:
+            deseasonalized = y - seasonal
+    res = model.fit(use_mle=False)
+    # The same estimator on the same data. Both are the results of an
+    # optimizer, and where it stops depends on the platform: on macOS
+    # (Accelerate) the two differ by 3e-7 relative, and noise of a few ulps
+    # in the data moves sigma2 by up to 7e-7. Fitting to the seasonal data,
+    # the bug the test guards against, makes sigma2 3.6 to 4.5 times larger.
+    ima = SARIMAX(deseasonalized, order=(0, 1, 1), trend="c")
+    expected = ima.fit(disp=False).params[-1]
+    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-4)
+
+
+@pytest.mark.parametrize("use_mle", [True, False])
+@pytest.mark.parametrize("deseasonalize", [True, False])
+def test_prediction_intervals_ima_variance(use_mle, deseasonalize):
+    # The Theta model is an IMA(1,1) with drift whose moving average
+    # coefficient is alpha - 1, so the psi weights after the first are alpha
+    # and the h-step forecast variance is sigma2 * (1 + (h - 1) * alpha**2).
+    # The drift does not change the variance. The reference is the forecast
+    # variance of SARIMAX at the parameters of the Theta model, which has
+    # reached its steady state after 300 observations
+    rng = np.random.default_rng(1129)
+    e = rng.standard_normal(301)
+    y = 10 + np.cumsum(0.1 + e[1:] - 0.6 * e[:-1])
+    res = ThetaModel(
+        y, period=4, deseasonalize=deseasonalize, use_test=False
+    ).fit(use_mle=use_mle)
+    b0, alpha = res.params
+    steps = 6
+    pi = res.prediction_intervals(steps)
+    half_width = (pi["upper"] - pi["lower"]) / 2
+    variance = (half_width / stats.norm.ppf(0.975)) ** 2
+
+    ima = SARIMAX(y, order=(0, 1, 1), trend="c")
+    ima_res = ima.filter([b0, alpha - 1, res.sigma2])
+    expected = ima_res.get_forecast(steps).var_pred_mean
+    np.testing.assert_allclose(variance, expected, rtol=1e-8)
+    closed_form = res.sigma2 * (1 + np.arange(steps) * alpha**2)
+    np.testing.assert_allclose(variance, closed_form, rtol=1e-8)
+    # The intervals are centered on the forecast
+    center = (pi["upper"] + pi["lower"]) / 2
+    np.testing.assert_allclose(center, res.forecast(steps), rtol=1e-12)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+@pytest.mark.parametrize("use_mle", [True, False])
+def test_sequence_endog(container, use_mle):
+    # A list or a tuple gives the results of the same data in an ndarray. The
+    # data are an IMA(1,1) with drift plus a seasonal pattern, so that the MLE
+    # of the moving average coefficient is inside the invertible region and
+    # determined to more than a few digits
+    rng = np.random.default_rng(20261120)
+    e = rng.standard_normal(121)
+    t = np.arange(120)
+    y = 50 + np.cumsum(0.3 + e[1:] - 0.5 * e[:-1])
+    y = y + 5 * np.sin(2 * np.pi * t / 12)
+    expected = ThetaModel(y, period=12).fit(use_mle=use_mle)
+    res = ThetaModel(container(y.tolist()), period=12).fit(use_mle=use_mle)
+    # alpha, the MLE estimates and sigma2 are the results of optimizers, and
+    # where they stop depends on the memory layout of the data on macOS
+    # (Accelerate): alpha differed by 5e-10 relative without MLE there. Noise
+    # of a few ulps in these data moves the results by up to 9e-7 relative. A
+    # wrong conversion of the input changes the index, the number of
+    # observations or the values completely.
+    rtol = 1e-4
+    np.testing.assert_allclose(res.params, expected.params, rtol=rtol)
+    pd.testing.assert_frame_equal(
+        res.forecast_components(15), expected.forecast_components(15), rtol=rtol
+    )
+    pd.testing.assert_series_equal(
+        res.forecast(15), expected.forecast(15), rtol=rtol
+    )
+    pd.testing.assert_frame_equal(
+        res.prediction_intervals(15),
+        expected.prediction_intervals(15),
+        rtol=rtol,
+    )
+
+    # The table of the parameter estimates prints them to full precision, so
+    # only the model table, with the sample and the number of observations,
+    # is compared as text
+    def without_time(table):
+        lines = table.as_text().splitlines()
+        return [ln for ln in lines if "Date:" not in ln and "Time:" not in ln]
+
+    assert without_time(res.summary().tables[0]) == without_time(
+        expected.summary().tables[0]
+    )
+
+
+@pytest.mark.parametrize(
+    ("method", "error", "match"),
+    [
+        ("geometric", ValueError, "^method must be one of"),
+        (1, TypeError, "^method must be a string"),
+    ],
+)
+def test_invalid_method_message(method, error, match):
+    # The error names the method argument
+    y = np.arange(1.0, 49.0)
+    with pytest.raises(error, match=match):
+        ThetaModel(y, period=12, method=method)
+
+
+@pytest.mark.parametrize("use_mle", [False, True])
+def test_summary_parameter_table(use_mle):
+    # Each estimate is in the row of its own parameter (0.15.0 showed the
+    # first value in a row labelled "Parameters", the second in the row of
+    # the first parameter, and dropped the label of the last), with four
+    # significant digits
+    rng = np.random.default_rng(20261124)
+    index = pd.date_range("2000-01-01", periods=60, freq="MS")
+    y = pd.Series(50 + np.cumsum(rng.standard_normal(60)), index=index)
+    res = ThetaModel(y, deseasonalize=False).fit(use_mle=use_mle)
+    lines = res.summary().tables[1].as_text().splitlines()
+    # title, ====, header, ----, one row per parameter, ----
+    assert lines[2].split() == ["Estimate"]
+    rows = [line.split() for line in lines[4:-1]]
+    assert [row[0] for row in rows] == list(res.params.index)
+    values = np.array([float(row[1]) for row in rows])
+    # four significant digits: relative rounding error below 5e-4
+    assert_allclose(values, res.params.to_numpy(), rtol=5e-4)
+    digits = [len(row[1].replace("-", "").replace(".", "").lstrip("0")) for row in rows]
+    assert max(digits) <= 4

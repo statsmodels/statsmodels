@@ -1,0 +1,4 @@
+- Pickling the simulation smoother of a state space model, for example
+  ``pickle.dumps(mod.simulation_smoother())``, raised an
+  ``AttributeError``. It can be pickled, and the unpickled simulation
+  smoother gives the same draws as the original. :pr:`11026`

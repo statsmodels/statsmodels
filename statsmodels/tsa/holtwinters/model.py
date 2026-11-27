@@ -31,6 +31,9 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_bool_like,
+    is_float_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
@@ -208,6 +211,14 @@ class ExponentialSmoothing(TimeSeriesModel):
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+        .. versionchanged:: 0.15.1
+
+           With 'drop', the initial values, the Box-Cox transformation, the
+           parameter estimates and ``simulate`` use the data with the nans
+           dropped. They previously used the data including the nans, which
+           made the estimates wrong, and a model with a multiplicative
+           component raised.
+
     Notes
     -----
     This is a full implementation of the holt winters exponential smoothing as
@@ -244,8 +255,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         missing="none",
     ):
         super().__init__(endog, None, dates, freq, missing=missing)
+        # self.endog holds the data after missing values are handled
         self._y = self._data = array_like(
-            endog, "endog", ndim=1, contiguous=True, order="C"
+            self.endog, "endog", ndim=1, contiguous=True, order="C"
         )
         options = ("add", "mul", "additive", "multiplicative")
         trend = string_like(trend, "trend", options=options, optional=True)
@@ -304,6 +316,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         self._estimate_trend = estimated and self.trend is not None
         self._estimate_seasonal = estimated and self.seasonal is not None
         self._bounds = self._check_bounds(bounds)
+        if is_bool_like(use_boxcox, strict=True):
+            use_boxcox = bool(use_boxcox)
+        elif is_int_like(use_boxcox, strict=True):
+            use_boxcox = int(use_boxcox)
+        elif is_float_like(use_boxcox):
+            use_boxcox = float(use_boxcox)
         self._use_boxcox = use_boxcox
         self._lambda = np.nan
         self._y = self._boxcox()
@@ -334,10 +352,11 @@ class ExponentialSmoothing(TimeSeriesModel):
             ub = bound[1] if bound[1] is not None else np.inf
             if len(bound) != 2 or lb >= ub:
                 raise ValueError(msg)
-            if ("smoothing" in key or "damp" in key) and (
-                bound[0] < 0.0 or bound[1] > 1.0
-            ):
-                raise ValueError(f"{key} must have a lower bound >= 0.0 and <= 1.0")
+            if ("smoothing" in key or "damp" in key) and (lb < 0.0 or ub > 1.0):
+                raise ValueError(
+                    f"{key} must have a lower bound >= 0.0 and an upper bound "
+                    f"<= 1.0. None is not a valid bound for {key}."
+                )
         return bounds
 
     def _boxcox(self):
@@ -377,10 +396,30 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend" and "initial_seasonal.<j>" for
             j=0,...,m-1, where m is `seasonal_periods`, can be fixed too.
 
+            .. versionchanged:: 0.15.1
+
+               A fit with a fixed ``initial_seasonal.<j>`` no longer changes
+               the initial values stored on the model. It previously did,
+               which changed the results of later fits of the same model.
+
         Yields
         ------
         None
             No value returned.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           A fit with ``optimized=False`` uses fixed ``initial_seasonal.<j>``
+           values. It previously ignored them.
+
+        .. deprecated:: 0.15.1
+
+           The key ``"initial_seasonal"`` is deprecated and will raise a
+           KeyError after statsmodels 0.17 is released. Optimized fits ignore
+           it. Use ``"initial_seasonal.<j>"`` to fix the initial seasonal
+           values.
 
         Examples
         --------
@@ -417,6 +456,16 @@ class ExponentialSmoothing(TimeSeriesModel):
                     f"{key} if not allowed. Only {valid} are supported in "
                     "this specification."
                 )
+        if "initial_seasonal" in values:
+            warnings.warn(
+                'The key "initial_seasonal" is deprecated and will raise a '
+                "KeyError after statsmodels 0.17 is released. It is ignored "
+                "when the parameters are optimized. Use "
+                '"initial_seasonal.<j>" for j=0,...,m-1, where m is '
+                "seasonal_periods, to fix the initial seasonal values.",
+                FutureWarning,
+                stacklevel=3,
+            )
 
         if "smoothing_level" in values:
             alpha = values["smoothing_level"]
@@ -547,7 +596,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         """
         if start is None:
             freq = getattr(self._index, "freq", 1)
-            if isinstance(freq, int):
+            if is_int_like(freq):
                 start = self._index.shape[0]
             else:
                 start = self._index[-1] + freq
@@ -707,8 +756,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             phi = fixed.get("damping_trend", phi)
             l0 = fixed.get("initial_level", l0)
             b0 = fixed.get("initial_trend", b0)
-            for i in range(self.seasonal_periods):
-                s0[i] = fixed.get(f"initial_seasonal.{i}", s0[i])
+            # A new list, since s0 is the array of initial values stored on
+            # the model, which must not change
+            s0 = [
+                fixed.get(f"initial_seasonal.{i}", s0[i])
+                for i in range(self.seasonal_periods)
+            ]
         return sel, alpha, beta, gamma, phi, l0, b0, s0
 
     def _construct_bounds(self):
@@ -1002,6 +1055,13 @@ class ExponentialSmoothing(TimeSeriesModel):
             set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood.
+
+            .. versionchanged:: 0.15.1
+
+               If False, a ValueError is raised unless `smoothing_level`, and
+               `smoothing_trend`, `smoothing_seasonal` and `damping_trend` if
+               the model has these components, are given or fixed using
+               ``fix_params``. A TypeError was raised previously.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
@@ -1078,6 +1138,23 @@ class ExponentialSmoothing(TimeSeriesModel):
                 continue
             if not 0 <= value <= 1:
                 raise ValueError(f"{name} must be in [0, 1], got {value}")
+        if not optimized:
+            required = (
+                ("smoothing_level", alpha, True),
+                ("smoothing_trend", beta, self.has_trend),
+                ("smoothing_seasonal", gamma, self.has_seasonal),
+                ("damping_trend", phi, self.damped_trend),
+            )
+            missing = [
+                name
+                for name, value, needed in required
+                if needed and value is None and name not in self._fixed_parameters
+            ]
+            if missing:
+                raise ValueError(
+                    f"{', '.join(missing)} must be given when optimized is "
+                    "False, either as an argument of fit or using fix_params."
+                )
         start_params = array_like(start_params, "start_params", optional=True)
         minimize_kwargs = dict_like(minimize_kwargs, "minimize_kwargs", optional=True)
         minimize_kwargs = {} if minimize_kwargs is None else minimize_kwargs
@@ -1146,6 +1223,10 @@ class ExponentialSmoothing(TimeSeriesModel):
                 res.level = fp.get("initial_level", res.level)
                 res.trend = fp.get("initial_trend", res.trend)
                 res.seasonal = fp.get("initial_seasonal", res.seasonal)
+                res.seasonal = [
+                    fp.get(f"initial_seasonal.{i}", res.seasonal[i])
+                    for i in range(self.seasonal_periods)
+                ]
 
         hwfit = self._predict(
             h=0,

@@ -81,8 +81,8 @@ def gls(
         * 'yule_walker' - only non-seasonal consecutive
           autoregressive (AR) models
         * 'burg' - only non-seasonal, consecutive autoregressive (AR) models
-        * 'innovations' - only non-seasonal, consecutive moving
-          average (MA) models.
+        * 'innovations' - only non-seasonal ARMA models with consecutive
+          autoregressive (AR) and moving average (MA) lags.
         The default is 'innovations_mle'.
     arma_estimator_kwargs : dict, optional
         Arguments to pass to the ARMA estimator.
@@ -231,13 +231,6 @@ def gls(
     converged = False if n_iter is None else None
     i = 0
 
-    if arma_estimator in ["hannan_rissanen", "yule_walker", "burg", "innovations"]:
-        if spec.max_seasonal_ar_order > 0 or spec.max_seasonal_ma_order > 0:
-            raise ValueError(
-                f"The selected ARMA estimator '{arma_estimator}' does not support "
-                f"seasonal AR or MA structures."
-            )
-
     def _check_arma_estimator_kwargs(kwargs, method):
         if kwargs:
             raise ValueError(f"arma_estimator_kwargs not supported for method {method}")
@@ -257,8 +250,13 @@ def gls(
             _arma_result = burg(resid, ar_order=spec.ar_order, demean=False)
             p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         elif arma_estimator == "innovations":
-            _check_arma_estimator_kwargs(arma_estimator_kwargs, "innovations")
-            _arma_result = innovations(resid, ma_order=spec.ma_order, demean=False)
+            _arma_result = innovations(
+                resid,
+                ar_order=spec.ar_order,
+                ma_order=spec.ma_order,
+                demean=False,
+                **arma_estimator_kwargs,
+            )
             out, res_arma = _arma_result.parameters, _arma_result.other_results
             p_arma = out[-1]
         elif arma_estimator == "hannan_rissanen":

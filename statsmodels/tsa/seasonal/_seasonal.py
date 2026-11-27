@@ -7,7 +7,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from pandas.core.nanops import nanmean as pd_nanmean
 
 from statsmodels.tools.validation import (
     PandasWrapper,
@@ -84,16 +83,29 @@ def seasonal_mean(x, period):
     Parameters
     ----------
     x : array_like
-        Time series values.
+        Time series values, with time in the first axis. If 2d, individual
+        series are in columns.
+
+        .. versionchanged:: 0.15.1
+
+           ``x`` is converted with ``array_like``, so a list, tuple, Series
+           or DataFrame works where it raised.
     period : int
         The number of periods per cycle, e.g., 12 for monthly data.
 
     Returns
     -------
     ndarray
-        The mean value for each period, ignoring NaNs.
+        The mean value for each period, ignoring NaNs, with shape
+        ``(period,) + x.shape[1:]``. A period without any non-NaN value has
+        a NaN mean.
     """
-    return np.array([pd_nanmean(x[i::period], axis=0) for i in range(period)])
+    # dtype=None keeps float32 and complex x as before
+    x = array_like(x, "x", dtype=None)
+    with warnings.catch_warnings():
+        # a period without any non-NaN value has a NaN mean, as before
+        warnings.simplefilter("ignore", RuntimeWarning)
+        return np.array([np.nanmean(x[i::period], axis=0) for i in range(period)])
 
 
 def seasonal_decompose(

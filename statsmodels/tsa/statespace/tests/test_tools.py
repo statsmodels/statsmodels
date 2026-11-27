@@ -17,7 +17,8 @@ import pandas as pd
 import pytest
 from scipy.linalg import solve_discrete_lyapunov
 
-from statsmodels.tsa.statespace import tools
+from statsmodels.tsa.statespace import mlemodel, sarimax, tools
+from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.stattools import acovf
 
 
@@ -1168,3 +1169,425 @@ def test_missing_index_values(make_mask):
         _mask_results(make_mask(mask)), _mask_results(mask), strict=True
     ):
         assert_equal(actual, expected)
+
+
+COMPANION_C0 = np.array([[2.0, 0.5], [0.0, 1.0]])
+COMPANION_C1 = np.array([[0.3, 0.1], [0.2, 0.4]])
+COMPANION_C2 = np.array([[-0.1, 0.05], [0.0, 0.2]])
+
+
+@pytest.mark.parametrize(
+    "polynomial, desired",
+    [
+        # An ndarray leading matrix in a list or tuple (it raised "truth value
+        # is ambiguous"), against nested lists
+        (
+            [COMPANION_C0, COMPANION_C1, COMPANION_C2],
+            [COMPANION_C0.tolist(), COMPANION_C1, COMPANION_C2],
+        ),
+        ((COMPANION_C0, COMPANION_C1), [COMPANION_C0.tolist(), COMPANION_C1]),
+        ([np.eye(2), COMPANION_C1], [1, COMPANION_C1]),
+        # A 3-dimensional array (it raised a broadcasting error)
+        (
+            np.array([COMPANION_C0, COMPANION_C1, COMPANION_C2]),
+            [COMPANION_C0.tolist(), COMPANION_C1, COMPANION_C2],
+        ),
+        (np.array([np.eye(2), COMPANION_C1]), [1, COMPANION_C1]),
+        (np.array([[[2.0]], [[-0.6]], [[0.4]]]), [2.0, -0.6, 0.4]),
+    ],
+)
+def test_companion_matrix_arrays(polynomial, desired):
+    actual = tools.companion_matrix(polynomial)
+    assert_allclose(actual, tools.companion_matrix(desired), rtol=1e-15)
+
+    # The eigenvalues z of the companion matrix solve
+    # det(C_0 z^p + C_1 z^(p-1) + ... + C_p) = 0
+    coefficients = np.asarray(desired[1:], dtype=float)
+    leading = desired[0]
+    order = len(coefficients)
+    for z in np.linalg.eigvals(actual):
+        if np.ndim(coefficients) == 1:
+            value = leading * z**order + np.polyval(coefficients, z)
+            scale = abs(leading * z**order)
+        else:
+            c0 = np.eye(2) if np.ndim(leading) == 0 else np.asarray(leading)
+            value = np.linalg.det(
+                c0 * z**order
+                + sum(c * z ** (order - 1 - i) for i, c in enumerate(coefficients))
+            )
+            scale = abs(np.linalg.det(c0 * z**order))
+        # atol: the determinant is zero up to rounding
+        assert_allclose(abs(value), 0, atol=1e-12 * max(scale, 1.0))
+
+
+@pytest.mark.parametrize("complex_step", [False, True])
+@pytest.mark.parametrize("container", [list, tuple])
+def test_solve_discrete_lyapunov_array_like(container, complex_step):
+    # a and q can be nested lists or tuples (a raised AttributeError); the
+    # solution solves X = a X a' + q, with the non-conjugating transpose and
+    # complex a for the complex step, and agrees with SciPy for real a
+    a = [[0.5, 0.2], [-0.1, 0.3]]
+    if complex_step:
+        a[0][0] += 1e-3j
+    q = [[1.0, 0.4], [0.4, 2.0]]
+    actual = tools.solve_discrete_lyapunov(
+        container(map(container, a)), container(map(container, q)), complex_step
+    )
+    a_arr = np.array(a)
+    assert_allclose(actual, a_arr @ actual @ a_arr.T + np.array(q), rtol=1e-12)
+    if complex_step:
+        assert np.abs(actual.imag).max() > 1e-4
+    else:
+        desired = solve_discrete_lyapunov(a_arr, np.array(q))
+        assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_prepare_trend_data_array_like(container):
+    # The polynomial can be a list or tuple (it raised AttributeError): a
+    # constant, a linear and a cubic trend in time
+    actual = tools.prepare_trend_data(container([1, 1, 0, 1]), 3, 5, offset=2)
+    time = np.arange(2.0, 7.0)
+    desired = np.column_stack([np.ones(5), time, time**3])
+    assert_allclose(actual, desired, rtol=1e-15)
+
+
+def test_concat_unnamed_series():
+    # Along the rows, a Series without a name takes the name of the first
+    # series, as an unnamed column of a DataFrame does; it raised "Columns
+    # must match to concatenate along rows"
+    first = pd.Series([1.0, 2.0], index=[0, 1], name="y")
+    second = pd.Series([3.0, 4.0], index=[2, 3])
+    actual = tools.concat([first, second])
+    assert actual.name == "y"
+    assert_allclose(actual.to_numpy(), [1.0, 2.0, 3.0, 4.0], rtol=1e-15)
+    assert_equal(actual.index.to_numpy(), np.arange(4, dtype=np.int64))
+    # The given series keeps its name
+    assert second.name is None
+
+    # A Series with another name still raises
+    with pytest.raises(ValueError, match="Columns must match"):
+        tools.concat([first, second.rename("z")])
+
+    # Along the columns, the unnamed series keeps its default column name
+    second.index = first.index
+    actual = tools.concat([first, second], axis=1)
+    assert list(actual.columns) == ["y", 0]
+    assert_allclose(actual.to_numpy(), [[1.0, 3.0], [2.0, 4.0]], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "size",
+    [3, np.int64(3), np.int32(3), np.array(3), 3.0],
+    ids=["int", "int64", "int32", "0d-array", "float"],
+)
+def test_companion_matrix_int_like_size(size):
+    # A 0-d integer array or an integral float is the size of a companion
+    # matrix with zero coefficients, as an int is. They raised a TypeError.
+    # The matrix has ones on the first superdiagonal and zeros elsewhere.
+    assert_equal(tools.companion_matrix(size), np.eye(3, k=1))
+
+
+@pytest.mark.parametrize("size", [True, np.True_], ids=["True", "np.True_"])
+def test_companion_matrix_bool_size(size):
+    # A bool is not a size: True was the size 1
+    with pytest.raises(TypeError):
+        tools.companion_matrix(size)
+
+
+@pytest.mark.parametrize("use_list", [False, True])
+@pytest.mark.parametrize("transform_variance", [False, True])
+@pytest.mark.parametrize(
+    "func",
+    ["constrain_stationary_multivariate", "constrain_stationary_multivariate_python"],
+)
+def test_constrain_stationary_multivariate_variance(
+    func, transform_variance, use_list
+):
+    # The returned variance is the variance of the constrained VAR: with it
+    # unconstrain_stationary_multivariate recovers the unconstrained matrices.
+    # Without the transformation it is the input variance (it was an internal
+    # scaled variance), and the input is not changed.
+    rng = np.random.default_rng(20261122)
+    k_endog, order = 2, 2
+    unconstrained = rng.standard_normal((k_endog, k_endog * order))
+    variance = np.array([[1.0, 0.3], [0.3, 2.0]])
+    original = variance.copy()
+    if use_list:
+        blocks = [
+            unconstrained[:, i * k_endog : (i + 1) * k_endog] for i in range(order)
+        ]
+        constrained, actual = getattr(tools, func)(blocks, variance, transform_variance)
+        constrained = np.concatenate(constrained, axis=1)
+    else:
+        constrained, actual = getattr(tools, func)(
+            unconstrained, variance, transform_variance
+        )
+
+    recovered, _ = tools.unconstrain_stationary_multivariate(constrained, actual)
+    assert_allclose(recovered, unconstrained, rtol=1e-10)
+    assert_allclose(variance, original, rtol=1e-15)
+    if not transform_variance:
+        assert_allclose(actual, original, rtol=1e-15)
+        # A copy, as the transformed variance is a new array
+        assert not np.shares_memory(actual, variance)
+
+
+def test_companion_matrix_one_term():
+    with pytest.raises(ValueError, match="at least two terms"):
+        tools.companion_matrix([1])
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_companion_matrix_leading_matrix(container):
+    # A matrix polynomial C(L) = C_0 + C_1 L + C_2 L^2 with C_0 not the
+    # identity; the first block column holds -(C_0^{-1} C_i)'
+    c0 = [[2.0, 0.5], [0.0, 1.0]]
+    c1 = np.array([[0.3, 0.1], [0.2, 0.4]])
+    c2 = np.array([[0.1, 0.0], [-0.1, 0.2]])
+    actual = tools.companion_matrix(container([c0, c1, c2]))
+
+    desired = np.zeros((4, 4))
+    desired[:2, :2] = -np.linalg.solve(c0, c1).T
+    desired[2:, :2] = -np.linalg.solve(c0, c2).T
+    desired[0, 2] = desired[1, 3] = 1.0
+    assert_allclose(actual, desired, rtol=1e-14)
+
+    # Its eigenvalues are the inverse roots of det C(z), so they solve
+    # det(C_0 x^2 + C_1 x + C_2) = 0
+    for x in np.linalg.eigvals(actual):
+        # atol: the determinant is zero, the entries are of order one
+        assert_allclose(
+            np.linalg.det(np.array(c0) * x**2 + c1 * x + c2), 0.0, atol=1e-14
+        )
+
+
+def test_concat_scalars():
+    # Scalars are promoted to the dimension of the other inputs
+    assert_allclose(
+        tools.concat([np.float64(1.0), np.array([2.0, 3.0])]), [1.0, 2.0, 3.0]
+    )
+    assert_allclose(
+        tools.concat([1.0, np.array([[2.0], [3.0]])]), [[1.0], [2.0], [3.0]]
+    )
+
+
+def test_concat_series():
+    s1 = pd.Series([1.0, 2.0], name="a")
+    s2 = pd.Series([3.0], index=[2], name="a")
+    actual = tools.concat([s1, s2])
+    assert isinstance(actual, pd.Series)
+    pd.testing.assert_series_equal(actual, pd.Series([1.0, 2.0, 3.0], name="a"))
+
+
+@pytest.mark.parametrize(
+    "series, axis, match",
+    [
+        ([np.zeros((2, 2, 2)), np.zeros((2, 2, 2))], 0, "3 or more dimensions"),
+        (
+            [pd.DataFrame({"a": [1.0]}), pd.DataFrame({"b": [2.0]})],
+            0,
+            "Columns must match",
+        ),
+        (
+            [pd.DataFrame({"a": [1.0]}), pd.DataFrame({"b": [2.0]}, index=[5])],
+            1,
+            "Index must match",
+        ),
+    ],
+    ids=["3d", "columns", "index"],
+)
+def test_concat_invalid(series, axis, match):
+    with pytest.raises(ValueError, match=match):
+        tools.concat(series, axis=axis)
+
+
+@pytest.mark.parametrize("transform_variance", [True, False])
+@pytest.mark.parametrize("order", [1, 2])
+@pytest.mark.parametrize("k_endog", [1, 3])
+def test_python_twin_helpers_default_dimensions(k_endog, order, transform_variance):
+    # The private helpers of the pure-Python twin take `order` and `k_endog`
+    # from the list of matrices when they are not given; together they give
+    # the coefficients of the compiled constrain_stationary_multivariate, and
+    # its variance with transform_variance=True (with False it returns the
+    # input variance, the helper that of its internal recursion)
+    rng = np.random.default_rng([k_endog, order, transform_variance])
+    unconstrained = rng.standard_normal((k_endog, k_endog * order))
+    factor = rng.standard_normal((k_endog, k_endog))
+    variance = factor @ factor.T + k_endog * np.eye(k_endog)
+    blocks = [
+        unconstrained[:, i * k_endog : (i + 1) * k_endog] for i in range(order)
+    ]
+
+    sv_constrained = tools._constrain_sv_less_than_one_python(blocks)
+    coefficients, actual_variance = (
+        tools._compute_coefficients_from_multivariate_pacf_python(
+            sv_constrained, variance, transform_variance
+        )
+    )
+    expected, expected_variance = tools.constrain_stationary_multivariate(
+        unconstrained, variance, transform_variance
+    )
+    _assert_twins_agree(np.concatenate(coefficients, axis=1), expected, 1e-10)
+    if transform_variance:
+        _assert_twins_agree(actual_variance, expected_variance, 1e-10)
+
+
+def test_constrain_stationary_multivariate_prefix():
+    # The prefix selects the precision: float32 input computed in double
+    # precision agrees with the double precision twin to 1e-10, while single
+    # precision only agrees to about 1e-5
+    rng = np.random.default_rng(1122)
+    unconstrained = rng.standard_normal((2, 4)).astype(np.float32)
+    variance = np.array([[1.0, 0.3], [0.3, 2.0]], dtype=np.float32)
+    expected = tools.constrain_stationary_multivariate_python(
+        unconstrained.astype(np.float64), variance.astype(np.float64)
+    )
+    actual = tools.constrain_stationary_multivariate(
+        unconstrained, variance, prefix="d"
+    )
+    assert actual[0].dtype == np.float64
+    _assert_twins_agree(actual[0], expected[0], 1e-10)
+    _assert_twins_agree(actual[1], expected[1], 1e-10)
+
+
+def test_constrain_stationary_multivariate_order_zero():
+    # Fewer columns than rows means there is no coefficient matrix
+    with pytest.raises(ValueError, match="Must have order at least 1"):
+        tools.constrain_stationary_multivariate(np.zeros((2, 1)), np.eye(2))
+
+
+def _copy_case(name):
+    # Random source and target and a missing mask. The missing versions copy
+    # the leading (non-missing) rows, the index versions the indexed rows.
+    rng = np.random.default_rng(1122)
+    mask = rng.uniform(size=(3, 6)) < 0.5
+    if name == "copy_missing_matrix":
+        a = rng.standard_normal((3, 2, 6))
+        b = rng.standard_normal((3, 2, 6))
+        expected = b.copy()
+        for t in range(6):
+            n = np.sum(~mask[:, t])
+            expected[:n, :, t] = a[:n, :, t]
+        return a, b, mask, (True,), expected
+    a = rng.standard_normal((3, 6))
+    b = rng.standard_normal((3, 6))
+    expected = b.copy()
+    for t in range(6):
+        if name == "copy_missing_vector":
+            n = np.sum(~mask[:, t])
+            expected[:n, t] = a[:n, t]
+        else:
+            expected[mask[:, t], t] = a[mask[:, t], t]
+    return a, b, mask, (), expected
+
+
+@pytest.mark.parametrize(
+    "name", ["copy_missing_matrix", "copy_missing_vector", "copy_index_vector"]
+)
+def test_copy_with_prefix(name):
+    # The prefix sets the dtype of the result: float32 input gives a float64
+    # result with prefix "d"
+    a, b, mask, args, expected = _copy_case(name)
+    a = a.astype(np.float32)
+    b = b.astype(np.float32)
+    expected = expected.astype(np.float32)
+    original = b.copy()
+    actual = getattr(tools, name)(a, b, mask, *args, prefix="d")
+    assert actual.dtype == np.float64
+    assert_allclose(actual, expected, rtol=1e-7)
+    # Not in place: the target is unchanged
+    assert_allclose(b, original, rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "name, kwargs, match",
+    [
+        (
+            "reorder_missing_matrix",
+            dict(reorder_rows=True, reorder_cols=True),
+            "Reordering a submatrix requires n = m",
+        ),
+        (
+            "reorder_missing_matrix",
+            dict(reorder_rows=True, is_diagonal=True),
+            "only valid with reordering a submatrix",
+        ),
+        (
+            "copy_missing_matrix",
+            dict(missing_rows=True, missing_cols=True),
+            "Copying a submatrix requires n = m",
+        ),
+        (
+            "copy_missing_matrix",
+            dict(missing_rows=True, is_diagonal=True),
+            "only valid with copying a submatrix",
+        ),
+        (
+            "copy_index_matrix",
+            dict(index_rows=True, index_cols=True),
+            "Copying a submatrix requires n = m",
+        ),
+        (
+            "copy_index_matrix",
+            dict(index_rows=True, is_diagonal=True),
+            "only valid with copying a submatrix",
+        ),
+    ],
+)
+def test_missing_matrix_invalid_arguments(name, kwargs, match):
+    # Rows and columns together need a square matrix, and a diagonal matrix
+    # needs rows and columns
+    a = np.zeros((2, 3, 1))
+    mask = np.zeros((2, 1), dtype=bool)
+    args = (a, mask) if name == "reorder_missing_matrix" else (a, a.copy(), mask)
+    with pytest.raises(RuntimeError, match=match):
+        getattr(tools, name)(*args, **kwargs)
+
+
+def test_compute_smoothed_state_weights_prior_requires_first_period():
+    rng = np.random.default_rng(1122)
+    mod = sarimax.SARIMAX(rng.standard_normal(20), order=(1, 0, 0))
+    res = mod.smooth([0.5, 1.0])
+    with pytest.raises(ValueError, match="must include the time period 0"):
+        tools.compute_smoothed_state_weights(
+            res, compute_j=[1, 2], compute_prior_weights=True
+        )
+
+
+def _local_level(k_states):
+    rng = np.random.default_rng(1122)
+    mod = mlemodel.MLEModel(rng.standard_normal((30, k_states)), k_states=k_states)
+    mod["design"] = np.eye(k_states)
+    mod["obs_cov"] = 0.5 * np.eye(k_states)
+    mod["transition"] = 0.8 * np.eye(k_states)
+    mod["selection"] = np.eye(k_states)
+    mod["state_cov"] = np.eye(k_states)
+    return mod
+
+
+def test_initialization_from_components_scalars():
+    # A scalar mean and covariance of a single state
+    mod = _local_level(1)
+    mod.ssm.initialize_known(np.array([0.5]), np.array([[2.0]]))
+    desired = mod.ssm.loglike()
+
+    mod.ssm.initialize(Initialization.from_components(1, a=0.5, Pstar=2.0))
+    assert_allclose(mod.ssm.loglike(), desired, rtol=1e-12)
+
+
+def test_initialization_from_components_vector_selection():
+    # The diffuse selection matrix for a single diffuse state can be given as
+    # a vector
+    mod = _local_level(2)
+    init = Initialization(2)
+    init.set(0, "known", constant=[0.3], stationary_cov=[[2.0]])
+    init.set(1, "diffuse")
+    mod.ssm.initialize(init)
+    desired = mod.ssm.loglike()
+
+    init = Initialization.from_components(
+        2, a=[0.3, -0.1], Pstar=np.diag([2.0, 0.0]), A=[0.0, 1.0]
+    )
+    mod.ssm.initialize(init)
+    assert_allclose(mod.ssm.loglike(), desired, rtol=1e-12)

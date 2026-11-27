@@ -1,0 +1,5 @@
+- With NumPy < 2.1, binding a 1-dimensional ``endog`` to a state
+  space representation (``bind``, and ``clone`` of the state space
+  models) changed the shape of the caller's array to 2 dimensions.
+  The caller's array is now left unchanged, as with newer NumPy.
+  :pr:`11207`

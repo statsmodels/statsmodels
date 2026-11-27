@@ -1,0 +1,3 @@
+- The Hamilton filter of Markov switching models gave a log-likelihood of ``-inf`` for
+  an observation far from every regime mean, and ``nan`` in total.
+  These log-likelihoods are finite. :pr:`11001`

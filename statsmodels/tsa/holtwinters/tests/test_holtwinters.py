@@ -863,7 +863,7 @@ def test_start_params(trend, seasonal):
 def test_no_params_to_optimize():
     mod = ExponentialSmoothing(
         housing_data,
-        initial_level=housing_data.iloc[0],
+        initial_level=housing_data.iloc[0, 0],
         initialization_method="known",
     )
     with pytest.warns(EstimationWarning, match="Model has no free parameters"):
@@ -2898,6 +2898,47 @@ def test_period_and_range_index_output(index_type):
         pd.testing.assert_index_equal(value.index, expected_index)
 
 
+@pytest.mark.parametrize(
+    "steps",
+    [6.0, np.float64(6.0), np.array(6), np.int32(6)],
+    ids=["float", "float64", "0d-array", "int32"],
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date", "period", "range"])
+def test_forecast_int_like_steps(steps, index_type):
+    # A float with an integral value is a number of steps, as an int is, and
+    # so is a 0-d integer array with a date index. They raised a KeyError or
+    # a TypeError. The forecasts from R are the reference.
+    index = {
+        "ndarray": None,
+        "date": pd.date_range("2005-01-01", periods=30, freq="MS"),
+        "period": pd.period_range("2005Q1", periods=30, freq="Q"),
+        "range": pd.RangeIndex(30),
+    }[index_type]
+    endog = np.asarray(aust)
+    if index is not None:
+        endog = pd.Series(endog, index=index[:24])
+    fcast = _r_hw_fit(endog).forecast(steps)
+    assert_allclose(fcast, R_HW_FORECAST, rtol=1e-12)
+    if index is not None:
+        pd.testing.assert_index_equal(fcast.index, index[24:])
+
+
+@pytest.mark.parametrize(
+    "steps", [True, np.True_, 2.5], ids=["True", "np.True_", "2.5"]
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date"])
+def test_forecast_steps_not_int(steps, index_type):
+    # A bool was one step without a date index; 2.5 raised a KeyError or a
+    # TypeError from the date arithmetic
+    endog = np.asarray(aust)
+    if index_type == "date":
+        index = pd.date_range("2005-01-01", periods=24, freq="MS")
+        endog = pd.Series(endog, index=index)
+    res = _r_hw_fit(endog)
+    with pytest.raises(TypeError, match="steps must be integer_like"):
+        res.forecast(steps)
+
+
 def test_integer_endog_matches_float():
     y = np.round(np.asarray(aust))
     res_int = _r_hw_fit(y.astype(int))
@@ -3243,3 +3284,327 @@ def test_ses_holt_default_initialization_is_estimated(trend):
     assert optimized["initial_level"]
     if trend is not None:
         assert optimized["initial_trend"]
+
+
+def _seasonal_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+def _seasonal_recursions(y, seasonal, alpha, gamma, level, initial_seasonal):
+    # The Holt-Winters recursions without a trend, Hyndman and
+    # Athanasopoulos (2014), section 7.5. season[t] is s[t - m], the
+    # seasonal term of the prediction of y[t].
+    season = list(initial_seasonal)
+    fitted = np.empty_like(y)
+    for t in range(y.shape[0]):
+        s = season[t]
+        if seasonal == "add":
+            fitted[t] = level + s
+            new_level = alpha * (y[t] - s) + (1 - alpha) * level
+            season.append(gamma * (y[t] - level) + (1 - gamma) * s)
+        else:
+            fitted[t] = level * s
+            new_level = alpha * y[t] / s + (1 - alpha) * level
+            season.append(gamma * y[t] / level + (1 - gamma) * s)
+        level = new_level
+    return fitted
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("fix_level", [False, True])
+def test_fix_params_initial_seasonal_not_optimized(seasonal, fix_level):
+    # With optimized=False, the fixed initial_seasonal.<j> values were
+    # ignored and the starting values of the model were used instead
+    y = _seasonal_data()
+    mod = ExponentialSmoothing(y, seasonal=seasonal, seasonal_periods=12)
+    level, _, initial_seasonal = mod.initial_values()
+    initial_seasonal = np.array(initial_seasonal, dtype=float)
+    fixed = {"smoothing_level": 0.3, "smoothing_seasonal": 0.2}
+    values = (3.0, -2.0) if seasonal == "add" else (1.05, 0.95)
+    for j, value in zip((0, 7), values, strict=True):
+        fixed[f"initial_seasonal.{j}"] = value
+        initial_seasonal[j] = value
+    if fix_level:
+        fixed["initial_level"] = level = 48.0
+    with mod.fix_params(fixed):
+        res = mod.fit(optimized=False)
+    expected = _seasonal_recursions(y, seasonal, 0.3, 0.2, level, initial_seasonal)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+    assert_allclose(res.params["initial_seasons"], initial_seasonal, rtol=1e-12)
+    assert_allclose(res.params["initial_level"], level, rtol=1e-12)
+
+
+def test_fix_params_plain_initial_seasonal_deprecated():
+    # The key "initial_seasonal" is accepted, used with optimized=False and
+    # ignored by optimized fits. It is deprecated, and does what it did.
+    y = _seasonal_data()
+    mod = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12)
+    level, _, _ = mod.initial_values()
+    initial_seasonal = np.linspace(-3.0, 3.0, 12)
+    fixed = {
+        "smoothing_level": 0.3,
+        "smoothing_seasonal": 0.2,
+        "initial_seasonal": initial_seasonal,
+    }
+    match = 'The key "initial_seasonal" is deprecated'
+    with pytest.warns(FutureWarning, match=match) as record:
+        with mod.fix_params(fixed):
+            res = mod.fit(optimized=False)
+    assert record[0].filename == __file__
+    expected = _seasonal_recursions(y, "add", 0.3, 0.2, level, initial_seasonal)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+    with pytest.warns(FutureWarning, match=match):
+        with mod.fix_params({"initial_seasonal": initial_seasonal}):
+            res = mod.fit()
+    # The same optimization from the same starting values as without the key.
+    # Where it stops depends on the platform: on macOS (Accelerate) the two
+    # fits differ by up to 1.3e-7 relative, and noise of a few ulps in the data
+    # moves the estimates by up to 2.4e-6. Using the fixed values in the
+    # optimized fit would change the initial seasonal values completely.
+    ref = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12).fit()
+    assert_allclose(
+        res.params_formatted["param"], ref.params_formatted["param"], rtol=1e-4
+    )
+
+
+def _missing_drop_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+MISSING_DROP_SPECS = [
+    {"trend": "add"},
+    {"trend": "add", "seasonal": "add", "seasonal_periods": 12},
+    {"trend": "mul", "seasonal": "mul", "seasonal_periods": 12},
+    {"trend": "add", "use_boxcox": True},
+]
+
+
+@pytest.mark.parametrize("spec", MISSING_DROP_SPECS)
+@pytest.mark.parametrize("loc", [[3], [20], [40, 70]])
+def test_missing_drop_matches_data_with_nans_removed(spec, loc):
+    # With missing="drop", the initial values, the Box-Cox transformation
+    # and the optimizer used the data including the nans. A model of the
+    # data with the nans removed by hand is the reference. The nans are
+    # placed in the window of the initial values (3), in the second season
+    # (20) and later (40, 70), where only the optimizer used them.
+    y = _missing_drop_data()
+    y_nan = y.copy()
+    y_nan[loc] = np.nan
+    y_drop = np.delete(y, loc)
+    mod = ExponentialSmoothing(y_nan, missing="drop", **spec)
+    ref_mod = ExponentialSmoothing(y_drop, **spec)
+    assert mod.nobs == y_drop.shape[0]
+    for value, expected in zip(
+        mod.initial_values(), ref_mod.initial_values(), strict=True
+    ):
+        # None, for a component the model does not have, becomes nan
+        assert_allclose(
+            np.asarray(value, dtype=float),
+            np.asarray(expected, dtype=float),
+            rtol=1e-12,
+        )
+
+    smoothing = {"smoothing_level": 0.3, "smoothing_trend": 0.1}
+    if "seasonal" in spec:
+        smoothing["smoothing_seasonal"] = 0.2
+    res = mod.fit(**smoothing, optimized=False)
+    ref = ref_mod.fit(**smoothing, optimized=False)
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-12)
+    assert_allclose(res.sse, ref.sse, rtol=1e-12)
+    assert_allclose(res.forecast(6), ref.forecast(6), rtol=1e-12)
+
+    # Both optimizations solve the same problem from the same starting
+    # values, so they reach the same minimum. They can stop at points that
+    # differ by more than rounding (noise of 4 ulps in the data moves the
+    # estimates by up to 2e-3 and the SSE by up to 1e-6), so the SSE is
+    # compared, not the estimates. With the nans used, the SSE was 200 times
+    # larger.
+    res = mod.fit()
+    ref = ref_mod.fit()
+    assert_allclose(res.sse, ref.sse, rtol=1e-4)
+
+
+def test_missing_drop_simulate():
+    # simulate used the data including the nans to compute the residuals
+    y = _missing_drop_data()
+    y_nan = y.copy()
+    y_nan[20] = np.nan
+    smoothing = {"smoothing_level": 0.3, "smoothing_trend": 0.1}
+    res = ExponentialSmoothing(y_nan, trend="add", missing="drop").fit(
+        **smoothing, optimized=False
+    )
+    ref = ExponentialSmoothing(np.delete(y, 20), trend="add").fit(
+        **smoothing, optimized=False
+    )
+    sim = res.simulate(6, repetitions=3, rng=np.random.default_rng(0))
+    expected = ref.simulate(6, repetitions=3, rng=np.random.default_rng(0))
+    assert_allclose(sim, expected, rtol=1e-12)
+
+
+# Fixed smoothing parameters for the use_boxcox tests, which compare two
+# models that are the same once use_boxcox is converted. Fitted by the
+# optimizer, the two did not stop at the same point on the Azure macOS runners
+# (fitted values up to 3e-8 apart).
+_BOXCOX_FIXED = {
+    "smoothing_level": 0.3,
+    "smoothing_trend": 0.1,
+    "smoothing_seasonal": 0.2,
+    "optimized": False,
+}
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [
+        (np.float32(0.5), 0.5),
+        (np.array(0.5), 0.5),
+        (np.float64(0.0), 0.0),
+        (np.int64(1), True),
+        (np.int64(0), False),
+    ],
+    ids=["float32 lambda", "0-d lambda", "float64 zero", "int64 one", "int64 zero"],
+)
+def test_use_boxcox_numpy_scalars(austourists, use_boxcox, expected):
+    # A NumPy float is a fixed lambda and a NumPy int is used as a bool, as a
+    # Python float and int are; a float32 lambda and an int64 raised TypeError
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    if expected is False:
+        assert res.params["lamda"] is None
+    else:
+        assert_allclose(res.params["lamda"], ref.params["lamda"], rtol=1e-12)
+    if not isinstance(expected, bool):
+        assert_allclose(res.params["lamda"], expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
+    # A NumPy bool raised "use_boxcox must be True, False, 'log' or a float."
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    assert res.params["use_boxcox"] is expected
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize(
+    "fixed",
+    [
+        {"initial_seasonal.0": 1.5},
+        {"smoothing_level": 0.3, "initial_seasonal.0": 1.5, "initial_seasonal.5": 0.8},
+    ],
+)
+def test_fix_params_initial_seasonal_leaves_model_unchanged(seasonal, fixed):
+    # A fit with fixed initial seasonal values wrote them into the initial
+    # values stored on the model, so later fits of the same model differed
+    # from fits of a fresh model
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    y = 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+    spec = {"trend": "add", "seasonal": seasonal, "seasonal_periods": 12}
+    mod = ExponentialSmoothing(y, **spec)
+    fresh = ExponentialSmoothing(y, **spec)
+    with mod.fix_params(fixed):
+        res = mod.fit()
+    seasons = res.params["initial_seasons"]
+    for key, value in fixed.items():
+        if key.startswith("initial_seasonal."):
+            assert_allclose(seasons[int(key.split(".")[1])], value, rtol=1e-12)
+
+    for value, expected in zip(
+        mod.initial_values(), fresh.initial_values(), strict=True
+    ):
+        assert_allclose(value, expected, rtol=1e-12)
+    smoothing = {
+        "smoothing_level": 0.3,
+        "smoothing_trend": 0.1,
+        "smoothing_seasonal": 0.2,
+    }
+    res = mod.fit(**smoothing, optimized=False)
+    ref = fresh.fit(**smoothing, optimized=False)
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-12)
+    assert_allclose(res.sse, ref.sse, rtol=1e-12)
+
+
+def _trend_seasonal_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["smoothing_level", "smoothing_trend", "smoothing_seasonal", "damping_trend"],
+)
+@pytest.mark.parametrize("use_fix_params", [False, True])
+def test_fit_not_optimized_missing_parameter(missing, use_fix_params):
+    # Without optimization, a parameter that is neither given nor fixed
+    # raised a TypeError in the recursions
+    mod = ExponentialSmoothing(
+        _trend_seasonal_data(),
+        trend="add",
+        damped_trend=True,
+        seasonal="add",
+        seasonal_periods=12,
+    )
+    values = {
+        "smoothing_level": 0.3,
+        "smoothing_trend": 0.1,
+        "smoothing_seasonal": 0.2,
+        "damping_trend": 0.95,
+    }
+    del values[missing]
+    with pytest.raises(ValueError, match=f"{missing} must be given"):
+        if use_fix_params:
+            with mod.fix_params(values):
+                mod.fit(optimized=False)
+        else:
+            mod.fit(optimized=False, **values)
+
+
+def test_fit_not_optimized_fixed_smoothing_level():
+    # A smoothing_level fixed using fix_params does not need to be given.
+    # The reference is the simple exponential smoothing recursion.
+    y = _trend_seasonal_data()
+    mod = ExponentialSmoothing(y)
+    level = mod.initial_values()[0]
+    with mod.fix_params({"smoothing_level": 0.3}):
+        res = mod.fit(optimized=False)
+    expected = np.empty_like(y)
+    for t in range(y.shape[0]):
+        expected[t] = level
+        level = 0.3 * y[t] + 0.7 * level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("key", ["smoothing_level", "damping_trend"])
+@pytest.mark.parametrize(
+    "bound", [(0.1, None), (None, 0.5), (None, None), (-0.1, 0.5), (0.1, 1.5)]
+)
+def test_bounds_outside_unit_interval(key, bound):
+    # The bounds of the smoothing and damping parameters must lie in [0, 1].
+    # None, which means no bound for the initial values, raised a TypeError.
+    with pytest.raises(ValueError, match=f"{key} must have a lower bound >= 0.0"):
+        ExponentialSmoothing(
+            _trend_seasonal_data(), trend="add", damped_trend=True, bounds={key: bound}
+        )

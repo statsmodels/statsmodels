@@ -107,6 +107,12 @@ class SimulationSmoother(KalmanSmoother):
         \*\*kwargs
             Additional keyword arguments. Present so that calls to this method
             can use \*\*kwargs without clearing out additional arguments.
+
+        Returns
+        -------
+        int
+            The simulation output bitmask. If none of the options are given,
+            this is the smoother output bitmask.
         """
         # If we do not explicitly have simulation_output, try to get it from
         # kwargs
@@ -264,7 +270,12 @@ class SimulationSmoother(KalmanSmoother):
             array of ints, a new ``Generator`` is created, seeded with
             `rng`. If `rng` is already a ``Generator`` or ``RandomState``
             instance, that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+
+            .. versionchanged:: 0.15.1
+
+               With ``method="cfa"``, the simulations use `rng`. It was
+               ignored.
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -287,7 +298,7 @@ class SimulationSmoother(KalmanSmoother):
                     "Can only retrieve simulations of the state"
                     " vector using the CFA simulation smoother."
                 )
-            return CFASimulationSmoother(self)
+            return CFASimulationSmoother(self, rng=rng)
 
         # Set the class to be the default results class, if None provided
         if results_class is None:
@@ -348,15 +359,16 @@ class SimulationSmoothResults:
     ----------
     model : Representation
         A Statespace representation
-    simulation_smoother : {{prefix}}SimulationSmoother object
-        The Cython simulation smoother object with which to simulation smooth.
+    simulation_smoother : object
+        The Cython simulation smoother object with which to simulation smooth
+        (for example ``dSimulationSmoother`` for a float64 model).
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
         `rng` is already a ``Generator`` or ``RandomState`` instance,
         that instance is used.
-    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+    random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            random_state has been deprecated. In-line with SPEC-007, use
@@ -614,7 +626,7 @@ class SimulationSmoothResults:
             same as in the state space model.
         initial_state_variates : array_like, optional
             If specified, this is the state vector at time zero, which should
-            be shaped (`k_states` x 1), where `k_states` is the same as in the
+            be shaped (`k_states`,), where `k_states` is the same as in the
             state space model. If unspecified, but the model has been
             initialized, then that initialization is used. Usually only
             specified if results are to be replicated (e.g., to enforce a seed)
@@ -643,7 +655,7 @@ class SimulationSmoothResults:
             array of ints, a new ``Generator`` is created, seeded with
             `rng`. If `rng` is already a ``Generator`` or ``RandomState``
             instance, that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use

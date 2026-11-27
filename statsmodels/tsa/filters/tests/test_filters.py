@@ -1,4 +1,4 @@
-from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
+from statsmodels.compat.pandas import PD_LT_3_1_0, QUARTER_END, assert_index_equal
 
 from datetime import datetime
 from pathlib import Path
@@ -1196,8 +1196,6 @@ CONVOLUTION_2D_CASES = [
     for kind in ("1d", "column", "2d")
     for nlags in (1, 2, 3, 4)
     for nsides in (1, 2)
-    # a (1, nvar) filter is not a separate lag polynomial per column
-    if not (kind == "2d" and nlags == 1)
 ]
 
 
@@ -1338,6 +1336,141 @@ def test_miso_lfilter_useic_zero_matches_default():
 
     assert_allclose(y_ic, y_false)
     assert_allclose(inp_ic, inp_false)
+
+
+def _miso_lfilter_recursion(ar, ma, x, past=None):
+    # ar(L) y_t = ma(L) x_t evaluated directly: the combined input is
+    # inp_t = sum_lag ma[lag] . x[t - lag] with x zero before t = 0, and
+    # y_t = inp_t - ar[1] y[t-1] - ... with y[-1], y[-2], ... = past (or zero)
+    nobs = x.shape[0]
+    inp = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(ma.shape[0]):
+            if t - lag >= 0:
+                inp[t] += ma[lag] @ x[t - lag]
+    past = [0.0] * (len(ar) - 1) if past is None else list(past)
+    y = np.zeros(nobs)
+    for t in range(nobs):
+        y[t] = inp[t] - sum(ar[j + 1] * past[j] for j in range(len(past)))
+        past = ([y[t]] + past)[:-1]
+    return y, inp
+
+
+def _miso_lfilter_data(nvars=2):
+    rng = np.random.default_rng(20261131)
+    x = rng.standard_normal((12, nvars))
+    ma = rng.standard_normal((3, nvars))
+    return array([1.0, -0.5, 0.2]), ma, x
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_miso_lfilter_x_list(form):
+    # x is documented as array_like, but a list or tuple raised an
+    # AttributeError because x.shape was read before x was converted
+    ar, ma, x = _miso_lfilter_data()
+    x_form = x.tolist() if form == "list" else tuple(map(tuple, x))
+    y, inp = miso_lfilter(ar, ma, x_form)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_miso_lfilter_ar_column(form):
+    # a column of AR coefficients raised in scipy.signal.lfilter
+    ar, ma, x = _miso_lfilter_data()
+    ar_form = ar[:, None] if form == "column" else DataFrame({"ar": ar})
+    y, inp = miso_lfilter(ar_form, ma, x)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("x_1d", [True, False], ids=["x-1d", "x-column"])
+@pytest.mark.parametrize("ma_1d", [True, False], ids=["ma-1d", "ma-column"])
+def test_miso_lfilter_one_variable(ma_1d, x_1d):
+    # one input variable as a 1-d array or a column, which raised for a 1-d
+    # x or ma, is the ARMA filter ma(L) / ar(L) of scipy.signal.lfilter
+    from scipy import signal
+
+    ar, ma, x = _miso_lfilter_data(nvars=1)
+    y, inp = miso_lfilter(ar, ma[:, 0] if ma_1d else ma, x[:, 0] if x_1d else x)
+    assert_allclose(inp, signal.lfilter(ma[:, 0], [1.0], x[:, 0]), rtol=1e-12)
+    assert_allclose(y, signal.lfilter(ma[:, 0], ar, x[:, 0]), rtol=1e-10)
+
+
+@pytest.mark.parametrize("ma_shape", [(3, 1), (3, 3)])
+def test_miso_lfilter_ma_columns_mismatch_deprecated(ma_shape):
+    # a 2-d ma without one column per column of a 2-d x silently returned the
+    # filter of a misaligned part of x. It warns and keeps that result: the
+    # middle column of the full 2-d correlation, filtered by ar.
+    from scipy import signal
+
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal((12, 2))
+    ar = array([1.0, -0.5])
+    with pytest.warns(FutureWarning, match="ma must have one column per column"):
+        y, inp = miso_lfilter(ar, ma, x)
+    expected_inp = signal.correlate(x, ma[::-1, :])[:12, 1]
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, signal.lfilter([1.0], ar, expected_inp), rtol=1e-12)
+
+
+@pytest.mark.parametrize("ma_shape, x_shape", [((3,), (12, 2)), ((3, 2), (12,))])
+def test_miso_lfilter_ma_columns_mismatch_1d(ma_shape, x_shape):
+    # a 1-d ma or x is a single column, which raised before; a mismatch with
+    # the other argument raises
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal(x_shape)
+    with pytest.raises(ValueError, match="ma must have one column per column of x"):
+        miso_lfilter(array([1.0, -0.5]), ma, x)
+
+
+def test_miso_lfilter_complex_x():
+    # the filter is linear with real coefficients, so a complex x gives the
+    # filter of its real part plus i times the filter of its imaginary part
+    ar, ma, x = _miso_lfilter_data()
+    x_imag = np.random.default_rng(1).standard_normal(x.shape)
+    y, inp = miso_lfilter(ar, ma, x + 1j * x_imag)
+    y_real, inp_real = _miso_lfilter_recursion(ar, ma, x)
+    y_imag, inp_imag = _miso_lfilter_recursion(ar, ma, x_imag)
+    assert np.iscomplexobj(y)
+    assert_allclose(inp, inp_real + 1j * inp_imag, rtol=1e-12)
+    assert_allclose(y, y_real + 1j * y_imag, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "useic", [[1.5, -2.0], [0.0, 0.0], []], ids=["values", "zeros", "empty"]
+)
+def test_miso_lfilter_useic_ndarray(useic):
+    # an ndarray of initial conditions raised "The truth value of an array
+    # ... is ambiguous". The values before the first observation are useic in
+    # reverse time order, y[-1] = useic[0], and zero if useic is empty.
+    ar, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(ar, ma, x, useic=np.array(useic))
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic or None)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+    # a list gives the same result
+    assert_allclose(miso_lfilter(ar, ma, x, useic=useic)[0], y, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "useic",
+    [False, None, 0, [], [0.0], np.array([0.0])],
+    ids=["false", "none", "zero", "empty", "list-zero", "ndarray-zero"],
+)
+def test_miso_lfilter_zero_useic_without_ar_lags(useic):
+    # without AR lags there are no initial conditions; zero or empty useic
+    # gives the combined input, as False, None, 0 and [] did before
+    _, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(array([1.0]), ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(array([1.0]), ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-12)
+    assert_allclose(y, inp, rtol=1e-12)
 
 
 def test_bkfilter_too_short_series():
@@ -1815,7 +1948,9 @@ def test_cffilter_reference_values(drift):
     # With drift=True the drift line is removed before filtering and the
     # trend is the drift-removed series less the cycle, so the trend does not
     # contain the drift line.
-    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", float_precision="round_trip")
+    # float_precision is deprecated in pandas 3.1; its default parser is used
+    kwargs = {"float_precision": "round_trip"} if PD_LT_3_1_0 else {}
+    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", **kwargs)
     x = ref["x"].to_numpy()
     suffix = "drift" if drift else "no_drift"
     ref_cycle = ref[f"cycle_{suffix}"].to_numpy()
@@ -2176,3 +2311,172 @@ def test_fftconvolve_invalid_mode_deprecated(func, mode):
         res = func(x, np.array([1.0, -0.5]), mode=mode)
     assert res is None
     assert rec[0].filename == __file__
+
+
+@pytest.mark.parametrize(
+    "useic",
+    [[1.0], [1.5, -2.0], np.array([2.0])],
+    ids=["list", "list-2", "ndarray"],
+)
+def test_miso_lfilter_nonzero_useic_without_ar_lags(useic):
+    # without AR lags there are no initial conditions. A non-zero useic
+    # raised "Unexpected shape for parameter zi" because lfiltic was called
+    # with b = [1, 0]. It is ignored, as values beyond len(ar) - 1 are, and
+    # the result is the combined input.
+    _, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(array([1.0]), ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(array([1.0]), ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+def test_miso_lfilter_useic_extra_values_ignored(nlags):
+    # useic values beyond len(ar) - 1 are ignored: y[-1], ..., y[-nlags] are
+    # the first nlags values
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2, 0.1])[: nlags + 1]
+    useic = [1.5, -2.0, 0.5, 3.0]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic[:nlags])
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("nlags", [0, 1, 2])
+@pytest.mark.parametrize("form", ["float", "int", "numpy-float", "ndarray-0d"])
+def test_miso_lfilter_scalar_useic(form, nlags):
+    # a scalar useic raised an IndexError for one AR lag, and a ValueError
+    # for two or more with scipy >= 1.16. It is y[-1], with zero for the
+    # further lags, as lfiltic of scipy < 1.16 treated it for two or more.
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2])[: nlags + 1]
+    useic = {
+        "float": 1.5,
+        "int": 2,
+        "numpy-float": np.float64(1.5),
+        "ndarray-0d": np.array(1.5),
+    }[form]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    past = [float(useic)] + [0.0] * (nlags - 1) if nlags else None
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("useic", [True, np.True_], ids=["bool", "numpy-bool"])
+@pytest.mark.parametrize("nlags", [0, 1])
+def test_miso_lfilter_useic_true_raises(nlags, useic):
+    # useic=True is not a set of initial values. With no or one AR lag it
+    # raised an error from scipy (zi shape, IndexError)
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5])[: nlags + 1]
+    with pytest.raises(ValueError, match="useic must be False or the initial"):
+        miso_lfilter(ar, ma, x, useic=useic)
+
+
+@pytest.mark.parametrize("useic", [True, np.True_], ids=["bool", "numpy-bool"])
+@pytest.mark.parametrize("nlags", [2, 3])
+def test_miso_lfilter_useic_true_deprecated(nlags, useic):
+    # with two or more AR lags, lfiltic of scipy < 1.16 used True as
+    # y[-1] = 1, with zero for the further lags. That result is kept, with a
+    # warning.
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2, 0.1])[: nlags + 1]
+    with pytest.warns(FutureWarning, match="useic must be False or the initial"):
+        y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    past = [1.0] + [0.0] * (nlags - 1)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize("nvar", [1, 2, 3])
+def test_convolution_filter_row_filter(nvar, nsides):
+    # a (1, nvar) filter has one coefficient per column of x. It was
+    # convolved across the columns instead, which returned one column, 3 * x0
+    # + 2 * x1 = [[23], [46], ...] for nvar = 2. Each column of x is
+    # multiplied by its own coefficient, with no NaN padding for one lag.
+    t = np.arange(1.0, 7.0)
+    x = t[:, None] * np.array([1.0, 10.0, 100.0])[:nvar]
+    filt = np.array([[2.0, 3.0, 4.0][:nvar]])
+    expected = t[:, None] * np.array([2.0, 30.0, 400.0])[:nvar]
+    res = convolution_filter(x, filt, nsides=nsides)
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, expected, rtol=1e-12)
+    # a DataFrame raised, since the result had one column
+    columns = ["a", "b", "c"][:nvar]
+    index = date_range("2000-01-01", periods=6)
+    res_df = convolution_filter(
+        DataFrame(x, columns=columns, index=index), filt, nsides=nsides
+    )
+    assert isinstance(res_df, DataFrame)
+    assert list(res_df.columns) == columns
+    assert_index_equal(res_df.index, index)
+    assert_allclose(res_df.to_numpy(), expected, rtol=1e-12)
+
+
+CONVOLUTION_FILT_COLUMNS = "filt must have one column, or one column per column"
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize("case", ["fewer-columns", "one-observation"])
+def test_convolution_filter_row_filter_columns_deprecated(case, nsides):
+    # a filter with one row and more than one column, but not one column per
+    # column of x, is not one coefficient per column. It is still convolved
+    # across the columns of x as before, which warns.
+    t = np.arange(1.0, 7.0)
+    if case == "fewer-columns":
+        # column c of the result is 3 * x[:, c] + 2 * x[:, c + 1]
+        x = t[:, None] * np.array([1.0, 10.0, 100.0])
+        filt = [[2.0, 3.0]]
+        expected = t[:, None] * np.array([23.0, 230.0])
+    else:
+        # the valid part of the convolution of [1, 10] and [2, 3, 4]
+        x = np.array([[1.0, 10.0]])
+        filt = [[2.0, 3.0, 4.0]]
+        expected = np.array([[2.0 * 10 + 3.0 * 1, 3.0 * 10 + 4.0 * 1]])
+    with pytest.warns(FutureWarning, match=CONVOLUTION_FILT_COLUMNS):
+        res = convolution_filter(x, filt, nsides=nsides)
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+def test_convolution_filter_extra_filter_columns_deprecated(nsides):
+    # a 2-d filter with more columns than x ignored the extra columns. It
+    # warns, and each column of x is still filtered with its column of filt,
+    # as the 1-d filter path filters a 1-d series
+    rng = np.random.default_rng(20261121)
+    # integer data, so that every sum is exact
+    x = rng.integers(-9, 10, size=(25, 2)).astype(float)
+    filt = rng.integers(-5, 6, size=(3, 3)).astype(float)
+    index = date_range("2000-01-01", periods=25)
+    df = DataFrame(x, columns=["a", "b"], index=index)
+    for x_in in (x, df):
+        with pytest.warns(FutureWarning, match=CONVOLUTION_FILT_COLUMNS):
+            res = convolution_filter(x_in, filt, nsides=nsides)
+        assert res.shape == x.shape
+        for i in range(2):
+            expected = convolution_filter(x[:, i], filt[:, i], nsides=nsides)
+            # atol keeps a sum that cancels to zero from failing if scipy
+            # convolves by FFT
+            assert_allclose(np.asarray(res)[:, i], expected, rtol=1e-12, atol=1e-10)
+    assert list(res.columns) == ["a", "b"]
+    assert_index_equal(res.index, index)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize(
+    "x_shape, filt_shape",
+    [((25, 3), (3, 2)), ((25, 2), (1, 3))],
+    ids=["fewer-columns", "row-more-columns"],
+)
+def test_convolution_filter_filter_columns_raises(x_shape, filt_shape, nsides):
+    # a filter with more than one row and fewer columns than x raised an
+    # IndexError, and one with one row and more columns than x raised an
+    # unclear ValueError from scipy
+    x = np.ones(x_shape)
+    filt = np.ones(filt_shape)
+    with pytest.raises(ValueError, match=CONVOLUTION_FILT_COLUMNS):
+        convolution_filter(x, filt, nsides=nsides)

@@ -1,35 +1,16 @@
 """Typing aliases used by statsmodels"""
 
-from __future__ import annotations
+from collections.abc import Sequence
+from typing import TypeAlias
 
-from typing import TYPE_CHECKING, Any
+import numpy as np
+from numpy.typing import ArrayLike, DTypeLike, NDArray
+from pandas import DataFrame, Series
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    import numpy as np
-    from numpy.typing import (
-        ArrayLike,
-        DTypeLike,
-        NDArray,
-        _FloatLike_co,
-        _UIntLike_co,
-    )
-    from pandas import DataFrame, Series
-
-    _ExtendedFloatLike_co = _FloatLike_co | _UIntLike_co
-    NumericArray = NDArray[Any, np.dtype[_ExtendedFloatLike_co]]
-    Float64Array = NDArray[Any, np.double]
-    ArrayLike1D = Sequence[float | int] | NumericArray | Series
-    ArrayLike2D = Sequence[Sequence[float | int]] | NumericArray | DataFrame
-else:
-    ArrayLike = Any
-    DTypeLike = Any
-    Float64Array = Any
-    NumericArray = Any
-    ArrayLike1D = Any
-    ArrayLike2D = Any
-    NDArray = Any
+NumericArray: TypeAlias = NDArray[np.bool_ | np.integer | np.floating]
+Float64Array: TypeAlias = NDArray[np.float64]
+ArrayLike1D: TypeAlias = Sequence[float] | NumericArray | Series
+ArrayLike2D: TypeAlias = Sequence[Sequence[float]] | NumericArray | DataFrame
 
 __all__ = [
     "ArrayLike",

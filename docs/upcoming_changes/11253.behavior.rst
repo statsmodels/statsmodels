@@ -1,0 +1,11 @@
+- Bools are no longer taken as integers. ``True`` and ``np.True_`` raise
+  instead of being used as 1 where an integer is expected, for example as
+  ``eval_env`` of ``from_formula``, ``exog_idx`` or ``focus_exog`` of the
+  regression plots, ``steps`` of ``forecast``, ``order`` of ``ARDL``, the
+  periods and windows of ``STL`` and ``MSTL``, and the ``start`` and ``end``
+  of prediction. A bool ``rho`` of ``GLSAR`` raises; it was an AR order of 1.
+  :pr:`11253`
+- ``np.timedelta64`` is no longer accepted as a location in prediction, and
+  ``arma_periodogram`` raises for a 0-d integer array ``worN`` of 0 or less.
+  ``GLSAR`` takes a 0-d integer array ``rho`` such as ``np.array(2)`` as the
+  AR order, as it takes an int, instead of as a coefficient. :pr:`11253`

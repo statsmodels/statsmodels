@@ -143,24 +143,29 @@ References
 from collections import OrderedDict
 import contextlib
 import datetime as dt
+import functools
+import warnings
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm, rv_continuous, rv_discrete
 from scipy.stats.distributions import rv_frozen
 
-from statsmodels.base.covtype import descriptions
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels, descriptions
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.tools import Bunch, pinv_extended
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_bool_like,
+    is_int_like,
     string_like,
 )
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -227,7 +232,12 @@ class ETSModel(base.StateSpaceMLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`
+        The observed time-series process :math:`y`. A single column, an
+        (nobs, 1) array or a one-column DataFrame, is used as the series.
+
+        .. versionchanged:: 0.15.1
+
+           A single column is accepted. It used to raise a ValueError.
     error : {"add", "additive", "mul", "multiplicative"}, optional
         The error model. "add" (default) or "mul". "additive" and
         "multiplicative" are accepted as aliases for "add" and "mul".
@@ -292,6 +302,17 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_seasonal : array_like, optional
         The initial seasonal component. An array of length `seasonal_periods`.
         Only used if initialization is 'known'.
+
+        .. deprecated:: 0.15.1
+
+           A single value, which is used for all initial seasonal states, is
+           deprecated and will raise a ValueError after statsmodels 0.17 is
+           released. Other lengths raise a ValueError.
+
+        .. versionchanged:: 0.15.1
+
+           A single row or column is used as a 1-d array. A row was used in
+           reverse order.
     bounds : dict, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
@@ -510,6 +531,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal_periods, "seasonal_periods", optional=True
             )
             if seasonal_periods is None:
+                if self._index_freq is None:
+                    raise ValueError(
+                        "seasonal_periods must be given for a seasonal model if "
+                        "endog has no date index with a frequency."
+                    )
                 self.seasonal_periods = freq_to_period(self._index_freq)
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
@@ -591,6 +617,17 @@ class ETSModel(base.StateSpaceMLEModel):
         initial_seasonal : array_like, optional
             The initial seasonal component. An array of length
             `seasonal_periods`. Only used if initialization is 'known'.
+
+            .. deprecated:: 0.15.1
+
+               A single value, which is used for all initial seasonal states,
+               is deprecated and will raise a ValueError after statsmodels
+               0.17 is released. Other lengths raise a ValueError.
+
+            .. versionchanged:: 0.15.1
+
+               A single row or column is used as a 1-d array. A row was used
+               in reverse order.
         """
         self.initialization_method = string_like(
             initialization_method,
@@ -615,6 +652,32 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
+            if self.has_seasonal:
+                m = self.seasonal_periods
+                seasonal = np.asarray(initial_seasonal)
+                # A scalar or any array with a single value is broadcast to
+                # all seasonal states (a 0-d array raised an IndexError)
+                if seasonal.size == 1 and (
+                    seasonal.ndim > 0 or np.isscalar(initial_seasonal)
+                ):
+                    warnings.warn(
+                        "initial_seasonal has a single value, which is used "
+                        f"for all {m} initial seasonal states. This is "
+                        "deprecated and will raise a ValueError after "
+                        "statsmodels 0.17 is released. Pass an array of "
+                        "length seasonal_periods instead.",
+                        FutureWarning,
+                        stacklevel=3,
+                    )
+                elif seasonal.shape in ((1, m), (m, 1)):
+                    # A single row or column is used as a 1-d array (a row
+                    # was used in reverse order)
+                    initial_seasonal = seasonal.ravel()
+                elif seasonal.shape != (m,):
+                    raise ValueError(
+                        "initial_seasonal must have length seasonal_periods "
+                        f"({m}), got an array of shape {seasonal.shape}."
+                    )
         elif self.initialization_method == "heuristic":
             (
                 initial_level,
@@ -689,6 +752,7 @@ class ETSModel(base.StateSpaceMLEModel):
         else:
             if not isinstance(bounds, (dict, OrderedDict)):
                 raise ValueError("bounds must be a dictionary")
+            bounds = dict(bounds)
             for key in bounds:
                 if key not in self.param_names:
                     raise ValueError(f"Invalid key: {key} in bounds dictionary")
@@ -713,10 +777,13 @@ class ETSModel(base.StateSpaceMLEModel):
             ETS models have no exogenous variables.
         """
         endog = np.require(data.orig_endog, requirements="WC")
+        if endog.ndim == 2 and endog.shape[1] == 1:
+            # a single column: an (nobs, 1) array or a one-column DataFrame
+            endog = np.require(endog[:, 0], requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.require(data.orig_endog, requirements="WC", dtype=float)
+            endog = np.require(endog, requirements="WC", dtype=float)
         return endog, None
 
     @property
@@ -1023,6 +1090,7 @@ class ETSModel(base.StateSpaceMLEModel):
         disp=True,
         callback=None,
         return_params=False,
+        param_index=None,
         **kwargs,
     ):
         r"""
@@ -1035,6 +1103,16 @@ class ETSModel(base.StateSpaceMLEModel):
         :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
 
         The fit is performed using the L-BFGS algorithm.
+
+        .. versionchanged:: 0.15.1
+
+           A fit does not change the bounds of the model. Before, it added
+           the values of the fixed parameters, for example from
+           ``fix_params``, and of the parameters that are not estimated,
+           such as the initial states of a "heuristic" initialization, to
+           the bounds. They stayed fixed in later fits of the model, also
+           after ``set_initialization_method``, and the dictionary passed
+           as ``bounds`` was changed.
 
         Parameters
         ----------
@@ -1084,6 +1162,21 @@ class ETSModel(base.StateSpaceMLEModel):
         return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
+        param_index : {"names", "integer"}, optional
+            The index of ``params``, ``bse``, ``tvalues``, ``pvalues``,
+            ``conf_int()`` and ``cov_params()`` of the results if the data
+            are pandas objects. "names" uses the parameter names,
+            ``param_names``; "integer" uses 0, 1, ..., k - 1. If None, uses
+            "integer" and warns that the default will change to "names"
+            after statsmodels 0.17 is released. Not used for ndarray data,
+            whose results are ndarrays, or if `return_params` is True.
+
+            .. versionadded:: 0.15.1
+
+            .. deprecated:: 0.15.1
+
+               The default "integer" index is deprecated and will change to
+               "names". Pass "names" to use the future default now.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
@@ -1093,6 +1186,7 @@ class ETSModel(base.StateSpaceMLEModel):
             The fitted model results, or the array of fitted parameters if
             `return_params` is True.
         """
+        param_index = self._check_param_index(param_index, not return_params)
 
         if start_params is None:
             start_params = self.start_params
@@ -1103,23 +1197,30 @@ class ETSModel(base.StateSpaceMLEModel):
             final_params = np.asarray(list(self._fixed_params.values()))
             mlefit = Bunch(params=start_params, mle_retvals=None, mle_settings=None)
         else:
-            internal_start_params = self._convert_and_bound_start_params(start_params)
-            bounds = self._setup_bounds()
+            # The bounds of the fixed parameters and of the parameters that
+            # are not in the model are added to a copy of the bounds, as they
+            # only apply to this fit
+            with self._use_copy_of_bounds():
+                internal_start_params = self._convert_and_bound_start_params(
+                    start_params
+                )
+                bounds = self._setup_bounds()
 
-            # check if we need to use the starred parameters
-            use_beta_star = "smoothing_trend" not in self.bounds
-            if use_beta_star:
-                internal_start_params[1] /= internal_start_params[0]
-            use_gamma_star = "smoothing_seasonal" not in self.bounds
-            if use_gamma_star:
-                internal_start_params[2] /= 1 - internal_start_params[0]
+                # check if we need to use the starred parameters
+                use_beta_star = "smoothing_trend" not in self.bounds
+                if use_beta_star:
+                    internal_start_params[1] /= internal_start_params[0]
+                use_gamma_star = "smoothing_seasonal" not in self.bounds
+                if use_gamma_star:
+                    internal_start_params[2] /= 1 - internal_start_params[0]
 
-            # check if we have fixed parameters and remove them from the
-            # parameter vector. The last initial seasonal is removed as well
-            # if it is computed from the other initial seasonals (see the
-            # implementation notes above); its value in `fixed_values` is
-            # updated in every call of `_loglike_internal`.
-            derive_last_seasonal = self._derive_last_initial_seasonal
+                # check if we have fixed parameters and remove them from the
+                # parameter vector. The last initial seasonal is removed as
+                # well if it is computed from the other initial seasonals (see
+                # the implementation notes above); its value in
+                # `fixed_values` is updated in every call of
+                # `_loglike_internal`.
+                derive_last_seasonal = self._derive_last_initial_seasonal
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
@@ -1187,7 +1288,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if return_params:
             return final_params
         else:
-            result = self.smooth(final_params)
+            result = self.smooth(final_params, param_index=param_index)
             result.mlefit = mlefit
             result.mle_retvals = mlefit.mle_retvals
             result.mle_settings = mlefit.mle_settings
@@ -1284,6 +1385,16 @@ class ETSModel(base.StateSpaceMLEModel):
             yield
         finally:
             self.loglike = external_loglike
+
+    @contextlib.contextmanager
+    def _use_copy_of_bounds(self):
+        """Work on a copy of the bounds, restoring the bounds on exit"""
+        model_bounds = self.bounds
+        self.bounds = dict(model_bounds)
+        try:
+            yield
+        finally:
+            self.bounds = model_bounds
 
     def loglike(self, params, **kwargs):
         r"""
@@ -1386,7 +1497,7 @@ class ETSModel(base.StateSpaceMLEModel):
             states = pd.DataFrame(states, index=index, columns=statenames)
         return yhat, states
 
-    def smooth(self, params, return_raw=False):
+    def smooth(self, params, return_raw=False, param_index=None):
         """
         Exponential smoothing with given parameters
 
@@ -1397,6 +1508,21 @@ class ETSModel(base.StateSpaceMLEModel):
         return_raw : bool, optional
             Whether to return only the state space results or the full results
             object. Default is ``False``.
+        param_index : {"names", "integer"}, optional
+            The index of ``params``, ``bse``, ``tvalues``, ``pvalues``,
+            ``conf_int()`` and ``cov_params()`` of the results if the data
+            are pandas objects. "names" uses the parameter names,
+            ``param_names``; "integer" uses 0, 1, ..., k - 1. If None, uses
+            "integer" and warns that the default will change to "names"
+            after statsmodels 0.17 is released. Not used for ndarray data,
+            whose results are ndarrays, or if `return_raw` is True.
+
+            .. versionadded:: 0.15.1
+
+            .. deprecated:: 0.15.1
+
+               The default "integer" index is deprecated and will change to
+               "names". Pass "names" to use the future default now.
 
         Returns
         -------
@@ -1405,9 +1531,44 @@ class ETSModel(base.StateSpaceMLEModel):
             object. Otherwise a tuple of arrays or pandas objects, depending on
             the format of the endog data.
         """
+        param_index = self._check_param_index(param_index, not return_raw)
         params = np.asarray(params)
         results = self._smooth(params)
-        return self._wrap_results(params, results, return_raw)
+        results = self._wrap_results(params, results, return_raw)
+        if not return_raw:
+            # Read by ETSResultsWrapper, which attaches the names
+            results._results._named_params = (
+                self.use_pandas and param_index == "names"
+            )
+        return results
+
+    def _check_param_index(self, param_index, warn):
+        """
+        Validate param_index; if warn, None is "integer" with a FutureWarning
+        for pandas data
+        """
+        param_index = string_like(
+            param_index,
+            "param_index",
+            optional=True,
+            options=("names", "integer"),
+            lower=False,
+        )
+        if param_index is None and warn:
+            if self.use_pandas:
+                warnings.warn(
+                    'The default param_index will change from "integer" '
+                    "(params, bse and the other results indexed by parameter "
+                    'use 0, 1, ...) to "names" (they use the parameter names, '
+                    "model.param_names) after statsmodels 0.17 is released. "
+                    'Pass param_index="names" to use the future default now, '
+                    'or param_index="integer" to keep the current one and '
+                    "silence this warning.",
+                    FutureWarning,
+                    stacklevel=_stacklevel_outside_statsmodels(),
+                )
+            param_index = "integer"
+        return param_index
 
     @property
     def _res_classes(self):
@@ -1690,6 +1851,45 @@ class ETSResults(base.StateSpaceMLEResults):
     def llf(self):
         """Log-likelihood function evaluated at the fitted params"""
         return self._llf
+
+    @contextlib.contextmanager
+    def _constraint_names(self):
+        # The constraint parser of t_test and wald_test reads the parameter
+        # names from the model data, which has none since ETS has no exog.
+        # They are set only during the test, as the data also labels the
+        # results of pandas data.
+        data = self.model.data
+        cov_names = data._cov_names
+        data.cov_names = self.model.param_names
+        try:
+            yield
+        finally:
+            data.cov_names = cov_names
+
+    @Appender(base.StateSpaceMLEResults.t_test.__doc__)
+    def t_test(self, r_matrix, cov_p=None, use_t=None):
+        with self._constraint_names():
+            return super().t_test(r_matrix, cov_p=cov_p, use_t=use_t)
+
+    @Appender(base.StateSpaceMLEResults.wald_test.__doc__)
+    def wald_test(
+        self,
+        r_matrix,
+        cov_p=None,
+        invcov=None,
+        use_f=None,
+        df_constraints=None,
+        scalar=True,
+    ):
+        with self._constraint_names():
+            return super().wald_test(
+                r_matrix,
+                cov_p=cov_p,
+                invcov=invcov,
+                use_f=use_f,
+                df_constraints=df_constraints,
+                scalar=scalar,
+            )
 
     def _get_prediction_params(self, start_idx):
         """Returns internal parameter representation of smoothing parameters and "initial" states for prediction/simulation, that is the states just before the first prediction/simulation step"""
@@ -2115,6 +2315,13 @@ class ETSResults(base.StateSpaceMLEResults):
                of an internal array, which could crash the Python process,
                and otherwise returned NaN values.
 
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, is a number of
+               steps, as an int is. Before, it was used as the index of the
+               last forecast, which raised a KeyError. A bool is not a number
+               of steps: True was one step.
+
         Returns
         -------
         forecast : Series or ndarray
@@ -2122,7 +2329,10 @@ class ETSResults(base.StateSpaceMLEResults):
             by the forecast periods if `endog` is a pandas object, otherwise
             an ndarray.
         """
-        return self._forecast(steps, "end")
+        if not is_int_like(steps):
+            # a date: forecast until it
+            return self.predict(start=self.nobs, end=steps)
+        return self._forecast(int(steps), "end")
 
     def _forecast(self, steps, anchor):
         """
@@ -2152,8 +2362,15 @@ class ETSResults(base.StateSpaceMLEResults):
         # sample (_get_prediction_index raises if end lies before start)
 
         # Handle `dynamic`
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
+        # (False is negative below if start is after the sample)
+        check_dynamic = not isinstance(dynamic, bool)
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
             # Convert to offset relative to start
             dynamic = dynamic - start
         elif isinstance(dynamic, bool):
@@ -2161,6 +2378,12 @@ class ETSResults(base.StateSpaceMLEResults):
                 dynamic = 0
             else:
                 dynamic = end + 1 - start
+        if check_dynamic and dynamic < 0:
+            raise ValueError(
+                "Dynamic prediction cannot begin before start: dynamic must be "
+                "a non-negative offset relative to start, or a date not "
+                "before start."
+            )
 
         # start : index of first predicted value
         # dynamic : offset to first dynamically predicted value
@@ -2169,13 +2392,16 @@ class ETSResults(base.StateSpaceMLEResults):
             start_smooth = None
             end_smooth = None
             nsmooth = 0
-            start_dynamic = start
+            # a start after the sample is forecast from the end of the sample
+            start_dynamic = min(start, end + 1)
         else:
             # dynamic simulations from start + dynamic
             start_smooth = start
             end_smooth = min(start + dynamic - 1, end)
             nsmooth = max(end_smooth - start_smooth + 1, 0)
-            start_dynamic = start + dynamic
+            # but not after end + 1: the forecasts after the sample are
+            # dynamic anyway, and a later dynamic has no effect
+            start_dynamic = min(start + dynamic, end + 1)
         # anchor for simulations is one before start_dynamic
         if start_dynamic == 0:
             anchor_dynamic = "start"
@@ -2223,10 +2449,22 @@ class ETSResults(base.StateSpaceMLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+
+            .. versionchanged:: 0.15.1
+
+               A `dynamic` before `start`, a negative offset or an earlier
+               date, raises a ValueError that says so. With numpy data, it
+               gave more predictions than the periods from `start` to `end`,
+               and pandas data raised a ValueError about their number.
         index : pd.Index, optional
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
+
+            .. versionchanged:: 0.15.1
+
+               The predictions are labelled with `index`. It used to be
+               checked for its length and then ignored.
 
         Returns
         -------
@@ -2266,7 +2504,7 @@ class ETSResults(base.StateSpaceMLEResults):
             y = y[ndiscard:]
 
         # Wrap data / squeeze where appropriate
-        return self.model._wrap_data(y, start, end_dynamic)
+        return self.model._wrap_data(y, start, end_dynamic, index=index)
 
     def get_prediction(
         self,
@@ -2302,18 +2540,38 @@ class ETSResults(base.StateSpaceMLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+
+            .. versionchanged:: 0.15.1
+
+               A `dynamic` before `start`, a negative offset or an earlier
+               date, raises a ValueError that says so. With numpy data, it
+               gave more predictions than the periods from `start` to `end`,
+               and pandas data raised a ValueError about their number.
         index : pd.Index, optional
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
+
+            .. versionchanged:: 0.15.1
+
+               The predicted mean, the prediction intervals and the summary
+               frame are labelled with `index`. It used to be checked for
+               its length and then ignored.
         method : {"exact", "simulated"} or None, optional
             Method to use for calculating prediction intervals. 'exact'
             (default, if available) or 'simulated'. 'exact' is available
             for the models with additive errors and no multiplicative
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
+
+            .. deprecated:: 0.15.1
+
+               Other values are treated as "exact". This is deprecated and
+               they will raise a ValueError after statsmodels 0.17 is
+               released.
         simulate_repetitions : int, optional
             Number of simulation repetitions for calculating prediction
-            intervals when ``method='simulated'``. Default is 1000.
+            intervals when ``method='simulated'``, at least 2. Default is
+            1000.
         **simulate_kwargs
             Additional arguments passed to the ``simulate`` method.
 
@@ -2396,6 +2654,45 @@ class ETSResultsWrapper(wrap.ResultsWrapper):
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
     )
 
+    def __getattribute__(self, attr):
+        # The base class labels the results with the model data, which all
+        # fits of a model share, so the parameter names of a fit with
+        # param_index="names" are attached here
+        how = _PARAM_INDEXED.get(attr)
+        if how is not None:
+            results = object.__getattribute__(self, "_results")
+            if getattr(results, "_named_params", False):
+                names = results.model.param_names
+                return _attach_param_names(getattr(results, attr), names, how)
+        return super().__getattribute__(attr)
+
+
+# The results indexed by parameter and how they are labelled
+_PARAM_INDEXED = {
+    "params": "columns",
+    "bse": "columns",
+    "tvalues": "columns",
+    "pvalues": "columns",
+    "conf_int": "columns",
+    "cov_params": "cov",
+}
+
+
+def _attach_param_names(value, names, how):
+    """Label a result or the output of a method with the parameter names"""
+    if callable(value):
+
+        @functools.wraps(value)
+        def method(*args, **kwargs):
+            return _attach_param_names(value(*args, **kwargs), names, how)
+
+        return method
+    if how == "cov":
+        return pd.DataFrame(value, index=names, columns=names)
+    if value.ndim == 1:
+        return pd.Series(value, index=names)
+    return pd.DataFrame(value, index=names)
+
 
 wrap.populate_wrapper(ETSResultsWrapper, ETSResults)
 
@@ -2427,6 +2724,12 @@ class PredictionResults:
         prediction; starting with this observation and continuing through
         the end of prediction, forecasted endogenous values will be used
         instead.
+
+        .. versionchanged:: 0.15.1
+
+           The ``endog`` attribute holds the observed values of the
+           in-sample periods also when all predictions are dynamic
+           (`dynamic` True or 0). They were NaN.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
@@ -2436,9 +2739,14 @@ class PredictionResults:
         if available) or 'simulated'. 'exact' is available for the models
         with additive errors and no multiplicative components, "ANN", "AAN",
         "AAdN", "ANA", "AAA" and "AAdA".
+
+        .. deprecated:: 0.15.1
+
+           Other values are treated as "exact". This is deprecated and they
+           will raise a ValueError after statsmodels 0.17 is released.
     simulate_repetitions : int, optional
-        Number of simulation repetitions for calculating prediction intervals.
-        Default is 1000.
+        Number of simulation repetitions for calculating prediction intervals
+        when ``method='simulated'``, at least 2. Default is 1000.
     **simulate_kwargs
         Additional arguments passed to the ``simulate`` method.
     """
@@ -2462,6 +2770,20 @@ class PredictionResults:
                 method = "exact"
             else:
                 method = "simulated"
+        else:
+            try:
+                string_like(
+                    method, "method", options=("exact", "simulated"), lower=False
+                )
+            except (TypeError, ValueError):
+                warnings.warn(
+                    'method must be "exact", "simulated" or None, got '
+                    f'{method!r}. Other values are treated as "exact". This is '
+                    "deprecated and will raise a ValueError after statsmodels "
+                    "0.17 is released.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
         self.method = method
 
         (
@@ -2480,9 +2802,14 @@ class PredictionResults:
         self.predicted_mean = results.predict(
             start=start, end=end_dynamic, dynamic=dynamic, index=index
         )
-        self.row_labels = self.predicted_mean.index
-        self.endog = np.empty(nsmooth + ndynamic) * np.nan
-        if nsmooth > 0:
+        # None for numpy data
+        self.row_labels = getattr(self.predicted_mean, "index", None)
+        # one value per prediction: with a start after the sample, the
+        # forecasts before start are not predictions
+        self.endog = np.empty(end_dynamic - start + 1) * np.nan
+        # the observed values of the in-sample periods, also of those that
+        # are predicted dynamically
+        if start <= end:
             self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
             data=results.model.data.__class__(
@@ -2491,11 +2818,20 @@ class PredictionResults:
         )
 
         if self.method == "simulated":
+            # a single path has no variance (ddof=1) and gives no interval
+            simulate_repetitions = int_like(
+                simulate_repetitions, "simulate_repetitions"
+            )
+            if not simulate_repetitions >= 2:
+                raise ValueError(
+                    "simulate_repetitions must be at least 2 for simulated "
+                    f"prediction intervals, got {simulate_repetitions}"
+                )
 
             sim_results = []
             # first, perform "non-dynamic" simulations, i.e., simulations of
             # only one step, based on the previous step
-            if nsmooth > 1:
+            if nsmooth > 0:
                 if start_smooth == 0:
                     anchor = "start"
                 else:
@@ -2520,11 +2856,15 @@ class PredictionResults:
                         **simulate_kwargs,
                     )
                 )
+            # when we are doing out of sample only prediction, start > end + 1,
+            # and we only keep the simulations from start on, as in predict
+            ndiscard = max(start - (end + 1), 0)
             if sim_results and isinstance(sim_results[0], pd.DataFrame):
-                self.simulation_results = pd.concat(sim_results, axis=0)
+                self.simulation_results = pd.concat(sim_results, axis=0).iloc[ndiscard:]
             else:
-                self.simulation_results = np.concatenate(sim_results, axis=0)
-            self.forecast_variance = self.simulation_results.var(axis=1)
+                self.simulation_results = np.concatenate(sim_results, axis=0)[ndiscard:]
+            # ddof=1 is the default of pandas, but not of numpy
+            self.forecast_variance = self.simulation_results.var(axis=1, ddof=1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
@@ -2615,7 +2955,11 @@ class PredictionResults:
         to_include = {}
         to_include["mean"] = self.predicted_mean
         if self.method == "simulated":
-            to_include["mean_numerical"] = np.mean(self.simulation_results, axis=1)
+            # the simulations are labelled with the model's index, not with
+            # an index given to get_prediction
+            to_include["mean_numerical"] = np.mean(
+                np.asarray(self.simulation_results), axis=1
+            )
         to_include["pi_lower"] = pred_int[:, 0]
         to_include["pi_upper"] = pred_int[:, 1]
 
@@ -2628,7 +2972,6 @@ class PredictionResults:
 class PredictionResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
         "predicted_mean": "dates",
-        "simulation_results": "dates",
         "endog": "dates",
     }
     _wrap_attrs = wrap.union_dicts(_attrs)

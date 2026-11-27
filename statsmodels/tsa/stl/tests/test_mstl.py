@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.seasonal import MSTL
+from statsmodels.tsa.seasonal import MSTL, STL
 from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -45,6 +45,13 @@ def test_return_pandas_series_when_input_pandas_and_len_periods_one(data_pd):
     assert isinstance(res.seasonal, pd.Series)
     assert isinstance(res.resid, pd.Series)
     assert isinstance(res.weights, pd.Series)
+
+
+def test_numpy_integer_periods_and_windows(data):
+    res = MSTL(endog=data, periods=5, windows=7).fit()
+    res_np = MSTL(endog=data, periods=np.int64(5), windows=np.int64(7)).fit()
+    assert_allclose(res_np.seasonal, res.seasonal)
+    assert_allclose(res_np.trend, res.trend)
 
 
 def test_seasonal_is_datafame_when_input_pandas_and_multiple_periods(data_pd):
@@ -336,3 +343,55 @@ def test_input_forms(form):
     combined = np.asarray(res.trend) + seasonal + np.asarray(res.resid)
     assert_allclose(combined, y_float, rtol=1e-12)
     assert_allclose(np.asarray(res.observed), y_float, rtol=1e-15)
+
+
+@pytest.mark.parametrize("container", ["series", "dataframe"])
+@pytest.mark.parametrize("index_type", ["period", "datetime"])
+@pytest.mark.parametrize(
+    "freq, datetime_freq, period",
+    [("M", "MS", 12), ("Q", "QS", 4), ("W", "W", 52), ("D", "D", 7)],
+)
+def test_periods_from_index(freq, datetime_freq, period, index_type, container):
+    # a PeriodIndex has no inferred_freq, so without periods MSTL raised
+    # "Unable to determine period from endog". The period is that of the
+    # frequency of the index, as in seasonal_decompose, and the result is the
+    # decomposition with that period. A DatetimeIndex gives the period of its
+    # inferred frequency, as before.
+    y = np.random.default_rng(20261121).standard_normal(3 * period)
+    if index_type == "period":
+        index = pd.period_range("2000-01-01", periods=y.shape[0], freq=freq)
+    else:
+        index = pd.date_range("2000-01-01", periods=y.shape[0], freq=datetime_freq)
+    if container == "series":
+        endog = pd.Series(y, index=index)
+    else:
+        endog = pd.DataFrame({"y": y}, index=index)
+    mod = MSTL(endog)
+    assert list(mod.periods) == [period]
+    res = mod.fit()
+    expected = MSTL(y, periods=period).fit()
+    assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
+    assert_allclose(res.trend, expected.trend, rtol=1e-12)
+    assert res.seasonal.index.equals(index)
+
+
+@pytest.mark.parametrize(
+    "convert", [np.int64, np.array, float], ids=["int64", "0d-array", "float"]
+)
+def test_int_like_periods_and_windows(data, convert):
+    # A 0-d integer array or an integral float is a single period or window,
+    # as an int is. They raised a TypeError. With one period, MSTL is STL.
+    res = MSTL(endog=data, periods=convert(5), windows=convert(7)).fit()
+    assert res.seasonal.ndim == 1
+    expected = STL(data, period=5, seasonal=7).fit()
+    assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
+    assert_allclose(res.trend, expected.trend, rtol=1e-12)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("arg", ["periods", "windows"])
+def test_bool_periods_and_windows(data, value, arg):
+    # A bool is neither a period nor a window
+    kwargs = {"periods": 5, "windows": 7, arg: value}
+    with pytest.raises(TypeError):
+        MSTL(endog=data, **kwargs)

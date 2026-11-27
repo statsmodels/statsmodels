@@ -933,3 +933,16 @@ def test_effectsize_oneway_scalar_vars(use_var, nobs):
     assert_allclose(es, expected, rtol=1e-12)
     es_vector = effectsize_oneway(means, np.full(4, var), nobs, use_var=use_var)
     assert_allclose(es_vector, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("center", [1, np.int64(1), np.float32(1.0)])
+def test_scale_transform_numeric_center(center):
+    x = np.array([[0.5, 2.0], [1.5, -1.0], [4.0, 1.0]])
+    assert_allclose(scale_transform(x, center=center), np.abs(x - 1.0), rtol=1e-15)
+
+
+@pytest.mark.parametrize("center", [True, 1 + 0j], ids=["bool", "complex"])
+def test_scale_transform_center_not_a_number(center):
+    # a bool and a complex number were accepted as numbers (numbers.Number)
+    with pytest.raises(ValueError, match="center should be"):
+        scale_transform(np.array([0.5, 1.5, 4.0]), center=center)

@@ -1206,3 +1206,75 @@ def test_seasonal_mean():
     expected = [[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]]
     assert_allclose(seasonal_mean(x2, 3), expected, rtol=1e-15)
     assert_allclose(seasonal_mean(np.arange(6), 2), [2.0, 3.0], rtol=1e-15)
+
+
+SEASONAL_MEAN_X = np.array([1.0, 2.0, 3.0, 4.0, 5.0, np.nan, 7.0, 8.0, 9.0, 10.0])
+# with period 3, the means of positions (0, 3, 6, 9), (1, 4, 7) and (2, 5, 8),
+# without the NaN at position 5
+SEASONAL_MEAN_EXPECTED = np.array([5.5, 5.0, 6.0])
+
+
+@pytest.mark.parametrize(
+    "form",
+    [
+        "ndarray",
+        "list",
+        "tuple",
+        "series",
+        "series-float-index",
+        "dataframe",
+        "dataframe-2",
+        "ndarray-2d",
+        "ndarray-3d",
+    ],
+)
+def test_seasonal_mean_array_like(form):
+    # a list, tuple, Series or DataFrame raised an AttributeError or a
+    # ValueError from pandas' private nanmean. Time is in the first axis, by
+    # position, also for a pandas object with a float index.
+    x, expected = SEASONAL_MEAN_X, SEASONAL_MEAN_EXPECTED
+    x2, expected2 = np.c_[x, 10 * x], np.c_[expected, 10 * expected]
+    index = pd.date_range("2000-01-01", periods=10, freq="MS")
+    forms = {
+        "ndarray": (x, expected),
+        "list": (x.tolist(), expected),
+        "tuple": (tuple(x), expected),
+        "series": (pd.Series(x, index=index), expected),
+        "series-float-index": (pd.Series(x, index=np.arange(10.0)), expected),
+        "dataframe": (pd.DataFrame({"a": x}, index=index), expected[:, None]),
+        "dataframe-2": (pd.DataFrame(x2, index=index, columns=["a", "b"]), expected2),
+        "ndarray-2d": (x2, expected2),
+        "ndarray-3d": (x2[:, None, :], expected2[:, None, :]),
+    }
+    x_in, expected = forms[form]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = seasonal_mean(x_in, 3)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == expected.shape
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+def test_seasonal_mean_dtype():
+    # float32 and complex x keep their dtype, and integer x has float means,
+    # as before
+    x, expected = SEASONAL_MEAN_X, SEASONAL_MEAN_EXPECTED
+    res = seasonal_mean(x.astype(np.float32), 3)
+    assert res.dtype == np.float32
+    assert_allclose(res, expected, rtol=1e-6)
+    res = seasonal_mean(x + 2j * x, 3)
+    assert res.dtype == np.complex128
+    assert_allclose(res, expected + 2j * expected, rtol=1e-12)
+    # the means of positions (0, 3, 6, 9), (1, 4, 7) and (2, 5, 8)
+    res = seasonal_mean(np.arange(10), 3)
+    assert res.dtype == np.float64
+    assert_allclose(res, [4.5, 4.0, 5.0], rtol=1e-12)
+
+
+def test_seasonal_mean_all_nan_period():
+    # a period without any non-NaN value has a NaN mean, without a warning
+    x = np.array([1.0, np.nan, 3.0, np.nan, 5.0, np.nan])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = seasonal_mean(x, 2)
+    assert_allclose(res, [3.0, np.nan], rtol=1e-12)

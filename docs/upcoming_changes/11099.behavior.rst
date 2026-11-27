@@ -1,0 +1,7 @@
+- :func:`~statsmodels.tsa.ardl.ardl_select_order` with ``glob=True``
+  listed the model without any of the candidate lags with order 0 for
+  every exog variable, which means lag 0, so when that model had the
+  smallest criterion the selected model included lag 0 of every exog
+  variable (and ``causal=True`` raised a ``ValueError``). The model is
+  listed with ``None`` for the exog variables and selected without
+  their lags, so the selected model changes in this case. :pr:`11099`

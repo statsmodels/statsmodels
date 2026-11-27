@@ -9,6 +9,7 @@ from scipy.signal import lfilter
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
 from statsmodels.tsa.arima.estimators.gls import gls
+from statsmodels.tsa.arima.estimators.innovations import innovations
 from statsmodels.tsa.arima_process import arma_acovf
 
 
@@ -381,9 +382,9 @@ def test_alternate_arma_estimators_invalid():
     with pytest.raises(ValueError):
         gls(endog, exog, order=([0, 1], 0, 0), arma_estimator="burg")
 
-    # Innovations (MA) can only handle consecutive MA
-    with pytest.raises(ValueError):
-        gls(endog, exog, order=(1, 0, 0), arma_estimator="innovations")
+    # Innovations can only handle consecutive AR and MA
+    with pytest.raises(ValueError, match="non-consecutive autoregressive"):
+        gls(endog, exog, order=([0, 1], 0, 0), arma_estimator="innovations")
     with pytest.raises(ValueError):
         gls(
             endog,
@@ -435,12 +436,12 @@ def test_arma_kwargs():
     assert msg.endswith("FACTR*EPSMCH")
 
 
-@pytest.mark.parametrize("arma_estimator", ["burg", "innovations"])
+@pytest.mark.parametrize("arma_estimator", ["burg"])
 def test_gls_arma_estimator_kwargs_not_supported(arma_estimator):
     rng = np.random.default_rng(20261133)
     endog = rng.standard_normal(100)
     exog = rng.standard_normal((100, 1))
-    order = (1, 0, 0) if arma_estimator == "burg" else (0, 0, 1)
+    order = (1, 0, 0)
     with pytest.raises(ValueError, match="arma_estimator_kwargs not supported"):
         gls(
             endog,
@@ -449,6 +450,31 @@ def test_gls_arma_estimator_kwargs_not_supported(arma_estimator):
             arma_estimator=arma_estimator,
             arma_estimator_kwargs={"demean": False},
         )
+
+
+def test_gls_innovations_arma():
+    # The first iteration fits the ARMA model to the OLS residuals with the
+    # innovations estimator, passing it `arma_estimator_kwargs`
+    endog = lake.copy()
+    exog = np.c_[np.ones_like(endog), np.arange(1, len(endog) + 1) * 1.0]
+    res = gls(
+        endog,
+        exog,
+        order=(1, 0, 1),
+        arma_estimator="innovations",
+        arma_estimator_kwargs={"m": 10},
+        n_iter=1,
+    ).other_results
+
+    resid = endog - exog @ np.linalg.lstsq(exog, endog, rcond=None)[0]
+    desired = innovations(
+        resid, ar_order=1, ma_order=1, demean=False, m=10
+    ).parameters[-1]
+    actual = res.params[1]
+    assert_allclose(actual.ar_params, desired.ar_params)
+    assert_allclose(actual.ma_params, desired.ma_params)
+    assert_allclose(actual.sigma2, desired.sigma2)
+    assert_equal(res.arma_results[1].spec.order, (1, 0, 1))
 
 
 @pytest.mark.parametrize(
