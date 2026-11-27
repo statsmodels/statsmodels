@@ -41,6 +41,34 @@ class TestDistributions:
         f2 = StepFunction(x, y, side="right")
         npt.assert_almost_equal(f2([1, 2, 3, 4, 5]), [7, 10, 13, 14, 15])
 
+    @pytest.mark.parametrize(
+        "side, expected",
+        [
+            ("left", [3, 3, 3, 10, 10, 20, 20]),
+            ("right", [3, 3, 10, 10, 20, 20, 20]),
+        ],
+    )
+    def test_stepfunction_infinite_boundaries(self, side, expected):
+        f = StepFunction([1, 2], [10, 20], ival=3, side=side)
+        time = np.array([-np.inf, 0, 1, 1.5, 2, 3, np.inf])
+        npt.assert_array_equal(f(time), expected)
+
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_stepfunction_negative_infinity_scalar(self, side):
+        f = StepFunction([1, 2], [10, 20], ival=3, side=side)
+        assert f(-np.inf) == 3
+
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_ecdf_negative_infinity(self, side):
+        ecdf = ECDF([1, 2], side=side)
+        assert ecdf(-np.inf) == 0
+
+    def test_stepfunction_repeated_negative_infinity(self):
+        x = [-np.inf] * 253 + [1, 2, 3]
+        y = np.arange(len(x))
+        f = StepFunction(x[::-1], y[::-1], ival=3)
+        assert f(-np.inf) == 3
+
     def test_monotone_fn_inverter(self):
         x = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 

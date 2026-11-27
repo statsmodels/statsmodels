@@ -1,0 +1,4 @@
+- ``MarkovSwitchingParams`` stores the counts in ``k_parameters`` and
+  ``k_params`` and the bounds of its slices as Python ints, so
+  ``MarkovSwitching.k_params`` is an int. They were NumPy integers.
+  :pr:`11283`

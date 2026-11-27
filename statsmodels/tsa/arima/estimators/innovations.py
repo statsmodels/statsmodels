@@ -133,7 +133,7 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
             " seasonal or otherwise non-consecutive AR orders."
         )
 
-    sample_acovf = acovf(endog, fft=True)
+    sample_acovf = acovf(endog, fft=True, demean=demean)
 
     # With AR terms or a given recursion level, all of the estimates use the
     # coefficients of the same MA(m) model

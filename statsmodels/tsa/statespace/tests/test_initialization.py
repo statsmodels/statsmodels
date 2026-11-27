@@ -435,7 +435,7 @@ def test_uses_stationary():
     assert init._uses_stationary()
 
     nested = Initialization(3)
-    nested.set((0, 1), init_inner := Initialization(2))
+    nested.set((0, 2), init_inner := Initialization(2))
     init_inner.set(0, "known", constant=[0.0])
     init_inner.set(1, "stationary")
     nested.set(2, "diffuse")
@@ -692,3 +692,183 @@ def test_set_unset_bool_float_index(index, method):
             init.set(index, "diffuse")
         else:
             init.unset(index)
+
+
+def _set_object_reference(kind):
+    if kind == "known":
+        return Initialization(
+            2, "known", constant=[1.0, 2.0], stationary_cov=[[2.0, 0.5], [0.5, 1.0]]
+        )
+    elif kind == "approximate_diffuse":
+        return Initialization(
+            2, "approximate_diffuse", approximate_diffuse_variance=50.0
+        )
+    elif kind == "mixed":
+        init = Initialization(2)
+        init.set(0, "diffuse")
+        init.set(1, "stationary")
+        return init
+    return Initialization(2, kind)
+
+
+@pytest.mark.parametrize(
+    "kind", ["known", "diffuse", "approximate_diffuse", "stationary", "mixed"]
+)
+@pytest.mark.parametrize("use_constructor", [False, True])
+def test_set_initialization_object_all_states(kind, use_constructor):
+    # An Initialization object given for all the states is used as their
+    # initialization, as it is for a block of states
+    mod = sarimax.SARIMAX(np.zeros(10), order=(2, 0, 0))
+    mod.update([0.5, -0.2, 1.0])
+    reference = _set_object_reference(kind)
+    desired = reference(model=mod.ssm)
+    if use_constructor:
+        init = Initialization(2, reference)
+    else:
+        init = Initialization(2)
+        init.set(None, reference)
+    assert init.initialized
+    check_initialization(mod, init, *desired)
+
+
+def test_set_initialization_object_replaces_global():
+    known = {"constant": [1.0, 2.0], "stationary_cov": [[2.0, 0.5], [0.5, 1.0]]}
+    init = Initialization(2, "known", **known)
+    init.set(None, Initialization(2, "diffuse"))
+    assert init.initialization_type is None
+    a, Pinf, Pstar = init()
+    assert_allclose(a, np.zeros(2))
+    assert_allclose(Pinf, np.eye(2))
+    assert_allclose(Pstar, np.zeros((2, 2)))
+
+    # A global initialization replaces the block of all the states
+    init.set(None, "known", **known)
+    assert init.blocks == {}
+    a, Pinf, Pstar = init()
+    assert_allclose(a, known["constant"])
+    assert_allclose(Pinf, np.zeros((2, 2)))
+    assert_allclose(Pstar, known["stationary_cov"])
+    init.unset(None)
+    assert not init.initialized
+
+    init.set(None, Initialization(2, "diffuse"))
+    init.unset(None)
+    assert not init.initialized
+    assert init.blocks == {}
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"initialization_type": "foo"},
+        {"initialization_type": "known"},
+        {"initialization_type": "known", "stationary_cov": np.eye(3)},
+        {
+            "initialization_type": "known",
+            "constant": [1.0, 2.0, 3.0],
+            "stationary_cov": np.eye(2),
+        },
+        {
+            "initialization_type": "approximate_diffuse",
+            "approximate_diffuse_variance": 50.0,
+            "constant": [1.0],
+        },
+        {"initialization_type": "stationary", "constant": [1.0, 2.0]},
+        {"initialization_type": "diffuse", "stationary_cov": np.eye(2)},
+    ],
+)
+@pytest.mark.parametrize("previous", [None, "approximate_diffuse"])
+def test_failed_set_leaves_initialization(kwargs, previous):
+    # A call that raises does not change the initialization
+    init = Initialization(2)
+    if previous is not None:
+        init.set(None, previous, approximate_diffuse_variance=7.0)
+    initialization_type = init.initialization_type
+    initialized = init.initialized
+    variance = init.approximate_diffuse_variance
+    constant = init.constant.copy()
+    stationary_cov = init.stationary_cov.copy()
+
+    with pytest.raises(ValueError):
+        init.set(None, **kwargs)
+    assert init.initialization_type == initialization_type
+    assert init.initialized == initialized
+    assert_allclose(init.approximate_diffuse_variance, variance, rtol=1e-12)
+    assert_allclose(init.constant, constant, rtol=1e-12)
+    assert_allclose(init.stationary_cov, stationary_cov, rtol=1e-12)
+    if previous is not None:
+        # The previous initialization, with its variance, is still used
+        assert_allclose(init()[2], 7.0 * np.eye(2), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "index, k_block, k_object",
+    [((0, 2), 2, 1), ((0, 1), 1, 2), (1, 1, 2), (None, 3, 1), (None, 3, 2)],
+    ids=["block-of-2-one", "block-of-1-two", "int-two", "all-one", "all-two"],
+)
+def test_set_object_size_mismatch(index, k_block, k_object):
+    # An Initialization object must have as many states as the block. An
+    # object with one state was used for every state of the block when the
+    # initialization was computed in Python (and for only the first state by
+    # the Kalman filter), and a larger object raised only when it was used.
+    init = Initialization(3)
+    block = Initialization(
+        k_object,
+        "known",
+        constant=np.arange(1.0, k_object + 1),
+        stationary_cov=np.eye(k_object),
+    )
+    match = f"has {k_object} states, but the block of states .* has {k_block}"
+    with pytest.raises(ValueError, match=match):
+        init.set(index, block)
+    # Nothing was set
+    assert init.blocks == {}
+    assert init.initialization_type is None
+    assert not init.initialized
+
+
+def test_set_object_size_mismatch_keeps_global():
+    # The check comes before a global initialization is replaced
+    init = Initialization(2)
+    init.set(None, "approximate_diffuse", approximate_diffuse_variance=7.0)
+    with pytest.raises(ValueError, match="has 1 states"):
+        init.set(None, Initialization(1, "diffuse"))
+    assert init.initialization_type == "approximate_diffuse"
+    assert init.blocks == {}
+    assert_allclose(init()[2], 7.0 * np.eye(2), rtol=1e-12)
+
+
+def test_set_object_size_match():
+    # An object with as many states as the block initializes the block, in
+    # Python and in the Kalman filter, as the block set with the same values
+    mod = sarimax.SARIMAX(np.zeros(10), order=(3, 0, 0))
+    cov = np.array([[4.0, 1.0], [1.0, 3.0]])
+    init = Initialization(3)
+    init.set((0, 2), Initialization(2, "known", constant=[1.0, 2.0], stationary_cov=cov))
+    init.set(2, "diffuse")
+
+    direct = Initialization(3)
+    direct.set((0, 2), "known", constant=[1.0, 2.0], stationary_cov=cov)
+    direct.set(2, "diffuse")
+    a, Pinf, Pstar = direct()
+    assert_allclose(a, [1.0, 2.0, 0.0], rtol=1e-12)
+    check_initialization(mod, init, a, Pinf, Pstar)
+
+
+@pytest.mark.parametrize("method", ["set", "unset"])
+@pytest.mark.parametrize(
+    "index", [2, np.int64(2), -1], ids=["k_states", "int64-k_states", "negative"]
+)
+def test_set_unset_index_out_of_range(index, method):
+    # unset accepted an index equal to k_states and did nothing, since the
+    # slice of states it selected was empty. set raised.
+    init = Initialization(2)
+    init.set(1, "diffuse")
+    with pytest.raises(ValueError, match="Invalid index"):
+        if method == "set":
+            init.set(index, "diffuse")
+        else:
+            init.unset(index)
+    assert list(init.blocks) == [(1,)]
+    init.unset(1)
+    assert list(init.blocks) == []
