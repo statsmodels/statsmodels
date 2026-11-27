@@ -4717,7 +4717,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 comparison = pd.DataFrame(
                     np.concatenate([comparison, extra], axis=0),
                     index=ix,
-                    columns=self.model.endog_names,
+                    # endog_names is a str for a univariate model
+                    columns=np.atleast_1d(self.model.endog_names),
                 )
 
             # Get the results object
@@ -4817,6 +4818,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             An updated dataset with updated and/or revised data from which the
             news can be computed, or an updated or previous results object
             to use in computing the news.
+
+            .. versionchanged:: 0.15.1
+
+               A dataset for a univariate model works when `exog` has more
+               periods than the dataset. It raised a TypeError.
         impact_date : int, str, or datetime, optional
             A single specific period of impacts from news and revisions to
             compute. Can also be a date string to parse or a datetime type.
