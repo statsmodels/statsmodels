@@ -1,0 +1,5 @@
+- After ``bind`` of new data to a state space representation that had
+  already been filtered (for example ``mod.ssm.bind(new_endog)``), the
+  filter and smoother kept using the old data and its missing values;
+  with more observations they raised ``IndexError``. The next run uses
+  the new data. :pr:`11153`
