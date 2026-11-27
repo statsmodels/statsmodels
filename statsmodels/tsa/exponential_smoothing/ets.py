@@ -752,6 +752,7 @@ class ETSModel(base.StateSpaceMLEModel):
         else:
             if not isinstance(bounds, (dict, OrderedDict)):
                 raise ValueError("bounds must be a dictionary")
+            bounds = dict(bounds)
             for key in bounds:
                 if key not in self.param_names:
                     raise ValueError(f"Invalid key: {key} in bounds dictionary")
@@ -1103,6 +1104,16 @@ class ETSModel(base.StateSpaceMLEModel):
 
         The fit is performed using the L-BFGS algorithm.
 
+        .. versionchanged:: 0.15.1
+
+           A fit does not change the bounds of the model. Before, it added
+           the values of the fixed parameters, for example from
+           ``fix_params``, and of the parameters that are not estimated,
+           such as the initial states of a "heuristic" initialization, to
+           the bounds. They stayed fixed in later fits of the model, also
+           after ``set_initialization_method``, and the dictionary passed
+           as ``bounds`` was changed.
+
         Parameters
         ----------
         start_params : array_like, optional
@@ -1186,23 +1197,30 @@ class ETSModel(base.StateSpaceMLEModel):
             final_params = np.asarray(list(self._fixed_params.values()))
             mlefit = Bunch(params=start_params, mle_retvals=None, mle_settings=None)
         else:
-            internal_start_params = self._convert_and_bound_start_params(start_params)
-            bounds = self._setup_bounds()
+            # The bounds of the fixed parameters and of the parameters that
+            # are not in the model are added to a copy of the bounds, as they
+            # only apply to this fit
+            with self._use_copy_of_bounds():
+                internal_start_params = self._convert_and_bound_start_params(
+                    start_params
+                )
+                bounds = self._setup_bounds()
 
-            # check if we need to use the starred parameters
-            use_beta_star = "smoothing_trend" not in self.bounds
-            if use_beta_star:
-                internal_start_params[1] /= internal_start_params[0]
-            use_gamma_star = "smoothing_seasonal" not in self.bounds
-            if use_gamma_star:
-                internal_start_params[2] /= 1 - internal_start_params[0]
+                # check if we need to use the starred parameters
+                use_beta_star = "smoothing_trend" not in self.bounds
+                if use_beta_star:
+                    internal_start_params[1] /= internal_start_params[0]
+                use_gamma_star = "smoothing_seasonal" not in self.bounds
+                if use_gamma_star:
+                    internal_start_params[2] /= 1 - internal_start_params[0]
 
-            # check if we have fixed parameters and remove them from the
-            # parameter vector. The last initial seasonal is removed as well
-            # if it is computed from the other initial seasonals (see the
-            # implementation notes above); its value in `fixed_values` is
-            # updated in every call of `_loglike_internal`.
-            derive_last_seasonal = self._derive_last_initial_seasonal
+                # check if we have fixed parameters and remove them from the
+                # parameter vector. The last initial seasonal is removed as
+                # well if it is computed from the other initial seasonals (see
+                # the implementation notes above); its value in
+                # `fixed_values` is updated in every call of
+                # `_loglike_internal`.
+                derive_last_seasonal = self._derive_last_initial_seasonal
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
@@ -1367,6 +1385,16 @@ class ETSModel(base.StateSpaceMLEModel):
             yield
         finally:
             self.loglike = external_loglike
+
+    @contextlib.contextmanager
+    def _use_copy_of_bounds(self):
+        """Work on a copy of the bounds, restoring the bounds on exit"""
+        model_bounds = self.bounds
+        self.bounds = dict(model_bounds)
+        try:
+            yield
+        finally:
+            self.bounds = model_bounds
 
     def loglike(self, params, **kwargs):
         r"""

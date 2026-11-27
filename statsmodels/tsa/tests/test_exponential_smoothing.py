@@ -3261,6 +3261,60 @@ def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
     assert np.max(np.abs(pred - other)) > 1e-3
 
 
+@pytest.mark.parametrize("how", ["fix_params", "fit_constrained"])
+@pytest.mark.parametrize("user_bounds", [False, True])
+def test_fit_after_fit_with_fixed_params(oildata, how, user_bounds):
+    # A fit with fixed parameters added their values to the model's bounds,
+    # so a later fit kept them fixed although fixed_params was empty, and
+    # the dictionary passed as bounds was changed
+    level_bounds = (0.1, 0.9)
+    bounds = {"smoothing_level": level_bounds} if user_bounds else None
+    model = ETSModel(oildata, trend="add", bounds=bounds)
+    if how == "fix_params":
+        with model.fix_params({"smoothing_trend": 0.05}):
+            res_fixed = model.fit(disp=False, param_index="integer")
+    else:
+        res_fixed = model.fit_constrained(
+            {"smoothing_trend": 0.05}, disp=False, param_index="integer"
+        )
+    assert res_fixed.fixed_params == ["smoothing_trend"]
+    assert_allclose(res_fixed.params.iloc[1], 0.05, rtol=1e-12)
+
+    fresh_bounds = {"smoothing_level": (0.1, 0.9)} if user_bounds else None
+    fresh = ETSModel(oildata, trend="add", bounds=fresh_bounds)
+    assert list(model.bounds) == list(fresh.bounds)
+    for key in fresh.bounds:
+        assert_allclose(model.bounds[key], fresh.bounds[key], rtol=1e-12)
+    if user_bounds:
+        # the dictionary passed by the user is not changed
+        assert list(bounds) == ["smoothing_level"]
+        assert bounds["smoothing_level"] is level_bounds
+
+    res = model.fit(disp=False, param_index="integer")
+    expected = fresh.fit(disp=False, param_index="integer")
+    assert res.fixed_params == []
+    # The same optimization from the same start; the tolerance only allows
+    # for rounding. The bug kept smoothing_trend at 0.05 instead of 1e-4.
+    assert_allclose(res.params, expected.params, rtol=1e-6)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+
+def test_fit_after_initialization_method_change(austourists):
+    # The initial states of a heuristic fit were added to the bounds, so an
+    # estimated fit after set_initialization_method("estimated") kept them
+    # at their heuristic values
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(austourists, initialization_method="heuristic", **kwargs)
+    model.fit(disp=False, param_index="integer")
+    assert model.bounds == {}
+    model.set_initialization_method("estimated")
+    res = model.fit(disp=False, param_index="integer")
+    expected = ETSModel(austourists, **kwargs).fit(disp=False, param_index="integer")
+    # the same optimization from the same start, see above
+    assert_allclose(res.params, expected.params, rtol=1e-6)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+
 @pytest.mark.parametrize("method", ["foo", "Simulated", "EXACT", 1])
 def test_get_prediction_unknown_method(oildata, method):
     # An unknown method was accepted silently and treated as "exact"; it
