@@ -717,8 +717,9 @@ def _lp_by_hand(y, exog, shock_idx, lags, horizons, trend):
     t = np.arange(lags, nobs - horizons)
     irfs = np.empty((horizons + 1, y.shape[1]))
     stderr = np.empty_like(irfs)
-    cols = [y[t, shock_idx]] + [y[t - lag, i] for lag in range(1, lags + 1)
-                                for i in range(y.shape[1])]
+    cols = [y[t, shock_idx]] + [
+        y[t - lag, i] for lag in range(1, lags + 1) for i in range(y.shape[1])
+    ]
     if exog is not None:
         cols.append(exog[t])
     if trend in ("c", "ct"):

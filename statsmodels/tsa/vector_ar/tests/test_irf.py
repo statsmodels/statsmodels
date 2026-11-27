@@ -401,9 +401,7 @@ def test_plot_impulse_response_selection(
 def test_plot_simulated_bands(macro_res, close_figures, stderr_type, method, orth):
     irf = macro_res.irf(PERIODS)
     kwargs = {"orth": orth, "repl": 30, "signif": 0.1}
-    fig = irf.plot(
-        stderr_type=stderr_type, rng=np.random.default_rng(11), **kwargs
-    )
+    fig = irf.plot(stderr_type=stderr_type, rng=np.random.default_rng(11), **kwargs)
     band = getattr(irf, method)(rng=np.random.default_rng(11), **kwargs)
     irfs = irf.orth_irfs if orth else irf.irfs
     for i in range(3):
