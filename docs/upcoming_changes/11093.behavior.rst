@@ -1,0 +1,19 @@
+- With ``em_initialization=False``, ``DynamicFactorMQ.fit`` and
+  ``fit_em`` switch every block of factors with non-stationary
+  parameters to a diffuse initialization and restart. In models of
+  monthly data without idiosyncratic AR(1) terms, only the first
+  block of factors was checked, and only with a global
+  initialization, so a non-stationary block could keep its
+  stationary initialization (with a loglikelihood of 0, after which
+  the EM iterations stopped at the apparent decrease of the
+  loglikelihood); fits of such models with several blocks of
+  factors change. With idiosyncratic AR(1) terms or quarterly
+  variables, a global initialization (for example
+  ``initialization="stationary"``) raised a ``KeyError``.
+  :pr:`11093`
+- With ``transformed=False`` and ``em_initialization=False``,
+  ``DynamicFactorMQ.fit`` and ``fit_em`` restarted the EM iterations
+  (after switching states to a diffuse initialization) from the
+  start parameters transformed a second time. They restart from the
+  start parameters transformed once, so these fits change.
+  :pr:`11093`

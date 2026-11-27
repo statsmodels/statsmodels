@@ -1,0 +1,14 @@
+- With ``em_initialization=False``, ``DynamicFactorMQ.fit`` and
+  ``fit_em`` did not detect a negative or complex eigenvalue outside
+  the unit circle in the transition of a block of factors or of the
+  block of quarterly idiosyncratic AR(1) terms after an EM step (the
+  eigenvalues, not their moduli, were compared with one), so the block
+  kept its stationary initialization (with a loglikelihood of 0, after
+  which the EM iterations stopped at the apparent decrease of the
+  loglikelihood) instead of being switched to a diffuse initialization
+  with a restart. Fits of such models change. :pr:`11120`
+- After such a restart, ``DynamicFactorMQ.fit`` and ``fit_em``
+  replaced the model's initialization by the default initialization,
+  and changed an initialization set by block in place (the switched
+  states were diffuse). The model keeps its initialization,
+  unchanged. :pr:`11120`

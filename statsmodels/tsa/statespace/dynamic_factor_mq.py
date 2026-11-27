@@ -7,6 +7,7 @@ License: BSD-3
 from statsmodels.compat.pandas import MONTH_END, QUARTER_END
 
 from collections import OrderedDict
+from copy import deepcopy
 from warnings import warn
 
 import numpy as np
@@ -2580,6 +2581,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
+
+            .. versionchanged:: 0.15.1
+
+               With ``transformed=False``, the start parameters are
+               transformed once. When the EM iterations restarted (see
+               `em_initialization`), they restarted from the transformed
+               start parameters transformed a second time.
         cov_type : str, optional
             The `cov_type` keyword governs the method for calculating the
             covariance matrix of parameter estimates. Can be one of:
@@ -2631,7 +2639,25 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             non-stationary parameters for states with a stationary
             initialization, these states are switched to a diffuse
             initialization (with an `EstimationWarning`) and the EM
-            iterations restart.
+            iterations restart. The switched initialization is used for
+            this fit only; the model keeps its initialization.
+
+            .. versionchanged:: 0.15.1
+
+               Every block of factors is checked, also with a global
+               initialization. In models without idiosyncratic AR(1) terms
+               and quarterly variables, only the first block of factors was
+               checked, and only with a global initialization, so a
+               non-stationary block could keep its stationary initialization
+               (with a loglikelihood of 0). In other models, a global
+               initialization raised an error. A block of factors, and the
+               block of quarterly idiosyncratic AR(1) terms, is
+               non-stationary if an eigenvalue of its transition matrix has
+               a modulus of one or more; a negative or complex eigenvalue
+               with a modulus above one was not detected. After a restart,
+               the model's initialization was replaced by the default
+               initialization, and an initialization set by block was
+               changed in place (the switched states were diffuse).
         mstep_method : {'missing', 'nonmissing'}, optional
             The EM algorithm maximization step. If there are no NaN values
             in the dataset, this can be set to "nonmissing" (which is slightly
@@ -2722,38 +2748,40 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 self.update(out[1])
                 switch_init = []
                 T = self["transition"]
-                init = self.ssm.initialization
+                # States are switched in a copy, so that the model's
+                # initialization (which can be the user's object) is kept
+                init = deepcopy(self.ssm.initialization)
                 iloc = np.arange(self.k_states)
 
-                # We may only have global initialization if we have no
-                # quarterly variables and idiosyncratic_ar1=False
-                if self.k_endog_Q == 0 and not self.idiosyncratic_ar1:
-                    block = s.factor_blocks[0]
-                    if init.initialization_type == "stationary":
+                # A global initialization applies to every block of states. A
+                # global stationary initialization is the stationary
+                # initialization of each block (the transition and state
+                # covariance matrices are block diagonal), so the blocks are
+                # used instead, and a single block can be switched to diffuse.
+                # (With a single block of factors and no other states, the
+                # initialization of the blocks is again global.)
+                if init.initialization_type == "stationary":
+                    init = self._default_initialization()
+                global_type = init.initialization_type
+
+                # Factor blocks
+                for block in s.factor_blocks:
+                    b = tuple(iloc[block["factors"]])
+                    init_type = global_type or init.blocks[b].initialization_type
+                    if init_type == "stationary":
                         Tb = T[block["factors"], block["factors"]]
-                        if not np.all(np.linalg.eigvals(Tb) < (1 - 1e-10)):
+                        if not np.all(np.abs(np.linalg.eigvals(Tb)) < (1 - 1e-10)):
                             init.set(block["factors"], "diffuse")
                             switch_init.append(
                                 "factor block:"
                                 f" {tuple(block.factor_names)}")
-                else:
-                    # Factor blocks
-                    for block in s.factor_blocks:
-                        b = tuple(iloc[block["factors"]])
-                        init_type = init.blocks[b].initialization_type
-                        if init_type == "stationary":
-                            Tb = T[block["factors"], block["factors"]]
-                            if not np.all(np.linalg.eigvals(Tb) < (1 - 1e-10)):
-                                init.set(block["factors"], "diffuse")
-                                switch_init.append(
-                                    "factor block:"
-                                    f" {tuple(block.factor_names)}")
 
                 if self.idiosyncratic_ar1:
                     endog_names = self._get_endog_names(as_string=True)
                     # Monthly variables
                     for j in range(s["idio_ar_M"].start, s["idio_ar_M"].stop):
-                        init_type = init.blocks[(j,)].initialization_type
+                        init_type = (
+                            global_type or init.blocks[(j,)].initialization_type)
                         if init_type == "stationary":
                             if not np.abs(T[j, j]) < (1 - 1e-10):
                                 init.set(j, "diffuse")
@@ -2765,10 +2793,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     # Quarterly variables
                     if self.k_endog_Q > 0:
                         b = tuple(iloc[s["idio_ar_Q"]])
-                        init_type = init.blocks[b].initialization_type
+                        init_type = (
+                            global_type or init.blocks[b].initialization_type)
                         if init_type == "stationary":
                             Tb = T[s["idio_ar_Q"], s["idio_ar_Q"]]
-                            if not np.all(np.linalg.eigvals(Tb) < (1 - 1e-10)):
+                            if not np.all(np.abs(np.linalg.eigvals(Tb)) < (1 - 1e-10)):
                                 init.set(s["idio_ar_Q"], "diffuse")
                                 switch_init.append(
                                     "idiosyncratic AR(1) for the"
@@ -2781,8 +2810,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                          " switched to diffuse for the following: "
                          f" {switch_init}, and fitting was restarted.",
                          EstimationWarning, stacklevel=2)
+                    # The model's initialization is restored after the restart
+                    base_init = self.ssm.initialization
+                    self.ssm.initialization = init
+                    # The parameters in `params` are transformed
                     results = self.fit_em(
-                        start_params=params[-1], transformed=transformed,
+                        start_params=params[-1], transformed=True,
                         cov_type=cov_type, cov_kwds=cov_kwds,
                         maxiter=maxiter, tolerance=tolerance,
                         em_initialization=em_initialization,
@@ -2791,7 +2824,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                         low_memory=low_memory,
                         llf_decrease_action=llf_decrease_action,
                         llf_decrease_tolerance=llf_decrease_tolerance)
-                    self.ssm.initialize(self._default_initialization())
+                    self.ssm.initialization = base_init
                     return results
 
             # Check for decrease in the log-likelihood
