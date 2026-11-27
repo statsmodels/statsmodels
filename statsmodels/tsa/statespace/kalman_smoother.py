@@ -470,6 +470,17 @@ class KalmanSmoother(KalmanFilter):
         Returns
         -------
         SmootherResults object
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           With an exact diffuse initialization and a time-varying transition
+           matrix, the backward recursion in the diffuse periods uses the
+           transition matrix of the previous period, :math:`T_{t-1}`, as it
+           does in the other periods. It used :math:`T_t`, so the smoothed
+           state, its covariance matrix and the smoothed disturbances were
+           wrong in every diffuse period but the last.
         """
         unused = {"results": results, "run_filter": run_filter,
                   "prefix": prefix}
@@ -652,6 +663,11 @@ class SmootherResults(FilterResults):
     smoothed_state_autocov : ndarray
         The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
+
+        .. versionchanged:: 0.15.1
+
+           It is computed in the periods of an exact diffuse initialization,
+           where it was left at zero or at the values of an earlier run.
     smoothed_measurement_disturbance : ndarray
         The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
