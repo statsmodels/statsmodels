@@ -2357,6 +2357,11 @@ class ETSResults(base.StateSpaceMLEResults):
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
 
+            .. versionchanged:: 0.15.1
+
+               The predictions are labelled with `index`. It used to be
+               checked for its length and then ignored.
+
         Returns
         -------
         forecast : ndarray or Series
@@ -2395,7 +2400,7 @@ class ETSResults(base.StateSpaceMLEResults):
             y = y[ndiscard:]
 
         # Wrap data / squeeze where appropriate
-        return self.model._wrap_data(y, start, end_dynamic)
+        return self.model._wrap_data(y, start, end_dynamic, index=index)
 
     def get_prediction(
         self,
@@ -2435,6 +2440,12 @@ class ETSResults(base.StateSpaceMLEResults):
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
+
+            .. versionchanged:: 0.15.1
+
+               The predicted mean, the prediction intervals and the summary
+               frame are labelled with `index`. It used to be checked for
+               its length and then ignored.
         method : {"exact", "simulated"} or None, optional
             Method to use for calculating prediction intervals. 'exact'
             (default, if available) or 'simulated'. 'exact' is available
@@ -2808,7 +2819,11 @@ class PredictionResults:
         to_include = {}
         to_include["mean"] = self.predicted_mean
         if self.method == "simulated":
-            to_include["mean_numerical"] = np.mean(self.simulation_results, axis=1)
+            # the simulations are labelled with the model's index, not with
+            # an index given to get_prediction
+            to_include["mean_numerical"] = np.mean(
+                np.asarray(self.simulation_results), axis=1
+            )
         to_include["pi_lower"] = pred_int[:, 0]
         to_include["pi_upper"] = pred_int[:, 1]
 

@@ -224,7 +224,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         """Not implemented for state space models"""
         raise NotImplementedError
 
-    def _wrap_data(self, data, start_idx, end_idx, names=None):
+    def _wrap_data(self, data, start_idx, end_idx, names=None, index=None):
         # TODO: check if this is reasonable for statespace
         # squeezing data: data may be:
         # - m x n: m dates, n simulations -> squeeze does nothing
@@ -234,7 +234,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if data.ndim > 1 and data.shape[1] == 1:
             data = np.squeeze(data, axis=1)
         if self.use_pandas:
-            _, _, _, index = self._get_prediction_index(start_idx, end_idx)
+            _, _, _, index = self._get_prediction_index(start_idx, end_idx, index)
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:
