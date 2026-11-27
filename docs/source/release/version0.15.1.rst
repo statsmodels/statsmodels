@@ -492,6 +492,14 @@ New functions and methods
   Fay and Graubard (2001) and Morel, Bokossa and Neerchal (2003), with the
   constants ``b = 0.75``, ``d = 2`` and ``r = 1``. :issue:`1183`,
   :pr:`10794`
+- Add :class:`~statsmodels.genmod.distributed_gee.DistributedGEE`, a GEE fit
+  to data split into partitions of whole clusters, holding one partition in
+  memory at a time. It combines the fits of the partitions by aggregated
+  estimating equations (Lin and Xi, 2011) and refines the estimate with
+  Newton steps over the partitions. With an independence working
+  correlation the estimate and its robust covariance converge to those of
+  ``GEE``. It is available from ``statsmodels.genmod.api``.
+  :issue:`10793`, :pr:`10830`
 
 Performance
 -----------

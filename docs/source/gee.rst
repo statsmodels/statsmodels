@@ -76,6 +76,16 @@ Model Class
    NominalGEE
    OrdinalGEE
 
+.. module:: statsmodels.genmod.distributed_gee
+   :synopsis: Divide-and-conquer GEE
+
+.. currentmodule:: statsmodels.genmod.distributed_gee
+
+.. autosummary::
+   :toctree: generated/
+
+   DistributedGEE
+
 .. module:: statsmodels.genmod.qif
    :synopsis: Quadratic inference functions
 
@@ -96,6 +106,13 @@ Results Classes
 
    GEEResults
    GEEMargins
+
+.. currentmodule:: statsmodels.genmod.distributed_gee
+
+.. autosummary::
+   :toctree: generated/
+
+   DistributedGEEResults
 
 .. currentmodule:: statsmodels.genmod.qif
 
