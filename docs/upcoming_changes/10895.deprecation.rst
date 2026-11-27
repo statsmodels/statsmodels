@@ -1,0 +1,3 @@
+- ``useic=True`` in :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter`
+  with two or more AR lags, which set the last presample value to 1, warns
+  with a ``FutureWarning`` and will raise in statsmodels 0.17. :pr:`10895`

@@ -2163,6 +2163,84 @@ def test_fftconvolveinv_longer_in2(mode, start, stop):
     assert_allclose(res, geometric[start:stop], rtol=1e-12)
 
 
+@pytest.mark.parametrize(
+    "useic",
+    [[1.0], [1.5, -2.0], np.array([2.0])],
+    ids=["list", "list-2", "ndarray"],
+)
+def test_miso_lfilter_nonzero_useic_without_ar_lags(useic):
+    # without AR lags there are no initial conditions. A non-zero useic
+    # raised "Unexpected shape for parameter zi" because lfiltic was called
+    # with b = [1, 0]. It is ignored, as values beyond len(ar) - 1 are, and
+    # the result is the combined input.
+    _, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(array([1.0]), ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(array([1.0]), ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+def test_miso_lfilter_useic_extra_values_ignored(nlags):
+    # useic values beyond len(ar) - 1 are ignored: y[-1], ..., y[-nlags] are
+    # the first nlags values
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2, 0.1])[: nlags + 1]
+    useic = [1.5, -2.0, 0.5, 3.0]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic[:nlags])
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("nlags", [0, 1, 2])
+@pytest.mark.parametrize("form", ["float", "int", "numpy-float", "ndarray-0d"])
+def test_miso_lfilter_scalar_useic(form, nlags):
+    # a scalar useic raised an IndexError for one AR lag, and a ValueError
+    # for two or more with scipy >= 1.16. It is y[-1], with zero for the
+    # further lags, as lfiltic of scipy < 1.16 treated it for two or more.
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2])[: nlags + 1]
+    useic = {
+        "float": 1.5,
+        "int": 2,
+        "numpy-float": np.float64(1.5),
+        "ndarray-0d": np.array(1.5),
+    }[form]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    past = [float(useic)] + [0.0] * (nlags - 1) if nlags else None
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("useic", [True, np.True_], ids=["bool", "numpy-bool"])
+@pytest.mark.parametrize("nlags", [0, 1])
+def test_miso_lfilter_useic_true_raises(nlags, useic):
+    # useic=True is not a set of initial values. With no or one AR lag it
+    # raised an error from scipy (zi shape, IndexError)
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5])[: nlags + 1]
+    with pytest.raises(ValueError, match="useic must be False or the initial"):
+        miso_lfilter(ar, ma, x, useic=useic)
+
+
+@pytest.mark.parametrize("useic", [True, np.True_], ids=["bool", "numpy-bool"])
+@pytest.mark.parametrize("nlags", [2, 3])
+def test_miso_lfilter_useic_true_deprecated(nlags, useic):
+    # with two or more AR lags, lfiltic of scipy < 1.16 used True as
+    # y[-1] = 1, with zero for the further lags. That result is kept, with a
+    # warning.
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2, 0.1])[: nlags + 1]
+    with pytest.warns(FutureWarning, match="useic must be False or the initial"):
+        y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    past = [1.0] + [0.0] * (nlags - 1)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
 @pytest.mark.parametrize("nsides", [1, 2])
 @pytest.mark.parametrize("nvar", [1, 2, 3])
 def test_convolution_filter_row_filter(nvar, nsides):

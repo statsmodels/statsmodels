@@ -531,6 +531,23 @@ def miso_lfilter(ar, ma, x, useic=False):
         ``y[-1]``), of length ``ar.shape[0] - 1``. Use the default, False,
         for zero initial conditions.
 
+        .. versionchanged:: 0.15.1
+
+           Without AR lags, ``ar = [1.0]``, there are no initial conditions,
+           and a non-zero ``useic`` is ignored, as values beyond
+           ``ar.shape[0] - 1`` are, where it raised a ValueError. A scalar
+           ``useic`` is the initial value ``y[-1]``, with zero for any
+           further lags, where it raised an IndexError for one AR lag (and
+           a ValueError for any number of lags with scipy 1.16 or later).
+
+        .. deprecated:: 0.15.1
+
+           ``useic=True`` is not a set of initial values. With two or more
+           AR lags it is used as ``y[-1] = 1``, with zero for the further
+           lags, as before, but this is deprecated and will raise a
+           ValueError in statsmodels 0.17.0. With no or one AR lag, where it
+           raised an error from scipy, it raises a ValueError.
+
     Returns
     -------
     y : ndarray
@@ -542,7 +559,8 @@ def miso_lfilter(ar, ma, x, useic=False):
     ------
     ValueError
         If ``ma`` or ``x`` is 1-d and ``ma`` does not have one column per
-        column of ``x``.
+        column of ``x``, or if ``useic`` is True and ``ar`` has no or one AR
+        lag.
 
     Warns
     -----
@@ -551,6 +569,10 @@ def miso_lfilter(ar, ma, x, useic=False):
         column of ``x``. The result does not filter each column of ``x`` with
         its own column of ``ma``. This is deprecated and will raise a
         ValueError in statsmodels 0.17.0.
+    FutureWarning
+        If ``useic`` is True and ``ar`` has two or more AR lags. True is used
+        as ``y[-1] = 1``, with zero for the further lags. This is deprecated
+        and will raise a ValueError in statsmodels 0.17.0.
 
     Notes
     -----
@@ -587,6 +609,21 @@ def miso_lfilter(ar, ma, x, useic=False):
             FutureWarning,
             stacklevel=2,
         )
+    if isinstance(useic, (bool, np.bool_)) and useic:
+        msg = (
+            "useic must be False or the initial values of the filtered "
+            "series, not True"
+        )
+        if ar.shape[0] <= 2:
+            # this raised an error from scipy
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. True is used as y[-1] = 1, with zero for the further "
+            "lags. This is deprecated and will raise a ValueError in "
+            "statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
     inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
     #  inp2 = signal.convolve(x, ma[:,::-1])[:, x.shape[1]-1]
@@ -597,8 +634,9 @@ def miso_lfilter(ar, ma, x, useic=False):
     # TODO: initialize also x for correlate
     # useic can be an ndarray; all-zero values are the default zero values
     if np.any(useic):
-        return signal.lfilter([1], ar, inp,
-                              zi=signal.lfiltic(np.array([1., 0.]), ar,
-                                                useic))[0][:nobs], inp[:nobs]
+        # b = [1.0] as in lfilter, so that zi has len(ar) - 1 values, also
+        # for ar = [1.0]. A scalar useic is y[-1], and lfiltic needs it 1-d.
+        zi = signal.lfiltic([1.0], ar, np.atleast_1d(useic))
+        return signal.lfilter([1], ar, inp, zi=zi)[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
