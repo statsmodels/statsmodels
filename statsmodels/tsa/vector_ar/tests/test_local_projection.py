@@ -611,12 +611,26 @@ def test_int_like_shock_idx(shock_idx):
 
 
 @pytest.mark.parametrize(
-    "shock_idx", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+    "shock_idx",
+    [True, np.True_, 1.0, 1.5, np.float64(1.0), np.array(1.5), np.array(True), None],
+    ids=["True", "np.True_", "1.0", "1.5", "float64", "0d-float", "0d-bool", "None"],
 )
 def test_bool_float_shock_idx(shock_idx):
-    # A bool or a float is not a column index: True was column 1
+    # A bool or a float is not a column index: True was column 1. These
+    # scalars raised "'float' object is not iterable" and the like
     y = np.random.default_rng(20261126).standard_normal((80, 3))
-    with pytest.raises(TypeError):
+    msg = r"shock_idx must be an int or a sequence of int, but it is "
+    with pytest.raises(TypeError, match=msg):
+        LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
+
+
+@pytest.mark.parametrize("shock_idx", ["1", "01", b"1"], ids=["1", "01", "bytes"])
+def test_str_shock_idx(shock_idx):
+    # A str was iterated by character, so the error said that it contained
+    # "1" (and "0" for "01") rather than that it is not an int
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    msg = rf"shock_idx must be an int or a sequence of int, but it is {shock_idx!r}"
+    with pytest.raises(TypeError, match=msg):
         LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
 
 

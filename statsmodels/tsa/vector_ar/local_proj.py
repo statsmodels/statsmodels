@@ -260,7 +260,11 @@ class LocalProjections:
            A 0-d integer array is a column index, as an int is. It raised a
            TypeError. A bool raises a TypeError: True was the column index
            1. A sequence that holds a float, a bool or a str raises a
-           TypeError: [1.5], [True] and ["1"] were the column index 1.
+           TypeError: [1.5], [True] and ["1"] were the column index 1. A
+           value that is neither an integer nor a sequence, such as 1.5, a
+           0-d float array or None, and a str such as "1", raise a TypeError
+           that says what shock_idx must be. The message was that the value
+           is not iterable, or for a str, that it contains "1".
     lags : int, optional
         Number of lagged values of *all* endog variables to include as
         controls.  Defaults to ``1``.
@@ -375,6 +379,13 @@ class LocalProjections:
 
         if is_int_like(shock_idx, strict=True):
             shock_idx_list = [int(shock_idx)]
+        elif isinstance(shock_idx, (str, bytes)) or not np.iterable(shock_idx):
+            # A str would be iterated by character, and other scalars failed
+            # with "'float' object is not iterable"
+            raise TypeError(
+                "shock_idx must be an int or a sequence of int, but it is "
+                f"{shock_idx!r}"
+            )
         else:
             shock_idx_list = []
             for val in shock_idx:
