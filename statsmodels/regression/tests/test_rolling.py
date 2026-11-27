@@ -242,6 +242,8 @@ def test_plot(close_figures):
     res.plot_recursive_coefficient(variables=2, alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(variables="x0", alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(variables=[0, 2], alpha=None, figsize=(30, 7))
+    res.plot_recursive_coefficient(variables=np.int64(2), alpha=None)
+    res.plot_recursive_coefficient(variables=[np.int64(0), 2], alpha=None)
     plt.close("all")
     res.plot_recursive_coefficient(variables=["x0"], alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(
@@ -258,6 +260,46 @@ def test_plot(close_figures):
         out = res.plot_recursive_coefficient(fig=fig)
     assert out is fig
     res.plot_recursive_coefficient(alpha=None, figsize=(30, 7))
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables",
+    [2, np.int64(2), np.array(2), "x2", [np.int64(2)]],
+    ids=["int", "int64", "0d-array", "name", "list"],
+)
+def test_plot_int_like_variables(variables, close_figures):
+    # A 0-d integer array selects a variable, as the integer it holds does
+    y, x, _ = gen_data(250, 3, True)
+    res = RollingOLS(y, x, window=100).fit()
+    fig = res.plot_recursive_coefficient(variables=variables, alpha=None)
+    assert len(fig.axes) == 1
+    ax = fig.axes[0]
+    assert ax.get_title() == "x2"
+    params = np.asarray(res.params)[:, 2]
+    expected = params[~np.isnan(params)]
+    assert_allclose(ax.get_lines()[0].get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables, exception, match",
+    [
+        (True, TypeError, None),
+        (np.True_, TypeError, None),
+        ([True], ValueError, "variable True is not an integer"),
+        ([np.True_], ValueError, "variable True is not an integer"),
+    ],
+    ids=["True", "np.True_", "list-True", "list-np.True_"],
+)
+def test_plot_bool_variables(variables, exception, match, close_figures):
+    # A bool does not select a variable
+    y, x, _ = gen_data(250, 3, True)
+    res = RollingOLS(y, x, window=100).fit()
+    with pytest.raises(exception, match=match):
+        res.plot_recursive_coefficient(variables=variables)
 
 
 @pytest.mark.parametrize("params_only", [True, False])
@@ -735,3 +777,19 @@ def test_batched_full_sample_window(method, expanding):
     assert_results_equal(res, expected, rtol=1e-9, robust=True)
     assert np.isfinite(res.params[-1]).all()
     assert np.isfinite(res.params[5]).all() == expanding
+
+
+def test_lstsq_window_equal_to_k_no_rcond_warning():
+    # A window with as many rows as columns is estimated one window at a time.
+    # lstsq was called without rcond, which warns on NumPy < 2.
+    rs = np.random.default_rng(5150)
+    n, k = 20, 3
+    x = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    y = rs.standard_normal(n)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        res = RollingOLS(y, x, window=k).fit(method="lstsq", params_only=True)
+    # Each window is a square system with a unique solution
+    expected = [np.linalg.solve(x[i - k : i], y[i - k : i]) for i in range(k, n + 1)]
+    assert np.all(np.isnan(res.params[: k - 1]))
+    assert_allclose(res.params[k - 1 :], expected, rtol=1e-8)

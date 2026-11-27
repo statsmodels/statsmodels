@@ -1,0 +1,3 @@
+- ``coint_johansen``, ``select_coint_rank`` and
+  :class:`~statsmodels.tsa.vector_ar.vecm.VECM` with ``exog_coint`` raised for a list ``endog``.
+  :pr:`10959`

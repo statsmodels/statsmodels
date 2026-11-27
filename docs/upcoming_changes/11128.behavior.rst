@@ -1,0 +1,5 @@
+- The Sidak and Holm-Sidak corrections of
+  :func:`~statsmodels.stats.multitest.multipletests` computed the corrected
+  significance level as ``1 - (1 - alpha) ** (1 / n)``, which rounds to 0 for an
+  ``alpha`` of about 1e-16 or less, so that no hypothesis was rejected. The level
+  is now computed without the cancellation. :pr:`11128`

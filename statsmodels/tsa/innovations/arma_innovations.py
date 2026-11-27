@@ -1,7 +1,10 @@
+import warnings
+
 import numpy as np
 from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa import arima_process
 from statsmodels.tsa.statespace.tools import prefix_dtype_map
 
@@ -22,6 +25,8 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ----------
     endog : array_like
         The observed time-series process, may be univariate or multivariate.
+        If 2-d, each column is filtered separately using the same ARMA
+        process.
     ar_params : array_like, optional
         Autoregressive parameters.
     ma_params : array_like, optional
@@ -39,11 +44,13 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     -------
     innovations : ndarray
         Innovations (one-step-ahead prediction errors) for the given `endog`
-        series with predictions based on the given ARMA process. If
-        `normalize=True`, then the returned innovations have been "whitened" by
-        dividing through by the square root of the mean square error.
+        series with predictions based on the given ARMA process, with the
+        same shape as `endog`. If `normalize=True`, then the returned
+        innovations have been "whitened" by dividing through by the square
+        root of `innovations_mse`, so that they have variance `sigma2`.
     innovations_mse : ndarray
-        Mean square error for the innovations.
+        Mean square error for the innovations divided by `sigma2`. The mean
+        square error is ``sigma2 * innovations_mse``.
     """
     # Parameters
     endog = np.require(endog,  requirements="W")
@@ -55,8 +62,6 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
     nobs, k_endog = endog.shape
-    ar = np.r_[1, -ar_params]
-    ma = np.r_[1, ma_params]
 
     # Get BLAS prefix
     if prefix is None:
@@ -66,9 +71,15 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
     # Make arrays contiguous for BLAS calls
     endog = np.asfortranarray(endog, dtype=dtype)
-    ar_params = np.asfortranarray(ar_params, dtype=dtype)
-    ma_params = np.asfortranarray(ma_params, dtype=dtype)
+    # The Cython routines need writable arrays, so read-only parameters (for
+    # example a pandas Series under copy-on-write) are copied
+    ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
+    ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
+    # The lag polynomials are built from the converted parameters, so that
+    # they have the dtype that matches the prefix
+    ar = np.r_[1, -ar_params]
+    ma = np.r_[1, ma_params]
 
     # Get the appropriate functions
     arma_transformed_acovf_fast = getattr(
@@ -79,8 +90,8 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
         _arma_innovations, prefix + "arma_innovations_filter")
 
     # Run the innovations algorithm for ARMA coefficients
-    arma_acovf = arima_process.arma_acovf(ar, ma,
-                                          sigma2=sigma2, nobs=nobs) / sigma2
+    arma_acovf = arima_process.arma_acovf(
+        ar, ma, sigma2=sigma2, nobs=nobs, dtype=dtype) / sigma2
     acovf, acovf2 = arma_transformed_acovf_fast(ar, ma, arma_acovf)
     theta, v = arma_innovations_algo_fast(nobs, ar_params, ma_params,
                                           acovf, acovf2)
@@ -115,7 +126,7 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive parameters.
     ma_params : array_like, optional
@@ -145,7 +156,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive parameters.
     ma_params : array_like, optional
@@ -162,7 +173,9 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     ndarray
         Array of loglikelihood values for each observation.
     """
-    endog = np.array(endog)
+    # A single column is squeezed to 1-d. The dtype is kept, so that the BLAS
+    # prefix is found from the data.
+    endog = array_like(endog, "endog", dtype=None, ndim=1)
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
@@ -172,12 +185,26 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     dtype = prefix_dtype_map[prefix]
 
     endog = np.ascontiguousarray(endog, dtype=dtype)
-    ar_params = np.asfortranarray(ar_params, dtype=dtype)
-    ma_params = np.asfortranarray(ma_params, dtype=dtype)
+    # The Cython routines need writable arrays, so read-only parameters (for
+    # example a pandas Series under copy-on-write) are copied
+    ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
+    ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
 
     func = getattr(_arma_innovations, prefix + "arma_loglikeobs_fast")
     return func(endog, ar_params, ma_params, sigma2)
+
+
+def _warn_unused_prefix(prefix, func_name):
+    # The score is the complex-step derivative of the loglikelihood, which is
+    # always evaluated in double precision (complex128), so prefix is not used
+    if prefix is not None:
+        warnings.warn(
+            f"prefix is not used by {func_name} and is deprecated. It will be "
+            "removed after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=3,
+        )
 
 
 def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
@@ -188,7 +215,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive coefficients, not including the zero lag.
     ma_params : array_like, optional
@@ -200,22 +227,28 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+        Not used. The score is always computed in double precision.
+
+        .. deprecated:: 0.15.1
+
+           `prefix` has no effect. It is deprecated and will be removed after
+           statsmodels 0.17 is released.
 
     Returns
     -------
     ndarray
-        Score, evaluated at the given parameters.
+        Score, evaluated at the given parameters. The elements are the
+        derivatives with respect to `ar_params`, `ma_params` and `sigma2`, in
+        that order.
 
     Notes
     -----
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglike` method.
     """
-    ar_params = [] if ar_params is None else ar_params
-    ma_params = [] if ma_params is None else ma_params
+    _warn_unused_prefix(prefix, "arma_score")
+    ar_params = np.atleast_1d([] if ar_params is None else ar_params)
+    ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
     p = len(ar_params)
     q = len(ma_params)
@@ -236,7 +269,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive coefficients, not including the zero lag.
     ma_params : array_like, optional
@@ -248,22 +281,28 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+        Not used. The score is always computed in double precision.
+
+        .. deprecated:: 0.15.1
+
+           `prefix` has no effect. It is deprecated and will be removed after
+           statsmodels 0.17 is released.
 
     Returns
     -------
     ndarray
-        Score per observation, evaluated at the given parameters.
+        Score per observation, evaluated at the given parameters, with one
+        row per observation. The columns are the derivatives with respect to
+        `ar_params`, `ma_params` and `sigma2`, in that order.
 
     Notes
     -----
     This is a numerical approximation, calculated using first-order complex
-    step differentiation on the `arma_loglike` method.
+    step differentiation on the `arma_loglikeobs` method.
     """
-    ar_params = [] if ar_params is None else ar_params
-    ma_params = [] if ma_params is None else ma_params
+    _warn_unused_prefix(prefix, "arma_scoreobs")
+    ar_params = np.atleast_1d([] if ar_params is None else ar_params)
+    ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
     p = len(ar_params)
     q = len(ma_params)

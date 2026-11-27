@@ -1,0 +1,5 @@
+- With pandas 3.1, :class:`~statsmodels.tsa.forecasting.theta.ThetaModel`,
+  :func:`~statsmodels.tsa.seasonal.seasonal_decompose` and
+  :class:`~statsmodels.tsa.seasonal.MSTL` emitted pandas'
+  ``Pandas4Warning`` about ``inferred_freq`` for data whose index has no
+  frequency. :pr:`10899`

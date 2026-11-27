@@ -119,9 +119,9 @@ cdef {{cython_type}} {{prefix}}factorize_cholesky({{prefix}}KalmanFilter kfilter
         lapack.{{prefix}}potrf("U", &_k_endog, kfilter._forecast_error_fac, &k_endog, &info)
 
         if info < 0:
-            raise np.linalg.LinAlgError('Illegal value in forecast error'
+            raise np.linalg.LinAlgError('Illegal value in forecast error'  # pragma: no cover
                                         ' covariance matrix encountered at'
-                                        ' period %d' % kfilter.t)
+                                        ' period %d' % kfilter.t)  # pragma: no cover
         if info > 0:
             raise np.linalg.LinAlgError('Non-positive-definite forecast error'
                                        ' covariance matrix encountered at'
@@ -165,9 +165,9 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{pr
                         kfilter._forecast_error_ipiv, &info)
 
         if info < 0:
-            raise np.linalg.LinAlgError('Illegal value in forecast error'
+            raise np.linalg.LinAlgError('Illegal value in forecast error'  # pragma: no cover
                                         ' covariance matrix encountered at'
-                                        ' period %d' % kfilter.t)
+                                        ' period %d' % kfilter.t)  # pragma: no cover
         if info > 0:
             raise np.linalg.LinAlgError('Singular forecast error covariance'
                                         ' matrix encountered at period %d' %
@@ -216,9 +216,9 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
                                    kfilter._standardized_forecast_error, &k_endog, &info)
 
             if info != 0:
-                raise np.linalg.LinAlgError('Error computing standardized'
+                raise np.linalg.LinAlgError('Error computing standardized'  # pragma: no cover
                                             ' forecast error at period %d'
-                                            % kfilter.t)
+                                            % kfilter.t)  # pragma: no cover
 
         # Continue taking the inverse
         lapack.{{prefix}}potri("U", &_k_endog, kfilter._forecast_error_fac, &k_endog, &info)
@@ -350,9 +350,9 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
                                kfilter._standardized_forecast_error, &k_endog, &info)
 
         if info != 0:
-                raise np.linalg.LinAlgError('Error computing standardized'
+                raise np.linalg.LinAlgError('Error computing standardized'  # pragma: no cover
                                             ' forecast error at period %d'
-                                            % kfilter.t)
+                                            % kfilter.t)  # pragma: no cover
 
     # Solve the linear systems
     # `tmp2` array used here, dimension $(p \times 1)$

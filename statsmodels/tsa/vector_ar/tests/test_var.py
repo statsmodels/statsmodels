@@ -17,17 +17,23 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    MissingDataError,
+    SingularMatrixWarning,
+    ValueWarning,
+)
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.stattools import acovf
-from statsmodels.tsa.vector_ar import util, var_model
+from statsmodels.tsa.vector_ar import output, util, var_model
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     ErrorBand,
     ForecastInterval,
 )
+from statsmodels.tsa.vector_ar.tests.results import results_var_r
 from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess, forecast, var_acf
 
 DECIMAL_12 = 12
@@ -406,6 +412,23 @@ class TestVARResults(CheckIRF, CheckFEVD):
         with pytest.raises(RuntimeError, match="0 lags"):
             res.test_causality(0, 1)
 
+    def test_causality_numpy_integer(self):
+        # NumPy integers are accepted as variable indices, like Python ints
+        result = self.res.test_causality(np.int64(0), np.int64(1), kind="f")
+        expected = self.res.test_causality(0, 1, kind="f")
+        assert_almost_equal(result.pvalue, expected.pvalue, DECIMAL_12)
+
+        result = self.res.test_causality(
+            [np.int32(0)], [np.int64(1), np.int32(2)], kind="f"
+        )
+        expected = self.res.test_causality([0], [1, 2], kind="f")
+        assert_almost_equal(result.pvalue, expected.pvalue, DECIMAL_12)
+
+    def test_inst_causality_numpy_integer(self):
+        result = self.res.test_inst_causality(np.int64(0))
+        expected = self.res.test_inst_causality(0)
+        assert_almost_equal(result.pvalue, expected.pvalue, DECIMAL_12)
+
     @pytest.mark.smoke
     def test_select_order(self):
         result = self.model.fit(10, ic="aic", verbose=True)
@@ -514,6 +537,82 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("plot_stderr", [True, False])
+def test_plot_forecast_lines(close_figures, plot_stderr):
+    # The bands are point +/- q * sqrt(diag(mse(h))); the legend entry
+    # "Forc 2 STD err" belongs to the upper band
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    steps, alpha = 4, 0.1
+    fig = res.plot_forecast(steps, alpha=alpha, plot_stderr=plot_stderr)
+    point = res.forecast(data[-2:], steps)
+    se = np.sqrt(np.diagonal(res.mse(steps), axis1=1, axis2=2))
+    q = stats.norm.ppf(1 - alpha / 2)
+    nobs = data.shape[0]
+    assert len(fig.axes) == 3
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == res.names[j]
+        lines = ax.lines
+        assert_allclose(lines[0].get_ydata(), data[:, j], rtol=1e-12)
+        assert_allclose(lines[1].get_xdata(), np.arange(nobs - 1, nobs + steps))
+        assert_allclose(lines[1].get_ydata()[1:], point[:, j], rtol=1e-10)
+        handles, labels = ax.get_legend_handles_labels()
+        if plot_stderr:
+            assert len(lines) == 4
+            upper, lower = lines[2], lines[3]
+            assert_allclose(upper.get_ydata(), point[:, j] + q * se[:, j], rtol=1e-10)
+            assert_allclose(lower.get_ydata(), point[:, j] - q * se[:, j], rtol=1e-10)
+            assert labels == ["Observed", "Forecast", "Forc 2 STD err"]
+            assert handles[2] is upper
+        else:
+            assert len(lines) == 2
+            assert labels == ["Observed", "Forecast"]
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plotting_helpers_default_axes(close_figures):
+    # Without axes (or names), the helpers in plotting draw on the current
+    # axes (and leave the subplots without titles)
+    import matplotlib.pyplot as plt
+
+    from statsmodels.tsa.vector_ar import plotting
+
+    y = np.array([1.0, 2.0, 0.5, -0.5])
+    error = np.array([0.1, 0.2, 0.3, 0.4])
+    q = stats.norm.ppf(1 - 0.1 / 2)
+    fig, ax = plt.subplots()
+    plotting.plot_with_error(y, error, alpha=0.1)
+    plotting.plot_with_error(y, (y - 1, y + 2), stderr_type="mc")
+    drawn = [line.get_ydata() for line in ax.lines]
+    expected = [y, y - q * error, y + q * error, y, y - 1, y + 2]
+    assert len(drawn) == len(expected)
+    for actual, value in zip(drawn, expected, strict=True):
+        assert_allclose(actual, value, rtol=1e-12)
+    assert_allclose(ax.lines[0].get_xdata(), np.arange(4))
+
+    acorr = np.array([1.0, 0.5, -0.25])
+    fig, ax = plt.subplots()
+    plotting.acorr_plot(acorr)
+    segments = ax.collections[0].get_segments()
+    for lag, segment in enumerate(segments):
+        assert_allclose(segment, [[lag, 0.0], [lag, acorr[lag]]])
+    assert_allclose(ax.get_xlim(), [-1, 3])
+    assert_allclose(ax.get_ylim(), [-1, 1])
+
+    prior = np.column_stack([np.arange(5.0), np.arange(5.0) ** 2])
+    forc = np.array([[5.0, 25.0], [6.0, 36.0]])
+    fig = plotting.plot_var_forc(prior, forc, forc + 1, forc - 1)
+    assert len(fig.axes) == 2
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == ""
+        assert_allclose(ax.lines[0].get_ydata(), prior[:, j])
+        assert_allclose(ax.lines[2].get_ydata(), forc[:, j] + 1)
+        assert_allclose(ax.lines[3].get_ydata(), forc[:, j] - 1)
+
+
 def test_pickle():
     # Removed from class to allow thread safe testing
     fh = BytesIO()
@@ -527,6 +626,45 @@ def test_pickle():
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
     assert type(res_unpickled) is type(res)
+
+
+@pytest.mark.parametrize(
+    "model, causing, statistic, df, pvalue",
+    [
+        ("var", ["lrm", "lry"], 9.912316048202, 4, 0.0419308947994),
+        ("var", [0, 2], 16.616263763054, 4, 0.0022944927874),
+        ("var", ["lrm"], 16.726178260626, 3, 0.000804549633518),
+        ("var", [0, 1, 2], 3.736943485999, 3, 0.291306347447),
+        ("var5", [0, 1], 13.894373834716, 6, 0.0308385811695),
+        ("vecm", [0, 1], 9.912316048202, 4, 0.0419308947994),
+    ],
+)
+def test_inst_causality_several_causing_and_caused(
+    model, causing, statistic, df, pvalue
+):
+    # All covariances between the causing and the caused variables are
+    # restricted (Lütkepohl 2005, Section 3.6.3). Reference values from the
+    # R package vars 1.6.1 (R 4.6.2) on the Danish data:
+    #   fit <- VAR(y, p = 2, type = "const")
+    #   causality(fit, cause = c("lrm", "lry"))$Instant
+    # "var5" adds the series sin(t / 3) + 0.01 t, t = 0, 1, ..., to the four
+    # variables and uses p = 1, so 2 causing variables face 3 caused ones.
+    # The VECM test uses the VAR(2) with a constant, as "var" does.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.vecm import VECM
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    if model == "var":
+        res = VAR(y).fit(2)
+    elif model == "var5":
+        t = np.arange(y.shape[0], dtype=float)
+        res = VAR(y.assign(x5=np.sin(t / 3.0) + 0.01 * t)).fit(1)
+    else:
+        res = VECM(y, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    result = res.test_inst_causality(causing)
+    assert_allclose(result.test_statistic, statistic, rtol=1e-9)
+    assert result.df == df
+    assert_allclose(result.pvalue, pvalue, rtol=1e-9)
 
 
 class E1_Results:
@@ -721,6 +859,84 @@ def test_var_fit_invalid_trend_raises():
     data = get_macrodata().view((float, 3), type=np.ndarray)
     with pytest.raises(ValueError, match="trend"):
         VAR(data).fit(2, trend="not-a-trend")
+
+
+def test_var_fit_perfectly_collinear_warns():
+    # see GH#10646: two identical series make the design matrix
+    # rank-deficient, so the parameters are not uniquely determined, just
+    # as with a rank-deficient OLS design matrix.
+    r = np.random.default_rng(0).normal(0, 0.01, 60)
+    data = pd.DataFrame({"a": r, "b": r})
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(data).fit(1)
+    # the warning points at the line of the user, not at the library
+    assert record[0].filename == __file__
+
+
+def test_var_fit_ic_warns_once_at_user_line():
+    # fit(maxlags, ic) selects the lag order with select_order, which would
+    # warn for every singular lag order; only the final fit warns
+    rng = np.random.default_rng(1)
+    y = np.cumsum(rng.standard_normal((100, 2)), axis=0)
+    exog = np.ones((100, 1))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(y, exog=exog).fit(maxlags=4, ic="aic")
+    assert len(record) == 1
+    assert record[0].filename == __file__
+    # the design is full rank without the constant: no warning for any order
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        VAR(y, exog=exog).fit(maxlags=4, ic="bic", trend="n")
+
+
+def test_var_fit_near_collinear_minimum_norm():
+    # The second series equals the first up to 1e-14 noise: the smallest
+    # singular value of the design is below the cutoff of the rank rule, so
+    # the design is rank-deficient and the minimum-norm solution is returned.
+    # The cutoff 1e-15 of lstsq gave coefficients of the order of 1e12.
+    rng = np.random.default_rng(3)
+    a = rng.standard_normal(1000)
+    y = np.column_stack([a, a + 1e-14 * rng.standard_normal(1000)])
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = VAR(y).fit(1)
+    assert np.abs(res.params).max() < 1
+    # the two lag columns have the same coefficient in the minimum-norm solution
+    assert_allclose(res.params[1, :], res.params[2, :], rtol=1e-3, atol=1e-3)
+
+
+def test_var_fit_full_rank_does_not_warn():
+    rng = np.random.default_rng(0)
+    data = pd.DataFrame({"a": rng.normal(0, 0.01, 60), "b": rng.normal(0, 0.01, 60)})
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        VAR(data).fit(1)
+    singular = [x for x in w if issubclass(x.category, SingularMatrixWarning)]
+    assert len(singular) == 0
+
+
+@pytest.mark.parametrize("nobs", [1000, 3000, 6000])
+@pytest.mark.parametrize(
+    "trend,expect_singular",
+    [("n", False), ("c", True), ("ct", True), ("ctt", True)],
+)
+def test_var_fit_large_nobs_exog_constant_singular(nobs, trend, expect_singular):
+    # Regression test for GH#10646: the exog column is an exact multiple
+    # of the constant trends "c"/"ct"/"ctt" add (but not "n"). The near-
+    # zero singular value of such a design does not grow with nobs, so a
+    # fixed cutoff like the old rcond=1e-15 misses it from about 1000
+    # observations on for trend "c" -- this is what default_rcond fixes.
+    rng = np.random.default_rng(6)
+    endog = rng.standard_normal((nobs, 2))
+    exog = np.ones((nobs, 1))
+    if expect_singular:
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            VAR(endog, exog=exog).fit(1, trend=trend)
+    else:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            VAR(endog, exog=exog).fit(1, trend=trend)
+        singular = [x for x in w if issubclass(x.category, SingularMatrixWarning)]
+        assert len(singular) == 0
 
 
 def test_irf_trend():
@@ -1084,6 +1300,63 @@ def test_eigval_decomp_real():
     assert eigva[k] == eigva.max()
 
 
+def test_irf_err_band_sz3_component():
+    # component[j] selects the eigenvector used for the bands of the responses
+    # to a shock in variable j; the array passed is not modified
+    from scipy import linalg
+
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    # With these settings the largest eigenvalue for shock 0 is not the first
+    # one returned by scipy.linalg.eig (with OpenBLAS)
+    periods, repl = 3, 50
+    irf = res.irf(periods)
+
+    def band(component):
+        rng = np.random.default_rng(0)
+        return irf.err_band_sz3(
+            orth=True, repl=repl, signif=0.1, rng=rng, component=component
+        )
+
+    default = band(None)
+    # The default is the largest eigenvalue of the covariance of the stacked
+    # responses to each shock at horizons 1 to periods, in the order of
+    # scipy.linalg.eig; the second largest is used for shock 1 below
+    sims = res.irf_resim(
+        orth=True, repl=repl, steps=periods, rng=np.random.default_rng(0)
+    )
+    largest, second = [], []
+    for j in range(3):
+        stacked = sims[:, 1:, :, j].transpose(0, 2, 1).reshape(repl, -1)
+        cov = np.cov(stacked, rowvar=False)
+        eigvals = linalg.eig(cov, left=True, right=False)[0].real
+        order = np.argsort(eigvals)
+        largest.append(order[-1])
+        second.append(order[-2])
+    same = band(np.array(largest))
+    assert_allclose(same.lower, default.lower, rtol=1e-12)
+    assert_allclose(same.upper, default.upper, rtol=1e-12)
+
+    component = np.array(largest)
+    component[1] = second[1]
+    passed = component.copy()
+    changed = band(component)
+    assert_equal(component, passed)
+    for other in (0, 2):
+        lower, upper = changed.lower[..., other], changed.upper[..., other]
+        assert_allclose(lower, default.lower[..., other], rtol=1e-12)
+        assert_allclose(upper, default.upper[..., other], rtol=1e-12)
+    assert not np.allclose(changed.lower[1:, :, 1], default.lower[1:, :, 1])
+    assert not np.allclose(changed.upper[1:, :, 1], default.upper[1:, :, 1])
+    # the impact period is not perturbed
+    assert_allclose(changed.lower[0], irf.orth_irfs[0], rtol=1e-12)
+    assert_allclose(changed.upper[0], irf.orth_irfs[0], rtol=1e-12)
+    # a tuple gives the same bands
+    from_tuple = band(tuple(int(c) for c in component))
+    assert_allclose(from_tuple.lower, changed.lower, rtol=1e-12)
+    assert_allclose(from_tuple.upper, changed.upper, rtol=1e-12)
+
+
 @pytest.mark.slow
 def test_irf_err_bands():
     # smoke tests
@@ -1103,6 +1376,73 @@ def test_irf_err_bands():
         assert isinstance(res, ErrorBand)
         assert res[0] is res.lower
         assert res[1] is res.upper
+
+
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2", "err_band_sz3"])
+def test_irf_err_band_component_range(method):
+    # component holds indices of eigenvalues: 0, ..., periods - 1 for sz1 and
+    # sz2, 0, ..., neqs * periods - 1 for sz3 (the stacked responses)
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    periods = 2
+    irf = res.irf(periods)
+    if method == "err_band_sz3":
+        shape, n_comp = (3,), 3 * periods
+    else:
+        shape, n_comp = (3, 3), periods
+
+    def band(value):
+        rng = np.random.default_rng(1)
+        component = np.full(shape, value)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        first = band(0)
+        last = band(n_comp - 1)
+    # a nested list gives the same bands as an array
+    as_list = getattr(irf, method)(
+        repl=30,
+        rng=np.random.default_rng(1),
+        component=np.full(shape, n_comp - 1).tolist(),
+    )
+    assert_allclose(as_list.lower, last.lower, rtol=1e-12)
+    assert_allclose(as_list.upper, last.upper, rtol=1e-12)
+    for value in (n_comp, -n_comp - 1):
+        with pytest.raises(ValueError, match="components does not exist"):
+            band(value)
+    # Negative values count from the end, as in numpy indexing; deprecated
+    for value, expected in ((-1, last), (-n_comp, first)):
+        with pytest.warns(FutureWarning, match="Negative values in comp") as rec:
+            wrapped = band(value)
+        assert rec[0].filename == __file__
+        assert_allclose(wrapped.lower, expected.lower, rtol=1e-12)
+        assert_allclose(wrapped.upper, expected.upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2"])
+def test_irf_err_band_component_max_last_row(method):
+    # A valid component with its largest value in the last row was rejected:
+    # the check compared the position of the maximum with neqs * periods
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    irf = res.irf(2)
+
+    def band(component):
+        rng = np.random.default_rng(2)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    component = np.zeros((3, 3), dtype=int)
+    component[2, 0] = 1
+    mixed = band(component)
+    zeros = band(np.zeros((3, 3), dtype=int))
+    ones = band(np.ones((3, 3), dtype=int))
+    # each band uses only its own element of component
+    for attr in ("lower", "upper"):
+        expected = getattr(zeros, attr).copy()
+        expected[:, 2, 0] = getattr(ones, attr)[:, 2, 0]
+        assert_allclose(getattr(mixed, attr), expected, rtol=1e-12)
+    assert not np.allclose(ones.lower[1:, 2, 0], zeros.lower[1:, 2, 0])
 
 
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
@@ -1223,6 +1563,59 @@ def test_irf_plot_err_bands_kwarg(close_figures):
     assert fig2 is not None
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("form", ["errorband", "tuple", "array"])
+@pytest.mark.parametrize("stderr_type", [None, "asym", "mc"])
+def test_irf_plot_err_bands_default_stderr_type(
+    bivariate_var_result, close_figures, method, form, stderr_type
+):
+    # The given bands are plotted whatever stderr_type is; with the default
+    # "asym" they were read as a covariance array
+    irf = bivariate_var_result.irf(3)
+    rng = np.random.default_rng(0)
+    lower = rng.standard_normal((4, 2, 2))
+    upper = lower + rng.uniform(0.5, 1.0, size=(4, 2, 2))
+    bands = {
+        "errorband": ErrorBand(lower, upper),
+        "tuple": (lower, upper),
+        "array": np.stack([lower, upper]),
+    }[form]
+    kwargs = {} if stderr_type is None else {"stderr_type": stderr_type}
+    fig = getattr(irf, method)(err_bands=bands, **kwargs)
+    values = irf.irfs if method == "plot" else irf.cum_effects
+    assert len(fig.axes) == 4
+    for i in range(2):
+        for j in range(2):
+            lines = [line.get_ydata() for line in fig.axes[2 * i + j].lines]
+            assert_allclose(lines[0], values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1], lower[:, i, j], rtol=1e-12)
+            assert_allclose(lines[2], upper[:, i, j], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("plot_stderr", [False, np.False_, 0])
+def test_irf_plot_stderr_false_values(
+    bivariate_var_result, close_figures, method, plot_stderr
+):
+    # Any false value turns the bands off; plot drew them for numpy.False_
+    irf = bivariate_var_result.irf(3)
+    fig = getattr(irf, method)(plot_stderr=plot_stderr)
+    if method == "plot":
+        values, n_lines = irf.irfs, 2  # the responses and the zero line
+    else:
+        values, n_lines = irf.cum_effects, 3  # and the long-run effect
+    for i in range(2):
+        for j in range(2):
+            lines = fig.axes[2 * i + j].lines
+            assert len(lines) == n_lines
+            assert_allclose(lines[0].get_ydata(), values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1].get_ydata(), [0, 0])
+
+
 def test_irf_invalid_stderr_type_raises(bivariate_var_result):
     irf = bivariate_var_result.irf()
     with pytest.raises(ValueError, match="stderr_type"):
@@ -1249,6 +1642,31 @@ def test_forecast_wrong_shape_params():
     results = mod.fit(maxlags=1, ic="aic", trend="c")
     with pytest.raises(ValueError):
         forecast(y, results.params, results.params, steps=5)
+
+
+@pytest.mark.parametrize("convert", [np.asarray, lambda c: c.tolist()])
+def test_forecast_coefs_array_like(convert):
+    # VAR(2) forecasts by hand: y(h) = c + A1 y(h - 1) + A2 y(h - 2)
+    a1 = np.array([[0.5, 0.1], [0.2, 0.4]])
+    a2 = np.array([[-0.2, 0.0], [0.1, -0.1]])
+    intercept = np.array([0.1, -0.1])
+    y = np.array([[1.0, -1.0], [2.0, 0.5]])
+    path = [y[0], y[1]]
+    for _ in range(3):
+        path.append(intercept + a1 @ path[-1] + a2 @ path[-2])
+    fc = forecast(y, convert(np.array([a1, a2])), intercept, 3)
+    assert_allclose(fc, path[2:], rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "coefs, ndim",
+    [(np.eye(2), 2), (np.ones((1, 2, 2, 1)), 4), (0.5, 0)],
+    ids=["2d", "4d", "scalar"],
+)
+def test_forecast_coefs_not_3d_raises(coefs, ndim):
+    match = f"coefs must have 3 dimensions, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        forecast(np.ones((2, 2)), coefs, None, 3)
 
 
 def test_var_model_predict_matches_forecast_and_fittedvalues():
@@ -1544,16 +1962,21 @@ def test_select_order_qr_fallback():
     # Constant in exog and trend: singular regressors
     exog = np.column_stack([np.ones(200), rng.standard_normal(200)])
     assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
-    res = VAR(y, exog=exog).select_order(6, trend="c")
-    expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = VAR(y, exog=exog).select_order(6, trend="c")
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
 
-    # Almost perfect fit of the third series
+    # Almost perfect fit of the third series: ill-conditioned but not
+    # exactly singular, so no warning is expected here.
     y_fit = y.copy()
     y_fit[:, 2] = y[:, 0] + y[:, 1] + 1e-6 * rng.standard_normal(200)
     assert var_model._var_order_ics(y_fit, None, 6, "c", 0) is None
-    res = VAR(y_fit).select_order(6, trend="c")
-    expected = _select_order_loop(VAR(y_fit), 6, "c")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        res = VAR(y_fit).select_order(6, trend="c")
+        expected = _select_order_loop(VAR(y_fit), 6, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
 
     # Non-finite data
@@ -1576,3 +1999,1316 @@ def test_select_order_qr_fallback():
     res = VAR(y_short, exog=exog_many).select_order(3, trend="c")
     expected = _select_order_loop(VAR(y_short, exog=exog_many), 3, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
+
+
+def test_select_order_qr_fallback_singular_warns_once():
+    # The constant exog column duplicates the trend constant for every lag
+    # order considered by the fallback loop; select_order should collapse
+    # that into a single warning instead of one per lag order (GH#10646).
+    rng = np.random.default_rng(5)
+    y = np.cumsum(rng.standard_normal((100, 2)), axis=0)
+    exog = np.ones((100, 1))
+    assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(y, exog=exog).select_order(6, trend="c")
+    singular = [w for w in record.list if issubclass(w.category, SingularMatrixWarning)]
+    assert len(singular) == 1
+    assert singular[0].filename == __file__
+
+
+TABLE_HEADER = ["Test", "statistic", "Critical", "Value", "p-value", "df"]
+
+
+def test_normality_summary():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    # Drop the first (NaN) row by position, which keeps the RangeIndex. With
+    # dropna, pandas < 2 gives an Int64Index starting at 1, for which VAR
+    # warns that the index is not supported.
+    res = VAR(np.log(data).diff().iloc[1:]).fit(2)
+    norm = res.test_normality(signif=0.05)
+    results = {
+        "statistic": norm.test_statistic,
+        "crit_value": norm.crit_value,
+        "pvalue": norm.pvalue,
+        "df": norm.df,
+        "conclusion": norm.conclusion,
+        "signif": norm.signif,
+    }
+    with pytest.warns(FutureWarning, match=r"output\.normality_summary is") as record:
+        text = output.normality_summary(results)
+    # The deprecated hypothesis_test_table does not warn a second time
+    assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
+
+    lines = text.split("\n")
+    assert len(lines) == 8
+    assert lines[0] == "Normality skew/kurtosis Chi^2-test"
+    assert lines[2].split() == TABLE_HEADER
+    assert lines[4].split() == [
+        f"{norm.test_statistic:.6f}",
+        f"{norm.crit_value:.6f}",
+        f"{norm.pvalue:.3f}",
+        "6",
+    ]
+    assert lines[6] == "H_0: data generated by normally-distributed process"
+    # The statistic, 27.3, is far above the critical value, 12.6
+    assert lines[7] == "Conclusion: reject H_0 at 5.00% significance level"
+    # The printed critical value is the chi-square quantile for the printed
+    # df, to the six decimals printed
+    stat, crit, _, df = lines[4].split()
+    assert_allclose(float(crit), stats.chi2.ppf(0.95, int(df)), rtol=1e-6)
+    assert float(stat) > float(crit)
+
+
+@pytest.mark.parametrize(
+    "statistic, df, signif, conclusion, signif_text",
+    [
+        (13.2, 3, 0.05, "reject", "5.00%"),
+        (1.7, 2, 0.1, "fail to reject", "10.00%"),
+    ],
+)
+def test_hypothesis_test_table(statistic, df, signif, conclusion, signif_text):
+    crit_value = stats.chi2.ppf(1 - signif, df)
+    pvalue = stats.chi2.sf(statistic, df)
+    results = {
+        "statistic": statistic,
+        "crit_value": crit_value,
+        "pvalue": pvalue,
+        "df": df,
+        "conclusion": conclusion,
+        "signif": signif,
+    }
+    title = "Chi-square test"
+    null_hyp = "H_0: the restrictions hold"
+    with pytest.warns(
+        FutureWarning, match=r"output\.hypothesis_test_table is"
+    ) as record:
+        text = output.hypothesis_test_table(results, title, null_hyp)
+    assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
+
+    lines = text.split("\n")
+    assert len(lines) == 8
+    assert lines[0] == title
+    assert set(lines[1]) == {"="}
+    assert lines[2].split() == TABLE_HEADER
+    assert set(lines[3]) == {"-"}
+    assert lines[4].split() == [
+        f"{statistic:.6f}",
+        f"{crit_value:.6f}",
+        f"{pvalue:.3f}",
+        str(df),
+    ]
+    assert set(lines[5]) == {"="}
+    assert lines[6] == null_hyp
+    expected = f"Conclusion: {conclusion} H_0 at {signif_text} significance level"
+    assert lines[7] == expected
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("k_exog", [0, 1, 2])
+@pytest.mark.parametrize("by_name", [False, True])
+def test_reorder_trend_exog(trend, k_exog, by_name):
+    # reorder must give the VAR estimated on the reordered data
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = pd.DataFrame(np.diff(np.log(data.to_numpy()), axis=0), columns=names)
+    rng = np.random.default_rng(20261122)
+    exog = None
+    if k_exog:
+        exog = pd.DataFrame(
+            rng.standard_normal((y.shape[0], k_exog)), columns=["x", "z"][:k_exog]
+        )
+    order = [2, 0, 1]
+    res = VAR(y, exog=exog).fit(2, trend=trend)
+    reordered = res.reorder([names[i] for i in order] if by_name else order)
+    expected = VAR(y.iloc[:, order], exog=exog).fit(2, trend=trend)
+
+    assert reordered.names == [names[i] for i in order]
+    assert reordered.trend == trend
+    assert reordered.k_trend == expected.k_trend
+    assert reordered.k_exog_user == k_exog
+    assert reordered.exog_names == expected.exog_names
+    assert_allclose(reordered.params, expected.params, rtol=1e-10)
+    assert_allclose(reordered.coefs, expected.coefs, rtol=1e-10)
+    assert_allclose(reordered.sigma_u, expected.sigma_u, rtol=1e-10)
+    assert_allclose(reordered.resid, expected.resid, rtol=1e-10)
+    exog_future = None if exog is None else rng.standard_normal((4, k_exog))
+    assert_allclose(
+        reordered.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
+        expected.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
+        rtol=1e-10,
+    )
+
+
+def test_pprint_matrix_text():
+    values = np.array([[1.5, -0.25], [12.0, 3e-7]])
+    text = output.pprint_matrix(values, ["a", "bbb"], ["x", "a_long_label"])
+    # Rows labels in 3 + 2 characters, columns in max(len(label) + 2, 10),
+    # floats with six decimals
+    expected = [
+        "     " + " " * 9 + "x" + "  a_long_label",
+        "a    " + "  1.500000" + "     -0.250000",
+        "bbb  " + " 12.000000" + "      0.000000",
+        "",
+    ]
+    assert text.split("\n") == expected
+    # Other values are converted with str, and labels are truncated to a
+    # given column width
+    text = output.pprint_matrix(np.array([[1, 22]]), [0], ["abcdefgh", 1], col_space=5)
+    assert text.split("\n") == ["   " + "abcde" + "    1", "0  " + "    1" + "   22", ""]
+
+
+def test_var_loglike_resid_deprecated():
+    # With Sigma = U'U / T, the Gaussian log-likelihood of the residuals U is
+    # -(T / 2) (K log(2 pi) + log|Sigma| + K), which var_loglike computes
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    resid = res.resid
+    nobs = resid.shape[0]
+    sigma_mle = resid.T @ resid / nobs
+    expected = stats.multivariate_normal(np.zeros(3), sigma_mle).logpdf(resid).sum()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert_allclose(res.llf, expected, rtol=1e-10)
+        assert_allclose(
+            var_model.var_loglike(None, sigma_mle, nobs), expected, rtol=1e-10
+        )
+    with pytest.warns(FutureWarning, match="resid has no effect"):
+        value = var_model.var_loglike(resid, sigma_mle, nobs)
+    assert_allclose(value, expected, rtol=1e-10)
+
+
+def test_forecast_cov_auto_warning_text():
+    from statsmodels.tools.sm_exceptions import OutputWarning
+
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    with pytest.warns(OutputWarning, match="parameter uncertainty into account$"):
+        res.forecast_cov(2, method="auto")
+
+
+@pytest.mark.parametrize("k_exog", [0, 1])
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_var_missing_drop(k_exog, trend):
+    # missing="drop" gives the VAR of the data without the dropped rows
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = None
+    if k_exog:
+        exog = np.random.default_rng(15).standard_normal((y.shape[0], k_exog))
+    y_nan = y.copy()
+    y_nan[5, 1] = np.nan
+    y_nan[40, 0] = np.nan
+    keep = np.ones(y.shape[0], dtype=bool)
+    keep[[5, 40]] = False
+    mod = VAR(y_nan, exog=exog, missing="drop")
+    res = mod.fit(2, trend=trend)
+    expected = VAR(y[keep], exog=None if exog is None else exog[keep]).fit(
+        2, trend=trend
+    )
+    assert mod.n_totobs == y.shape[0] - 2
+    assert mod.nobs == res.nobs == y.shape[0] - 2 - 2
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-12)
+    sel = mod.select_order(4, trend=trend)
+    sel_expected = VAR(y[keep], exog=None if exog is None else exog[keep]).select_order(
+        4, trend=trend
+    )
+    for key in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(sel.ics[key], sel_expected.ics[key], rtol=1e-10)
+
+
+@pytest.mark.parametrize("call", ["select_order", "fit", "default"])
+def test_select_order_zero_lags_no_regressors(call):
+    # VAR(0) without a trend or exog has no parameters, so maxlags=0 has no
+    # lag order to select (it raised a KeyError)
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    msg = 'maxlags must be at least 1 with trend="n" and no exog'
+    with pytest.raises(ValueError, match=msg):
+        if call == "select_order":
+            VAR(y).select_order(0, trend="n")
+        elif call == "fit":
+            VAR(y).fit(0, ic="aic", trend="n")
+        else:
+            # The default maxlags is 0 for 6 observations of 3 variables
+            VAR(y[:6]).select_order(trend="n")
+
+
+@pytest.mark.parametrize("trend, use_exog", [("n", True), ("c", False)])
+def test_select_order_zero_lags(trend, use_exog):
+    # VAR(0) is the regression on the deterministic terms. Its criteria are
+    # log det(Sigma_mle) plus the penalty for neqs * k_det parameters
+    # (Lütkepohl pp. 146-150)
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    nobs = y.shape[0]
+    exog = np.random.default_rng(0).standard_normal((nobs, 1)) if use_exog else None
+    sel = VAR(y, exog=exog).select_order(0, trend=trend)
+    x = exog if use_exog else np.ones((nobs, 1))
+    resid = y - x @ np.linalg.lstsq(x, y, rcond=None)[0]
+    logdet = np.linalg.slogdet(resid.T @ resid / nobs)[1]
+    free_params = 3 * 1
+    assert_allclose(sel.ics["aic"], [logdet + 2 * free_params / nobs], rtol=1e-10)
+    assert_allclose(
+        sel.ics["bic"], [logdet + np.log(nobs) * free_params / nobs], rtol=1e-10
+    )
+    assert sel.selected_orders == {"aic": 0, "bic": 0, "hqic": 0, "fpe": 0}
+
+
+def _granger_wald_ols(y, lags, caused, causing):
+    # Wald statistic of "the lags of `causing` are zero in the equations of
+    # `caused`" from the residual cross products of the unrestricted and the
+    # restricted OLS regressions, which have the same regressors in every
+    # equation: W = tr(Sigma_cc^-1 (E_r'E_r - E_u'E_u))
+    nobs, k = y.shape[0] - lags, y.shape[1]
+    lagged = [y[lags - j : y.shape[0] - j] for j in range(1, lags + 1)]
+    z = np.column_stack([np.ones(nobs)] + lagged)
+    keep = [0] + [
+        1 + j * k + i for j in range(lags) for i in range(k) if i not in causing
+    ]
+    yc = y[lags:, caused]
+    e_u = yc - z @ np.linalg.lstsq(z, yc, rcond=None)[0]
+    e_r = yc - z[:, keep] @ np.linalg.lstsq(z[:, keep], yc, rcond=None)[0]
+    df_resid = nobs - z.shape[1]
+    sigma = e_u.T @ e_u / df_resid
+    wald = np.trace(np.linalg.solve(sigma, e_r.T @ e_r - e_u.T @ e_u))
+    return wald, df_resid
+
+
+@pytest.mark.parametrize(
+    "caused, caused_ind, causing_ind",
+    [
+        (0, [0], [1, 2]),
+        ("realinv", [2], [0, 1]),
+        ([0, 1], [0, 1], [2]),
+        (["realinv", "realgdp"], [2, 0], [1]),
+    ],
+)
+@pytest.mark.parametrize("kind", ["f", "wald"])
+def test_test_causality_default_causing(caused, caused_ind, causing_ind, kind):
+    # causing=None is the complement of caused
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(pd.DataFrame(y, columns=names)).fit(2)
+    result = res.test_causality(caused, kind=kind)
+
+    assert result.causing == [names[i] for i in causing_ind]
+    assert result.caused == [names[i] for i in caused_ind]
+    wald, df_resid = _granger_wald_ols(y, 2, caused_ind, causing_ind)
+    num_restr = 2 * len(caused_ind) * len(causing_ind)
+    if kind == "f":
+        expected = wald / num_restr
+        df = (num_restr, 3 * df_resid)
+        pvalue = stats.f.sf(expected, *df)
+    else:
+        expected = wald
+        df = num_restr
+        pvalue = stats.chi2.sf(expected, df)
+    assert_allclose(result.test_statistic, expected, rtol=1e-10)
+    assert_equal(result.df, df)
+    assert_allclose(result.pvalue, pvalue, rtol=1e-8)
+    explicit = res.test_causality(caused, causing_ind, kind=kind)
+    assert_allclose(result.test_statistic, explicit.test_statistic, rtol=1e-14)
+    assert result.summary().as_text() == explicit.summary().as_text()
+
+
+def test_test_causality_default_causing_r():
+    # R vars 1.6.1 (R 4.6.2), y the log differences of realgdp, realcons and
+    # realinv of macrodata:
+    # est <- VAR(y, p = 2, type = "const")
+    # causality(est, cause = "realinv")$Granger
+    # causality(VAR(y[, 1:2], p = 2, type = "const"),
+    #           cause = "realcons")$Granger
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = pd.DataFrame(np.diff(np.log(data.to_numpy()), axis=0), columns=names)
+    result = VAR(y).fit(2).test_causality(["realgdp", "realcons"])
+    assert result.causing == ["realinv"]
+    assert_allclose(result.test_statistic, 1.1067248090187003, rtol=1e-8)
+    assert_allclose(result.pvalue, 0.35242200414558367, rtol=1e-8)
+    assert_equal(result.df, (4, 579))
+
+    result = VAR(y.iloc[:, :2]).fit(2).test_causality("realgdp")
+    assert result.causing == ["realcons"]
+    assert result.caused == ["realgdp"]
+    assert_allclose(result.test_statistic, 19.035317569398131, rtol=1e-8)
+    assert_allclose(result.pvalue, 1.2944585403573683e-08, rtol=1e-8)
+    assert "H_0: realcons does not Granger-cause realgdp" in str(result.summary())
+
+
+@pytest.mark.parametrize(
+    "diag, stable",
+    [
+        ([1.0, 0.5], False),  # a unit root
+        ([-1.0, 0.3], False),  # a root of -1
+        ([0.999, 0.5], True),
+        ([1.001, 0.5], False),
+    ],
+)
+def test_is_stable_unit_root(diag, stable):
+    # The eigenvalues of a diagonal VAR(1) are its diagonal. Stability needs
+    # all of them inside the unit circle, a unit root is not stable.
+    coefs = np.diag(diag)[None, :, :]
+    assert bool(var_model.is_stable(coefs)) is stable
+    assert bool(VARProcess(coefs, None, np.eye(2)).is_stable()) is stable
+
+
+def test_forecast_interval_y_none():
+    # y=None forecasts from the last k_ar observations: the recursion
+    # y_{T+h} = nu + A_1 y_{T+h-1} + A_2 y_{T+h-2} and the bounds
+    # +/- z sqrt(diag(sum_{i<h} Phi_i Sigma_u Phi_i'))
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    a1, a2 = res.coefs
+    path = [y[-2], y[-1]]
+    phis = [np.eye(3), a1]
+    for _ in range(4):
+        path.append(res.intercept + a1 @ path[-1] + a2 @ path[-2])
+    for _ in range(2):
+        phis.append(a1 @ phis[-1] + a2 @ phis[-2])
+    point = np.array(path[2:])
+    mse = np.cumsum([phi @ res.sigma_u @ phi.T for phi in phis], axis=0)
+    half_width = stats.norm.ppf(0.95) * np.sqrt(np.diagonal(mse, axis1=1, axis2=2))
+    interval = res.forecast_interval(None, 4, alpha=0.1)
+    assert_allclose(interval.point_forecast, point, rtol=1e-12)
+    assert_allclose(interval.forc_lower, point - half_width, rtol=1e-12)
+    assert_allclose(interval.forc_upper, point + half_width, rtol=1e-12)
+
+
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_forecast_interval_y_none_exog(use_pandas):
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = np.random.default_rng(11).standard_normal((y.shape[0], 1))
+    exog_future = np.random.default_rng(12).standard_normal((3, 1))
+    endog = pd.DataFrame(y, columns=data.columns) if use_pandas else y
+    res = VAR(endog, exog=exog).fit(3, trend="ct")
+    interval = res.forecast_interval(None, 3, exog_future=exog_future)
+    expected = res.forecast_interval(y[-3:], 3, exog_future=exog_future)
+    for actual, desired in zip(interval, expected, strict=True):
+        assert_allclose(actual, desired, rtol=1e-14)
+
+
+def test_forecast_interval_y_none_process_raises():
+    process = VARProcess(np.array([[[0.5, 0.1], [0.2, 0.3]]]), None, np.eye(2))
+    with pytest.raises(ValueError, match="y is required"):
+        process.forecast_interval(None, 3)
+
+
+@pytest.mark.parametrize("intercept_form", ["2d", "1d", "none"])
+def test_varprocess_forecast_var1_closed_form(intercept_form):
+    # A VARProcess that is not estimation results forecasts with its
+    # intercept. For a VAR(1), y_T(h) = mu + A^h (y_T - mu) with
+    # mu = (I - A)^-1 c, and MSE(h) = sum_{i<h} A^i Sigma_u A^i'.
+    coefs = np.array([[[0.5, 0.1], [0.2, 0.3]]])
+    c = np.array([1.0, -1.0])
+    sigma_u = np.array([[1.0, 0.3], [0.3, 2.0]])
+    coefs_exog = {"2d": c[:, None], "1d": c, "none": None}[intercept_form]
+    if intercept_form == "none":
+        c = np.zeros(2)
+    process = VARProcess(coefs, coefs_exog, sigma_u)
+    y_last = np.array([[0.4, 2.5]])
+    a = coefs[0]
+    mu = np.linalg.solve(np.eye(2) - a, c)
+    expected = np.array(
+        [mu + np.linalg.matrix_power(a, h) @ (y_last[0] - mu) for h in range(1, 6)]
+    )
+    assert_allclose(process.forecast(y_last, 5), expected, rtol=1e-12)
+
+    mse = np.cumsum(
+        [
+            np.linalg.matrix_power(a, i) @ sigma_u @ np.linalg.matrix_power(a, i).T
+            for i in range(5)
+        ],
+        axis=0,
+    )
+    half_width = stats.norm.ppf(0.95) * np.sqrt(mse[:, [0, 1], [0, 1]])
+    interval = process.forecast_interval(y_last, 5, alpha=0.1)
+    assert_allclose(interval.point_forecast, expected, rtol=1e-12)
+    assert_allclose(interval.forc_lower, expected - half_width, rtol=1e-12)
+    assert_allclose(interval.forc_upper, expected + half_width, rtol=1e-12)
+
+
+def test_varprocess_forecast_matches_results():
+    # A VARProcess with the estimates of a VAR(2) with a constant forecasts
+    # as the results do, which is the recursion written out
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    process = VARProcess(res.coefs, res.coefs_exog, res.sigma_u)
+    expected = list(y[-2:])
+    for _ in range(4):
+        expected.append(
+            res.intercept + res.coefs[0] @ expected[-1] + res.coefs[1] @ expected[-2]
+        )
+    expected = np.array(expected[2:])
+    assert_allclose(process.forecast(y[-2:], 4), expected, rtol=1e-12)
+    assert_allclose(
+        process.forecast(y[-2:], 4), res.forecast(y[-2:], 4), rtol=1e-12
+    )
+    interval = process.forecast_interval(y[-2:], 4)
+    expected_interval = res.forecast_interval(y[-2:], 4)
+    for actual, desired in zip(interval, expected_interval, strict=True):
+        assert_allclose(actual, desired, rtol=1e-12)
+
+
+def test_varprocess_forecast_errors():
+    coefs = np.array([[[0.5, 0.1], [0.2, 0.3]]])
+    sigma_u = np.eye(2)
+    y_last = np.ones((1, 2))
+    msg = "A VARProcess can only forecast with an intercept"
+    # a constant and a time trend
+    process = VARProcess(coefs, np.ones((2, 2)), sigma_u)
+    with pytest.raises(ValueError, match=msg):
+        process.forecast(y_last, 3)
+    with pytest.raises(ValueError, match=msg):
+        process.forecast_interval(y_last, 3)
+    # a constant and one exog variable
+    process = VARProcess(
+        coefs, np.ones((2, 2)), sigma_u, _params_info={"k_exog_user": 1}
+    )
+    with pytest.raises(ValueError, match=msg):
+        process.forecast(y_last, 3)
+    process = VARProcess(coefs, np.ones((2, 1)), sigma_u)
+    with pytest.raises(ValueError, match=msg):
+        process.forecast(y_last, 3, exog_future=np.ones((3, 1)))
+    with pytest.raises(ValueError, match="steps must be non-negative"):
+        process.forecast(y_last, -1)
+    with pytest.raises(TypeError, match="steps must be integer_like"):
+        process.forecast(y_last, 2.5)
+
+
+def _int_like_var_res():
+    y = np.random.default_rng(20261126).standard_normal((100, 3))
+    return VAR(pd.DataFrame(y, columns=["y1", "y2", "y3"])).fit(1)
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_get_eq_index_int_like(to_key):
+    # A NumPy integer or a 0-d integer array is a position, as an int is.
+    # It raised a ValueError.
+    res = _int_like_var_res()
+    idx = res.get_eq_index(to_key(2))
+    assert idx == 2
+    assert type(idx) is int
+    assert res.get_eq_index("y3") == 2
+
+
+@pytest.mark.parametrize(
+    "name", [True, np.True_, 2.0], ids=["True", "np.True_", "float"]
+)
+def test_get_eq_index_bool_float(name):
+    # A bool or a float is not a position: True was returned unchanged
+    res = _int_like_var_res()
+    with pytest.raises(ValueError, match="not in list"):
+        res.get_eq_index(name)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.array], ids=["int", "int64", "0d"]
+)
+def test_irf_plot_int_like_impulse_response(close_figures, to_key):
+    # A NumPy integer or a 0-d integer array selects a variable, as an int
+    # does. A NumPy integer raised a ValueError.
+    irf = _int_like_var_res().irf(4)
+    fig = irf.plot(impulse=to_key(1), response=to_key(2), plot_stderr=False)
+    (ax,) = fig.axes
+    assert ax.get_title() == r"y2$\rightarrow$y3"
+    assert_allclose(ax.lines[0].get_ydata(), irf.irfs[:, 2, 1], rtol=1e-12)
+
+
+@pytest.mark.parametrize("to_key", [np.int64, np.array], ids=["int64", "0d"])
+def test_causality_int_like(to_key):
+    # A NumPy integer or a 0-d integer array is an index, as an int is. A 0-d
+    # array raised a TypeError. The names are the reference.
+    res = _int_like_var_res()
+    result = res.test_causality(to_key(0), [to_key(1), 2])
+    expected = res.test_causality("y1", ["y2", "y3"])
+    assert result.caused == ["y1"]
+    assert result.causing == ["y2", "y3"]
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+    assert_allclose(result.pvalue, expected.pvalue, rtol=1e-12)
+    result = res.test_inst_causality(to_key(0))
+    expected = res.test_inst_causality("y1")
+    assert result.causing == ["y1"]
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "value", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+@pytest.mark.parametrize("call", ["caused", "causing", "caused-list", "inst"])
+def test_causality_bool_float(value, call):
+    # A bool or a float is not an index: True was the variable with index 1
+    res = _int_like_var_res()
+    with pytest.raises(TypeError):
+        if call == "caused":
+            res.test_causality(value)
+        elif call == "causing":
+            res.test_causality(0, value)
+        elif call == "caused-list":
+            res.test_causality([value])
+        else:
+            res.test_inst_causality(value)
+
+
+@pytest.mark.parametrize("use_pandas", [False, True])
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_var_refit_exog_names(use_pandas, trend):
+    # Each fit of a model with exog uses the original exog names
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = np.random.default_rng(7).standard_normal((y.shape[0], 1))
+    if use_pandas:
+        y = pd.DataFrame(y, columns=names)
+        exog = pd.DataFrame(exog, columns=["x"])
+        endog_names, exog_name = names, "x"
+    else:
+        endog_names, exog_name = ["y1", "y2", "y3"], "x1"
+    mod = VAR(y, exog=exog)
+    trend_names = ["const", "trend"][: len(trend)]
+    for lags in (1, 2, 2, 1):
+        res = mod.fit(lags, trend=trend)
+        lag_names = [f"L{i}.{name}" for i in range(1, lags + 1) for name in endog_names]
+        expected = trend_names + [exog_name] + lag_names
+        assert mod.exog_names == expected
+        assert list(mod.data.cov_names) == [
+            (xname, yname) for xname in expected for yname in endog_names
+        ]
+        fresh = VAR(y, exog=exog).fit(lags, trend=trend)
+        assert_allclose(np.asarray(res.params), np.asarray(fresh.params), rtol=1e-12)
+        if use_pandas:
+            assert list(res.params.index) == expected
+            assert list(res.cov_params().index.get_level_values(0)) == [
+                name for name in expected for _ in range(3)
+            ]
+
+
+def _var_predict_written_out(y, params, lags, k_trend, start, end, exog=None):
+    # Predictions of the zero-indexed observations start, ..., end:
+    # y_t = B_d' d_t + B_x' x_t + sum_i B_i' y_{t-i} with the trend terms
+    # d_t = (1, t + 1, (t + 1) ** 2)[:k_trend] and exog x_t, using the data
+    # in the sample and the forecasts after it
+    k = y.shape[1]
+    k_det = k_trend + (0 if exog is None else exog.shape[1])
+    path = list(y)
+    predictions = []
+    for t in range(lags, end + 1):
+        value = np.array([1.0, t + 1.0, (t + 1.0) ** 2])[:k_trend] @ params[:k_trend]
+        if exog is not None:
+            value = value + exog[t] @ params[k_trend:k_det]
+        for i in range(1, lags + 1):
+            value = value + path[t - i] @ params[k_det + (i - 1) * k : k_det + i * k]
+        if t >= y.shape[0]:
+            path.append(value)
+        predictions.append(value)
+    return np.array(predictions[start - lags :])
+
+
+def _var_predict_data():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    return np.diff(np.log(data.to_numpy()), axis=0)
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("lags", [1, 2])
+@pytest.mark.parametrize(
+    "start, end, from_n",
+    [
+        (-3, 3, True),  # in and out of sample
+        (-3, 1, True),  # end - start twice the out-of-sample length gave []
+        (1, 3, True),  # start after the sample
+        (0, 0, True),  # only the first forecast
+        (10, 11, False),  # in sample, as many rows as "ct" has trend terms
+        (None, None, False),  # all in-sample predictions
+    ],
+)
+def test_var_predict_trend_out_of_sample(trend, lags, start, end, from_n):
+    y = _var_predict_data()
+    n = y.shape[0]
+    if from_n:
+        # start and end count from n, the number of observations
+        start, end = n + start, n + end
+    mod = VAR(y)
+    res = mod.fit(lags, trend=trend)
+    params = np.asarray(res.params)
+    pred = mod.predict(params, start=start, end=end, lags=lags, trend=trend)
+    first = lags if start is None else start
+    last = n - 1 if end is None else end
+    expected = _var_predict_written_out(y, params, lags, res.k_trend, first, last)
+    assert pred.shape == (last - first + 1, 3)
+    assert_allclose(pred, expected, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "trend, expected",
+    [
+        # R vars 1.6.1 (R 4.6.2), y the log differences of realgdp,
+        # realcons and realinv of macrodata, n = 202:
+        # tt2 <- matrix((1:n)^2, ncol = 1, dimnames = list(NULL, "tt2"))
+        # est <- VAR(y, p = 2, type = "both", exogen = tt2)
+        # fut <- matrix((n + 1:3)^2, ncol = 1, dimnames = list(NULL, "tt2"))
+        # predict(est, n.ahead = 3, dumvar = fut)
+        (
+            "ctt",
+            [
+                [0.0037595019294891351, 0.0039060752482694737, -0.00054302873264010232],
+                [0.0038690994873518459, 0.0059887554230986474, -0.014483391087102813],
+                [0.0038982522979758593, 0.0052554488093068032, -0.0098882455177141532],
+            ],
+        ),
+        # predict(VAR(y, p = 2, type = "none"), n.ahead = 3)
+        (
+            "n",
+            [
+                [0.0042356792144035028, 0.0025459148324905199, 0.017484669325280769],
+                [0.0036601381578146145, 0.0039065028527603849, 0.004524250872569008],
+                [0.0028099951813873075, 0.0027067133561361513, 0.0062816370863210888],
+            ],
+        ),
+    ],
+)
+def test_var_predict_out_of_sample_r(trend, expected):
+    y = _var_predict_data()
+    n = y.shape[0]
+    mod = VAR(y)
+    res = mod.fit(2, trend=trend)
+    pred = mod.predict(res.params, start=n, end=n + 2, lags=2, trend=trend)
+    assert_allclose(pred, expected, rtol=1e-7)
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct"])
+def test_var_predict_exog(trend):
+    y = _var_predict_data()
+    n = y.shape[0]
+    exog = np.random.default_rng(1122).standard_normal((n, 2))
+    mod = VAR(y, exog=exog)
+    res = mod.fit(2, trend=trend)
+    params = np.asarray(res.params)
+    pred = mod.predict(params, start=5, end=n - 1, lags=2, trend=trend)
+    expected = _var_predict_written_out(y, params, 2, res.k_trend, 5, n - 1, exog)
+    assert_allclose(pred, expected, rtol=1e-8)
+    with pytest.raises(ValueError, match="cannot forecast out of sample with exog"):
+        mod.predict(params, start=n - 1, end=n + 1, lags=2, trend=trend)
+
+
+def test_var_predict_start_before_lags():
+    y = _var_predict_data()
+    n = y.shape[0]
+    mod = VAR(y)
+    for lags in (1, 2):
+        params = mod.fit(lags).params
+        # start=0 and end=n-1 with one lag returned n copies of a fitted value
+        with pytest.raises(ValueError, match="start must be at least lags"):
+            mod.predict(params, start=lags - 1, end=n - 1, lags=lags)
+
+
+@pytest.mark.parametrize("centered", [False, True])
+def test_seasonal_dummies_negative_raises(centered):
+    with pytest.raises(ValueError, match="n_seasons must be non-negative"):
+        util.seasonal_dummies(-1, 5, centered=centered)
+    # Observations in the seasons 1, 2, 3, 0, 1, 2 of 4; one column for each
+    # of the seasons 0, 1, 2
+    expected = np.zeros((6, 3))
+    expected[[3, 0, 1, 4, 5], [0, 1, 2, 1, 2]] = 1
+    if centered:
+        expected -= 1 / 4
+    actual = util.seasonal_dummies(4, 6, first_period=1, centered=centered)
+    assert_allclose(actual, expected, rtol=1e-14)
+
+
+@pytest.mark.parametrize("method", ["mle", "gls", 1])
+def test_var_fit_method_deprecated(method):
+    # Only "ols" is implemented, other values were ignored; "ols" in any
+    # case and None (the default) do not warn
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    with pytest.warns(FutureWarning, match="is ignored and the model is estimated"):
+        res = VAR(y).fit(2, method=method)
+    z = np.column_stack([np.ones(y.shape[0] - 2), y[1:-1], y[:-2]])
+    ols = np.linalg.lstsq(z, y[2:], rcond=None)[0]
+    assert_allclose(res.params, ols, rtol=1e-10)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for quiet in ("ols", "OLS", None):
+            res = VAR(y).fit(2, method=quiet)
+            assert_allclose(res.params, ols, rtol=1e-10)
+
+
+def _fevd_written_out(res, periods):
+    # decomp[j, h - 1, k] = sum_{i<h} Theta_i[j, k] ** 2 / MSE_h[j, j] with
+    # Theta_i = Phi_i P, P the Cholesky factor of Sigma_u and the MA weights
+    # Phi_0 = I, Phi_i = sum_{l=1}^{min(i, p)} Phi_{i-l} A_l
+    k, p = res.neqs, res.k_ar
+    phis = [np.eye(k)]
+    for i in range(1, periods):
+        lags = range(1, min(i, p) + 1)
+        phis.append(sum(phis[i - lag] @ res.coefs[lag - 1] for lag in lags))
+    thetas = np.array([phi @ np.linalg.cholesky(res.sigma_u) for phi in phis])
+    num = np.cumsum(thetas**2, axis=0)
+    return (num / num.sum(2, keepdims=True)).swapaxes(0, 1)
+
+
+def test_fevd_default_periods():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    expected = _fevd_written_out(res, 10)
+    for fevd in (var_model.FEVD(res), res.fevd(None)):
+        assert fevd.periods == 10
+        assert_allclose(fevd.decomp, expected, rtol=1e-10)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("periods", [4, 10, None])
+def test_fevd_plot_periods(periods, close_figures):
+    # The bars of variable i stack the shares of the shocks for the first
+    # periods horizons
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    fig = res.fevd(10).plot(periods=periods)
+    n_periods = 10 if periods is None else periods
+    expected = _fevd_written_out(res, n_periods)
+    assert len(fig.axes) == 3
+    for i, ax in enumerate(fig.axes):
+        assert len(ax.patches) == 3 * n_periods
+        heights = np.array([p.get_height() for p in ax.patches])
+        bottoms = np.array([p.get_y() for p in ax.patches])
+        centers = np.array([p.get_x() + p.get_width() / 2 for p in ax.patches])
+        shares = expected[i].T
+        assert_allclose(heights.reshape(3, n_periods), shares, rtol=1e-10)
+        stacked = np.vstack([np.zeros(n_periods), np.cumsum(shares, axis=0)[:-1]])
+        assert_allclose(bottoms.reshape(3, n_periods), stacked, rtol=1e-10)
+        # The centers are x - width / 2 + width / 2, exact up to the rounding
+        # of width = 0.8, which atol allows for at the center 0
+        ticks = np.tile(np.arange(n_periods), (3, 1))
+        assert_allclose(centers.reshape(3, n_periods), ticks, rtol=0, atol=1e-12)
+
+
+@pytest.mark.matplotlib
+def test_fevd_plot_periods_invalid(close_figures):
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    fevd = VAR(y).fit(2).fevd(5)
+    for periods in (6, 0, -1):
+        with pytest.raises(ValueError, match="periods must be between 1 and 5"):
+            fevd.plot(periods=periods)
+    with pytest.raises(TypeError, match="periods must be integer_like"):
+        fevd.plot(periods=2.5)
+
+
+@pytest.fixture
+def macro_var2():
+    """The VAR(2) of the macrodata log differences used by results_var_r"""
+    return VAR(get_macrodata()).fit(maxlags=2)
+
+
+def test_api_exports():
+    from statsmodels.tsa.vector_ar import api, svar_model
+
+    assert sorted(api.__all__) == ["SVAR", "VAR"]
+    assert api.VAR is var_model.VAR
+    assert api.SVAR is svar_model.SVAR
+
+
+def test_roots_r(macro_var2):
+    res = macro_var2
+    roots = res.roots
+    # vars reports the moduli of the eigenvalues of the companion matrix in
+    # decreasing order. The roots are their reciprocals, sorted by decreasing
+    # modulus.
+    assert_allclose(1 / np.abs(roots), results_var_r.roots_modulus[::-1], rtol=1e-10)
+    # Each root solves det(I - A_1 z - A_2 z**2) = 0
+    for z in roots:
+        poly = np.eye(res.neqs) - res.coefs[0] * z - res.coefs[1] * z**2
+        sv = np.linalg.svd(poly, compute_uv=False)
+        assert sv[-1] < 1e-12 * sv[0]
+    # The process is stable, so all roots are outside the unit circle
+    assert res.is_stable()
+    assert np.all(np.abs(roots) > 1)
+
+
+def test_orth_ma_rep_default_cholesky_r(macro_var2):
+    # P defaults to the Cholesky factor of sigma_u, as in the orthogonalized
+    # impulse responses of vars
+    ref = RResults()
+    orth = macro_var2.orth_ma_rep(ref.nirfs)
+    for i, name in enumerate(macro_var2.names):
+        expected = ref.orth_irf[name].view((float, 3), type=np.ndarray)
+        assert_allclose(orth[:, :, i], expected, rtol=1e-10)
+
+
+def test_fevd_r(macro_var2):
+    fevd = macro_var2.fevd(5)
+    for i, name in enumerate(macro_var2.names):
+        assert_allclose(fevd.decomp[i], results_var_r.fevd[name], rtol=1e-10)
+    # The shares sum to one over the shocks
+    assert_allclose(fevd.decomp.sum(2), np.ones((3, 5)), rtol=1e-13)
+
+
+def test_fevd_summary_values(macro_var2, capsys):
+    fevd = macro_var2.fevd(5)
+    fevd.summary()
+    blocks = capsys.readouterr().out.split("FEVD for ")[1:]
+    names = macro_var2.names
+    assert len(blocks) == len(names)
+    for name, block in zip(names, blocks, strict=True):
+        lines = block.strip().split("\n")
+        assert lines[0] == name
+        assert lines[1].split() == names
+        rows = [line.split() for line in lines[2:]]
+        assert [row[0] for row in rows] == [str(i) for i in range(5)]
+        values = np.array([row[1:] for row in rows], dtype=float)
+        # six decimals are printed
+        assert_allclose(values, results_var_r.fevd[name], rtol=0, atol=5e-7)
+
+
+@pytest.mark.parametrize(
+    "coefs, stable, mean",
+    [
+        ([[0.5, 0.1], [0.0, 0.3]], True, [18 / 7, 20 / 7]),
+        ([[1.2, 0.0], [0.0, 0.5]], False, [-5.0, 4.0]),
+    ],
+)
+def test_varprocess_str(coefs, stable, mean):
+    # The mean (I - A)^-1 c for the intercept c = (1, 2), solved by hand
+    process = VARProcess(np.array([coefs]), np.array([1.0, 2.0]), np.eye(2))
+    lines = str(process).split("\n")
+    assert len(lines) == 3
+    assert lines[0] == "VAR(1) process for 2-dimensional response y_t"
+    assert lines[1] == f"stable: {stable}"
+    assert lines[2].startswith("mean: [")
+    printed = np.array(lines[2][len("mean: [") : -1].split(), dtype=float)
+    # numpy prints eight decimals
+    assert_allclose(printed, mean, rtol=1e-7)
+    assert bool(process.is_stable()) is stable
+
+
+def test_varprocess_var1_closed_forms():
+    # A VAR(1) without deterministic terms: the MA weights are A**h, the
+    # orthogonalized ones A**h P with Sigma_u = P P', the forecast MSE is
+    # sum_{i<h} A**i Sigma_u A**i', Gamma(h) = A**h Gamma(0) with
+    # Gamma(0) = sum_i A**i Sigma_u A**i', and the long-run effects are
+    # (I - A)^-1 = sum_i A**i
+    a = np.array([[0.5, 0.1], [0.2, 0.3]])
+    sigma = np.array([[2.0, 0.5], [0.5, 1.0]])
+    chol = np.array([[np.sqrt(2.0), 0.0], [0.5 / np.sqrt(2.0), np.sqrt(0.875)]])
+    process = VARProcess(a[None], None, sigma)
+    assert process.k_trend == 0
+    assert process.k_exog == 0
+    assert_equal(process.intercept, np.zeros(2))
+    assert_equal(process.mean(), np.zeros(2))
+
+    powers = np.array([np.linalg.matrix_power(a, h) for h in range(6)])
+    assert_allclose(process.ma_rep(5), powers, rtol=1e-13)
+    assert_allclose(process.orth_ma_rep(5), powers @ chol, rtol=1e-13)
+    mse = np.cumsum([p @ sigma @ p.T for p in powers[:5]], axis=0)
+    assert_allclose(process.mse(5), mse, rtol=1e-13)
+    # The eigenvalues of A are below 0.6 in modulus, so 200 terms of the
+    # sums reach machine precision
+    many = [np.linalg.matrix_power(a, h) for h in range(200)]
+    gamma0 = sum(p @ sigma @ p.T for p in many)
+    acf = np.array([powers[h] @ gamma0 for h in range(4)])
+    assert_allclose(process.acf(3), acf, rtol=1e-12)
+    inv = np.array([[0.7, 0.1], [0.2, 0.5]]) / 0.33
+    assert_allclose(process.long_run_effects(), inv, rtol=1e-12)
+    assert_allclose(sum(many), inv, rtol=1e-12)
+
+
+def test_forecast_needs_initial_values_and_steps(bivariate_var_data):
+    y = bivariate_var_data
+    res = VAR(y).fit(2)
+    with pytest.raises(ValueError, match=r"at least order \(2\) observations"):
+        res.forecast(y[-1:], 3)
+    with pytest.raises(ValueError, match="steps must be non-negative, got -1"):
+        forecast(y[-2:], res.coefs, res.intercept, -1)
+
+
+@pytest.mark.parametrize("form", ["1d", "series", "column"])
+def test_var_single_variable_raises(form):
+    y = np.random.default_rng(0).standard_normal(50)
+    endog = {"1d": y, "series": pd.Series(y), "column": y[:, None]}[form]
+    with pytest.raises(ValueError, match="Only gave one variable to VAR"):
+        VAR(endog)
+
+
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_var_predict_default_start(bivariate_var_data, trend):
+    y = bivariate_var_data
+    mod = VAR(y)
+    res = mod.fit(2, trend=trend)
+    params = np.asarray(res.params)
+    # y_t = c + A_1 y_{t-1} + A_2 y_{t-2}, written out
+    a1, a2 = res.coefs
+    expected = y[1:-1] @ a1.T + y[:-2] @ a2.T
+    if trend == "c":
+        expected += params[0]
+    # start defaults to the first observation after the lags and end to the
+    # last observation
+    pred = mod.predict(params, lags=2, trend=trend)
+    assert_allclose(pred, expected, rtol=1e-10)
+
+
+def test_var_predict_dataframe_params(bivariate_var_data):
+    endog = pd.DataFrame(bivariate_var_data, columns=["a", "b"])
+    mod = VAR(endog)
+    res = mod.fit(2)
+    assert isinstance(res.params, pd.DataFrame)
+    pred = mod.predict(res.params, lags=2)
+    assert_allclose(pred, np.asarray(res.fittedvalues), rtol=1e-10)
+
+
+def test_select_order_invalid_trend(bivariate_var_data):
+    with pytest.raises(ValueError, match="Unknown trend: bad"):
+        VAR(bivariate_var_data).select_order(4, trend="bad")
+
+
+def test_fit_default_lag_orders(bivariate_var_data):
+    # Without ic the lag order defaults to 1. With ic, select_order considers
+    # the orders up to round(12 * (nobs / 100) ** (1 / 4)) = 15 for 252
+    # observations.
+    y = bivariate_var_data
+    assert VAR(y).fit().k_ar == 1
+    sel = VAR(y).select_order()
+    assert all(len(v) == 16 for v in sel.ics.values())
+    assert VAR(y).fit(ic="bic").k_ar == sel.bic
+
+
+def test_lag_order_results_summary(bivariate_var_data):
+    sel = VAR(bivariate_var_data).select_order(4)
+    lines = str(sel.summary()).split("\n")
+    assert lines[0].strip() == "VAR Order Selection (* highlights the minimums)"
+    cols = sorted(sel.ics)
+    assert lines[2].split() == [c.upper() for c in cols]
+    rows = [line.split() for line in lines[4:9]]
+    assert [row[0] for row in rows] == [str(i) for i in range(5)]
+    for j, col in enumerate(cols):
+        cells = [row[j + 1] for row in rows]
+        starred = [i for i, cell in enumerate(cells) if cell.endswith("*")]
+        assert starred == [sel.selected_orders[col]]
+        assert sel.selected_orders[col] == np.argmin(sel.ics[col])
+        # four significant digits are printed
+        printed = np.array([cell.rstrip("*") for cell in cells], dtype=float)
+        assert_allclose(printed, sel.ics[col], rtol=5e-4)
+
+
+def test_simulate_var_steps_must_match_offset(bivariate_var_result):
+    offset = np.zeros((20, 2))
+    with pytest.raises(ValueError, match="steps must be equal to their length"):
+        bivariate_var_result.simulate_var(
+            steps=10, offset=offset, rng=np.random.default_rng(0)
+        )
+
+
+def test_forecast_exog_future_checks(bivariate_var_data):
+    y = bivariate_var_data
+    res = VAR(y).fit(1)
+    with pytest.raises(ValueError, match="No exog in model"):
+        res.forecast(y[-1:], 3, exog_future=np.ones((3, 1)))
+    exog = np.random.default_rng(0).standard_normal((y.shape[0], 1))
+    res_exog = VAR(y, exog=exog).fit(1)
+    with pytest.raises(ValueError, match="Please provide an exog_future"):
+        res_exog.forecast(y[-1:], 3)
+
+
+def test_forecast_ctt_r():
+    # vars has no quadratic trend. t**2 enters there as exog, with the same
+    # time index t = 1, ..., nobs as the linear trend, see results_var_r.R
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2, trend="ctt")
+    fc = res.forecast(data[-2:], 5)
+    assert_allclose(fc, results_var_r.forecast_ctt, rtol=1e-8)
+    point = res.forecast_interval(data[-2:], 5).point_forecast
+    assert_allclose(point, results_var_r.forecast_ctt, rtol=1e-8)
+
+
+@pytest.mark.parametrize("alpha", [0, 1, -0.1, 1.5])
+def test_forecast_interval_invalid_alpha(bivariate_var_data, alpha):
+    res = VAR(bivariate_var_data).fit(1)
+    with pytest.raises(ValueError, match="alpha must be between 0 and 1"):
+        res.forecast_interval(bivariate_var_data[-1:], 3, alpha=alpha)
+
+
+def test_sigma_u_mle_without_residual_df():
+    # A VAR(1) with a constant for 2 variables has 3 parameters per equation
+    # and 3 observations after the lag, so the fit is exact
+    y = np.array([[1.0, 2.0], [2.0, 1.5], [0.5, 3.0], [1.5, 0.5]])
+    res = VAR(y).fit(1)
+    assert res.df_resid == 0
+    # The residuals are zero up to rounding
+    assert_allclose(res.resid, np.zeros((3, 2)), atol=1e-12)
+    assert np.all(np.isnan(res.sigma_u))
+    assert_equal(res.sigma_u_mle, np.zeros((2, 2)))
+
+
+def test_forecast_cov_invalid_method(bivariate_var_result):
+    with pytest.raises(ValueError, match="method has to be either 'mse' or 'auto'"):
+        bivariate_var_result.forecast_cov(3, method="bad")
+
+
+def test_reorder_by_position():
+    data = get_macrodata()
+    res = VAR(data).fit(maxlags=2)
+    order = [2, 0, 1]
+    by_position = res.reorder(order)
+    by_name = res.reorder([res.names[i] for i in order])
+    # The VAR of the reordered data
+    plain = data.view((float, 3), type=np.ndarray)
+    expected = VAR(plain[:, order]).fit(maxlags=2)
+    for reordered in (by_position, by_name):
+        assert reordered.names == ["realinv", "realgdp", "realcons"]
+        assert_allclose(reordered.params, expected.params, rtol=1e-10)
+        assert_allclose(reordered.sigma_u, expected.sigma_u, rtol=1e-10)
+        assert_allclose(reordered.stderr, expected.stderr, rtol=1e-10)
+    with pytest.raises(ValueError, match="Reorder specification length"):
+        res.reorder([0, 1])
+
+
+@pytest.mark.parametrize("signif", [0, 1, 1.5])
+def test_causality_invalid_signif(bivariate_var_result, signif):
+    with pytest.raises(ValueError, match="signif has to be between 0 and 1"):
+        bivariate_var_result.test_causality(0, 1, signif=signif)
+
+
+def test_causality_invalid_variable_types(bivariate_var_result):
+    with pytest.raises(TypeError, match="caused has to be of type"):
+        bivariate_var_result.test_causality([0.5])
+    with pytest.raises(TypeError, match="causing has to be of type"):
+        bivariate_var_result.test_causality(0, [1.5])
+
+
+@pytest.mark.parametrize("kind", ["f", "wald"])
+def test_causality_single_restriction(bivariate_var_result, kind):
+    # In a bivariate VAR(1), the test of y2 -> y1 has a single restriction,
+    # the coefficient of L1.y2 in the equation of y1, so the Wald and the F
+    # statistic are its squared t statistic. Without causing, the other
+    # variable is causing.
+    res = bivariate_var_result
+    t_sq = res.tvalues[2, 0] ** 2
+    df = 1 if kind == "wald" else (1, 2 * res.df_resid)
+    for result in (res.test_causality(0, 1, kind=kind), res.test_causality(0, kind=kind)):
+        assert_allclose(result.test_statistic, t_sq, rtol=1e-10)
+        assert result.df == df
+        assert result.caused == ["y1"]
+        dist = stats.chi2(df) if kind == "wald" else stats.f(*df)
+        assert_allclose(result.pvalue, dist.sf(t_sq), rtol=1e-10)
+        assert_allclose(result.crit_value, dist.ppf(0.95), rtol=1e-10)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_acorr_endog(bivariate_var_result, close_figures):
+    res = bivariate_var_result
+    nlags = 4
+    fig = res.plot_acorr(nlags=nlags, resid=False)
+    # The sample autocorrelations of endog, not of the residuals
+    expected = res.sample_acorr(nlags)[1:]
+    bound = 2 / np.sqrt(res.nobs)
+    assert len(fig.axes) == 4
+    for idx, ax in enumerate(fig.axes):
+        i, j = divmod(idx, 2)
+        heights = np.array([seg[1, 1] for seg in ax.collections[0].get_segments()])
+        assert_allclose(heights, expected[:, i, j], rtol=1e-12)
+        dashed = sorted(
+            line.get_ydata()[0] for line in ax.lines if line.get_linestyle() == "--"
+        )
+        assert_allclose(dashed, [-bound, bound], rtol=1e-12)
+
+
+def _var_forms_data(form, y):
+    index = None
+    if form == "datetime":
+        index = pd.date_range("2000-01-01", periods=y.shape[0], freq=QUARTER_END)
+    elif form == "period":
+        index = pd.period_range("2000Q1", periods=y.shape[0], freq="Q")
+    elif form == "range":
+        index = pd.RangeIndex(y.shape[0])
+    if index is not None:
+        return pd.DataFrame(y, index=index, columns=["a", "b"]), index
+    if form == "list":
+        return y.tolist(), None
+    return tuple(map(tuple, y)), None
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "datetime", "period", "range"])
+def test_var_endog_forms(bivariate_var_data, form):
+    y = bivariate_var_data
+    expected = VAR(y).fit(2)
+    endog, index = _var_forms_data(form, y)
+    res = VAR(endog).fit(2)
+    assert_allclose(np.asarray(res.params), expected.params, rtol=1e-10)
+    assert_allclose(np.asarray(res.sigma_u), expected.sigma_u, rtol=1e-10)
+    if index is None:
+        assert isinstance(res.params, np.ndarray)
+        return
+    assert isinstance(res.params, pd.DataFrame)
+    assert res.params.columns.tolist() == ["a", "b"]
+    exog_names = ["const", "L1.a", "L1.b", "L2.a", "L2.b"]
+    assert res.params.index.tolist() == exog_names
+    assert_index_equal(res.model._index, index)
+    assert_index_equal(res.fittedvalues.index, index[2:])
+
+
+def test_var_int_endog():
+    y = np.cumsum(np.random.default_rng(5).integers(-3, 4, size=(100, 2)), axis=0)
+    y = y.astype(np.int64)
+    res = VAR(y).fit(1)
+    expected = VAR(y.astype(float)).fit(1)
+    assert res.params.dtype == np.float64
+    assert_allclose(res.params, expected.params, rtol=1e-10)
+
+
+def test_var_dates_and_freq(bivariate_var_data):
+    y = bivariate_var_data
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq=QUARTER_END)
+    res = VAR(y, dates=index).fit(2)
+    assert_index_equal(res.model._index, index)
+    # dates without a frequency take it from freq
+    res = VAR(y, dates=list(index), freq=QUARTER_END).fit(2)
+    assert_index_equal(res.model._index, index)
+    assert res.model._index.freq == index.freq
+
+
+def test_var_missing(bivariate_var_data):
+    y = bivariate_var_data
+    y_nan = y.copy()
+    y_nan[10, 1] = np.nan
+    # missing="drop" removes the observation with the NaN
+    res = VAR(y_nan, missing="drop").fit(2)
+    expected = VAR(np.delete(y, 10, axis=0)).fit(2)
+    assert_allclose(res.params, expected.params, rtol=1e-10)
+    assert res.nobs == y.shape[0] - 1 - 2
+    with pytest.raises(MissingDataError):
+        VAR(y_nan, missing="raise")
+
+
+@pytest.mark.parametrize("form", ["1d", "list", "series", "frame"])
+def test_var_exog_forms(bivariate_var_data, form):
+    y = bivariate_var_data
+    x = np.random.default_rng(1).standard_normal(y.shape[0])
+    expected = VAR(y, exog=x[:, None]).fit(2)
+    endog = pd.DataFrame(y, columns=["a", "b"])
+    exog = {
+        "1d": x,
+        "list": x.tolist(),
+        "series": pd.Series(x, name="x"),
+        "frame": pd.DataFrame({"x": x}),
+    }[form]
+    res = VAR(endog, exog=exog).fit(2)
+    assert_allclose(np.asarray(res.params), expected.params, rtol=1e-10)
+    name = "x" if form in ("series", "frame") else "exog0"
+    assert res.exog_names == ["const", name, "L1.a", "L1.b", "L2.a", "L2.b"]
+
+
+def test_get_trendorder_unknown():
+    with pytest.raises(ValueError, match="Unknown trend: t"):
+        util.get_trendorder("t")
+
+
+@pytest.mark.parametrize(
+    "names, exog, expected",
+    [
+        ("y", None, ["const", "L1.y", "L2.y"]),
+        (["a"], pd.Series([1.0, 2.0], name="x"), ["const", "x", "L1.a", "L2.a"]),
+        (["a"], [1.0, 2.0], ["const", "exog0", "L1.a", "L2.a"]),
+        (["a"], [[1.0, 2.0], [3.0, 4.0]], ["const", "exog0", "exog1", "L1.a", "L2.a"]),
+    ],
+)
+def test_make_lag_names_forms(names, exog, expected):
+    assert util.make_lag_names(names, 2, 1, exog) == expected
+
+
+def test_acf_to_acorr_list():
+    acf = [[[4.0, 1.0], [1.0, 1.0]], [[2.0, 0.5], [0.4, 0.3]]]
+    # Divided by sqrt(gamma_ii(0) gamma_jj(0)), the outer product of (2, 1)
+    expected = np.array([[[1.0, 0.5], [0.5, 1.0]], [[0.5, 0.25], [0.2, 0.3]]])
+    assert_allclose(util.acf_to_acorr(acf), expected, rtol=1e-15)
+
+
+def test_eigval_decomp_list():
+    sym = [[2.0, 0.5], [0.5, 1.0]]
+    w, eigva, k = util.eigval_decomp(sym)
+    # The eigenvalues of the 2x2 matrix are 1.5 +- sqrt(0.5)
+    assert_allclose(np.sort(eigva), [1.5 - np.sqrt(0.5), 1.5 + np.sqrt(0.5)])
+    assert_allclose(eigva[k], 1.5 + np.sqrt(0.5))
+    assert_allclose(np.asarray(sym) @ w[:, k], eigva[k] * w[:, k], rtol=1e-13)
+
+
+def test_comp_matrix_requires_square_coefs():
+    with pytest.raises(ValueError, match=r"shape \(p, k, k\)"):
+        util.comp_matrix(np.zeros((2, 2, 3)))
+
+
+def test_varsim_defaults():
+    # Without sig_u the innovations have an identity covariance, and without
+    # an intercept the first p values are zero
+    a = np.array([[0.5, 0.1], [0.2, 0.3]])
+    sim = util.varsim(a[None], None, None, steps=20, rng=np.random.default_rng(0))
+    draws = np.random.default_rng(0).multivariate_normal(np.zeros(2), np.eye(2), 20)
+    expected = np.zeros((20, 2))
+    for t in range(1, 20):
+        expected[t] = a @ expected[t - 1] + draws[t]
+    assert_allclose(sim, expected, rtol=1e-12)
+    explicit = util.varsim(
+        a[None], np.zeros(2), np.eye(2), steps=20, rng=np.random.default_rng(0)
+    )
+    assert_allclose(sim, explicit, rtol=1e-13)
+
+
+def test_varsim_argument_checks():
+    coefs = np.array([[[0.5, 0.1], [0.2, 0.3]]])
+    with pytest.raises(ValueError, match="nsimulations must be a positive integer"):
+        util.varsim(coefs, None, None, steps=5, nsimulations=0)
+    with pytest.raises(ValueError, match="2-D intercept needs to have length"):
+        util.varsim(coefs, np.zeros((4, 2)), None, steps=5, rng=np.random.default_rng(0))
+    with pytest.raises(ValueError, match="initial_values should have shape"):
+        util.varsim(
+            coefs,
+            None,
+            None,
+            steps=5,
+            initial_values=np.zeros((2, 2)),
+            rng=np.random.default_rng(0),
+        )
+
+
+def test_seasonal_dummies():
+    assert util.seasonal_dummies(0, 5).shape == (5, 0)
+    # The first observation is in the second of four seasons, and the last
+    # season has no dummy
+    expected = np.array(
+        [
+            [0, 1, 0],
+            [0, 0, 1],
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+        ],
+        dtype=float,
+    )
+    assert_equal(util.seasonal_dummies(4, 6, first_period=1), expected)
+    centered = util.seasonal_dummies(4, 6, first_period=1, centered=True)
+    assert_allclose(centered, expected - 0.25, rtol=1e-15)
+
+
+def test_pprint_matrix_col_space():
+    values = np.array([[0.5, -1.25], [2.0, 0.125]])
+    text = output.pprint_matrix(values, ["r1", "row2"], ["a", "b"], col_space=12)
+    assert text.split("\n") == [
+        " " * 6 + "a".rjust(12) + "b".rjust(12),
+        "r1".ljust(6) + "0.500000".rjust(12) + "-1.250000".rjust(12),
+        "row2".ljust(6) + "2.000000".rjust(12) + "0.125000".rjust(12),
+        "",
+    ]

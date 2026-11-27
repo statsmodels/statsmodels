@@ -18,7 +18,11 @@ import pandas as pd
 import pytest
 import scipy.stats
 
-from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    EstimationWarning,
+    ValueWarning,
+)
 from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.holtwinters import (
@@ -37,6 +41,7 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_restricted,
     to_unrestricted,
 )
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 base, _ = os.path.split(Path(__file__).resolve())
 housing_data = pd.read_csv(
@@ -858,7 +863,7 @@ def test_start_params(trend, seasonal):
 def test_no_params_to_optimize():
     mod = ExponentialSmoothing(
         housing_data,
-        initial_level=housing_data.iloc[0],
+        initial_level=housing_data.iloc[0, 0],
         initialization_method="known",
     )
     with pytest.warns(EstimationWarning, match="Model has no free parameters"):
@@ -947,23 +952,102 @@ def test_use_boxcox_fit_override():
     ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
-@pytest.mark.parametrize("trend", TRENDS)
-@pytest.mark.parametrize("seasonal", SEASONALS)
-def test_equivalence_cython_python(trend, seasonal):
+@pytest.mark.parametrize(
+    "initialization_method", ["estimated", "heuristic", "legacy-heuristic", "known"]
+)
+@pytest.mark.parametrize("use_boxcox", [0, 1, 2])
+def test_int_use_boxcox_is_bool(initialization_method, use_boxcox):
+    # fit and forecast use an int use_boxcox as a bool: 0 does not transform
+    # the data and any other int estimates lambda. The initial values must
+    # come from the same transform. They were computed with the int as a
+    # fixed lambda, so "heuristic" and "legacy-heuristic" smoothed the data
+    # from initial states on another scale, and "estimated" started there.
+    flag = bool(use_boxcox)
+    kwargs = {}
+    if initialization_method == "known":
+        heuristic = ExponentialSmoothing(
+            housing_data,
+            trend="add",
+            seasonal="add",
+            initialization_method="heuristic",
+            use_boxcox=flag,
+        ).initial_values()
+        names = ("initial_level", "initial_trend", "initial_seasonal")
+        kwargs = dict(zip(names, heuristic, strict=True))
+    models = [
+        ExponentialSmoothing(
+            housing_data,
+            trend="add",
+            seasonal="add",
+            initialization_method=initialization_method,
+            use_boxcox=value,
+            **kwargs,
+        )
+        for value in (use_boxcox, flag)
+    ]
+    results = [mod.fit() for mod in models]
+    initial = [mod.initial_values() for mod in models]
+    for actual, expected in zip(initial[0], initial[1], strict=True):
+        assert_allclose(actual, expected, rtol=1e-14)
+    res_int, res_bool = results
+    assert res_int.params["use_boxcox"] == use_boxcox
+    names = ["smoothing_level", "smoothing_trend", "smoothing_seasonal"]
+    names += ["initial_level", "initial_trend"]
+    for name in names:
+        assert_allclose(res_int.params[name], res_bool.params[name], rtol=1e-12)
+    assert_allclose(res_int.fittedvalues, res_bool.fittedvalues, rtol=1e-12)
+    assert_allclose(res_int.forecast(12), res_bool.forecast(12), rtol=1e-12)
+    y = np.squeeze(np.asarray(housing_data))
+    if flag:
+        # The maximum likelihood lambda of the data
+        assert_allclose(res_int.params["lamda"], scipy.stats.boxcox(y)[1], rtol=1e-12)
+    else:
+        assert res_int.params["lamda"] is None
+        resid = y - np.asarray(res_int.fittedvalues)
+        assert_allclose(res_int.sse, resid @ resid, rtol=1e-12)
+
+
+HW_TWIN_CASES = [
+    (trend, seasonal, damped)
+    for trend in TRENDS
+    for seasonal in SEASONALS
+    for damped in (False, True)
+    if trend is not None or not damped
+]
+
+
+def _assert_hw_twins_agree(actual, expected, y):
+    # The smoothers return y minus the fitted values, so rounding error is
+    # relative to the size of y rather than to each residual
+    rtol = 1e-10
+    assert_allclose(actual, expected, rtol=rtol, atol=rtol * np.abs(y).max())
+
+
+@pytest.fixture(
+    scope="module",
+    params=HW_TWIN_CASES,
+    ids=[f"{t}-{s}-{'damped' if d else 'undamped'}" for t, s, d in HW_TWIN_CASES],
+)
+def hw_twin_case(request):
+    """
+    A fitted model and its parameters in the layout the smoothers use
+
+    The parameters are ``p = [alpha, beta, gamma, l0, b0, phi, s0, ...]``
+    and ``sel`` marks those that ExponentialSmoothing estimates.
+    """
+    trend, seasonal, damped = request.param
     mod = ExponentialSmoothing(
         housing_data,
         trend=trend,
         seasonal=seasonal,
+        damped_trend=damped,
         initialization_method="estimated",
     )
 
     # Overflow in mul-mul case fixed
     res = mod.fit()
-    assert isinstance(res.summary().as_text(), str)
 
     params = res.params
-    nobs = housing_data.shape[0]
-    y = np.squeeze(np.asarray(housing_data))
     m = 12 if seasonal else 0
     p = np.zeros(6 + m)
     alpha = params["smoothing_level"]
@@ -976,6 +1060,23 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
+    has_trend = trend is not None
+    has_seasonal = seasonal is not None
+    sel = np.array(
+        [True, has_trend, has_seasonal, True, has_trend, damped] + [has_seasonal] * m
+    )
+    return trend, seasonal, res, p, sel
+
+
+def test_equivalence_cython_python(hw_twin_case):
+    # The pure-Python smoothers in PY_SMOOTHERS are the twin of the Cython
+    # smoothers in SMOOTHERS
+    trend, seasonal, res, p, _ = hw_twin_case
+    assert isinstance(res.summary().as_text(), str)
+
+    nobs = housing_data.shape[0]
+    y = np.squeeze(np.asarray(housing_data))
+    m = 12 if seasonal else 0
     xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
@@ -988,9 +1089,70 @@ def test_equivalence_cython_python(trend, seasonal):
 
     sse_cy = cy_func(p, cy_hw_args)
     sse_py = py_func(p, py_hw_args)
-    assert_allclose(sse_py, sse_cy)
+    _assert_hw_twins_agree(sse_py, sse_cy, y)
     sse_py = py_func(p, cy_hw_args)
-    assert_allclose(sse_py, sse_cy)
+    _assert_hw_twins_agree(sse_py, sse_cy, y)
+
+    # With transform=True, alpha, beta and gamma are given in the unrestricted
+    # space and mapped back by to_restricted. At the image of p under
+    # to_unrestricted, both smoothers must give the residuals at p.
+    unrestricted = p.copy()
+    unrestricted[:3] = to_unrestricted(p, xi, bounds)
+    py_hw_args = PyHoltWintersArgs(xi, p.copy(), bounds, y, m, nobs, True)
+    cy_hw_args = HoltWintersArgs(xi, p.copy(), bounds, y, m, nobs, True)
+    sse_cy_transform = cy_func(unrestricted, cy_hw_args)
+    sse_py_transform = py_func(unrestricted, py_hw_args)
+    _assert_hw_twins_agree(sse_py_transform, sse_cy_transform, y)
+    _assert_hw_twins_agree(sse_py_transform, sse_cy, y)
+
+
+def test_equivalence_cython_python_model_usage(hw_twin_case):
+    # Set xi and transform on the arguments as
+    # ExponentialSmoothing._optimize_parameters sets them on the Cython
+    # arguments: create them with the estimated parameters selected, search
+    # over alpha, beta and gamma in the restricted space for starting values,
+    # then optimize all estimated parameters in the unrestricted space
+    trend, seasonal, _, p, sel = hw_twin_case
+    nobs = housing_data.shape[0]
+    y = np.squeeze(np.asarray(housing_data))
+    m = 12 if seasonal else 0
+    bounds = np.array([[0.0, 1.0]] * 3)
+    py_func = PY_SMOOTHERS[(seasonal, trend)]
+    cy_func = SMOOTHERS[(seasonal, trend)]
+    py_hw_args = PyHoltWintersArgs(sel.astype(np.int64), p.copy(), bounds, y, m, nobs)
+    cy_hw_args = HoltWintersArgs(sel.astype(np.int64), p.copy(), bounds, y, m, nobs)
+
+    # Residuals with every parameter given, the reference for both steps
+    def full_residuals(params):
+        xi = np.ones_like(params, dtype=np.int64)
+        hw_args = HoltWintersArgs(xi, params.copy(), bounds, y, m, nobs)
+        return cy_func(params, hw_args)
+
+    # Starting values: only alpha, beta and gamma, in the restricted space
+    sv_sel = np.zeros_like(sel)
+    sv_sel[:3] = True
+    sv_sel &= sel
+    for hw_args in (py_hw_args, cy_hw_args):
+        hw_args.xi = sv_sel.astype(np.int64)
+        hw_args.transform = False
+    point = np.array([0.3, 0.1, 0.2])[sv_sel[:3]]
+    err_py = py_func(point, py_hw_args)
+    err_cy = cy_func(point, cy_hw_args)
+    _assert_hw_twins_agree(err_py, err_cy, y)
+    with_point = p.copy()
+    with_point[sv_sel] = point
+    _assert_hw_twins_agree(err_py, full_residuals(with_point), y)
+
+    # Optimization: all estimated parameters, in the unrestricted space
+    for hw_args in (py_hw_args, cy_hw_args):
+        hw_args.xi = sel.astype(np.int64)
+        hw_args.transform = True
+    unrestricted = p.copy()
+    unrestricted[:3] = to_unrestricted(p, sel, bounds)
+    err_py = py_func(unrestricted[sel], py_hw_args)
+    err_cy = cy_func(unrestricted[sel], cy_hw_args)
+    _assert_hw_twins_agree(err_py, err_cy, y)
+    _assert_hw_twins_agree(err_py, full_residuals(p), y)
 
 
 def test_direct_holt_add():
@@ -2204,6 +2366,78 @@ def test_all_initial_values():
     assert_allclose(fit2.params["initial_seasons"], seas)
 
 
+def _known_seasonal_kwargs(seasonal, m):
+    model_kwargs = {
+        "trend": "add",
+        "seasonal": seasonal,
+        "seasonal_periods": m,
+        "initialization_method": "known",
+        "initial_level": 38.0,
+        "initial_trend": 0.5,
+    }
+    fit_kwargs = {
+        "smoothing_level": 0.3,
+        "smoothing_trend": 0.1,
+        "smoothing_seasonal": 0.2,
+        "optimized": False,
+    }
+    return model_kwargs, fit_kwargs
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("m", [3, 4])
+def test_initial_seasonal_without_last_value(seasonal, m):
+    # A known initial_seasonal of length seasonal_periods - 1 is completed so
+    # that the average effect is zero: the values sum to 0 if additive and to
+    # m, a mean of 1, if multiplicative. The model then equals the one given
+    # the complete values.
+    full = {
+        ("add", 3): [3.0, -1.0, -2.0],
+        ("add", 4): [4.0, -14.0, -5.0, 15.0],
+        ("mul", 3): [1.25, 0.5, 1.25],
+        ("mul", 4): [1.25, 0.5, 0.75, 1.5],
+    }[(seasonal, m)]
+    kwargs, fit_kwargs = _known_seasonal_kwargs(seasonal, m)
+    short = ExponentialSmoothing(aust, initial_seasonal=full[:-1], **kwargs)
+    assert_allclose(short.initial_values()[2], full, rtol=1e-15)
+    res = short.fit(**fit_kwargs)
+    expected = ExponentialSmoothing(aust, initial_seasonal=full, **kwargs)
+    expected = expected.fit(**fit_kwargs)
+    assert_allclose(res.params["initial_seasons"], full, rtol=1e-15)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-15)
+    assert_allclose(res.forecast(2 * m), expected.forecast(2 * m), rtol=1e-15)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+def test_initial_seasonal_one_value_two_periods(seasonal):
+    # With seasonal_periods=2 a single value was broadcast to both seasons.
+    # That is kept for now, with a FutureWarning. For "mul", the completed
+    # value would be 2 - 3.5 < 0.
+    value = 3.5 if seasonal == "mul" else 3.0
+    kwargs, fit_kwargs = _known_seasonal_kwargs(seasonal, 2)
+    with pytest.warns(FutureWarning, match="used for both seasons") as record:
+        mod = ExponentialSmoothing(aust, initial_seasonal=[value], **kwargs)
+    assert Path(record[0].filename) == Path(__file__)
+    res = mod.fit(**fit_kwargs)
+    expected = ExponentialSmoothing(aust, initial_seasonal=[value, value], **kwargs)
+    expected = expected.fit(**fit_kwargs)
+    assert_allclose(res.params["initial_seasons"], [value, value], rtol=1e-15)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-15)
+
+
+def test_initial_seasonal_without_last_value_not_positive():
+    # The completed multiplicative seasonal would be 4 - (1.5 + 1.5 + 1) = 0
+    with pytest.raises(ValueError, match="must sum to less than seasonal_periods"):
+        ExponentialSmoothing(
+            aust,
+            seasonal="mul",
+            seasonal_periods=4,
+            initialization_method="known",
+            initial_level=38.0,
+            initial_seasonal=[1.5, 1.5, 1.0],
+        )
+
+
 @pytest.mark.parametrize("trend", [None, "add"])
 @pytest.mark.parametrize("seasonal", ["add", "mul"])
 def test_seasonal_forecast_uses_final_season(trend, seasonal):
@@ -2344,3 +2578,929 @@ def test_damped_initial_trend_round_trip(trend, seasonal):
         res.params_formatted.loc["initial_trend", "param"],
         params["initial_trend"],
     )
+
+
+def _smoother_predictions(trend, seasonal, p, y, m):
+    """
+    One-step predictions of the Cython and the pure-Python smoother
+
+    ``p`` is ``[alpha, beta, gamma, l0, b0, phi, s0, ..., s(m-1)]``. The
+    smoothers return the residuals that the optimizer minimizes, so ``y``
+    minus them are their one-step predictions.
+    """
+    xi = np.ones(p.shape[0], dtype=np.int64)
+    bounds = np.array([[0.0, 1.0]] * 3)
+    predictions = {}
+    for name, smoothers, args in (
+        ("cython", SMOOTHERS, HoltWintersArgs),
+        ("python", PY_SMOOTHERS, PyHoltWintersArgs),
+    ):
+        hw_args = args(xi, p.copy(), bounds, y, m, y.shape[0])
+        resid = smoothers[(seasonal, trend)](p.copy(), hw_args)
+        predictions[name] = (y - resid, resid)
+    return predictions
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+@pytest.mark.parametrize("seasonal", SEASONALS)
+def test_damped_smoother_objective_is_reported_sse(trend, seasonal):
+    # The optimizer minimizes the sum of squared residuals of the smoother,
+    # so at the fitted parameters these must be the residuals and the SSE
+    # of the reported fit. With a multiplicative damped trend and additive
+    # seasonality, the smoothers predicted l * phi * b + s instead of
+    # l * b ** phi + s. The two agree when phi = 1, so phi is fixed below 1.
+    res = ExponentialSmoothing(
+        housing_data,
+        trend=trend,
+        damped_trend=True,
+        seasonal=seasonal,
+        initialization_method="estimated",
+    ).fit(damping_trend=0.95)
+    params = res.params
+    m = 12 if seasonal else 0
+    p = np.zeros(6 + m)
+    p[:6] = [
+        params["smoothing_level"],
+        params["smoothing_trend"],
+        params["smoothing_seasonal"] if seasonal else 0.0,
+        params["initial_level"],
+        params["initial_trend"],
+        params["damping_trend"],
+    ]
+    if seasonal:
+        p[6:] = params["initial_seasons"]
+    y = np.squeeze(np.asarray(housing_data, dtype=float))
+    fitted = np.asarray(res.fittedvalues)
+    predictions = _smoother_predictions(trend, seasonal, p, y, m)
+    for name, (prediction, resid) in predictions.items():
+        assert_allclose(prediction, fitted, rtol=1e-10, err_msg=name)
+        assert_allclose(resid @ resid, res.sse, rtol=1e-10, err_msg=name)
+
+
+def test_mul_damped_add_seasonal_one_step_closed_form():
+    # The (Md, A) method of Hyndman, Koehler, Ord and Snyder (2008),
+    # Forecasting with Exponential Smoothing, Table 2.1, with phi_1 = phi:
+    #   y[t+1|t] = l[t] * b[t] ** phi + s[t+1-m]
+    #   l[t] = alpha * (y[t] - s[t-m]) + (1 - alpha) * l[t-1] * b[t-1] ** phi
+    #   b[t] = beta * l[t] / l[t-1] + (1 - beta) * b[t-1] ** phi
+    #   s[t] = gamma * (y[t] - l[t-1] * b[t-1] ** phi) + (1 - gamma) * s[t-m]
+    m = 4
+    nobs = 12
+    rng = np.random.default_rng(20261119)
+    pattern = np.array([1.0, -0.5, 0.8, -1.3])
+    y = 10 * 1.02 ** np.arange(nobs) + np.tile(pattern, nobs // m)
+    y += 0.2 * rng.standard_normal(nobs)
+    alpha, beta, gamma, phi = 0.4, 0.2, 0.3, 0.9
+    l0, b0 = 10.0, 1.02
+    s0 = np.array([0.9, -0.6, 0.7, -1.2])
+    res = ExponentialSmoothing(
+        y,
+        trend="mul",
+        damped_trend=True,
+        seasonal="add",
+        seasonal_periods=m,
+        initialization_method="known",
+        initial_level=l0,
+        initial_trend=b0,
+        initial_seasonal=s0,
+    ).fit(
+        smoothing_level=alpha,
+        smoothing_trend=beta,
+        smoothing_seasonal=gamma,
+        damping_trend=phi,
+        optimized=False,
+    )
+
+    level, slope = l0, b0
+    # season[t] is s[t+1-m], the seasonal term of the prediction of y[t]
+    season = list(s0)
+    expected = np.empty(nobs)
+    for t in range(nobs):
+        damped = level * slope**phi
+        expected[t] = damped + season[t]
+        new_level = alpha * (y[t] - season[t]) + (1 - alpha) * damped
+        slope = beta * new_level / level + (1 - beta) * slope**phi
+        season.append(gamma * (y[t] - damped) + (1 - gamma) * season[t])
+        level = new_level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+    assert_allclose(res.forecast(1), level * slope**phi + season[nobs], rtol=1e-10)
+
+    p = np.r_[alpha, beta, gamma, l0, b0, phi, s0]
+    predictions = _smoother_predictions("mul", "add", p, y, m)
+    for name, (prediction, _) in predictions.items():
+        assert_allclose(prediction, expected, rtol=1e-10, err_msg=name)
+
+
+# R 4.6.2, stats::HoltWinters at fixed parameters and start values, with
+# aust the 24 values of ``aust`` above:
+#
+#   ses <- HoltWinters(ts(c(0, aust)), alpha = 0.35, beta = FALSE,
+#                      gamma = FALSE, l.start = 40)
+#   x <- ts(c(aust[1:4], aust), frequency = 4)
+#   hw <- HoltWinters(x, alpha = 0.3, beta = 0.1, gamma = 0.4,
+#                     seasonal = "additive", l.start = 38, b.start = 0.5,
+#                     s.start = c(4, -14, -5, 1))
+#   fitted(ses)[, "xhat"]; ses$SSE; coef(ses)
+#   fitted(hw)[, "xhat"]; hw$SSE; coef(hw); predict(hw, 6)
+#
+# R starts the recursions at observation 2 without a trend or seasonal, and
+# at observation f + 1 with a season, so a value or a season is put in front
+# of the data. With every start value given, those values are not used. R
+# updates the season with y[t] - l[t], statsmodels with y[t] - l[t-1] - b[t-1];
+# substituting the level update shows that the two agree when the statsmodels
+# gamma is gamma_R * (1 - alpha).
+R_SES_FITTED = [
+    40.0,
+    40.604610299999997,
+    34.807644195000002,
+    33.939804776750002,
+    35.125920904887501,
+    39.006452138176869,
+    35.625407989814967,
+    35.925533693379727,
+    38.393798550696822,
+    42.071502807952932,
+    38.259554175169406,
+    38.069968563860115,
+    38.892553416509074,
+    43.202561770730895,
+    39.242194950975083,
+    39.849818768133801,
+    41.222754049286969,
+    46.240288582036527,
+    41.904007828323742,
+    41.964339138410431,
+    43.251622639966776,
+    49.031927715978405,
+    44.187909965385963,
+    44.234049427500878,
+]
+R_SES_SSE = 1945.009041036981
+R_SES_LEVEL = 45.521939727875576
+R_HW_FITTED = [
+    42.5,
+    24.745061139999997,
+    33.989825203799995,
+    39.897184282345989,
+    42.23915108885781,
+    25.898805811550346,
+    36.216145884424613,
+    42.60175401477499,
+    47.900874631746561,
+    30.67383599894367,
+    39.282716749298444,
+    45.15896610184565,
+    48.954685935488953,
+    31.85836014518085,
+    39.623367563610721,
+    45.453754410767239,
+    52.182823066662507,
+    34.893388072701967,
+    42.768488022302876,
+    47.133447327474883,
+    55.340010780032912,
+    37.164813684294813,
+    44.866994770106452,
+    49.064136748631952,
+]
+R_HW_SSE = 114.53470711678553
+# coef(hw): the final level and trend, then the seasonal of each of the next
+# four periods
+R_HW_STATES = [
+    50.548048362460811,
+    0.51267816695466806,
+    7.991904139219157,
+    -13.926037398748061,
+    -5.7963931341920603,
+    -2.1511440480353903,
+]
+R_HW_FORECAST = [
+    59.052630668634635,
+    37.647367297622083,
+    46.28968972913276,
+    50.447616982244092,
+    61.103343336453307,
+    39.698079965440755,
+]
+R_HW_INITIAL = {
+    "initial_level": 38.0,
+    "initial_trend": 0.5,
+    "initial_seasonal": [4.0, -14.0, -5.0, 1.0],
+}
+R_HW_ALPHA = 0.3
+R_HW_SMOOTHING = {
+    "smoothing_level": R_HW_ALPHA,
+    "smoothing_trend": 0.1,
+    "smoothing_seasonal": 0.4 * (1 - R_HW_ALPHA),
+}
+
+
+def _r_hw_fit(endog):
+    mod = ExponentialSmoothing(
+        endog,
+        trend="add",
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        **R_HW_INITIAL,
+    )
+    return mod.fit(optimized=False, **R_HW_SMOOTHING)
+
+
+@pytest.mark.parametrize("use_boxcox", [False, None])
+def test_ses_matches_r(use_boxcox):
+    # use_boxcox=None is accepted and, like False, does not transform the data
+    res = ExponentialSmoothing(
+        aust,
+        initialization_method="known",
+        initial_level=40.0,
+        use_boxcox=use_boxcox,
+    ).fit(smoothing_level=0.35, optimized=False)
+    assert_allclose(res.fittedvalues, R_SES_FITTED, rtol=1e-12)
+    assert_allclose(res.sse, R_SES_SSE, rtol=1e-12)
+    assert_allclose(res.level.iloc[-1], R_SES_LEVEL, rtol=1e-12)
+    # Simple exponential smoothing forecasts are flat at the last level
+    assert_allclose(res.forecast(3), np.full(3, R_SES_LEVEL), rtol=1e-12)
+    assert res.params["use_boxcox"] is False
+    assert res.params["lamda"] is None
+
+
+def test_use_boxcox_none_estimates_as_false():
+    # The data that are optimized over and simulated from are untransformed
+    res = {}
+    for use_boxcox in (None, False):
+        mod = ExponentialSmoothing(aust, trend="add", use_boxcox=use_boxcox)
+        res[use_boxcox] = mod.fit()
+    params = ["smoothing_level", "smoothing_trend", "initial_level", "initial_trend"]
+    for name in params:
+        assert_allclose(res[None].params[name], res[False].params[name], rtol=1e-15)
+    sims = [
+        res[use_boxcox].simulate(
+            6, random_errors="bootstrap", rng=np.random.default_rng(0)
+        )
+        for use_boxcox in (None, False)
+    ]
+    assert_allclose(sims[0], sims[1], rtol=1e-15)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+def test_input_forms_match_r(form):
+    endog = series_forms(np.asarray(aust))[form]
+    res = _r_hw_fit(endog)
+    assert_allclose(res.fittedvalues, R_HW_FITTED, rtol=1e-12)
+    assert_allclose(res.sse, R_HW_SSE, rtol=1e-12)
+    states = np.r_[
+        np.asarray(res.level)[-1],
+        np.asarray(res.trend)[-1],
+        np.asarray(res.season)[-4:],
+    ]
+    assert_allclose(states, R_HW_STATES, rtol=1e-12)
+    fcast = res.forecast(6)
+    assert_allclose(fcast, R_HW_FORECAST, rtol=1e-12)
+    predicted = res.predict(20, 29)
+    assert_allclose(predicted, np.r_[R_HW_FITTED[20:], R_HW_FORECAST], rtol=1e-12)
+    # Without errors, a simulation from the end of the sample is the forecast
+    sim = res.simulate(6, random_errors=np.zeros((6, 1)))
+    assert_allclose(sim, R_HW_FORECAST, rtol=1e-12)
+    if form in ("series", "dataframe"):
+        pd.testing.assert_index_equal(res.fittedvalues.index, endog.index)
+        fcast_index = pd.date_range("2002-01-01", periods=6, freq="MS")
+        for value in (fcast, sim):
+            assert isinstance(value, pd.Series)
+            pd.testing.assert_index_equal(value.index, fcast_index)
+        assert isinstance(predicted, pd.Series)
+        predict_index = pd.date_range("2001-09-01", periods=10, freq="MS")
+        pd.testing.assert_index_equal(predicted.index, predict_index)
+    else:
+        for value in (res.fittedvalues, fcast, predicted, sim):
+            assert isinstance(value, np.ndarray)
+
+
+@pytest.mark.parametrize("index_type", ["period", "range"])
+def test_period_and_range_index_output(index_type):
+    if index_type == "period":
+        index = pd.period_range("2005Q1", periods=30, freq="Q")
+    else:
+        index = pd.RangeIndex(30)
+    endog = pd.Series(np.asarray(aust), index=index[:24])
+    res = _r_hw_fit(endog)
+    assert_allclose(res.fittedvalues, R_HW_FITTED, rtol=1e-12)
+    fcast = res.forecast(6)
+    predicted = res.predict(20, 29)
+    sim = res.simulate(6, random_errors=np.zeros((6, 1)))
+    for value, expected, expected_index in (
+        (fcast, R_HW_FORECAST, index[24:]),
+        (sim, R_HW_FORECAST, index[24:]),
+        (predicted, np.r_[R_HW_FITTED[20:], R_HW_FORECAST], index[20:]),
+    ):
+        assert isinstance(value, pd.Series)
+        assert_allclose(value, expected, rtol=1e-12)
+        pd.testing.assert_index_equal(value.index, expected_index)
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [6.0, np.float64(6.0), np.array(6), np.int32(6)],
+    ids=["float", "float64", "0d-array", "int32"],
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date", "period", "range"])
+def test_forecast_int_like_steps(steps, index_type):
+    # A float with an integral value is a number of steps, as an int is, and
+    # so is a 0-d integer array with a date index. They raised a KeyError or
+    # a TypeError. The forecasts from R are the reference.
+    index = {
+        "ndarray": None,
+        "date": pd.date_range("2005-01-01", periods=30, freq="MS"),
+        "period": pd.period_range("2005Q1", periods=30, freq="Q"),
+        "range": pd.RangeIndex(30),
+    }[index_type]
+    endog = np.asarray(aust)
+    if index is not None:
+        endog = pd.Series(endog, index=index[:24])
+    fcast = _r_hw_fit(endog).forecast(steps)
+    assert_allclose(fcast, R_HW_FORECAST, rtol=1e-12)
+    if index is not None:
+        pd.testing.assert_index_equal(fcast.index, index[24:])
+
+
+@pytest.mark.parametrize(
+    "steps", [True, np.True_, 2.5], ids=["True", "np.True_", "2.5"]
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date"])
+def test_forecast_steps_not_int(steps, index_type):
+    # A bool was one step without a date index; 2.5 raised a KeyError or a
+    # TypeError from the date arithmetic
+    endog = np.asarray(aust)
+    if index_type == "date":
+        index = pd.date_range("2005-01-01", periods=24, freq="MS")
+        endog = pd.Series(endog, index=index)
+    res = _r_hw_fit(endog)
+    with pytest.raises(TypeError, match="steps must be integer_like"):
+        res.forecast(steps)
+
+
+def test_integer_endog_matches_float():
+    y = np.round(np.asarray(aust))
+    res_int = _r_hw_fit(y.astype(int))
+    res_float = _r_hw_fit(y)
+    assert_allclose(res_int.fittedvalues, res_float.fittedvalues, rtol=1e-15)
+    assert_allclose(res_int.forecast(6), res_float.forecast(6), rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"trend": "linear"}, "trend must be one of"),
+        ({"seasonal": "linear", "seasonal_periods": 4}, "seasonal must be one of"),
+        ({"initialization_method": "simple"}, "initialization_method must be one"),
+    ],
+)
+def test_invalid_options(kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        ExponentialSmoothing(aust, **kwargs)
+
+
+def test_initialization_method_none_raises():
+    # None stopped being a valid initialization method in 0.13
+    with pytest.raises(TypeError, match="initialization_method must be a string"):
+        ExponentialSmoothing(aust, initialization_method=None)
+
+
+def test_invalid_fit_method():
+    mod = ExponentialSmoothing(aust)
+    with pytest.raises(ValueError, match="method must be one of"):
+        mod.fit(method="Nelder-Mead")
+
+
+def test_seasonal_periods_needed_without_freq():
+    with pytest.raises(ValueError, match="seasonal_periods has not been provided"):
+        ExponentialSmoothing(np.asarray(aust), seasonal="add")
+    # A quarterly index gives the period
+    assert ExponentialSmoothing(aust, seasonal="add").seasonal_periods == 4
+
+
+def test_fix_params_with_heuristic_initialization():
+    mod = SimpleExpSmoothing(aust, initialization_method="heuristic")
+    # Initial values can only be fixed when they are estimated
+    with pytest.raises(KeyError, match="initial_level if not allowed"):
+        with mod.fix_params({"initial_level": 40.0}):
+            pass
+    with mod.fix_params({"smoothing_level": 0.35}):
+        with pytest.warns(EstimationWarning, match="no free parameters"):
+            res = mod.fit()
+    y = np.asarray(aust)
+    level = mod.initial_values()[0]
+    expected = np.empty_like(y)
+    for t in range(y.shape[0]):
+        expected[t] = level
+        level = 0.35 * y[t] + 0.65 * level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-12)
+    assert_allclose(res.forecast(2), np.full(2, level), rtol=1e-12)
+
+
+def _holt_winters_data(seed, alpha, beta, gamma, seasonal):
+    # 60 observations from the additive Holt-Winters recursions plus N(0, 1)
+    nobs = 60
+    rng = np.random.default_rng(seed)
+    level, slope = 20.0, 0.5
+    season = [2.0, -1.0, 0.5, -1.5] if seasonal else [0.0] * 4
+    y = np.empty(nobs)
+    for t in range(nobs):
+        y[t] = level + slope + season[t] + rng.standard_normal()
+        new_level = alpha * (y[t] - season[t]) + (1 - alpha) * (level + slope)
+        season.append(gamma * (y[t] - level - slope) + (1 - gamma) * season[t])
+        slope = beta * (new_level - level) + (1 - beta) * slope
+        level = new_level
+    return y
+
+
+@pytest.mark.parametrize("seasonal", [None, "add"])
+def test_brute_start_respects_smoothing_trend_bounds(seasonal):
+    # With smoothing_trend in [0.3, 0.5] and smoothing_trend <= smoothing_level,
+    # the grid points with smoothing_level < 0.3 are infeasible. Least squares
+    # stopped after one evaluation returns its starting value, the grid point.
+    # A small smoothing_level and a large smoothing_trend generate the data.
+    y = _holt_winters_data(20261120, 0.1, 0.9, 0.0, seasonal)
+    fit_kwargs = {"method": "least_squares", "minimize_kwargs": {"max_nfev": 1}}
+
+    def start(bounds):
+        mod = ExponentialSmoothing(
+            y, trend="add", seasonal=seasonal, seasonal_periods=4, bounds=bounds
+        )
+        with pytest.warns(ConvergenceWarning, match="Optimization failed"):
+            res = mod.fit(**fit_kwargs)
+        assert res.mle_retvals.nfev == 1
+        return res.params["smoothing_level"], res.params["smoothing_trend"]
+
+    # Without the bounds the best grid point has smoothing_level < 0.3
+    alpha, _ = start(None)
+    assert alpha < 0.3
+    alpha, beta = start({"smoothing_trend": (0.3, 0.5)})
+    assert 0.3 <= beta <= 0.5
+    assert beta <= alpha
+
+
+def test_fixed_smoothing_level_keeps_tighter_bounds():
+    # Fixing smoothing_level caps smoothing_trend at it and smoothing_seasonal
+    # at 1 - smoothing_level, but user bounds that are already tighter stay.
+    # Without the bounds, both are close to 0.5 for these data.
+    y = _holt_winters_data(20261121, 0.5, 0.5, 0.5, True)
+    bounds = {"smoothing_trend": (0.0, 0.05), "smoothing_seasonal": (0.0, 0.05)}
+    mod = ExponentialSmoothing(
+        y, trend="add", seasonal="add", seasonal_periods=4, bounds=bounds
+    )
+    with mod.fix_params({"smoothing_level": 0.5}):
+        res = mod.fit()
+    assert_allclose(res.params["smoothing_level"], 0.5, rtol=1e-15)
+    # Bound by the transformation, so at most the upper bound up to rounding
+    assert 0.0 <= res.params["smoothing_trend"] <= 0.05 * (1 + 1e-12)
+    assert 0.0 <= res.params["smoothing_seasonal"] <= 0.05 * (1 + 1e-12)
+
+
+def test_convergence_warning_returns_start():
+    mod = SimpleExpSmoothing(aust, initialization_method="estimated")
+    with pytest.warns(ConvergenceWarning, match="Optimization failed to converge"):
+        res = mod.fit(
+            start_params=[0.4, 45.0],
+            method="least_squares",
+            minimize_kwargs={"max_nfev": 1},
+        )
+    assert not res.mle_retvals.success
+    params = [res.params["smoothing_level"], res.params["initial_level"]]
+    assert_allclose(params, [0.4, 45.0], rtol=1e-12)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+def test_legacy_heuristic_multiplicative_trend(seasonal):
+    # The initial values of statsmodels 0.11: the mean of y[0], y[m], ..., the
+    # m-th root of the growth of the second season over the first, and the
+    # first season relative to the level
+    m = 4
+    y = np.asarray(aust)
+    nobs = y.shape[0]
+    l0 = y[::m].mean()
+    b0 = (y[m : 2 * m].mean() / y[:m].mean()) ** (1 / m)
+    s0 = y[:m] / l0 if seasonal == "mul" else y[:m] - l0
+    alpha, beta, gamma = 0.3, 0.1, 0.2
+    res = ExponentialSmoothing(
+        aust,
+        trend="mul",
+        seasonal=seasonal,
+        seasonal_periods=m,
+        initialization_method="legacy-heuristic",
+    ).fit(
+        smoothing_level=alpha,
+        smoothing_trend=beta,
+        smoothing_seasonal=gamma,
+        optimized=False,
+    )
+    assert_allclose(res.params["initial_level"], l0, rtol=1e-12)
+    assert_allclose(res.params["initial_trend"], b0, rtol=1e-12)
+    assert_allclose(res.params["initial_seasons"], s0, rtol=1e-12)
+
+    # The (M, A) and (M, M) methods of Hyndman, Koehler, Ord and Snyder (2008),
+    # Forecasting with Exponential Smoothing, Table 2.1
+    level, slope = l0, b0
+    # season[t] is the seasonal term of the prediction of y[t]
+    season = list(s0)
+    expected = np.empty(nobs)
+    for t in range(nobs):
+        base = level * slope
+        if seasonal == "add":
+            expected[t] = base + season[t]
+            new_level = alpha * (y[t] - season[t]) + (1 - alpha) * base
+            season.append(gamma * (y[t] - base) + (1 - gamma) * season[t])
+        else:
+            expected[t] = base * season[t]
+            new_level = alpha * y[t] / season[t] + (1 - alpha) * base
+            season.append(gamma * y[t] / base + (1 - gamma) * season[t])
+        slope = beta * new_level / level + (1 - beta) * slope
+        level = new_level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-12)
+    h = np.arange(1, 7)
+    future_season = np.array([season[nobs + (j - 1) % m] for j in h])
+    trend = level * slope**h
+    fcast = trend + future_season if seasonal == "add" else trend * future_season
+    assert_allclose(res.forecast(6), fcast, rtol=1e-12)
+
+
+@pytest.mark.parametrize("trend", [None, "add", "mul"])
+def test_initial_values_force(trend):
+    y = np.asarray(aust)
+    mod = ExponentialSmoothing(aust, trend=trend, initialization_method="heuristic")
+    stored = mod.initial_values()
+    # Without force, the stored values are returned and the arguments ignored
+    ignored = mod.initial_values(initial_level=3.0, initial_trend=0.5)
+    assert_allclose(ignored[0], stored[0], rtol=1e-15)
+    if trend is None:
+        assert ignored[1] is None
+    else:
+        assert_allclose(ignored[1], stored[1], rtol=1e-15)
+    # With force, the level starts at y[0] and the trend at y[1] - y[0] or
+    # y[1] / y[0], unless they are given
+    l0, b0, s0 = mod.initial_values(force=True)
+    assert_allclose(l0, y[0], rtol=1e-15)
+    assert s0 == []
+    l0_given, b0_given, _ = mod.initial_values(
+        initial_level=3.0, initial_trend=0.5, force=True
+    )
+    assert_allclose(l0_given, 3.0, rtol=1e-15)
+    if trend is None:
+        assert b0 is None
+        assert b0_given is None
+    else:
+        expected_b0 = y[1] - y[0] if trend == "add" else y[1] / y[0]
+        assert_allclose(b0, expected_b0, rtol=1e-15)
+        assert_allclose(b0_given, 0.5, rtol=1e-15)
+
+
+def test_summary_shows_nan_parameter():
+    res = ExponentialSmoothing(
+        aust, initialization_method="known", initial_level=np.nan
+    ).fit(smoothing_level=0.35, optimized=False)
+    rows = {
+        line.split()[0]: line.split()[1:]
+        for line in res.summary().as_text().splitlines()
+        if line.startswith(("smoothing_level", "initial_level"))
+    }
+    assert rows["smoothing_level"] == ["0.3500000", "alpha", "False"]
+    assert rows["initial_level"] == ["nan", "l.0", "False"]
+
+
+@pytest.mark.parametrize(
+    "anchor", ["2009", "2009-03-01", pd.Timestamp("2009-03-01"), 16, -8]
+)
+def test_simulate_anchor_in_sample(anchor):
+    # Without errors, a simulation anchored at observation 16 continues the
+    # states there, so it is the forecast of the model fit to the first 16
+    # observations. "2009" selects all of 2009 and anchors at its start.
+    res = _r_hw_fit(aust)
+    sim = res.simulate(6, anchor=anchor, random_errors=np.zeros((6, 1)))
+    expected = _r_hw_fit(aust.iloc[:16]).forecast(6)
+    assert_allclose(sim, expected, rtol=1e-12)
+    pd.testing.assert_index_equal(sim.index, expected.index)
+
+
+def test_simulate_unexpected_random_errors():
+    res = _r_hw_fit(aust)
+    with pytest.raises(ValueError, match="random_errors has unexpected value"):
+        res.simulate(2, random_errors=[0.0, 0.0])
+
+
+def test_fix_params_fixes_initial_values():
+    # Setting an initial value raises unless initialization_method is "known".
+    # With "estimated", fix_params fixes some and estimates the others.
+    with pytest.raises(ValueError, match="initialization method is estimated"):
+        ExponentialSmoothing(aust, trend="add", seasonal="add", initial_level=40.0)
+    mod = ExponentialSmoothing(aust, trend="add", seasonal="add")
+    with mod.fix_params({"initial_level": 40.0, "initial_seasonal.0": 5.0}):
+        res = mod.fit()
+    assert_allclose(res.params["initial_level"], 40.0, rtol=1e-15)
+    assert_allclose(res.params["initial_seasons"][0], 5.0, rtol=1e-15)
+    optimized = res.params_formatted["optimized"]
+    assert not optimized["initial_level"]
+    assert not optimized["initial_seasons.0"]
+    for name in ("smoothing_level", "initial_trend", "initial_seasons.1"):
+        assert optimized[name]
+    # The reported parameters reproduce the fit
+    params = res.params
+    refit = ExponentialSmoothing(
+        aust,
+        trend="add",
+        seasonal="add",
+        initialization_method="known",
+        initial_level=params["initial_level"],
+        initial_trend=params["initial_trend"],
+        initial_seasonal=params["initial_seasons"],
+    ).fit(
+        smoothing_level=params["smoothing_level"],
+        smoothing_trend=params["smoothing_trend"],
+        smoothing_seasonal=params["smoothing_seasonal"],
+        optimized=False,
+    )
+    assert_allclose(refit.fittedvalues, res.fittedvalues, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "name, bound", [("initial_level", (None, 30.0)), ("initial_trend", (2.0, 3.0))]
+)
+def test_bounds_on_estimated_initial_values(name, bound):
+    mod = ExponentialSmoothing(aust, trend="add", bounds={name: bound})
+    res = mod.fit()
+    lower = -np.inf if bound[0] is None else bound[0]
+    assert lower <= res.params[name] <= bound[1]
+
+
+@pytest.mark.parametrize("trend", [None, "add", "mul"])
+def test_ses_holt_default_initialization_is_estimated(trend):
+    # SimpleExpSmoothing and Holt defaulted to initialization_method=None,
+    # which raised a TypeError, although the documented default is
+    # "estimated". With "estimated" and at least 10 observations, the
+    # starting values are those of the heuristic: the intercept and slope
+    # of a regression of the first 10 observations on 1, ..., 10.
+    rng = np.random.default_rng(20261121)
+    y = 20 + 0.5 * np.arange(40) + rng.standard_normal(40)
+    slope, intercept = np.polyfit(np.arange(1.0, 11.0), y[:10], 1)
+    if trend is None:
+        mod = SimpleExpSmoothing(y)
+        b0 = None
+    else:
+        mod = Holt(y, exponential=trend == "mul")
+        b0 = slope if trend == "add" else 1 + slope / intercept
+    level, initial_trend, _ = mod.initial_values()
+    assert_allclose(level, intercept, rtol=1e-10)
+    if b0 is None:
+        assert initial_trend is None
+    else:
+        assert_allclose(initial_trend, b0, rtol=1e-10)
+
+    # The recursions of Hyndman and Athanasopoulos at fixed parameters,
+    # starting from the heuristic values
+    alpha, beta = 0.3, 0.1
+    lvl, b = intercept, b0
+    expected = np.empty_like(y)
+    for t in range(y.shape[0]):
+        if trend is None:
+            expected[t] = lvl
+            lvl = alpha * y[t] + (1 - alpha) * lvl
+        elif trend == "add":
+            expected[t] = lvl + b
+            new = alpha * y[t] + (1 - alpha) * (lvl + b)
+            b = beta * (new - lvl) + (1 - beta) * b
+            lvl = new
+        else:
+            expected[t] = lvl * b
+            new = alpha * y[t] + (1 - alpha) * lvl * b
+            b = beta * new / lvl + (1 - beta) * b
+            lvl = new
+    if trend is None:
+        res = mod.fit(smoothing_level=alpha, optimized=False)
+    else:
+        res = mod.fit(smoothing_level=alpha, smoothing_trend=beta, optimized=False)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+    # The initial values are estimated
+    optimized = mod.fit().params_formatted["optimized"]
+    assert optimized["initial_level"]
+    if trend is not None:
+        assert optimized["initial_trend"]
+
+
+def _seasonal_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+def _seasonal_recursions(y, seasonal, alpha, gamma, level, initial_seasonal):
+    # The Holt-Winters recursions without a trend, Hyndman and
+    # Athanasopoulos (2014), section 7.5. season[t] is s[t - m], the
+    # seasonal term of the prediction of y[t].
+    season = list(initial_seasonal)
+    fitted = np.empty_like(y)
+    for t in range(y.shape[0]):
+        s = season[t]
+        if seasonal == "add":
+            fitted[t] = level + s
+            new_level = alpha * (y[t] - s) + (1 - alpha) * level
+            season.append(gamma * (y[t] - level) + (1 - gamma) * s)
+        else:
+            fitted[t] = level * s
+            new_level = alpha * y[t] / s + (1 - alpha) * level
+            season.append(gamma * y[t] / level + (1 - gamma) * s)
+        level = new_level
+    return fitted
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("fix_level", [False, True])
+def test_fix_params_initial_seasonal_not_optimized(seasonal, fix_level):
+    # With optimized=False, the fixed initial_seasonal.<j> values were
+    # ignored and the starting values of the model were used instead
+    y = _seasonal_data()
+    mod = ExponentialSmoothing(y, seasonal=seasonal, seasonal_periods=12)
+    level, _, initial_seasonal = mod.initial_values()
+    initial_seasonal = np.array(initial_seasonal, dtype=float)
+    fixed = {"smoothing_level": 0.3, "smoothing_seasonal": 0.2}
+    values = (3.0, -2.0) if seasonal == "add" else (1.05, 0.95)
+    for j, value in zip((0, 7), values, strict=True):
+        fixed[f"initial_seasonal.{j}"] = value
+        initial_seasonal[j] = value
+    if fix_level:
+        fixed["initial_level"] = level = 48.0
+    with mod.fix_params(fixed):
+        res = mod.fit(optimized=False)
+    expected = _seasonal_recursions(y, seasonal, 0.3, 0.2, level, initial_seasonal)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+    assert_allclose(res.params["initial_seasons"], initial_seasonal, rtol=1e-12)
+    assert_allclose(res.params["initial_level"], level, rtol=1e-12)
+
+
+def test_fix_params_plain_initial_seasonal_deprecated():
+    # The key "initial_seasonal" is accepted, used with optimized=False and
+    # ignored by optimized fits. It is deprecated, and does what it did.
+    y = _seasonal_data()
+    mod = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12)
+    level, _, _ = mod.initial_values()
+    initial_seasonal = np.linspace(-3.0, 3.0, 12)
+    fixed = {
+        "smoothing_level": 0.3,
+        "smoothing_seasonal": 0.2,
+        "initial_seasonal": initial_seasonal,
+    }
+    match = 'The key "initial_seasonal" is deprecated'
+    with pytest.warns(FutureWarning, match=match) as record:
+        with mod.fix_params(fixed):
+            res = mod.fit(optimized=False)
+    assert record[0].filename == __file__
+    expected = _seasonal_recursions(y, "add", 0.3, 0.2, level, initial_seasonal)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+    with pytest.warns(FutureWarning, match=match):
+        with mod.fix_params({"initial_seasonal": initial_seasonal}):
+            res = mod.fit()
+    # The same optimization from the same starting values as without the key.
+    # Where it stops depends on the platform: on macOS (Accelerate) the two
+    # fits differ by up to 1.3e-7 relative, and noise of a few ulps in the data
+    # moves the estimates by up to 2.4e-6. Using the fixed values in the
+    # optimized fit would change the initial seasonal values completely.
+    ref = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12).fit()
+    assert_allclose(
+        res.params_formatted["param"], ref.params_formatted["param"], rtol=1e-4
+    )
+
+
+def _missing_drop_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+MISSING_DROP_SPECS = [
+    {"trend": "add"},
+    {"trend": "add", "seasonal": "add", "seasonal_periods": 12},
+    {"trend": "mul", "seasonal": "mul", "seasonal_periods": 12},
+    {"trend": "add", "use_boxcox": True},
+]
+
+
+@pytest.mark.parametrize("spec", MISSING_DROP_SPECS)
+@pytest.mark.parametrize("loc", [[3], [20], [40, 70]])
+def test_missing_drop_matches_data_with_nans_removed(spec, loc):
+    # With missing="drop", the initial values, the Box-Cox transformation
+    # and the optimizer used the data including the nans. A model of the
+    # data with the nans removed by hand is the reference. The nans are
+    # placed in the window of the initial values (3), in the second season
+    # (20) and later (40, 70), where only the optimizer used them.
+    y = _missing_drop_data()
+    y_nan = y.copy()
+    y_nan[loc] = np.nan
+    y_drop = np.delete(y, loc)
+    mod = ExponentialSmoothing(y_nan, missing="drop", **spec)
+    ref_mod = ExponentialSmoothing(y_drop, **spec)
+    assert mod.nobs == y_drop.shape[0]
+    for value, expected in zip(
+        mod.initial_values(), ref_mod.initial_values(), strict=True
+    ):
+        # None, for a component the model does not have, becomes nan
+        assert_allclose(
+            np.asarray(value, dtype=float),
+            np.asarray(expected, dtype=float),
+            rtol=1e-12,
+        )
+
+    smoothing = {"smoothing_level": 0.3, "smoothing_trend": 0.1}
+    if "seasonal" in spec:
+        smoothing["smoothing_seasonal"] = 0.2
+    res = mod.fit(**smoothing, optimized=False)
+    ref = ref_mod.fit(**smoothing, optimized=False)
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-12)
+    assert_allclose(res.sse, ref.sse, rtol=1e-12)
+    assert_allclose(res.forecast(6), ref.forecast(6), rtol=1e-12)
+
+    # Both optimizations solve the same problem from the same starting
+    # values, so they reach the same minimum. They can stop at points that
+    # differ by more than rounding (noise of 4 ulps in the data moves the
+    # estimates by up to 2e-3 and the SSE by up to 1e-6), so the SSE is
+    # compared, not the estimates. With the nans used, the SSE was 200 times
+    # larger.
+    res = mod.fit()
+    ref = ref_mod.fit()
+    assert_allclose(res.sse, ref.sse, rtol=1e-4)
+
+
+def test_missing_drop_simulate():
+    # simulate used the data including the nans to compute the residuals
+    y = _missing_drop_data()
+    y_nan = y.copy()
+    y_nan[20] = np.nan
+    smoothing = {"smoothing_level": 0.3, "smoothing_trend": 0.1}
+    res = ExponentialSmoothing(y_nan, trend="add", missing="drop").fit(
+        **smoothing, optimized=False
+    )
+    ref = ExponentialSmoothing(np.delete(y, 20), trend="add").fit(
+        **smoothing, optimized=False
+    )
+    sim = res.simulate(6, repetitions=3, rng=np.random.default_rng(0))
+    expected = ref.simulate(6, repetitions=3, rng=np.random.default_rng(0))
+    assert_allclose(sim, expected, rtol=1e-12)
+
+
+# Fixed smoothing parameters for the use_boxcox tests, which compare two
+# models that are the same once use_boxcox is converted. Fitted by the
+# optimizer, the two did not stop at the same point on the Azure macOS runners
+# (fitted values up to 3e-8 apart).
+_BOXCOX_FIXED = {
+    "smoothing_level": 0.3,
+    "smoothing_trend": 0.1,
+    "smoothing_seasonal": 0.2,
+    "optimized": False,
+}
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [
+        (np.float32(0.5), 0.5),
+        (np.array(0.5), 0.5),
+        (np.float64(0.0), 0.0),
+        (np.int64(1), True),
+        (np.int64(0), False),
+    ],
+    ids=["float32 lambda", "0-d lambda", "float64 zero", "int64 one", "int64 zero"],
+)
+def test_use_boxcox_numpy_scalars(austourists, use_boxcox, expected):
+    # A NumPy float is a fixed lambda and a NumPy int is used as a bool, as a
+    # Python float and int are; a float32 lambda and an int64 raised TypeError
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    if expected is False:
+        assert res.params["lamda"] is None
+    else:
+        assert_allclose(res.params["lamda"], ref.params["lamda"], rtol=1e-12)
+    if not isinstance(expected, bool):
+        assert_allclose(res.params["lamda"], expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
+    # A NumPy bool raised "use_boxcox must be True, False, 'log' or a float."
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    assert res.params["use_boxcox"] is expected

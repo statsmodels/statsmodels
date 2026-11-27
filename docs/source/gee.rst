@@ -54,6 +54,10 @@ References
   http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 * LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with improved
   small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
+* MP Fay and BI Graubard (2001). Small-sample adjustments for Wald-type tests
+  using sandwich estimators. Biometrics, 57(4), 1198-1206.
+* JG Morel, MC Bokossa and NK Neerchal (2003). Small sample correction for the
+  variance of GEE estimators. Biometrical Journal, 45(4), 395-409.
 
 
 Module Reference

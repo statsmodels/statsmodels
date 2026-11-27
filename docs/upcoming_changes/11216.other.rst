@@ -1,0 +1,5 @@
+- ``FormulaManager`` methods that take a model specification or a
+  frame that carries one (``get_term_names``, ``get_column_names``,
+  ``get_term_name_slices``, ``get_description``, ``get_factors``
+  and ``is_categorical``) raise a ``TypeError`` for other input
+  instead of an ``AttributeError``. :pr:`11216`

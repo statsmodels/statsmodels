@@ -8,6 +8,8 @@ License: Simplified-BSD
 from statsmodels.compat.platform import PLATFORM_WIN
 
 import contextlib
+import copy
+import pickle
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -605,3 +607,37 @@ def test_resmooth():
     assert_allclose(weights2_no_resmooth, weights1_original)
     assert_allclose(weights2_resmooth, weights2_original)
     assert_allclose(weights2_default, weights2_original)
+
+
+@pytest.mark.parametrize("copy_method", ["pickle", "deepcopy"])
+@pytest.mark.parametrize("resmooth", [None, False])
+def test_compute_smoothed_state_weights_copied_results(copy_method, resmooth):
+    # The compiled Kalman smoother pickled its smoothed state autocovariance
+    # in place of the innovations transition matrices L_t, so the weights of
+    # copied (pickled or deep-copied) results, which by default reuse the
+    # compiled smoother when its smoothed state is unchanged, were wrong. They
+    # equal those of the original results and reproduce the smoothed state.
+    endog = np.cumsum(np.random.default_rng(6042).standard_normal(20)) + 10
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1), trend="c")
+    res = mod.smooth([1.0, 0.5, 0.2, 1.0])
+    if copy_method == "pickle":
+        copied = pickle.loads(pickle.dumps(res))
+    else:
+        copied = copy.deepcopy(res)
+
+    actual = tools.compute_smoothed_state_weights(copied, resmooth=resmooth)
+    desired = tools.compute_smoothed_state_weights(res, resmooth=True)
+    for actual_weights, desired_weights in zip(actual, desired, strict=True):
+        assert_allclose(actual_weights, desired_weights, rtol=1e-10)
+
+    # The smoothed state is the weighted sum of the observations, the state
+    # intercepts and the initial state mean
+    weights, state_intercept_weights, prior_weights = actual
+    # (time-invariant: the same intercept in every period)
+    state_intercept = res.filter_results.state_intercept[:, 0]
+    smoothed_state = (
+        np.einsum("tjmp,jp->tm", weights, endog[:, None])
+        + np.einsum("tjml,l->tm", state_intercept_weights, state_intercept)
+        + prior_weights @ res.filter_results.initial_state
+    )
+    assert_allclose(smoothed_state, res.smoothed_state.T, rtol=1e-10)

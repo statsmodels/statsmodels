@@ -1,0 +1,9 @@
+- The lookup of the X-12/X-13 binary in ``x13_arima_analysis`` and ``x13_arima_select_order`` sent the output of
+  each candidate binary, which it runs without arguments, to a pipe
+  that it did not read, so a binary that printed more than the pipe
+  holds made the lookup hang. :pr:`11125`
+- The lookup of the X-12/X-13 binary in ``x13_arima_analysis`` and ``x13_arima_select_order`` raised
+  ``subprocess.CalledProcessError`` when a binary under one of the
+  searched names exited with an error status. Such a binary is
+  skipped like one that cannot be run: the next name is tried, and
+  ``X13NotFoundError`` is raised if none works. :pr:`11125`

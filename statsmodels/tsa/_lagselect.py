@@ -11,6 +11,8 @@ from typing import NamedTuple
 
 import numpy as np
 
+from statsmodels.tools.validation import array_like
+
 __all__ = ["NestedLagOLSResults", "nested_lag_ols"]
 
 
@@ -107,12 +109,13 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     ----------
     endog : array_like
         The dependent variable, (nobs,), or variables, (nobs, neqs).
-    lags : ndarray or list of array_like
+    lags : ndarray or sequence of array_like
         The lag blocks in the order in which they enter the regressions. If
         an ndarray of shape (nobs, nlags), each column is one block. If a
-        list, each block has shape (nobs, k_j). Order p uses the first p
-        blocks. The blocks are copied in groups of rows, so views of the data
-        avoid forming the full matrix of lags.
+        sequence, each block has shape (nobs, k_j), or (nobs,) for a single
+        column. Order p uses the first p blocks. The blocks are copied in
+        groups of rows, so views of the data avoid forming the full matrix
+        of lags.
     exog : array_like, optional
         Regressors included in every order, of shape (nobs, k_exog).
     rcond : float or None
@@ -213,8 +216,8 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     nobs, neqs = endog.shape
     if exog is None:
         exog = np.empty((nobs, 0))
-    exog = np.asarray(exog)
-    if exog.ndim != 2 or exog.shape[0] != nobs:
+    exog = array_like(exog, "exog", dtype=None, shape=(None, None))
+    if exog.shape[0] != nobs:
         raise ValueError("exog must have shape (nobs, k_exog)")
     blocks, widths = _as_blocks(lags, nobs)
     nlags = widths.shape[0]
@@ -224,7 +227,7 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     if start is None:
         start = np.zeros(nlags + 1, dtype=int)
     else:
-        start = np.asarray(start, dtype=int)
+        start = array_like(start, "start", dtype=int, mindim=0, shape=(None,))
         if (
             start.shape != (nlags + 1,)
             or start[0] != 0

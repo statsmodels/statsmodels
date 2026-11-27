@@ -441,86 +441,6 @@ cdef class {{prefix}}Statespace(object):
 
         self.initialized = True
 
-    # ## Initialize: stationary process
-    # *Note:* see Durbin and Koopman section 5.6.2
-    def initialize_stationary(self, complex_step=False):
-        """
-        initialize_stationary()
-        """
-        cdef np.npy_intp dim1[1]
-        cdef np.npy_intp dim2[2]
-        cdef int i
-        cdef blas_int info, inc = 1
-        cdef blas_int k_states = self.k_states
-        cdef blas_int k_states2 = self.k_states**2
-        cdef np.float64_t asum, tol = 1e-9
-        cdef {{cython_type}} scalar
-        cdef blas_int [::1,:] ipiv
-
-        # Create selected state covariance matrix
-        {{prefix}}select_cov(self.k_states, self.k_posdef,
-                                   &self.tmp[0,0],
-                                   &self.selection[0,0,0],
-                                   &self.state_cov[0,0,0],
-                                   &self.selected_state_cov[0,0,0])
-
-        # Initial state mean
-        {{if combined_prefix == 'd'}}
-        asum = blas.{{prefix}}asum(&k_states, &self.state_intercept[0, 0], &inc)
-        {{elif prefix == 'c'}}
-        asum = blas.scasum(&k_states, &self.state_intercept[0, 0], &inc)
-        {{else}}
-        asum = blas.dzasum(&k_states, &self.state_intercept[0, 0], &inc)
-        {{endif}}
-
-        dim1[0] = self.k_states
-        self.initial_state = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
-        if asum > tol:
-            dim2[0] = self.k_states
-            dim2[1] = self.k_states
-            if sizeof(blas_int) == 4:
-                ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
-            else:
-                ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT64, FORTRAN)
-
-            # I - T
-            blas.{{prefix}}copy(&k_states2, &self.transition[0,0,0], &inc,
-                                            &self.tmp[0,0], &inc)
-            scalar = -1.0
-            blas.{{prefix}}scal(&k_states2, &scalar, &self.tmp[0, 0], &inc)
-            for i in range(self.k_states):
-                self.tmp[i, i] = self.tmp[i, i] + 1
-
-            # c
-            blas.{{prefix}}copy(&k_states, &self.state_intercept[0,0], &inc,
-                                                &self.initial_state[0], &inc)
-
-            # Solve (I - T) x = c
-            lapack.{{prefix}}getrf(&k_states, &k_states, &self.tmp[0, 0], &k_states,
-                                   &ipiv[0, 0], &info)
-            lapack.{{prefix}}getrs('N', &k_states, &inc, &self.tmp[0, 0], &k_states,
-                                   &ipiv[0, 0], &self.initial_state[0], &k_states, &info)
-
-        dim2[0] = self.k_states; dim2[1] = self.k_states;
-        self.initial_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
-
-        # Create a copy of the transition matrix (to avoid overwriting it)
-        blas.{{prefix}}copy(&k_states2, &self.transition[0,0,0], &inc,
-                                   &self.tmp[0,0], &inc)
-
-        # Copy the selected state covariance to the initial state covariance
-        # (it will be overwritten with the appropriate matrix)
-        blas.{{prefix}}copy(&k_states2, &self.selected_state_cov[0,0,0], &inc,
-                                   &self.initial_state_cov[0,0], &inc)
-
-        # Solve the discrete Lyapunov equation to the get initial state
-        # covariance matrix
-        tools._{{prefix}}solve_discrete_lyapunov(&self.tmp[0,0], &self.initial_state_cov[0,0], self.k_states, complex_step)
-
-        self.initial_diffuse_state_cov[:] = 0
-
-        self.initialized = True
-
     def __iter__(self):
         return self
 
@@ -800,9 +720,9 @@ cdef class {{prefix}}Statespace(object):
 
             # Check for errors
             if info > 0:
-                raise np.linalg.LinAlgError('Singular factorization of observation covariance matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Singular factorization of observation covariance matrix encountered at period %d' % t)  # pragma: no cover
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in factorization of observation covariance matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in factorization of observation covariance matrix encountered at period %d' % t)  # pragma: no cover
 
             # Setup the pointer
             self._obs = &self.selected_obs[0]
@@ -825,9 +745,9 @@ cdef class {{prefix}}Statespace(object):
 
             # Check for errors
             if info > 0:
-                raise np.linalg.LinAlgError('Singular factorization of observation covariance matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Singular factorization of observation covariance matrix encountered at period %d' % t)  # pragma: no cover
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in factorization of observation covariance matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in factorization of observation covariance matrix encountered at period %d' % t)  # pragma: no cover
 
         # Setup final pointers
         self._design = &self.transform_design[0,0]
@@ -858,18 +778,12 @@ cdef class {{prefix}}Statespace(object):
         # $Z_t^* = C_t^{-1}$
         # $H_t^* = I_m$
 
-        # Make sure we have enough observations to perform collapse
-        if self.k_endog < self.k_states:
-            raise RuntimeError('Cannot collapse observation vector it the'
-                               ' state dimension is larger than the dimension'
-                               ' of the observation vector.')
-
         # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
         # correspond to all states except the first k_posdef states)
         if self.subset_design:
-            k_states = self._k_posdef
-            k_states2 = self._k_posdef2
-            k_endogstates = self._k_endog * self._k_posdef
+            k_states = self._k_posdef  # pragma: no cover
+            k_states2 = self._k_posdef2  # pragma: no cover
+            k_endogstates = self._k_endog * self._k_posdef  # pragma: no cover
 
         # Handle missing data
         if self.nmissing[t] == self.k_endog:
@@ -900,7 +814,7 @@ cdef class {{prefix}}Statespace(object):
             if info > 0:
                 raise np.linalg.LinAlgError('Non-positive-definite observation covariance matrix encountered at period %d' % t)
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in observation covariance matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in observation covariance matrix encountered at period %d' % t)  # pragma: no cover
 
             # Calculate the determinant (just the squared product of the
             # diagonals, in the Cholesky decomposition case)
@@ -924,7 +838,7 @@ cdef class {{prefix}}Statespace(object):
 
             # Check for errors
             if not info == 0:
-                raise np.linalg.LinAlgError('Invalid value in calculation of H_t^{-1}Z matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in calculation of H_t^{-1}Z matrix encountered at period %d' % t)  # pragma: no cover
 
             # Calculate $(H_t^{-1} Z_t)' Z_t$
             # $(m \times m) = (m \times p) (p \times p) (p \times m)$
@@ -935,11 +849,16 @@ cdef class {{prefix}}Statespace(object):
 
             # Calculate $(Z_t' H_t^{-1} Z_t)^{-1}$ via Cholesky inversion
             lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
-            # Check for errors
+            # Check for errors (with H_t positive definite, Z_t' H_t^{-1} Z_t
+            # is positive definite if Z_t has full column rank)
             if info > 0:
-                raise np.linalg.LinAlgError('Non-positive-definite ZHZ matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError(
+                    'Collapsed filtering requires a design matrix of full'
+                    ' column rank, but the design matrix of the observed'
+                    ' series is not of full column rank (Z\' H^{-1} Z is not'
+                    ' positive definite) at period %d' % t)
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)  # pragma: no cover
             lapack.{{prefix}}potri("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
 
             # Calculate $C_t$ (the upper triangular cholesky decomposition of $(Z_t' H_t^{-1} Z_t)^{-1}$)
@@ -947,9 +866,9 @@ cdef class {{prefix}}Statespace(object):
 
             # Check for errors
             if info > 0:
-                raise np.linalg.LinAlgError('Non-positive-definite C matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Non-positive-definite C matrix encountered at period %d' % t)  # pragma: no cover
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in C matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError('Invalid value in C matrix encountered at period %d' % t)  # pragma: no cover
 
             # Calculate $C_t'^{-1} \equiv Z_t$
             # Do so by solving the system: $C_t' x = I$

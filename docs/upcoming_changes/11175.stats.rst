@@ -1,0 +1,6 @@
+- ``rvs`` of ``skewnorm`` and ``ACSkewT_gen`` in
+  ``statsmodels.sandbox.distributions.extras`` raised "TypeError:
+  _rvs() got an unexpected keyword argument 'size'" with scipy >=
+  1.9. With scipy 1.8 they warned and drew from the global NumPy
+  random state, ignoring ``random_state``, which they now use.
+  :pr:`11175`

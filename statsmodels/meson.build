@@ -30,7 +30,9 @@ _math_pxd = [
 _cython_tree = [fs.copyfile('__init__.py')]
 cython_args = []
 cython_c_args =  ['-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION', '-DCYTHON_FREETHREADING_COMPATIBLE=1']
+cython_trace_args = []
 if get_option('cython-coverage')
+  cython_trace_args += ['-X', 'linetrace=True']
   cython_args += ['--directive', 'linetrace=true']
   cython_c_args += ['-DCYTHON_TRACE_NOGIL=1']
 endif

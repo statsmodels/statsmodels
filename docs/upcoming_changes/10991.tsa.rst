@@ -1,0 +1,2 @@
+- ``plot`` and ``plot_cum_effects`` of ``IRAnalysis`` raised for ``err_bands``
+  with the default ``stderr_type``. :pr:`10991`

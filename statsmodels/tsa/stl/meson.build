@@ -5,4 +5,5 @@ py.extension_module(
     include_directories: [inc_np],
     subdir: 'statsmodels/tsa/stl',
     c_args: cython_c_args,
+    cython_args: cython_trace_args,
 )

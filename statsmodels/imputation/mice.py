@@ -114,6 +114,7 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 from statsmodels.compat.pandas import PD_LT_3
 
 from collections import defaultdict
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -123,6 +124,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.graphics import utils as gutils
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import maybe_unwrap_results
 
 _mice_data_example_1 = """
@@ -184,10 +186,16 @@ class MICEData:
     values can be matched to the rows of the input by label.  The index can
     be of any type and can contain duplicate labels.  The only change to the
     rows is that rows in which all variables are missing are dropped before
-    imputation.  `MICEData.data` then has fewer rows than the input, and
-    their labels are missing from its index.  The input is not modified.
+    imputation, with a ``ValueWarning``.  `MICEData.data` then has fewer rows
+    than the input, and their labels are missing from its index.  The input is
+    not modified.
     `MICE` fits its analysis model to `MICEData.data`, so the data of the
     analysis model have this index.
+
+    .. versionchanged:: 0.15.1
+
+       A ``ValueWarning`` is issued if rows in which all variables are
+       missing are dropped.  They were dropped without a warning before.
 
     Examples
     --------
@@ -229,6 +237,17 @@ class MICEData:
         # is preserved so imputed values can be related back to the input
         # (#6532).
         self.data = data.dropna(how="all").copy()
+        n_dropped = data.shape[0] - self.data.shape[0]
+        if n_dropped > 0:
+            one = n_dropped == 1
+            warnings.warn(
+                f"{n_dropped} of the {data.shape[0]} rows "
+                f"{'has' if one else 'have'} missing values in all "
+                f"variables and {'is' if one else 'are'} dropped. "
+                f"{'It is' if one else 'They are'} not in MICEData.data.",
+                ValueWarning,
+                stacklevel=2,
+            )
 
         self.history_callback = history_callback
         self.history = []
@@ -1309,16 +1328,15 @@ class MICE:
 
         # Impute missing values
         self.data.update_all(self.n_skip + 1)
-        start_params = None
+        fit_kwds = dict(self.fit_kwds)
         if len(self.results_list) > 0:
-            start_params = self.results_list[-1].params
+            fit_kwds["start_params"] = self.results_list[-1].params
 
         # Fit the analysis model.
         model = self.model_class.from_formula(
             self.model_formula, self.data.data, **self.init_kwds
         )
-        self.fit_kwds.update({"start_params": start_params})
-        result = model.fit(**self.fit_kwds)
+        result = model.fit(**fit_kwds)
 
         return result
 

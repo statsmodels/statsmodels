@@ -6,11 +6,13 @@ License: BSD-3
 
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
 import pandas as pd
 import pytest
-from scipy import stats
+from scipy import special, stats
 
 import statsmodels.nonparametric.kernels_asymmetric as kern
 
@@ -571,3 +573,35 @@ def test_batch_loop_per_point_reference(kind, kernel, batch_size, weighted):
     )
     assert result.shape == x.shape
     assert_allclose(result, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("kernel", ["beta", "beta2"])
+def test_beta_kernel_pdf_near_one_no_warning(kernel):
+    # Near x = 1 the beta pdf underflows to 0 at sample points far from 1, and
+    # scipy 1.8 warned "divide by zero"
+    rng = np.random.default_rng(20261124)
+    sample = rng.beta(2, 3, size=200)
+    bw = 0.005
+    # All in the boundary region of beta2, x > 1 - 2 * bw
+    x = np.array([0.995, 0.999, 1.0])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        pdf = kern.pdf_kernel_asym(x, sample, bw, kernel)
+        pdf_scalar = [kern.pdf_kernel_asym(xi, sample, bw, kernel) for xi in x]
+    # The kernels of Chen (1999): Beta(x / b + 1, (1 - x) / b + 1), and, in the
+    # boundary region, Beta(x / b, rho(1 - x)) with
+    # rho(z) = 2 b^2 + 2.5 - sqrt(4 b^4 + 6 b^2 + 2.25 - z^2 - z / b)
+    if kernel == "beta":
+        a, b = x / bw + 1, (1 - x) / bw + 1
+    else:
+        z = 1 - x
+        a = x / bw
+        b = 2 * bw**2 + 2.5 - np.sqrt(4 * bw**4 + 6 * bw**2 + 2.25 - z**2 - z / bw)
+    log_pdf = (
+        (a[:, None] - 1) * np.log(sample)
+        + (b[:, None] - 1) * np.log1p(-sample)
+        - special.betaln(a, b)[:, None]
+    )
+    expected = np.exp(log_pdf).mean(1)
+    assert_allclose(pdf, expected, rtol=1e-10)
+    assert_allclose(pdf_scalar, expected, rtol=1e-10)

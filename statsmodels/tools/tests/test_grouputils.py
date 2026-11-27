@@ -229,6 +229,31 @@ def test_check_index_sorted_detection():
         unsorted_grouping.check_index(unique=False, index=pd.Index([2, 1, 3]))
 
 
+def test_transform_slices_1d():
+    # Group sums of a 1d array: 1 + 2, 3 + 4 and 5 + 6
+    grouping = Grouping(pd.Index([1, 1, 2, 2, 3, 3]))
+    out = grouping.transform_slices(np.arange(1.0, 7.0), lambda x, idx: x.sum())
+    assert_allclose(out.ravel(), [3.0, 7.0, 11.0], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "shape, match",
+    [
+        ((), "1d or 2d"),
+        ((6, 2, 2), "1d or 2d"),
+        ((5,), "nobs=6 rows"),
+        ((5, 2), "nobs=6 rows"),
+    ],
+    ids=["0d", "3d", "1d-rows", "2d-rows"],
+)
+def test_transform_slices_invalid_shape(shape, match):
+    # A 3d array raised an UnboundLocalError, a 0d array an IndexError and
+    # a row count other than nobs a bare Exception
+    grouping = Grouping(pd.Index([1, 1, 2, 2, 3, 3]))
+    with pytest.raises(ValueError, match=match):
+        grouping.transform_slices(np.ones(shape), lambda x, idx: x.sum(0))
+
+
 def test_init_api():
     # make a multi-index panel
     grun_data = grunfeld.load_pandas().data

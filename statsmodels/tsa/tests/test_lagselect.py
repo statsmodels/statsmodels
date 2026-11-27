@@ -2,6 +2,7 @@ from fractions import Fraction
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
 import pytest
 
 from statsmodels.tsa._lagselect import nested_lag_ols
@@ -235,11 +236,65 @@ def test_exceptions():
         nested_lag_ols(y, np.ones((9, 2)), rcond=None)
     with pytest.raises(ValueError, match="each block"):
         nested_lag_ols(y, [np.ones((10, 0))], rcond=None)
-    with pytest.raises(ValueError, match="exog must"):
+    with pytest.raises(ValueError, match="exog must have 2 dimensions"):
         nested_lag_ols(y, x, np.ones(10), rcond=None)
+    with pytest.raises(ValueError, match=r"exog must have shape \(nobs, k_exog\)"):
+        nested_lag_ols(y, x, np.ones((9, 1)), rcond=None)
     for start in ([0, 1], [1, 1, 1], [0, 2, 1], [0, 1, 11]):
-        with pytest.raises(ValueError, match="start must"):
+        with pytest.raises(ValueError, match="start must be a nondecreasing"):
             nested_lag_ols(y, x, rcond=None, start=start)
+
+
+@pytest.mark.parametrize("kind", ["list", "pandas"])
+def test_exog_start_array_like(kind):
+    # A list or pandas exog and start give the fits of each order by lstsq
+    rng = np.random.default_rng(8)
+    nobs = 40
+    y = rng.standard_normal(nobs)
+    blocks = [rng.standard_normal((nobs, 1)) for _ in range(3)]
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    start = np.array([0, 1, 1, 3])
+    if kind == "list":
+        res = nested_lag_ols(
+            y, blocks, exog.tolist(), rcond=nobs * EPS, start=start.tolist()
+        )
+    else:
+        res = nested_lag_ols(
+            y, blocks, pd.DataFrame(exog), rcond=nobs * EPS, start=pd.Series(start)
+        )
+    ssr, params, tvalues = _ols_loop(y, blocks, exog, start)
+    assert_allclose(res.ssr, ssr, rtol=1e-10)
+    assert_allclose(res.params_last, np.squeeze(params), rtol=1e-9)
+    assert_allclose(res.tvalues_last, tvalues, rtol=1e-8)
+    assert_equal(res.nobs, nobs - start)
+
+
+@pytest.mark.parametrize(
+    "exog, ndim",
+    [(np.ones(10), 1), (np.ones((10, 1, 1)), 3), (1.0, 0)],
+    ids=["1d", "3d", "scalar"],
+)
+def test_exog_not_2d_raises(exog, ndim):
+    match = f"exog must have 2 dimensions, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        nested_lag_ols(np.zeros(10), np.ones((10, 2)), exog, rcond=None)
+
+
+@pytest.mark.parametrize(
+    "lags, start, ndim",
+    [
+        (np.ones((10, 2)), [[0], [1], [1]], 2),
+        (np.ones((10, 2)), [[0, 1, 1]], 2),
+        (np.ones((10, 2)), 0, 0),
+        # without lags a scalar is not taken as the sequence [0]
+        ([], 0, 0),
+    ],
+    ids=["column", "row", "scalar", "scalar-no-lags"],
+)
+def test_start_not_1d_raises(lags, start, ndim):
+    match = f"start must have 1 dimension, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        nested_lag_ols(np.zeros(10), lags, rcond=None, start=start)
 
 
 @pytest.mark.parametrize("seed", [0, 1])
@@ -342,3 +397,33 @@ def test_level_declines():
     x_big = x - level + 1e9
     assert nested_lag_ols(y, x_big, exog, rcond=nobs * EPS) is None
     assert nested_lag_ols(y, x_big, exog, rcond=1e-20) is not None
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_one_dimensional_blocks(container):
+    # A block of shape (nobs,) is a single column
+    rng = np.random.default_rng(11)
+    nobs = 60
+    y = rng.standard_normal(nobs)
+    x = rng.standard_normal((nobs, 3))
+    exog = np.ones((nobs, 1))
+    lags = container(x[:, j] for j in range(3))
+    res = nested_lag_ols(y, lags, exog, rcond=nobs * EPS)
+    ssr, params, tvalues = _ols_loop(y, [x[:, [j]] for j in range(3)], exog)
+    assert_allclose(res.ssr, ssr, rtol=1e-10)
+    assert_allclose(res.params_last, np.squeeze(params), rtol=1e-10)
+    assert_allclose(res.tvalues_last, tvalues, rtol=1e-8)
+    assert_equal(res.df_model, [1, 2, 3, 4])
+
+
+def test_original_columns_not_finite():
+    # The rank check applies to the original columns, which are the centered
+    # ones plus offset / constant times the constant column. With a tiny
+    # constant and a large level they overflow, so the check cannot be done.
+    rng = np.random.default_rng(12)
+    nobs = 50
+    y = rng.standard_normal(nobs) + 1e10
+    x = rng.standard_normal((nobs, 2)) + 1e10
+    exog = np.full((nobs, 1), 1e-300)
+    with np.errstate(over="ignore", invalid="ignore"):
+        assert nested_lag_ols(y, x, exog, rcond=nobs * EPS) is None

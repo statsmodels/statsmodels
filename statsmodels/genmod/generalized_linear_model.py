@@ -49,7 +49,7 @@ from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     PerfectSeparationWarning,
 )
-from statsmodels.tools.validation import float_like, string_like
+from statsmodels.tools.validation import float_like, is_float_like, string_like
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
@@ -276,6 +276,18 @@ class GLM(base.LikelihoodModel):
     | Working       | ``n_trials``                     |
     +---------------+----------------------------------+
 
+    A ``DomainWarning`` is issued if ``endog`` is outside of the support of the
+    distribution of the family: ``Binomial`` requires proportions in [0, 1]
+    (or successes and failures that give such proportions), ``Poisson`` and
+    ``NegativeBinomial`` require a nonnegative and ``Gamma`` and
+    ``InverseGaussian`` a positive ``endog``. The log-likelihood, the deviance
+    and the results based on them are not valid outside of the support.
+
+    .. versionchanged:: 0.15.1
+
+       The ``DomainWarning`` for ``endog`` outside of the support was added.
+       Before, such data were fit without a warning.
+
     WARNING: Log-likelihood and deviance are not valid in models where
     scale is equal to 1 (i.e., ``Binomial``, ``NegativeBinomial``, and
     ``Poisson``). If variance weights are specified, then results such as
@@ -404,6 +416,7 @@ class GLM(base.LikelihoodModel):
         self._init_keys.append("family")
 
         self._setup_binomial()
+        self._check_endog_domain()
         # internal usage for recreating a model
         if "n_trials" in kwargs:
             self.n_trials = kwargs["n_trials"]
@@ -1140,7 +1153,7 @@ class GLM(base.LikelihoodModel):
         -----
         The default scale for Binomial, Poisson and Negative Binomial
         families is 1.  The default for the other families is Pearson's
-        Chi-Square estimate.
+        Chi-Square estimate divided by ``df_resid``.
         """
         if not self.scaletype:
             if isinstance(
@@ -1151,8 +1164,8 @@ class GLM(base.LikelihoodModel):
             else:
                 return self._estimate_x2_scale(mu)
 
-        if isinstance(self.scaletype, float):
-            return np.array(self.scaletype)
+        if is_float_like(self.scaletype):
+            return np.array(float(self.scaletype))
 
         if isinstance(self.scaletype, str):
             scaletype = string_like(self.scaletype, "scaletype", options=("x2", "dev"))
@@ -1362,6 +1375,33 @@ class GLM(base.LikelihoodModel):
         distr = self.family.get_distribution(mu, scale, var_weights=var_weights, **kwds)
         return distr
 
+    def _check_endog_domain(self):
+        # warn if endog is outside of the support of the distribution of the
+        # family, the loglikelihood and the deviance are then not valid
+        family = self.family
+        if isinstance(family, families.Binomial):
+            # endog is the proportion of successes after _setup_binomial
+            outside = (self.endog < 0) | (self.endog > 1)
+            support = "in the interval [0, 1]"
+        elif isinstance(family, (families.Poisson, families.NegativeBinomial)):
+            outside = self.endog < 0
+            support = "nonnegative"
+        elif isinstance(family, (families.Gamma, families.InverseGaussian)):
+            outside = self.endog <= 0
+            support = "positive"
+        else:
+            return
+        n_outside = int(np.count_nonzero(outside))
+        if n_outside > 0:
+            warnings.warn(
+                f"endog has {n_outside} values outside of the support of the "
+                f"{type(family).__name__} family, which requires endog to be "
+                f"{support}. The log-likelihood, the deviance and the "
+                "results based on them are not valid.",
+                DomainWarning,
+                stacklevel=3,
+            )
+
     def _setup_binomial(self):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
@@ -1506,12 +1546,7 @@ class GLM(base.LikelihoodModel):
             scale = string_like(scale, "scale", options=("x2", "dev"))
         elif scale is not None:
             # GH-6627
-            try:
-                scale = float(scale)
-            except Exception as exc:
-                raise type(exc)(
-                    "scale must be a float if given and not a string."
-                ) from exc
+            scale = float_like(scale, "scale")
             if not scale > 0:
                 raise ValueError(f"scale must be positive, got {scale}")
         self.scaletype = scale
@@ -1874,7 +1909,73 @@ class GLM(base.LikelihoodModel):
 
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
-        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
+        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms, and
+        ``n`` is the sum of ``freq_weights``, which is the number of rows if
+        the model has no ``freq_weights``. A fit with ``freq_weights`` has the
+        same estimates as a fit to the data with each row repeated according
+        to its weight. The ``var_weights`` are not part of ``n``. They enter
+        ``loglike``, so that multiplying ``var_weights`` by a constant changes
+        the estimates. The log-likelihood is computed with a scale of 1.
+
+        .. versionchanged:: 0.15.1
+
+           ``n`` is the sum of ``freq_weights``. Before, it was the number of
+           rows, so that the estimates of fits with ``freq_weights`` differed
+           from those of the data with repeated rows. The estimates of fits
+           without ``freq_weights`` are unchanged.
+
+        .. warning::
+
+           The estimates of the ridge fit (``L1_wt=0``) of a family with an
+           estimated scale (all families except ``Binomial``, ``Poisson`` and
+           ``NegativeBinomial``) are different from those of versions before
+           0.15.1, and the difference is large if the estimated scale is far
+           from 1. The estimates of the other fits (``L1_wt`` greater than 0
+           and ``method="l1_slsqp"``) and of the ridge fit of ``Binomial``,
+           ``Poisson`` and ``NegativeBinomial`` are not affected.
+
+        .. versionchanged:: 0.15.1
+
+           The ridge fit uses a scale of 1 in the log-likelihood, as the other
+           fits do, and so minimizes the function above. Before, it used the
+           scale estimated at the current parameters. Where that fit
+           converged, its estimates were those of the ridge problem with the
+           penalty weight ``alpha`` multiplied by the scale estimated at the
+           estimates: the shrinkage was too strong if the estimated scale is
+           greater than 1 and too weak if it is smaller. To get the penalty of
+           earlier versions, multiply ``alpha`` by that scale, see the
+           example. The fit of earlier versions often stopped early with a
+           ``ConvergenceWarning``, and its estimates are then not those of any
+           penalty and cannot be reproduced.
+
+        Every element of ``params`` is penalized, including the coefficient
+        of the constant, and the columns of ``exog`` are used as they are. R's
+        ``glmnet`` does not penalize the intercept and standardizes the
+        columns by default (``standardize=TRUE``). With a vector ``alpha``
+        the fit has the estimates of ``glmnet``, where ``alpha`` is its
+        ``lambda`` and ``L1_wt`` is its ``alpha``:
+
+        * To leave the constant unpenalized, as ``glmnet`` with
+          ``intercept=TRUE`` and ``standardize=FALSE`` does, give it the
+          penalty weight 0. If the constant is the first of the ``k`` columns
+          of ``exog``, use ``alpha * np.r_[0.0, np.ones(k - 1)]``.
+        * To standardize the columns, as ``standardize=TRUE`` does, let
+          ``sd`` be the standard deviations of the columns other than the
+          constant, with the divisor ``n`` (and the ``freq_weights`` as
+          weights, if the model has them). Use the weights
+          ``alpha * np.r_[0.0, sd**2]`` for the ridge penalty (``L1_wt=0``)
+          and ``alpha * np.r_[0.0, sd]`` for the lasso (``L1_wt=1``). For
+          other values of ``L1_wt``, divide the columns of ``exog`` by
+          ``sd``, fit with the weights ``alpha * np.r_[0.0, np.ones(k - 1)]``
+          and divide the estimated coefficients other than the constant by
+          ``sd``.
+
+        The estimates agree with those of ``glmnet`` up to the convergence
+        tolerances of the two algorithms. In R, use a family object such as
+        ``gaussian()``: the default ``family="gaussian"`` standardizes ``y``
+        and so divides the weight of the L2 penalty,
+        ``(1 - L1_wt) * alpha``, by the standard deviation of ``y`` (with the
+        divisor ``n``).
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
@@ -1918,6 +2019,37 @@ class GLM(base.LikelihoodModel):
             If True, print out a full QC report upon failure.
         acc : float, optional
             Requested accuracy as used by slsqp (default 1e-10).
+
+        Examples
+        --------
+        The ridge fit of a Gaussian model, whose scale is estimated:
+
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
+        >>> rng = np.random.default_rng(0)
+        >>> exog = sm.add_constant(rng.standard_normal((200, 3)))
+        >>> endog = exog @ [1.0, 1.0, -0.5, 0.3] + 2.0 * rng.standard_normal(200)
+        >>> mod = sm.GLM(endog, exog, family=sm.families.Gaussian())
+        >>> alpha = 1.0
+        >>> res = mod.fit_regularized(alpha=alpha, L1_wt=0)
+
+        The penalty of versions before 0.15.1 is ``alpha`` multiplied by the
+        scale estimated at the estimates. Iterate until the scale does not
+        change:
+
+        >>> scale = 1.0
+        >>> for _ in range(100):
+        ...     res_old = mod.fit_regularized(alpha=alpha * scale, L1_wt=0)
+        ...     new_scale = mod.estimate_scale(mod.predict(res_old.params))
+        ...     if abs(new_scale - scale) < 1e-6 * new_scale:
+        ...         break
+        ...     scale = new_scale
+
+        ``res_old.params`` are the estimates that versions before 0.15.1
+        returned for this model, to better than 1e-5. The scale estimated at
+        them is about 5.6, so that the penalty weight of the earlier fit was
+        about 5.6 times ``alpha`` and its coefficients are shrunk more than
+        those of ``res.params``.
         """
 
         method = string_like(
@@ -1980,10 +2112,11 @@ class GLM(base.LikelihoodModel):
             start_params = np.zeros(self.exog.shape[1])
 
         def fun(x):
-            return -(self.loglike(x) / self.wnobs - np.sum(alpha * x**2) / 2)
+            llf = self.loglike(x, scale=1)
+            return -(llf / self.wnobs - np.sum(alpha * x**2) / 2)
 
         def grad(x):
-            return -(self.score(x) / self.wnobs - alpha * x)
+            return -(self.score(x, scale=1) / self.wnobs - alpha * x)
 
         from scipy.optimize import minimize
 

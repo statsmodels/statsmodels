@@ -14,6 +14,7 @@ skipped for the non-diagonal cases.
 Author: Chad Fulton
 License: Simplified-BSD
 """
+import contextlib
 from pathlib import Path
 import warnings
 
@@ -34,6 +35,7 @@ NONDIAGONAL_OBS_COV_SKIP = (
     "the univariate recursions only produce the diagonal of"
     " Var(C_t^{-1} eps_t), which is not enough to undo the diagonalization"
 )
+PSD_OBS_COV_MSG = "Positive semi-definite observation covariance matrix"
 
 
 def simulation_smoother(model, seed=1234):
@@ -305,11 +307,14 @@ class MultivariateMissingGeneralObsCov:
 
         # Univariate filtering, smoothing, and simulation smoothing
         cls.model.filter_univariate = True
-        # The non-diagonal obs_cov is diagonalized by the univariate filter
+        # The non-diagonal obs_cov is diagonalized by the univariate filter.
+        # It has rank 2, so its LDL decomposition warns.
         msg = "The univariate filtering approach diagonalized"
-        with pytest.warns(OutputWarning, match=msg):
-            cls.univariate_results = cls.model.smooth()
-        cls.univariate_sim = simulation_smoother(cls.model)
+        with pytest.warns(UserWarning, match=PSD_OBS_COV_MSG):
+            with pytest.warns(OutputWarning, match=msg):
+                cls.univariate_results = cls.model.smooth()
+        with pytest.warns(UserWarning, match=PSD_OBS_COV_MSG):
+            cls.univariate_sim = simulation_smoother(cls.model)
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
@@ -762,7 +767,13 @@ def test_nondiagonal_obs_cov_smoothed_decomposition(initialization,
     # The exact diffuse periods use the univariate approach either way.
     obs, mod = nondiagonal_obs_cov_model(initialization, missing)
     mod.ssm.filter_univariate = filter_univariate
-    res = mod.ssm.smooth()
+    # The univariate approach warns that obs_cov has rank 2
+    if filter_univariate or initialization == "diffuse":
+        ctx = pytest.warns(UserWarning, match=PSD_OBS_COV_MSG)
+    else:
+        ctx = contextlib.nullcontext()
+    with ctx:
+        res = mod.ssm.smooth()
 
     fitted = (mod["design"] @ res.smoothed_state
               + res.smoothed_measurement_disturbance)
@@ -773,11 +784,166 @@ def test_nondiagonal_obs_cov_smoothed_decomposition(initialization,
 def test_nondiagonal_obs_cov_disturbance_cov_warns():
     _, mod = nondiagonal_obs_cov_model()
     mod.ssm.filter_univariate = True
-    with pytest.warns(OutputWarning, match="diagonalized"):
-        mod.ssm.smooth()
+    with pytest.warns(UserWarning, match=PSD_OBS_COV_MSG):
+        with pytest.warns(OutputWarning, match="diagonalized"):
+            mod.ssm.smooth()
 
     # Nothing to warn about when the observation equation is not diagonalized
     mod.ssm.filter_univariate = False
     with warnings.catch_warnings():
         warnings.simplefilter("error", OutputWarning)
         mod.ssm.smooth()
+
+
+def ldl_obs_cov_model(obs_cov):
+    # Local level model for each series, with a given (non-diagonal) obs_cov
+    obs_cov = np.asarray(obs_cov, dtype=float)
+    k_endog = obs_cov.shape[0]
+    endog = np.random.default_rng(1).standard_normal((60, k_endog))
+    mod = MLEModel(endog, k_states=k_endog, k_posdef=k_endog)
+    mod["design"] = np.eye(k_endog)
+    mod["obs_cov"] = obs_cov
+    mod["transition"] = np.eye(k_endog)
+    mod["selection"] = np.eye(k_endog)
+    mod["state_cov"] = 0.5 * np.eye(k_endog)
+    mod.ssm.initialize_known(np.zeros(k_endog), np.eye(k_endog))
+    return mod
+
+
+# The univariate approach diagonalizes a non-diagonal obs_cov with an LDL
+# decomposition, so it must give the loglikelihood of the conventional
+# filter, which does not decompose obs_cov
+PSD_OBS_COV = {
+    "rank 1 of 2": [[1.0, 1.0], [1.0, 1.0]],
+    # Zero pivots in the second and third column
+    "rank 1 of 3": [[1.0, 2.0, 3.0], [2.0, 4.0, 6.0], [3.0, 6.0, 9.0]],
+    # u u' with u of shape (3, 2): rounding leaves the last pivot slightly
+    # negative (about -1e-15 times the diagonal element)
+    "rank 2 of 3, a": [
+        [67.18770623032997, 7.216822768597606, -6.143090820525295],
+        [7.216822768597606, 4.3482658442951525, -9.268905216211522],
+        [-6.143090820525295, -9.268905216211522, 21.304493156804693]],
+    "rank 2 of 3, b": [
+        [2.0209946816759143, 2.0720688554242166, 8.98201555216445],
+        [2.0720688554242166, 49.067190529262085, -22.007502043723502],
+        [8.98201555216445, -22.007502043723502, 60.67795241745098]],
+    "rank 2 of 3, c": [
+        [37.381500458335324, 35.643608705601444, -39.70094764775798],
+        [35.643608705601444, 93.7861839217789, -9.866472318169604],
+        [-39.70094764775798, -9.866472318169604, 55.264219631272326]],
+    "zero row": [[0.0, 0.0, 0.0], [0.0, 1.0, 0.5], [0.0, 0.5, 1.0]],
+    # Positive definite, but the last pivot is below 1e-10 times the diagonal
+    # element, so it warns; the pivot itself is kept
+    "numerically singular": [[1.0, 1.0], [1.0, 1.0 + 1e-12]],
+}
+PD_OBS_COV = {
+    "2x2": [[1.0, 0.5], [0.5, 1.0]],
+    "3x3": [[2.0, 0.6, -0.4], [0.6, 1.5, 0.3], [-0.4, 0.3, 1.0]],
+    # The pivot 1e-8 is above the tolerance
+    "nearly singular": [[1.0, 1.0], [1.0, 1.0 + 1e-8]],
+    # The tolerance is relative to the diagonal element
+    "small variance": [[1e-11, 1e-9], [1e-9, 1.0]],
+    "small uncorrelated variance": [[1e-11, 0.0, 0.0], [0.0, 1.0, 0.5],
+                                    [0.0, 0.5, 1.0]],
+}
+INDEFINITE_OBS_COV = {
+    "negative pivot": [[1.0, 2.0], [2.0, 1.0]],
+    "negative first variance": [[-1.0, 0.5], [0.5, 1.0]],
+    "negative second variance": [[1.0, 0.5], [0.5, -1.0]],
+    "zero variance": [[1.0, 0.5], [0.5, 0.0]],
+    "zero pivot": [[0.0, 1.0], [1.0, 1.0]],
+    "zero pivot, 3x3": [[1.0, 1.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0, 1.0]],
+    # D C D with C = [[1, 1, 0], [1, 1, 1e-6], [0, 1e-6, 1]] (smallest
+    # eigenvalue about -5e-13) and D = diag(1, 2**-20, 2**-20): the check of
+    # the column below a zero pivot does not depend on the scale of the series
+    "zero pivot, scaled": [[1.0, 2.0**-20, 0.0],
+                           [2.0**-20, 2.0**-40, 1e-6 * 2.0**-40],
+                           [0.0, 1e-6 * 2.0**-40, 2.0**-40]],
+}
+
+
+@pytest.mark.parametrize("complex_step", [False, True])
+@pytest.mark.parametrize("obs_cov", list(PSD_OBS_COV.values()),
+                         ids=list(PSD_OBS_COV))
+def test_univariate_psd_obs_cov(obs_cov, complex_step):
+    mod = ldl_obs_cov_model(obs_cov)
+    desired = mod.ssm.loglike()
+
+    mod.ssm.filter_univariate = True
+    msg = PSD_OBS_COV_MSG + " encountered at period 0"
+    with pytest.warns(UserWarning, match=msg):
+        llf = mod.ssm.loglike(complex_step=complex_step)
+    # The conventional filter does not decompose obs_cov; the two agree up to
+    # rounding
+    assert_allclose(llf, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("complex_step", [False, True])
+@pytest.mark.parametrize("obs_cov", list(PD_OBS_COV.values()),
+                         ids=list(PD_OBS_COV))
+def test_univariate_pd_obs_cov(obs_cov, complex_step):
+    mod = ldl_obs_cov_model(obs_cov)
+    desired = mod.ssm.loglike()
+
+    mod.ssm.filter_univariate = True
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=PSD_OBS_COV_MSG)
+        llf = mod.ssm.loglike(complex_step=complex_step)
+    assert_allclose(llf, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("complex_step", [False, True])
+@pytest.mark.parametrize("obs_cov", list(INDEFINITE_OBS_COV.values()),
+                         ids=list(INDEFINITE_OBS_COV))
+def test_univariate_indefinite_obs_cov_raises(obs_cov, complex_step):
+    mod = ldl_obs_cov_model(obs_cov)
+    mod.ssm.filter_univariate = True
+    msg = "Invalid value in LDL factorization of observation covariance"
+    with pytest.raises(np.linalg.LinAlgError, match=msg):
+        mod.ssm.loglike(complex_step=complex_step)
+
+
+def test_univariate_ill_conditioned_pd_obs_cov():
+    # L D L' with L = [[1, 0, 0], [0.3, 1, 0], [0.2, 5e5, 1]] and
+    # D = diag(1, 1e-12, 0.75): positive definite, condition number about
+    # 2e12. The second pivot is below the tolerance, but the rest of its
+    # column is not small, so it is used as a positive pivot, as before
+    # (statsmodels 0.15.0 gave the loglikelihood -297.21603787944184)
+    obs_cov = [[1.0, 0.3, 0.2], [0.3, 0.090000000001, 0.0600005],
+               [0.2, 0.0600005, 1.04]]
+    mod = ldl_obs_cov_model(obs_cov)
+    desired = mod.ssm.loglike()
+
+    mod.ssm.filter_univariate = True
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=PSD_OBS_COV_MSG)
+        llf = mod.ssm.loglike()
+    # The decomposition has an entry of 5e5 in L, so changing obs_cov by one
+    # ulp moves this loglikelihood by up to 7e-7 (relative), and the
+    # conventional filter differs from it by 4e-7
+    assert_allclose(llf, -297.21603787944184, rtol=5e-6)
+    assert_allclose(llf, desired, rtol=5e-6)
+
+
+def test_univariate_small_last_pivot_kept():
+    # The last pivot of obs_cov (5e-11) is below the tolerance, so it warns,
+    # but the pivot is kept. It matters here: the states add only about 3e-9
+    # to the variance of the second transformed series, and setting the
+    # pivot to zero would change the loglikelihood by 4%. The forecast error
+    # covariance of the conventional filter has a condition number of about
+    # 1e9, so the two agree to about 1e-7
+    endog = np.random.default_rng(1).standard_normal((60, 2))
+    mod = MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.eye(2)
+    mod["obs_cov"] = [[1.0, 1.0], [1.0, 1.0 + 5e-11]]
+    mod["transition"] = 0.5 * np.eye(2)
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = 1e-9 * np.eye(2)
+    mod.ssm.initialize_known(np.zeros(2), 1e-9 * np.eye(2))
+    desired = mod.ssm.loglike()
+
+    mod.ssm.filter_univariate = True
+    msg = PSD_OBS_COV_MSG + " encountered at period 0"
+    with pytest.warns(UserWarning, match=msg):
+        llf = mod.ssm.loglike()
+    assert_allclose(llf, desired, rtol=1e-6)

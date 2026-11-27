@@ -1,0 +1,6 @@
+- :func:`~statsmodels.tsa.stattools.zivot_andrews` did not skip the candidate
+  break periods whose dummies are collinear with the constant and the trend,
+  which happens when the number of lags is not smaller than the number of
+  trimmed observations, or with ``trim=0``. It then returned a NaN or wrong
+  statistic and break period, or raised. These periods are skipped, and a
+  ``ValueError`` is raised if no candidate period is left. :pr:`10850`

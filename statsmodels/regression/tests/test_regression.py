@@ -21,6 +21,7 @@ from numpy.testing import (
 import pandas as pd
 import pytest
 from scipy.linalg import toeplitz
+from scipy.signal import lfilter
 from scipy.stats import chi2, t as student_t
 
 from statsmodels.datasets import longley
@@ -33,6 +34,7 @@ from statsmodels.regression.linear_model import (
     WLS,
     CompareLRTestResult,
     ELTestResult,
+    RegressionModel,
     YuleWalkerResult,
     burg,
     yule_walker,
@@ -2060,7 +2062,11 @@ def _fit_gls_for_summary():
 def test_summary_after_remove_data(fit_func):
     # summary() must still work after remove_data() has been called
     res = fit_func()
-    assert isinstance(res.summary(), Summary)
+    with warnings.catch_warnings():
+        # scipy < 1.16 warns that kurtosistest needs 20 observations (16 here)
+        msg = "kurtosistest only valid for n>=20"
+        warnings.filterwarnings("ignore", message=msg, category=UserWarning)
+        assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
 
@@ -2220,6 +2226,46 @@ def test_hessian_factor_glsar_raises(order):
     res = mod.iterative_fit(maxiter=3)
     assert np.isfinite(res.params).all()
 
+
+@pytest.mark.parametrize(
+    "rho, order, coefs",
+    [
+        (2, 2, [0.0, 0.0]),
+        (np.int64(2), 2, [0.0, 0.0]),
+        (np.int32(2), 2, [0.0, 0.0]),
+        (np.array(2), 2, [0.0, 0.0]),
+        (2.0, 1, [2.0]),
+    ],
+    ids=["int", "int64", "int32", "0d-array", "float"],
+)
+def test_glsar_rho_order_or_coefficient(rho, order, coefs):
+    # An integer, including a 0-d integer array, is the AR order with zero
+    # coefficients. A float is a coefficient (rho is strict).
+    rng = np.random.default_rng(20261126)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    endog = exog @ np.array([1.0, 0.5]) + rng.standard_normal(n)
+    mod = GLSAR(endog, exog, rho=rho)
+    assert mod.order == order
+    assert_allclose(np.asarray(mod.rho, dtype=float), coefs, rtol=1e-12)
+    # Closed form of the whitening: e_t = y_t - sum_i rho_i y_{t-i-1}
+    expected = endog[order:].copy()
+    for i, coef in enumerate(coefs):
+        expected -= coef * endog[order - i - 1 : n - i - 1]
+    assert_allclose(mod.wendog, expected, rtol=1e-12)
+
+
+
+@pytest.mark.parametrize(
+    "rho",
+    [True, np.True_, np.array(False), [True, False]],
+    ids=["True", "np.True_", "0d-bool", "bool-list"],
+)
+def test_glsar_rho_bool_raises(rho):
+    # a bool is neither an AR order nor a coefficient: True was an order of 1
+    exog = np.column_stack([np.ones(10), np.arange(10.0)])
+    with pytest.raises(TypeError, match="rho must be an int"):
+        GLSAR(np.arange(10.0), exog, rho=rho)
 
 def test_conf_int_el_matches_own_critical_value_and_shrinks():
     # OLSResults.conf_int_el had no test coverage in the standard (non-slow)
@@ -2414,6 +2460,305 @@ def test_finite_data_unchanged():
     assert np.all(np.isfinite(res.params))
     res = GLS(endog, exog, sigma=np.linspace(1e-10, 1e10, 100)).fit()
     assert np.all(np.isfinite(res.params))
+
+
+def _chol_fit_data(nobs=400, k_vars=5, seed=20240724):
+    # columns with very different scales, a constant and a correlated pair
+    rng = np.random.default_rng(seed)
+    exog = rng.standard_normal((nobs, k_vars - 1))
+    exog[:, 1] = 0.7 * exog[:, 0] + 0.3 * exog[:, 1]
+    exog[:, 2] *= 1e3
+    exog[:, 3] *= 1e-2
+    exog = add_constant(exog, prepend=True)
+    beta = np.linspace(1.0, -1.0, k_vars)
+    endog = exog @ beta + 0.5 * rng.standard_normal(nobs)
+    weights = rng.uniform(0.5, 3.0, nobs)
+    sigma = toeplitz(0.6 ** np.arange(nobs))
+    return endog, exog, weights, sigma
+
+
+def _chol_fit_models(model_name, nobs=400):
+    endog, exog, weights, sigma = _chol_fit_data(nobs=nobs)
+    if model_name == "ols":
+        return lambda: OLS(endog, exog)
+    elif model_name == "wls":
+        return lambda: WLS(endog, exog, weights=weights)
+    else:
+        return lambda: GLS(endog, exog, sigma=sigma)
+
+
+@pytest.mark.parametrize("model_name", ["ols", "wls", "gls"])
+@pytest.mark.parametrize("reference", ["pinv", "qr"])
+def test_fit_chol_matches_pinv_and_qr(model_name, reference):
+    # GH#9317: solving the normal equations gives the same results as the
+    # pseudoinverse and the QR factorization on a well conditioned design
+    make_model = _chol_fit_models(model_name)
+    res_chol = make_model().fit(method="chol")
+    res_ref = make_model().fit(method=reference)
+
+    for attr in (
+        "params",
+        "bse",
+        "tvalues",
+        "normalized_cov_params",
+        "fittedvalues",
+        "ssr",
+        "llf",
+        "rsquared",
+        "centered_tss",
+    ):
+        assert_allclose(getattr(res_chol, attr), getattr(res_ref, attr), rtol=1e-9)
+    scale = np.sqrt(res_ref.scale)
+    assert_allclose(res_chol.resid, res_ref.resid, rtol=1e-9, atol=1e-9 * scale)
+    assert_allclose(res_chol.wresid, res_ref.wresid, rtol=1e-9, atol=1e-9 * scale)
+    assert_allclose(res_chol.cov_params(), res_ref.cov_params(), rtol=1e-9)
+    assert res_chol.model.rank == res_ref.model.rank == res_chol.model.exog.shape[1]
+    assert res_chol.df_model == res_ref.df_model
+    assert res_chol.df_resid == res_ref.df_resid
+    # the singular values are computed from X'X, which loses about half of
+    # the digits of the small ones
+    assert_allclose(
+        res_chol.model.wexog_singular_values,
+        res_ref.model.wexog_singular_values,
+        rtol=1e-6,
+    )
+    assert_allclose(res_chol.condition_number, res_ref.condition_number, rtol=1e-6)
+
+
+@pytest.mark.parametrize("model_name", ["ols", "wls", "gls"])
+def test_fit_chol_pinv_wexog_lazy(model_name):
+    # the pseudoinverse is not computed by fit, but is available on demand
+    # and the covariance estimators that use it give the same results
+    make_model = _chol_fit_models(model_name)
+    model = make_model()
+    res_chol = model.fit(method="chol")
+    assert model.__dict__["_pinv_wexog"] is None
+    pinv_wexog = model.pinv_wexog
+    assert pinv_wexog.shape == model.wexog.T.shape
+    assert model.__dict__["_pinv_wexog"] is pinv_wexog
+    assert_allclose(pinv_wexog, np.linalg.pinv(model.wexog), rtol=1e-9, atol=1e-14)
+
+    res_pinv = make_model().fit()
+    for cov_type in ("HC0", "HC1", "HC2", "HC3"):
+        assert_allclose(
+            getattr(res_chol, cov_type + "_se"),
+            getattr(res_pinv, cov_type + "_se"),
+            rtol=1e-9,
+        )
+    groups = np.arange(model.nobs) % 20
+    res_chol_cl = make_model().fit(method="chol", cov_type="cluster",
+                                   cov_kwds={"groups": groups})
+    res_pinv_cl = make_model().fit(cov_type="cluster", cov_kwds={"groups": groups})
+    assert_allclose(res_chol_cl.bse, res_pinv_cl.bse, rtol=1e-9)
+    if model_name != "gls":
+        from statsmodels.stats.outliers_influence import OLSInfluence
+
+        infl_chol = OLSInfluence(res_chol)
+        infl_pinv = OLSInfluence(res_pinv)
+        assert_allclose(
+            infl_chol.hat_matrix_diag, infl_pinv.hat_matrix_diag, rtol=1e-9
+        )
+        assert_allclose(
+            infl_chol.cooks_distance[0], infl_pinv.cooks_distance[0], rtol=1e-8
+        )
+
+
+def test_fit_chol_refit_resets_state():
+    # the model state after fit does not depend on the method of an earlier fit
+    endog, exog, _, _ = _chol_fit_data()
+    model = OLS(endog, exog)
+    res_pinv = model.fit()
+    pinv_wexog = model.pinv_wexog
+    res_chol = model.fit(method="chol")
+    assert model.__dict__["_pinv_wexog"] is None
+    assert_allclose(res_chol.params, res_pinv.params, rtol=1e-9)
+    res_qr = model.fit(method="qr")
+    assert model.__dict__["_pinv_wexog"] is not None
+    assert not model._pinv_wexog_lazy
+    assert_allclose(model.pinv_wexog, pinv_wexog, rtol=1e-9, atol=1e-14)
+    assert_allclose(res_qr.params, res_pinv.params, rtol=1e-9)
+
+
+def test_fit_chol_summary_pickle_remove_data():
+    endog, exog, _, _ = _chol_fit_data()
+    res = OLS(endog, exog).fit(method="chol")
+    assert isinstance(res.summary(), Summary)
+    res_unpickled = pickle.loads(pickle.dumps(res))
+    assert_allclose(res_unpickled.params, res.params)
+    assert_allclose(res_unpickled.HC0_se, res.HC0_se)
+    res.remove_data()
+    assert res.model.pinv_wexog is None
+    assert isinstance(res.summary(), Summary)
+
+
+def test_fit_chol_remove_data_does_not_compute_pinv_wexog(monkeypatch):
+    # remove_data must not compute the k x n pseudoinverse that a chol fit
+    # did not need, only to delete it again
+    endog, exog, _, _ = _chol_fit_data()
+    model = OLS(endog, exog)
+    res = model.fit(method="chol")
+    params = np.asarray(res.params).copy()
+    bse = np.asarray(res.bse).copy()
+    # summary needs data, so it has to be computed before remove_data
+    assert isinstance(res.summary(), Summary)
+
+    computed = []
+    pinv_wexog = RegressionModel.pinv_wexog
+
+    def getter(self):
+        computed.append(True)
+        return pinv_wexog.fget(self)
+
+    monkeypatch.setattr(
+        RegressionModel,
+        "pinv_wexog",
+        property(getter, pinv_wexog.fset, pinv_wexog.fdel),
+    )
+    res.remove_data()
+    assert not computed
+    assert model.__dict__["_pinv_wexog"] is None
+    assert model.wexog is None
+    monkeypatch.undo()
+
+    assert model.pinv_wexog is None
+    assert_allclose(res.params, params)
+    assert_allclose(res.bse, bse)
+    assert_allclose(res.predict(exog[:3]), exog[:3] @ params)
+    assert isinstance(res.summary(), Summary)
+
+
+@pytest.mark.parametrize("perturbation", [0.0, 1e-9])
+def test_fit_chol_collinear_uses_pinv(perturbation):
+    # a column that is (nearly) a linear combination of other columns
+    endog, exog, _, _ = _chol_fit_data()
+    rng = np.random.default_rng(5)
+    extra = exog[:, 1] - 2 * exog[:, 3] + perturbation * rng.standard_normal(len(endog))
+    exog = np.column_stack((exog, extra))
+    with pytest.warns(SingularMatrixWarning) as record:
+        res_chol = OLS(endog, exog).fit(method="chol")
+    assert any("Using pinv" in str(w.message) for w in record)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        res_pinv = OLS(endog, exog).fit()
+    assert_allclose(res_chol.params, res_pinv.params, rtol=1e-12, atol=1e-12)
+    assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-12)
+    assert res_chol.model.rank == res_pinv.model.rank
+    assert not res_chol.model._pinv_wexog_lazy
+    assert res_chol.model.__dict__["_pinv_wexog"] is not None
+    assert res_chol.df_resid == res_pinv.df_resid
+
+
+def test_fit_chol_zero_column_uses_pinv():
+    endog, exog, _, _ = _chol_fit_data()
+    exog = np.column_stack((exog, np.zeros(len(endog))))
+    with pytest.warns(SingularMatrixWarning) as record:
+        res_chol = OLS(endog, exog).fit(method="chol")
+    assert any("Using pinv" in str(w.message) for w in record)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        res_pinv = OLS(endog, exog).fit()
+    assert_allclose(res_chol.params, res_pinv.params, rtol=1e-12, atol=1e-12)
+    assert res_chol.model.rank == res_pinv.model.rank == exog.shape[1] - 1
+
+
+def test_fit_chol_longley():
+    # ill conditioned, but not collinear by the tolerance of R's lm; the
+    # normal equations lose about half of the digits of the pseudoinverse
+    data = longley.load()
+    endog = np.asarray(data.endog)
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        res_chol = OLS(endog, exog).fit(method="chol")
+    res_pinv = OLS(endog, exog).fit()
+    assert res_chol.model.rank == exog.shape[1]
+    assert_allclose(res_chol.params, res_pinv.params, rtol=1e-6)
+    assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-6)
+    assert_allclose(res_chol.ssr, res_pinv.ssr, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "dtypes",
+    [("float32", "float32"), ("float32", "float64"), ("float64", "float32")],
+    ids=["float32", "float32-endog", "float32-exog"],
+)
+def test_fit_chol_float32(dtypes):
+    # float32 data are not converted: the normal equations are formed in
+    # single precision and the results agree with those of pinv to the
+    # precision of float32 on a well conditioned design
+    endog, exog, _, _ = _chol_fit_data()
+    endog = endog.astype(dtypes[0])
+    exog = exog.astype(dtypes[1])
+    res_chol = OLS(endog, exog).fit(method="chol")
+    res_pinv = OLS(endog, exog).fit()
+    # float32 has a relative precision of 1.2e-7 and the design has a
+    # condition number of about 5 after scaling its columns to unit norm. The
+    # differences between the two methods in float32 are up to 4e-3 standard
+    # errors, so the parameters are compared in units of the standard errors
+    # (one coefficient is close to zero, which rules out rtol) with a margin
+    se = np.asarray(res_pinv.bse)
+    assert_allclose(res_chol.params / se, res_pinv.params / se, atol=2e-2)
+    assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-4)
+    assert_allclose(
+        res_chol.normalized_cov_params, res_pinv.normalized_cov_params, rtol=1e-4
+    )
+    assert res_chol.model.rank == exog.shape[1]
+
+
+def test_fit_chol_glsar_iterative_fit():
+    # iterative_fit passes method to the last fit, the iterations use pinv
+    rng = np.random.default_rng(20241119)
+    nobs = 300
+    exog = add_constant(rng.standard_normal((nobs, 3)))
+    errors = lfilter([1.0], [1.0, -0.5], rng.standard_normal(nobs))
+    endog = exog @ np.array([1.0, 2.0, -1.0, 0.5]) + errors
+
+    model_pinv = GLSAR(endog, exog, rho=1)
+    res_pinv = model_pinv.iterative_fit(maxiter=3)
+    model_chol = GLSAR(endog, exog, rho=1)
+    res_chol = model_chol.iterative_fit(maxiter=3, method="chol")
+
+    assert model_chol._pinv_wexog_lazy
+    assert model_chol.__dict__["_pinv_wexog"] is None
+    assert not model_pinv._pinv_wexog_lazy
+    assert_allclose(model_chol.rho, model_pinv.rho, rtol=1e-9)
+    assert_allclose(res_chol.params, res_pinv.params, rtol=1e-9)
+    assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-9)
+    assert_allclose(res_chol.history["params"][-1], res_pinv.history["params"][-1],
+                    rtol=1e-9)
+    assert res_chol.iter == res_pinv.iter == 3
+    assert res_chol.converged == res_pinv.converged
+
+
+def test_fit_chol_memory():
+    # fit does not allocate an array of the size of the design matrix
+    import tracemalloc
+
+    nobs, k_vars = 50000, 8
+    rng = np.random.default_rng(99)
+    exog = add_constant(rng.standard_normal((nobs, k_vars - 1)))
+    endog = exog.sum(1) + rng.standard_normal(nobs)
+    model = OLS(endog, exog)
+
+    def peak_memory(**kwargs):
+        # tracing may already be on, for example with PYTHONTRACEMALLOC=1, so
+        # measure the peak relative to the memory traced before the fit
+        tracemalloc.reset_peak()
+        baseline = tracemalloc.get_traced_memory()[0]
+        model.fit(**kwargs)
+        return tracemalloc.get_traced_memory()[1] - baseline
+
+    was_tracing = tracemalloc.is_tracing()
+    if not was_tracing:
+        tracemalloc.start()
+    try:
+        peak_chol = peak_memory(method="chol")
+        peak_pinv = peak_memory()
+    finally:
+        if not was_tracing:
+            tracemalloc.stop()
+    assert peak_chol < 0.5 * exog.nbytes
+    assert peak_pinv > 2 * exog.nbytes
 
 
 def _duplicated_constant_data(nobs, seed):

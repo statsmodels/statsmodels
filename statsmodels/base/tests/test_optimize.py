@@ -4,6 +4,7 @@ import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pytest
 
+from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.optimizer import (
     _fit_basinhopping,
     _fit_bfgs,
@@ -227,6 +228,70 @@ def test_fit_invalid_method_raises():
     assert_allclose(res_upper.params, res_lower.params)
 
 
+@pytest.fixture
+def shifted_poisson():
+    from statsmodels.base.model import GenericLikelihoodModel
+    from statsmodels.discrete.discrete_model import Poisson
+
+    rng = np.random.default_rng(2836)
+    exog = np.column_stack((np.ones(50), rng.standard_normal(50)))
+    endog = rng.poisson(np.exp(exog @ [0.5, 0.3]))
+    poisson = Poisson(endog, exog)
+
+    # The loglikelihood of Poisson at params - shift, so that its maximizer is
+    # that of Poisson plus shift. The argument is required, so that a call of
+    # the loglikelihood, the score or the Hessian without fargs fails.
+    def loglike(params, shift):
+        return poisson.loglike(params - shift)
+
+    def score(params, shift):
+        return poisson.score(params - shift)
+
+    def hessian(params, shift):
+        return poisson.hessian(params - shift)
+
+    model = GenericLikelihoodModel(
+        endog, exog, loglike=loglike, score=score, hessian=hessian
+    )
+    return model, poisson
+
+
+def test_newton_fargs_optimum(shifted_poisson):
+    # Newton passed fargs to the objective but not to the score and the Hessian
+    model, poisson = shifted_poisson
+    shift = np.array([0.25, -0.5])
+    desired = poisson.fit(method="bfgs", gtol=1e-10, disp=0)
+    res = model.fit(
+        start_params=shift, method="newton", fargs=(shift,), disp=0
+    )
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, desired.params + shift, rtol=1e-8)
+    assert res.mle_settings["fargs"] == (shift,)
+
+
+def test_newton_fargs_derivatives(shifted_poisson):
+    # The score and the Hessian that Newton reports are those of Poisson at
+    # params - shift, as derivatives of the objective -loglike / nobs
+    model, poisson = shifted_poisson
+    shift = np.array([0.25, -0.5])
+    start = np.array([0.4, 0.1])
+    res = model.fit(
+        start_params=start,
+        method="newton",
+        fargs=(shift,),
+        maxiter=0,
+        disp=0,
+        warn_convergence=False,
+    )
+    nobs = poisson.endog.shape[0]
+    assert_allclose(
+        res.mle_retvals["score"], -poisson.score(start - shift) / nobs, rtol=1e-12
+    )
+    assert_allclose(
+        res.mle_retvals["Hessian"], -poisson.hessian(start - shift) / nobs, rtol=1e-12
+    )
+
+
 def test_lbfgs_disp_false_no_output(capsys):
     xopt, _ = _fit_lbfgs(
         dummy_func,
@@ -239,6 +304,51 @@ def test_lbfgs_disp_false_no_output(capsys):
     )
     captured = capsys.readouterr()
     assert captured.out == ""
+
+
+class _ShiftedLeastSquares(GenericLikelihoodModel):
+    # The Gaussian loglikelihood of endog - shift, up to a constant. The shift
+    # is a required argument of the loglikelihood, the score and the Hessian,
+    # so that a solver that calls one of them without fargs raises. The fits
+    # skip the Hessian after the optimization, which is computed without fargs.
+    def loglike(self, params, shift):
+        resid = self.endog - shift - self.exog @ params
+        return -0.5 * (resid @ resid)
+
+    def score(self, params, shift):
+        return self.exog.T @ (self.endog - shift - self.exog @ params)
+
+    def hessian(self, params, shift):
+        return -self.exog.T @ self.exog
+
+
+@pytest.mark.parametrize(
+    "method", ["nm", "bfgs", "lbfgs", "powell", "cg", "ncg", "basinhopping", "minimize"]
+)
+def test_fit_fargs(method):
+    # cg did not pass fargs to the objective and the score
+    rng = np.random.default_rng(12345)
+    exog = np.column_stack((np.ones(50), rng.standard_normal(50)))
+    endog = exog @ [1.0, 0.5] + rng.standard_normal(50)
+    shift = 3.0
+    # The maximizer is least squares of endog - shift on exog. Without the
+    # shift, the intercept would be larger by 3.
+    desired = np.linalg.lstsq(exog, endog - shift, rcond=None)[0]
+    # The default tolerances of Nelder-Mead stop at a change of 1e-4 in the
+    # parameters. Those of the other solvers reach the maximizer to about 2e-8.
+    options = {
+        "nm": {"xtol": 1e-8, "ftol": 1e-10},
+        "basinhopping": {"niter": 5, "seed": 32839013},
+    }
+    res = _ShiftedLeastSquares(endog, exog).fit(
+        method=method,
+        fargs=(shift,),
+        disp=0,
+        skip_hessian=True,
+        **options.get(method, {}),
+    )
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, desired, rtol=1e-6)
 
 
 def _newton_funcs(region, curvature):

@@ -201,7 +201,13 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def param_names(self):
-        """List of human readable parameter names (for parameters actually included in the model)"""
+        """
+        List of human readable parameter names (for parameters actually included in the model)
+
+        Subclasses define them in ``_param_names``. Otherwise they are
+        "param.0", "param.1", ..., one for each of the `start_params`, or
+        an empty list if the model has no `start_params`.
+        """
         if hasattr(self, "_param_names"):
             return self._param_names
         else:
@@ -228,40 +234,18 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if data.ndim > 1 and data.shape[1] == 1:
             data = np.squeeze(data, axis=1)
         if self.use_pandas:
-            if data.shape[0]:
-                _, _, _, index = self._get_prediction_index(start_idx, end_idx)
-            else:
-                index = None
+            _, _, _, index = self._get_prediction_index(start_idx, end_idx)
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:
                 data = pd.DataFrame(data, index=index, columns=names)
         return data
 
-    def _wrap_results(
-        self,
-        params,
-        result,
-        return_raw,
-        cov_type=None,
-        cov_kwds=None,
-        results_class=None,
-        wrapper_class=None,
-    ):
+    def _wrap_results(self, params, result, return_raw):
         if not return_raw:
             # Wrap in a results object
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs["cov_type"] = cov_type
-            if cov_kwds is not None:
-                result_kwargs["cov_kwds"] = cov_kwds
-
-            if results_class is None:
-                results_class = self._res_classes["fit"][0]
-            if wrapper_class is None:
-                wrapper_class = self._res_classes["fit"][1]
-
-            res = results_class(self, params, result, **result_kwargs)
+            results_class, wrapper_class = self._res_classes["fit"]
+            res = results_class(self, params, result)
             result = wrapper_class(res)
         return result
 
@@ -334,7 +318,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     ----------
     model : Model instance
         A reference to the model that was fit.
-    nobs : float
+    nobs : int
         The number of observations used to fit the model.
     params : ndarray
         The parameters of the model.
@@ -462,8 +446,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 iloc = iloc.start
             iloc += 1  # anchor is one before start of prediction/simulation
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
         return iloc
@@ -494,8 +476,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
 
     @cache_readonly
@@ -519,7 +500,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
-        lags : int, array_like of int, or None, optional
+        lags : int or array_like of int, optional
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
             length.
@@ -529,6 +510,11 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             If lags is None, then the default maxlag is min(10, nobs//5) for
             non-seasonal time series and min (2*m, nobs//5) for seasonal time
             series.
+
+            .. versionchanged:: 0.15.1
+
+               The default for non-seasonal models is min(10, nobs//5). It
+               was min(2, nobs//5), as if they had a season of length 1.
 
         Returns
         -------
@@ -579,7 +565,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         # that many observations
         if lags is None:
             seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-            if seasonal_periods:
+            # non-seasonal ETS models have seasonal_periods = 1
+            if seasonal_periods > 1:
                 lags = min(2 * seasonal_periods, nobs_effective // 5)
             else:
                 lags = min(10, nobs_effective // 5)
@@ -661,16 +648,17 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         .. math::
 
             H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
-            \Bigg / \sum_{t=d+1}^{d+1+h} \tilde v_t^2
+            \Bigg / \sum_{t=d+1}^{d+h} \tilde v_t^2
 
         where :math:`d` = max(loglikelihood_burn, nobs_diffuse) (usually
         corresponding to diffuse initialization under either the approximate
-        or exact approach).
+        or exact approach) and :math:`h` is :math:`(T - d) / 3` rounded to
+        the nearest integer.
 
         This statistic can be tested against an :math:`F(h,h)` distribution.
         Alternatively, :math:`h H(h)` is asymptotically distributed according
         to :math:`\chi_h^2`; this second test can be applied by passing
-        `asymptotic=True` as an argument.
+        ``use_f=False`` as an argument.
 
         See section 5.4 of [1]_ for the above formula and discussion, as well
         as additional details.
@@ -802,8 +790,10 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             Integer of the start observation. Default is 0.
         title : str, optional
             The title used for the summary table.
-        model_name : str, optional
+        model_name : str or list of str, optional
             The name of the model used. Default is to use model class name.
+            The names after the first in a list are shown on separate lines,
+            prefixed by "+".
         display_params : bool, optional
             Whether or not to display the parameters table. Default is True.
 

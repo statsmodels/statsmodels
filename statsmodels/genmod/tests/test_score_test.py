@@ -6,6 +6,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -396,7 +397,9 @@ class TestScoreTestRedundantExtra:
             ("few_rows", "same number of rows"),
             ("more_rows", "same number of rows"),
             ("few_rows_1d", "same number of rows"),
-            ("ndim3", "same number of rows"),
+            ("ndim3", "ndim <= 2"),
+            ("ndim3_column", "ndim <= 2"),
+            ("scalar", "same number of rows"),
         ],
     )
     @pytest.mark.parametrize("caller", ["glm", "poisson", "glm_hc0", "model", "generic"])
@@ -413,6 +416,8 @@ class TestScoreTestRedundantExtra:
             "more_rows": np.vstack((z, z[:5])),
             "few_rows_1d": z[:-5, 0],
             "ndim3": z[:, :, None],
+            "ndim3_column": z[:, :1, None],
+            "scalar": 1.0,
         }[case]
         res = self.res_poisson if caller == "poisson" else self.res_glm
         with pytest.raises(ValueError, match=match):
@@ -424,6 +429,36 @@ class TestScoreTestRedundantExtra:
                 res.score_test(exog_extra=exog_extra, cov_type="HC0")
             else:
                 res.score_test(exog_extra=exog_extra)
+
+    @pytest.mark.parametrize(
+        "convert, k_extra",
+        [
+            (lambda z: z.tolist(), 2),
+            (pd.DataFrame, 2),
+            (lambda z: z[:, 0].tolist(), 1),
+            (lambda z: pd.Series(z[:, 0]), 1),
+            (lambda z: z[:, :1], 1),
+        ],
+        ids=["list", "dataframe", "list-1d", "series", "column"],
+    )
+    @pytest.mark.parametrize("caller", ["glm", "poisson", "generic"])
+    def test_exog_extra_array_like(self, convert, k_extra, caller):
+        res = self.res_poisson if caller == "poisson" else self.res_glm
+        z = self.exog_extra[:, :k_extra]
+        # closed form of the score statistic for the Poisson model with log
+        # link: score = ex'(y - mu), information = ex' diag(mu) ex
+        ex = np.column_stack((self.exog, z))
+        mu = np.exp(self.exog @ res.params)
+        score = ex.T @ (self.endog - mu)
+        stat = score @ np.linalg.solve((ex.T * mu) @ ex, score)
+        exog_extra = convert(self.exog_extra)
+        if caller == "generic":
+            st = score_test(res, exog_extra=exog_extra)
+        else:
+            st = res.score_test(exog_extra=exog_extra)
+        assert st.k_constraint == k_extra
+        assert_allclose(st.statistic, stat, rtol=1e-8)
+        assert_allclose(st.pvalue, stats.chi2.sf(stat, k_extra), rtol=1e-8)
 
     @pytest.mark.parametrize("weights", ["freq_weights", "var_weights"])
     def test_weights_not_used_in_rank(self, weights):

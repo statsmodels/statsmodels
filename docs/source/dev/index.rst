@@ -60,9 +60,11 @@ greatly helps the job of maintaining and releasing the software a shared effort.
 - Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines wherever possible.
   Lint your code by running ``LINT=true ./lint.sh``. 
 - Compare your changes to what’s in main by running ``git diff upstream/main``.
-- Finally, please add your changes to the release notes. Open the
-  ``docs/source/release/versionX.X.rst`` file that has the version number of the
-  next release and add your changes to the appropriate section.
+- Finally, please add your changes to the release notes. Add a fragment file
+  ``docs/upcoming_changes/<PR number>.<section>.rst`` with your bullets, as
+  described in ``docs/upcoming_changes/README.rst``. The fragments are collected
+  into ``docs/source/release/versionX.Y.Z.rst`` at release time, so pull
+  requests do not conflict there.
 
 How to Submit a Pull Request
 ----------------------------

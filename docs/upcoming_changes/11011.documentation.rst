@@ -1,0 +1,7 @@
+- Correct the docstrings of ``x13_arima_analysis`` and
+  ``x13_arima_select_order``: the supported ``endog`` (monthly or quarterly,
+  one-dimensional, one column), how ``exog`` is aligned and that it must cover
+  the forecast horizon, what ``trading``, ``forecast_periods``, ``rawspec``
+  and ``x12path`` do, the types of ``freq`` and ``tempdir``, and the
+  returned ``observed``, ``stdout`` (bytes) and ``x13_diagnostic``; document
+  ``X13ArimaAnalysisResult``. :pr:`11011`

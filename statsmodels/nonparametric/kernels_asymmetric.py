@@ -332,9 +332,16 @@ def _kernel_asym_batch(kfunc, x, sample, bw, weights, max_elements):
     return estimate
 
 
+def _beta_pdf(sample, a, b):
+    # scipy 1.8 warns "divide by zero" when the pdf of a beta distribution
+    # with a large shape parameter underflows to 0, near x = 1
+    with np.errstate(divide="ignore"):
+        return stats.beta.pdf(sample, a, b)
+
+
 def kernel_pdf_beta(x, sample, bw):
     # Beta kernel for density, pdf, estimation
-    return stats.beta.pdf(sample, x / bw + 1, (1 - x) / bw + 1)
+    return _beta_pdf(sample, x / bw + 1, (1 - x) / bw + 1)
 
 
 kernel_pdf_beta.__doc__ = f"""\
@@ -389,13 +396,13 @@ def kernel_pdf_beta2(x, sample, bw):
         # without vectorizing:
         if x < 2 * bw:
             a = a1 - np.sqrt(a2 - x**2 - x / bw)
-            pdf = stats.beta.pdf(sample, a, (1 - x) / bw)
+            pdf = _beta_pdf(sample, a, (1 - x) / bw)
         elif x > (1 - 2 * bw):
             x_ = 1 - x
             a = a1 - np.sqrt(a2 - x_**2 - x_ / bw)
-            pdf = stats.beta.pdf(sample, x / bw, a)
+            pdf = _beta_pdf(sample, x / bw, a)
         else:
-            pdf = stats.beta.pdf(sample, x / bw, (1 - x) / bw)
+            pdf = _beta_pdf(sample, x / bw, (1 - x) / bw)
     else:
         alpha = x / bw
         beta = (1 - x) / bw
@@ -408,7 +415,7 @@ def kernel_pdf_beta2(x, sample, bw):
         x_ = 1 - x[mask_upp]
         beta[mask_upp] = a1 - np.sqrt(a2 - x_**2 - x_ / bw)
 
-        pdf = stats.beta.pdf(sample, alpha, beta)
+        pdf = _beta_pdf(sample, alpha, beta)
 
     return pdf
 

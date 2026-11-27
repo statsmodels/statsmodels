@@ -1,0 +1,4 @@
+- ``NegativeBinomial.fit`` left the model reading the last element of
+  ``params`` as ``log(alpha)`` in ``loglike``, ``score`` and ``hessian`` if
+  the fit raised an exception, for example in a ``callback``. The model keeps
+  ``alpha`` as the last element of ``params`` after a failed fit. :pr:`11032`

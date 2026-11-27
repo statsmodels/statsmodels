@@ -23,8 +23,10 @@ import pytest
 
 from statsmodels import regression
 from statsmodels.datasets import macrodata
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa import stattools
 from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 from statsmodels.tsa.tests.results import savedrvs
 from statsmodels.tsa.tests.results.datamlw_tls import (
     mlacf,
@@ -122,11 +124,6 @@ def test_vec():
 def test_vech():
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     assert np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9])
-
-
-def test_ar_transparams():
-    arr = np.array([-1000.0, -100.0, -10.0, 1.0, 0.0, 1.0, 10.0, 100.0, 1000.0])
-    assert not np.isnan(tools._ar_transparams(arr)).any()
 
 
 class TestLagmat:
@@ -788,6 +785,236 @@ class TestDetrend:
             tools.detrend(np.ones((3, 3, 3)))
 
 
+def _vec_ref(a):
+    # The columns of a, stacked on top of one another
+    return np.concatenate([a[:, j] for j in range(a.shape[1])])
+
+
+def _vech_ref(a):
+    # The lower triangle of a, column by column
+    return np.concatenate([a[j:, j] for j in range(a.shape[0])])
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 5])
+def test_vec_vech_identities(n):
+    # Positive integer values, so that the products with the 0/1 matrices
+    # below are exact
+    rng = np.random.default_rng(20261119 + n)
+    a = rng.integers(1, 10, size=(n, n)).astype(float)
+    s = a + a.T
+    nh = n * (n + 1) // 2
+    assert_allclose(vec(a), _vec_ref(a), rtol=1e-15)
+    assert_allclose(vech(a), _vech_ref(a), rtol=1e-15)
+    assert_allclose(tools.unvec(_vec_ref(a)), a, rtol=1e-15)
+    assert_allclose(tools.unvech(_vech_ref(s)), s, rtol=1e-15)
+
+    dup = tools.duplication_matrix(n)
+    elim = tools.elimination_matrix(n)
+    assert dup.shape == (n * n, nh)
+    assert elim.shape == (nh, n * n)
+    # D vech(S) = vec(S) for a symmetric S, and L vec(A) = vech(A) for any A
+    assert_allclose(dup @ _vech_ref(s), _vec_ref(s), rtol=1e-15)
+    assert_allclose(elim @ _vec_ref(a), _vech_ref(a), rtol=1e-15)
+    # L D = I, and the Moore-Penrose inverse of D maps vec(S) to vech(S)
+    assert_allclose(elim @ dup, np.eye(nh), rtol=1e-15)
+    assert_allclose(np.linalg.pinv(dup) @ _vec_ref(s), _vech_ref(s), rtol=1e-12)
+
+
+@pytest.mark.parametrize("p, q", [(1, 1), (1, 3), (2, 3), (3, 2), (4, 4)])
+def test_commutation_matrix_identities(p, q):
+    rng = np.random.default_rng(20261119 + 10 * p + q)
+    a = rng.integers(1, 10, size=(p, q)).astype(float)
+    k = tools.commutation_matrix(p, q)
+    # K vec(A) = vec(A')
+    assert_allclose(k @ _vec_ref(a), _vec_ref(a.T), rtol=1e-15)
+    # A permutation matrix, with K_{q,p} K_{p,q} = I
+    assert_allclose(k.sum(0), np.ones(p * q), rtol=1e-15)
+    assert_allclose(k.sum(1), np.ones(p * q), rtol=1e-15)
+    assert_allclose(tools.commutation_matrix(q, p) @ k, np.eye(p * q), rtol=1e-15)
+    # K_{r,p} (A kron B) K_{q,s} = B kron A for A (p, q) and B (r, s), see
+    # Magnus and Neudecker (2019), Matrix Differential Calculus, Ch. 2
+    b = rng.integers(1, 10, size=(2, 3)).astype(float)
+    k_rp = tools.commutation_matrix(2, p)
+    k_qs = tools.commutation_matrix(q, 3)
+    assert_allclose(k_rp @ np.kron(a, b) @ k_qs, np.kron(b, a), rtol=1e-15)
+
+
+@pytest.mark.parametrize("form", [list, tuple, pd.Series])
+def test_unvech_input_forms(form):
+    v = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    expected = np.array([[1.0, 2.0, 3.0], [2.0, 4.0, 5.0], [3.0, 5.0, 6.0]])
+    assert_allclose(tools.unvech(form(v)), expected, rtol=1e-15)
+
+
+def test_add_trend_recarray():
+    x = np.rec.fromarrays([np.arange(5.0)], names="a")
+    with pytest.raises(NotImplementedError):
+        tools.add_trend(x, trend="c")
+
+
+@pytest.mark.parametrize("label", [["a", "b", "c", "d"], ["a", "a", "a", "a"]])
+def test_add_trend_non_numeric_column(label):
+    # The range of a column of strings cannot be computed, so it is not taken
+    # for a constant, even if all of its values are the same
+    df = pd.DataFrame({"label": label, "x": [1.0, 2.0, 4.0, 8.0]})
+    res = tools.add_trend(df, trend="ct", has_constant="raise")
+    assert list(res.columns) == ["label", "x", "const", "trend"]
+    assert list(res["label"]) == label
+    assert_allclose(res["const"], np.ones(4), rtol=1e-15)
+    assert_allclose(res["trend"], np.arange(1.0, 5.0), rtol=1e-15)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+@pytest.mark.parametrize("trend", ["c", "t", "ct", "ctt"])
+def test_add_trend_input_forms(form, trend):
+    x = np.random.default_rng(3).standard_normal(50)
+    value = series_forms(x)[form]
+    res = tools.add_trend(value, trend=trend)
+    t = np.arange(1.0, 51.0)
+    columns = {"c": [t**0], "t": [t], "ct": [t**0, t], "ctt": [t**0, t, t**2]}
+    expected = np.column_stack([x] + columns[trend])
+    assert_allclose(np.asarray(res), expected, rtol=1e-15)
+    if form in ("series", "dataframe"):
+        assert isinstance(res, pd.DataFrame)
+        pd.testing.assert_index_equal(res.index, value.index)
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+def _lags_of(x, col, lags):
+    # Columns t-1, ..., t-lags of x[:, col], for t = lags, ..., nobs - 1
+    nobs = x.shape[0]
+    return np.column_stack([x[lags - j : nobs - j, col] for j in range(1, lags + 1)])
+
+
+def test_add_lag_label_not_unique():
+    df = pd.DataFrame(np.ones((10, 3)), columns=["a", "b", "a"])
+    with pytest.raises(ValueError, match="does not uniquely identify"):
+        tools.add_lag(df, "a", lags=1)
+
+
+@pytest.mark.parametrize("insert, loc", [(0, 0), (2, 2), (3, 3), (-1, 3), (-3, 1)])
+def test_add_lag_insert_position(insert, loc):
+    # An int inserts the lags before that column, counting from the end if
+    # it is negative
+    x = np.random.default_rng(1).standard_normal((20, 3))
+    expected = np.column_stack([x[2:, :loc], _lags_of(x, 1, 2), x[2:, loc:]])
+    res = tools.add_lag(x, 1, lags=2, insert=insert)
+    assert_allclose(res, expected, rtol=1e-15)
+
+
+def test_add_lag_insert_past_last_column():
+    x = np.random.default_rng(1).standard_normal((20, 3))
+    expected = np.column_stack([x[2:], _lags_of(x, 1, 2)])
+    with pytest.warns(ValueWarning, match="inserting at the last position"):
+        res = tools.add_lag(x, 1, lags=2, insert=5)
+    assert_allclose(res, expected, rtol=1e-15)
+
+
+def test_add_lag_drop_column_after_lags():
+    # With the lags inserted before col, col is dropped from the columns
+    # that follow them
+    x = np.random.default_rng(1).standard_normal((20, 4))
+    expected = np.column_stack([x[2:, :1], _lags_of(x, 2, 2), x[2:, [1, 3]]])
+    res = tools.add_lag(x, 2, lags=2, drop=True, insert=1)
+    assert_allclose(res, expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+def test_add_lag_input_forms(form):
+    x = np.random.default_rng(4).standard_normal(50)
+    res = tools.add_lag(series_forms(x)[form], lags=2)
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, np.column_stack([x[2:], x[1:-1], x[:-2]]), rtol=1e-15)
+
+
+@pytest.mark.parametrize("form", ["series", "column", "dataframe"])
+def test_detrend_input_forms(form):
+    x = np.random.default_rng(5).standard_normal(50)
+    value = series_forms(x)[form]
+    res = tools.detrend(value, order=1)
+    # The residuals of the least squares fit on a constant and a trend
+    design = np.column_stack([np.ones(50), np.arange(50.0)])
+    expected = x - design @ np.linalg.lstsq(design, x, rcond=None)[0]
+    assert_allclose(np.squeeze(np.asarray(res)), expected, rtol=1e-8)
+    assert type(res) is type(value)
+    if form != "column":
+        pd.testing.assert_index_equal(res.index, value.index)
+    if form == "dataframe":
+        assert list(res.columns) == ["x"]
+
+
+def test_lagmat_negative_maxlag():
+    # The message said that maxlag must be greater than 0, but 0 is allowed
+    x = np.arange(10.0)
+    with pytest.raises(ValueError, match=r"`maxlag` must be non-negative\. Got -1\."):
+        tools.lagmat(x, -1)
+    np.testing.assert_allclose(tools.lagmat(x, 0, original="in"), x[:, None])
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_lagmat_input_forms(form, use_pandas):
+    x = np.random.default_rng(6).standard_normal(50)
+    value = series_forms(x)[form]
+    res = tools.lagmat(value, 2, trim="both", use_pandas=use_pandas)
+    assert_allclose(np.asarray(res), np.column_stack([x[1:-1], x[:-2]]), rtol=1e-15)
+    if use_pandas and form in ("series", "dataframe"):
+        assert isinstance(res, pd.DataFrame)
+        pd.testing.assert_index_equal(res.index, value.index[2:])
+        assert list(res.columns) == ["x.L.1", "x.L.2"]
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+@pytest.mark.parametrize("form", ["series", "column", "dataframe"])
+def test_lagmat2ds_input_forms(form):
+    x = np.random.default_rng(7).standard_normal(50)
+    res = tools.lagmat2ds(series_forms(x)[form], 2, trim="both")
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, np.column_stack([x[2:], x[1:-1], x[:-2]]), rtol=1e-15)
+
+
+@pytest.mark.parametrize("use_pandas", [False, True])
+@pytest.mark.parametrize("maxlagex, dropex", [(1, 0), (3, 1), (2, 2)])
+def test_lagmat2ds_maxlagex(maxlagex, dropex, use_pandas):
+    rng = np.random.default_rng(2)
+    nobs, maxlag0 = 30, 2
+    x = pd.DataFrame(rng.standard_normal((nobs, 2)), columns=["a", "b"])
+
+    def lag(col, j):
+        # Lag j of a column, with zeros before the start of the sample
+        out = np.zeros(nobs)
+        out[j:] = x.iloc[: nobs - j, col]
+        return out
+
+    expected = np.column_stack(
+        [lag(0, j) for j in range(maxlag0 + 1)]
+        + [lag(1, j) for j in range(dropex, maxlagex + 1)]
+    )
+    res = tools.lagmat2ds(
+        x, maxlag0, maxlagex=maxlagex, dropex=dropex, use_pandas=use_pandas
+    )
+    assert_allclose(np.asarray(res), expected, rtol=1e-15)
+    if use_pandas:
+        names = ["a"] + [f"a.L.{j}" for j in range(1, maxlag0 + 1)]
+        names += [f"b.L.{j}" if j else "b" for j in range(dropex, maxlagex + 1)]
+        assert list(res.columns) == names
+        pd.testing.assert_index_equal(res.index, x.index)
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+def test_int_input_matches_float():
+    xi = np.arange(30) % 7
+    xf = xi.astype(float)
+    assert_allclose(tools.add_trend(xi, "ct"), tools.add_trend(xf, "ct"), rtol=1e-15)
+    assert_allclose(tools.add_lag(xi, lags=2), tools.add_lag(xf, lags=2), rtol=1e-15)
+    assert_allclose(tools.detrend(xi), tools.detrend(xf), rtol=1e-12)
+    assert_allclose(tools.lagmat(xi, 2), tools.lagmat(xf, 2), rtol=1e-15)
+    assert_allclose(tools.lagmat2ds(xi, 2), tools.lagmat2ds(xf, 2), rtol=1e-15)
+
+
 class TestAddTrend:
     @classmethod
     def setup_class(cls):
@@ -936,6 +1163,33 @@ class TestAddTrend:
         assert_equal(tools.add_trend(self.arr_2d, "n"), self.arr_2d)
         assert tools.add_trend(self.arr_2d, "n") is not self.arr_2d
 
+    @pytest.mark.parametrize("container", [list, tuple])
+    @pytest.mark.parametrize("ndim", [1, 2])
+    def test_trend_n_array_like(self, container, ndim):
+        # A list was returned as a list, and a tuple raised AttributeError.
+        # The other trends return an ndarray for both.
+        if ndim == 1:
+            data = self.arr_1d
+            x = container(data.tolist())
+        else:
+            data = self.arr_2d
+            x = container(container(row) for row in data.tolist())
+        res = tools.add_trend(x, "n")
+        assert isinstance(res, np.ndarray)
+        assert_allclose(res, data, rtol=1e-15)
+        assert isinstance(tools.add_trend(x, "c"), np.ndarray)
+
+    def test_trend_n_pandas(self):
+        # pandas input is returned as a copy of the same type
+        s = pd.Series(self.arr_1d, name="y")
+        res = tools.add_trend(s, "n")
+        assert res is not s
+        assert_series_equal(res, s)
+        df = pd.DataFrame(self.arr_2d, columns=["a", "b"])
+        res = tools.add_trend(df, "n")
+        assert res is not df
+        assert_frame_equal(res, df)
+
 
 class TestLagmat2DS:
     @classmethod
@@ -1056,3 +1310,62 @@ def test_grangercausality():
     result, models = out[1]
     res2down, res2djoint, rconstr = models
     assert res2djoint.centered_tss is not res2djoint.uncentered_tss
+
+
+def test_unintegrate_docstring_example():
+    x = np.array([1, 3, 9.0, 19, 8.0])
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate_levels is"):
+        levels = tools.unintegrate_levels(x, 2)
+    assert_allclose(levels, [1.0, 2.0], rtol=1e-12)
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate is"):
+        undiffed = tools.unintegrate(np.diff(x, 2), levels)
+    assert_allclose(undiffed, x, rtol=1e-12)
+
+
+@pytest.mark.parametrize("d", [1, 2, 3])
+def test_unintegrate_round_trip(d):
+    # Integer-valued data, so that differencing and summing are exact
+    rng = np.random.default_rng(20261119)
+    x = rng.integers(-20, 20, size=25).cumsum().astype(float)
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate_levels is"):
+        levels = tools.unintegrate_levels(x, d)
+    # The first value of the k-th difference, for k = 0, 1, 2
+    first_values = [x[0], x[1] - x[0], x[2] - 2 * x[1] + x[0]]
+    assert_allclose(levels, first_values[:d], rtol=1e-12)
+
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate is") as record:
+        undiffed = tools.unintegrate(np.diff(x, d), levels)
+    # unintegrate recurses once per difference, but warns only once
+    assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
+    assert_allclose(undiffed, x, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "to_col", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_add_lag_int_like_col(to_col, use_pandas):
+    # A NumPy integer or a 0-d integer array is a column index, as an int
+    # is. A 0-d array raised a TypeError or was looked up as a label.
+    x = np.random.default_rng(20261126).standard_normal((10, 3))
+    data = pd.DataFrame(x, columns=["a", "b", "c"]) if use_pandas else x
+    lagged = tools.add_lag(data, to_col(1), 2)
+    # The columns a, b, b.L1, b.L2 and c, trimmed by two observations
+    expected = np.column_stack([x[2:, :2], x[1:-1, 1], x[:-2, 1], x[2:, 2]])
+    assert_allclose(lagged, expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "col", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_add_lag_bool_float_col(col, use_pandas):
+    # A bool or a float is not a column index (col is strict), so it is a
+    # label. True raised a ValueError after adding an axis.
+    x = np.random.default_rng(20261126).standard_normal((10, 3))
+    if use_pandas:
+        with pytest.raises(KeyError):
+            tools.add_lag(pd.DataFrame(x, columns=["a", "b", "c"]), col, 2)
+    else:
+        with pytest.raises(TypeError, match="col can only be a label"):
+            tools.add_lag(x, col, 2)

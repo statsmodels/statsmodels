@@ -1,0 +1,8 @@
+- ``score_obs`` of state space models with ``transformed=False`` gave wrong
+  scores with ``method="harvey"``, which ignored ``transformed``, and with
+  the default complex-step differentiation for models whose parameter
+  transformation is not complex differentiable, such as VARMAX and
+  dynamic factor models. These scores are computed with respect to the
+  transformed parameters and converted by the chain rule, as ``score``
+  does, so results of such calls change; for SARIMAX models the default
+  result changes only by about 1e-10 (relative). :pr:`11056`

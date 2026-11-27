@@ -95,7 +95,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
     # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
-        k_states = model._k_posdef
+        k_states = model._k_posdef  # pragma: no cover
 
     # Need to clear out the scaled_smoothed_estimator and
     # scaled_smoothed_estimator_cov in case we're re-running the filter

@@ -1,0 +1,4 @@
+- :meth:`~statsmodels.tsa.arima.model.ARIMA.fit` did not check the length of
+  ``start_params``: too few elements raised an ``IndexError`` or a NumPy
+  error. They raise a ``ValueError`` that states the expected length.
+  :pr:`10874`

@@ -1,0 +1,5 @@
+- Array arguments validated with ``array_like`` are converted to a base-class
+  ndarray, as ``np.asarray`` does. An ``np.matrix`` kept matrix semantics
+  (for example, a column could not be squeezed to 1-d) and a masked array kept
+  its mask, which later code honoured in some operations and ignored in
+  others; the mask is now dropped. :pr:`11242`

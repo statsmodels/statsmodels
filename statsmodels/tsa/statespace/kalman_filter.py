@@ -13,6 +13,7 @@ from warnings import warn
 import numpy as np
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import is_bool_like, is_int_like
 
 from . import tools
 from .representation import FrozenRepresentation, OptionWrapper, Representation
@@ -68,8 +69,9 @@ class KalmanFilter(Representation):
     Parameters
     ----------
     k_endog : ndarray or int
-        The observed time-series process :math:`y` if array like or the
-        number of variables in the process if an integer.
+        The observed time-series process :math:`y` if an ndarray, or the
+        number of variables in the process if an integer. See
+        `Representation` for the accepted shapes.
     k_states : int
         The dimension of the unobserved state process.
     k_posdef : int, optional
@@ -162,7 +164,10 @@ class KalmanFilter(Representation):
     filter_univariate = OptionWrapper("filter_method", FILTER_UNIVARIATE)
     """(bool) Flag for univariate filtering of multivariate observation vector"""
     filter_collapsed = OptionWrapper("filter_method", FILTER_COLLAPSED)
-    """(bool) Flag for Kalman filtering with collapsed observation vector"""
+    """(bool) Flag for Kalman filtering with collapsed observation vector
+
+    It requires a design matrix of full column rank, see `set_filter_method`.
+    """
     filter_extended = OptionWrapper("filter_method", FILTER_EXTENDED)
     """(bool) Flag for extended Kalman filtering. Not implemented"""
     filter_unscented = OptionWrapper("filter_method", FILTER_UNSCENTED)
@@ -474,13 +479,22 @@ class KalmanFilter(Representation):
             method if both are specified.
         FILTER_COLLAPSED
             Collapsed approach to Kalman filtering. Will be used *in addition*
-            to conventional or univariate filtering.
+            to conventional or univariate filtering. It requires more
+            observed series than states and a design matrix of full column
+            rank: in each period with more observed series than states, the
+            rows of the design matrix that belong to the observed series
+            must form a matrix of full column rank, otherwise filtering
+            raises a ``LinAlgError`` that says so. For example, the design
+            matrix of a dynamic factor model with lagged factors in the state
+            vector has zero columns.
+
+            .. versionchanged:: 0.15.1
+
+               The error for a design matrix that is not of full column rank
+               names this requirement.
         FILTER_CONCENTRATED
             Use the concentrated log-likelihood function. Will be used
             *in addition* to the other options.
-
-        Note that only the first method is available if using a Scipy version
-        older than 0.16.
 
         If the bitmask is set directly via the `filter_method` argument, then
         the full method must be provided.
@@ -495,9 +509,20 @@ class KalmanFilter(Representation):
 
         The default filtering method is FILTER_CONVENTIONAL.
 
+        Univariate filtering first diagonalizes a non-diagonal observation
+        covariance matrix with an LDL decomposition. A positive semi-definite
+        matrix gives a warning, and a matrix that is not positive
+        semi-definite raises a ``LinAlgError``.
+
+        .. versionchanged:: 0.15.1
+
+           An observation covariance matrix that is not positive
+           semi-definite raises a ``LinAlgError`` with univariate filtering.
+           It could give a meaningless loglikelihood without an error.
+
         Examples
         --------
-        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> mod = sm.tsa.statespace.SARIMAX(np.arange(10.0))
         >>> mod.ssm.filter_method
         1
         >>> mod.ssm.filter_conventional
@@ -589,9 +614,9 @@ class KalmanFilter(Representation):
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> mod = sm.tsa.statespace.SARIMAX(np.arange(10.0))
         >>> mod.ssm.inversion_method
-        1
+        9
         >>> mod.ssm.solve_cholesky
         True
         >>> mod.ssm.invert_univariate
@@ -655,7 +680,7 @@ class KalmanFilter(Representation):
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> mod = sm.tsa.statespace.SARIMAX(np.arange(10.0))
         >>> mod.ssm.stability_method
         1
         >>> mod.ssm.stability_force_symmetry
@@ -749,18 +774,18 @@ class KalmanFilter(Representation):
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.SARIMAX(range(10))
+        >>> mod = sm.tsa.statespace.SARIMAX(np.arange(10.0))
         >>> mod.ssm.conserve_memory
         0
         >>> mod.ssm.memory_no_predicted
         False
         >>> mod.ssm.memory_no_predicted = True
         >>> mod.ssm.conserve_memory
-        2
+        12
         >>> mod.ssm.set_conserve_memory(memory_no_filtered=True,
         ...                             memory_no_forecast=True)
         >>> mod.ssm.conserve_memory
-        7
+        63
         """
         if conserve_memory is not None:
             self.conserve_memory = conserve_memory
@@ -779,12 +804,12 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        alternate_timing : int, optional
-            Whether or not to use the alternate timing convention. Default is
-            unspecified.
+        alternate_timing : bool, optional
+            Whether or not to use the alternate timing convention. If not
+            given, the timing is not changed.
         **kwargs
-            Keyword arguments may be used to influence the memory conservation
-            method by setting individual boolean flags. See notes for details.
+            The boolean flags `timing_init_predicted` and
+            `timing_init_filtered` may be used to set the timing convention.
         """
         if alternate_timing is not None:
             self.filter_timing = int(alternate_timing)
@@ -863,29 +888,40 @@ class KalmanFilter(Representation):
         Parameters
         ----------
         filter_method : int, optional
-            Determines which Kalman filter to use. Default is conventional.
+            Determines which Kalman filter to use. Default is the
+            `filter_method` of the model (conventional unless changed).
         inversion_method : int, optional
-            Determines which inversion technique to use. Default is by Cholesky
-            decomposition.
+            Determines which inversion technique to use. Default is the
+            `inversion_method` of the model (by Cholesky decomposition unless
+            changed).
         stability_method : int, optional
             Determines which numerical stability techniques to use. Default is
-            to enforce symmetry of the predicted state covariance matrix.
+            the `stability_method` of the model (to enforce symmetry of the
+            predicted state covariance matrix unless changed).
         conserve_memory : int, optional
-            Determines what output from the filter to store. Default is to
-            store everything.
+            Determines what output from the filter to store. Default is the
+            `conserve_memory` of the model, without the output required for
+            smoothing.
         filter_timing : int, optional
-            Determines the timing convention of the filter. Default is that
-            from Durbin and Koopman (2012), in which the filter is initialized
-            with predicted values.
+            Determines the timing convention of the filter. Default is the
+            `filter_timing` of the model (that from Durbin and Koopman (2012),
+            in which the filter is initialized with predicted values, unless
+            changed).
         tolerance : float, optional
             The tolerance at which the Kalman filter determines convergence to
-            steady-state. Default is 1e-19.
+            steady-state. Default is the `tolerance` of the model.
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
-            recorded. Default is 0.
+            recorded. Default is the `loglikelihood_burn` of the model.
         complex_step : bool, optional
             Whether or not to compute the filter using complex-step
             differentiation. Default is False.
+
+        Returns
+        -------
+        FilterResults
+            The filter output, an instance of the `results_class` of the
+            model.
 
         Notes
         -----
@@ -1099,11 +1135,12 @@ class KalmanFilter(Representation):
         initial_state : array_like, optional
             If specified, this is the state vector at time zero, which should
             be shaped (`k_states` x 1), where `k_states` is the same as in the
-            state space model. If unspecified, but the model has been
-            initialized, then that initialization is used. If unspecified and
-            the model has not been initialized, then a vector of zeros is used.
-            Note that this is not included in the returned `simulated_states`
-            array.
+            state space model. If unspecified, it is drawn from the
+            distribution of the initial state given by the initialization of
+            the model. The initial state is the state of the first simulated
+            period: the first row of the returned `simulated_states` array.
+            The model must be initialized (otherwise RuntimeError is raised),
+            also if `initial_state` is specified.
         pretransformed_measurement_shocks : bool, optional
             If `measurement_shocks` is provided, this flag indicates whether it
             should be directly used as the shocks. If False, then it is assumed
@@ -1135,7 +1172,7 @@ class KalmanFilter(Representation):
             array of ints, a new ``Generator`` is created, seeded with
             `rng`. If `rng` is already a ``Generator`` or ``RandomState``
             instance, that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -1151,6 +1188,12 @@ class KalmanFilter(Representation):
             If `return_simulator=True`, then an instance of a simulator is
             returned, which can be reused for additional simulations of the
             same size.
+
+        Notes
+        -----
+        Simulation needs a simulation smoother: it is available for a
+        `SimulationSmoother` (the class used by `MLEModel`), and a
+        `KalmanFilter` or `KalmanSmoother` raises NotImplementedError.
         """
         time_invariant = self.time_invariant
         # Check for valid number of simulations
@@ -1178,7 +1221,7 @@ class KalmanFilter(Representation):
                                   " the simulation smoother.")
 
     def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
-                          cumulative=False, direct=False):
+                          cumulative=False, direct=None):
         r"""
         Impulse response function
 
@@ -1186,32 +1229,52 @@ class KalmanFilter(Representation):
         ----------
         steps : int, optional
             The number of steps for which impulse responses are calculated.
-            Default is 10. Note that the initial impulse is not counted as a
-            step, so if `steps=1`, the output will have 2 entries.
+            Default is 10. Note that if the design, transition and selection
+            matrices are time-invariant, the initial impulse is not counted as
+            a step, so if `steps=1`, the output will have 2 entries.
         impulse : int or array_like, optional
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1` where `k_posdef` is the same as in the state
             space model. Alternatively, a custom impulse vector may be
-            provided; must be a column vector with shape `(k_posdef, 1)`.
-            Default is 0.
+            provided, shaped `(k_posdef,)` or `(k_posdef, 1)`. Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               NumPy integers and 0-d integer arrays are accepted as the
+               index of the state innovation. They raised ValueError.
+
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
-            Note that this will also affect custum `impulse` vectors. Default
+            Note that this will also affect custom `impulse` vectors. Default
             is False.
         cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
+        direct : bool, optional
+            Not used.
+
+            .. deprecated:: 0.15.1
+
+               `direct` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
 
         Returns
         -------
         impulse_responses : ndarray
             Responses for each endogenous variable due to the impulse
-            given by the `impulse` argument. A (steps + 1 x k_endog) array.
+            given by the `impulse` argument. A (steps + 1 x k_endog) array if
+            the design, transition and selection matrices are time-invariant,
+            and a (steps x k_endog) array otherwise.
 
         Notes
         -----
         Intercepts in the measurement and state equation are ignored when
         calculating impulse responses.
+
+        The responses are computed by simulation, which needs a simulation
+        smoother: they are available for a `SimulationSmoother` (the class
+        used by `MLEModel`), and a `KalmanFilter` or `KalmanSmoother` raises
+        NotImplementedError.
 
         TODO: add note about how for time-varying systems this is - perhaps
         counter-intuitively - returning the impulse response within the given
@@ -1220,6 +1283,14 @@ class KalmanFilter(Representation):
         responses from arbitrary time points, it is necessary to clone a new
         model with the appropriate system matrices.
         """
+        if direct is not None:
+            warn(
+                "direct is not used by impulse_responses and is deprecated. It"
+                " will be removed after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+
         # We need to add an additional step, since the first simulated value
         # will always be zeros (note that we take this value out at the end).
         steps += 1
@@ -1232,14 +1303,14 @@ class KalmanFilter(Representation):
                 self._selection.shape[2] == 1):
             steps += 1
 
-        # Check for what kind of impulse we want
-        if type(impulse) is int:
+        # Check for what kind of impulse we want (an index, but not a bool)
+        if is_int_like(impulse, strict=True):
             if impulse >= self.k_posdef or impulse < 0:
                 raise ValueError("Invalid value for `impulse`. Must be the"
                                  " index of one of the state innovations.")
 
             # Create the (non-orthogonalized) impulse vector
-            idx = impulse
+            idx = int(impulse)
             impulse = np.zeros(self.k_posdef)
             impulse[idx] = 1
         else:
@@ -1327,7 +1398,7 @@ class FilterResults(FrozenRepresentation):
     k_posdef : int
         The dimension of a guaranteed positive definite
         covariance matrix describing the shocks in the
-        measurement equation.
+        transition equation.
     dtype : dtype
         Datatype of representation matrices
     prefix : str
@@ -1362,7 +1433,7 @@ class FilterResults(FrozenRepresentation):
         the ith row of the `endog` array.
     time_invariant : bool
         Whether or not the representation matrices are time-invariant
-    initialization : str
+    initialization : Initialization
         Kalman filter initialization method.
     initial_state : ndarray
         The state vector used to initialize the Kalman filter.
@@ -1415,6 +1486,13 @@ class FilterResults(FrozenRepresentation):
         The forecast error covariance matrices at each time period.
     llf_obs : ndarray
         The loglikelihood values at each time period.
+    llf : float
+        The joint loglikelihood, without the first `loglikelihood_burn`
+        periods.
+    scale : float
+        The scale of the model: concentrated out of the loglikelihood if the
+        filter method includes FILTER_CONCENTRATED, the given scale within
+        `KalmanFilter.fixed_scale`, and 1 otherwise.
     """
     _filter_attributes = [
         "filter_method", "inversion_method", "stability_method",
@@ -1471,8 +1549,11 @@ class FilterResults(FrozenRepresentation):
 
         Parameters
         ----------
-        kalman_filter : statespace.kalman_filter.KalmanFilter
-            The model object from which to take the updated values.
+        kalman_filter : object
+            The compiled Kalman filter of the model (an instance of one of the
+            ``?KalmanFilter`` classes in
+            ``statsmodels.tsa.statespace._kalman_filter``) after filtering,
+            from which to take the updated values.
 
         Notes
         -----
@@ -1900,8 +1981,11 @@ class FilterResults(FrozenRepresentation):
             Zero-indexed observation number at which to start prediction, i.e.,
             the first prediction will be at start.
         end : int, optional
-            Zero-indexed observation number at which to end prediction, i.e.,
-            the last prediction will be at end.
+            Zero-indexed observation number at which to end prediction. It is
+            excluded, as the end of a slice: the last prediction is at
+            `end - 1`. Default is the number of observations, so that the
+            predictions cover the sample; a larger `end` adds out-of-sample
+            forecasts.
         dynamic : bool or int, optional
             Offset relative to `start` at which to begin dynamic prediction.
             Prior to this observation, true endogenous values will be used for
@@ -1939,8 +2023,8 @@ class FilterResults(FrozenRepresentation):
             end = self.nobs
 
         # Prediction and forecasting is performed by iterating the Kalman
-        # Kalman filter through the entire range [0, end]
-        # Then, everything is returned corresponding to the range [start, end].
+        # filter through the entire range [0, end) (`end` is excluded).
+        # Then, everything is returned corresponding to the range [start, end).
         # In order to perform the calculations, the range is separately split
         # up into the following categories:
         # - static:   (in-sample) the Kalman filter is run as usual
@@ -1959,6 +2043,8 @@ class FilterResults(FrozenRepresentation):
 
         # If `dynamic=True`, then assume that we want to begin dynamic
         # prediction at the start of the sample prediction.
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if dynamic is True:
             dynamic = 0
         # If `dynamic=False`, then assume we want no dynamic prediction
@@ -2076,8 +2162,8 @@ class PredictionResults(FilterResults):
         Zero-indexed observation number at which to start forecasting,
         i.e., the first forecast will be at start.
     end : int
-        Zero-indexed observation number at which to end forecasting, i.e.,
-        the last forecast will be at end.
+        Zero-indexed observation number at which to end forecasting. It is
+        excluded, as the end of a slice: the last forecast is at `end - 1`.
     nstatic : int
         Number of in-sample static predictions (these are always the first
         elements of the prediction output).
@@ -2085,7 +2171,7 @@ class PredictionResults(FilterResults):
         Number of in-sample dynamic predictions (these always follow the static
         predictions directly, and are directly followed by the forecasts).
     nforecast : int
-        Number of in-sample forecasts (these always follow the dynamic
+        Number of out-of-sample forecasts (these always follow the dynamic
         predictions directly).
     oos_results : FilterResults, optional
         Filtering output associated with the out-of-sample forecasting
@@ -2102,15 +2188,16 @@ class PredictionResults(FilterResults):
         i.e., the first predict will be at `start`; this is relative to the
         original model from which prediction was performed.
     end : int
-        Zero-indexed observation number at which to end prediction,
-        i.e., the last predict will be at `end`; this is relative to the
-        original model from which prediction was performed.
+        Zero-indexed observation number at which to end prediction. It is
+        excluded, as the end of a slice: the last prediction is at
+        `end - 1`; this is relative to the original model from which
+        prediction was performed.
     nstatic : int
         Number of in-sample static predictions.
     ndynamic : int
         Number of in-sample dynamic predictions.
     nforecast : int
-        Number of in-sample forecasts.
+        Number of out-of-sample forecasts.
     endog : ndarray
         The observation vector.
     design : ndarray
@@ -2405,7 +2492,11 @@ def _check_dynamic(dynamic, start, end, nobs):
     start : int
         The location of the first forecast.
     end : int
-        The location of the final forecast (inclusive).
+        The end of the forecasts. ``FilterResults.predict`` passes the
+        location after the final forecast (exclusive, out-of-sample forecasts
+        included), and ``STLForecastResults`` the location of the final
+        in-sample forecast (inclusive). Dynamic prediction that begins after
+        `end` has no effect.
     nobs : int
         The number of observations in the time series.
 
@@ -2415,7 +2506,9 @@ def _check_dynamic(dynamic, start, end, nobs):
         The start location of the first dynamic forecast. None if there
         are no in-sample dynamic forecasts.
     ndynamic : int
-        The number of dynamic forecasts
+        The number of in-sample dynamic forecasts, ``min(end, nobs) -
+        dynamic``, for an exclusive `end` (``STLForecastResults`` does not
+        use it).
     """
     if dynamic is None:
         return dynamic, 0

@@ -3,7 +3,9 @@ from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
+import inspect
 from pathlib import Path
+import re
 import warnings
 
 import numpy as np
@@ -23,6 +25,7 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     ConvergenceWarning,
+    EstimationWarning,
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
@@ -86,6 +89,7 @@ from statsmodels.tsa.stattools._stattools import (
     _pacf_ols_qr,
     _pacf_yw_levinson,
 )
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 from statsmodels.tsa.tsatools import add_trend, lagmat
 
 DECIMAL_8 = 8
@@ -826,6 +830,30 @@ class TestPCCF:
         assert len(result) == 2
         assert np.all(np.isfinite(result) | np.isnan(result))
 
+    def test_yw_adjusted_non_positive_variance_returns_nan(self):
+        # With the adjusted autocovariances (divisor nobs - h) of "yw", x and
+        # y have Gamma(0) = I and Gamma(1) = [[-1, 1/7], [1/7, 1/7]]. The
+        # forward prediction error variance of x at lag 2 is then
+        # (I - Gamma(1) Gamma(1)')[0, 0] = 1 - (1 + 1 / 49) < 0, so the
+        # recursion stops and the lags from 2 on are NaN.
+        x = np.tile([1.0, -1.0], 4)
+        y = np.tile([1.0, 1.0, -1.0, -1.0], 2)
+        gamma1 = np.array([[-1.0, 1 / 7], [1 / 7, 1 / 7]])
+        assert (np.eye(2) - gamma1 @ gamma1.T)[0, 0] < 0
+        result = pccf(x, y, nlags=4, method="yw")
+        # lag 1 is Gamma(1)[0, 1] / sqrt(Gamma(0)[0, 0] * Gamma(0)[1, 1])
+        assert_allclose(result[0], 1 / 7, rtol=1e-12)
+        assert np.all(np.isnan(result[1:]))
+        # With the biased autocovariances (divisor nobs) of "ywm", the variances
+        # at lag 2 are positive, and lags 1 and 2 are 1/8 and
+        # (3/32) / sqrt(7/32 * 31/32) = 3 / sqrt(217). Stop at lag 2: for these
+        # periodic series the "ywm" prediction error covariance after two lags
+        # is exactly singular, so the recursion from lag 3 on solves a singular
+        # system and its result depends on rounding.
+        assert_allclose(
+            pccf(x, y, nlags=2, method="ywm"), [1 / 8, 3 / np.sqrt(217)], rtol=1e-12
+        )
+
     def test_return_consistency(self):
         result_no_alpha = pccf(self.x, self.y, nlags=5)
         _result = pccf(
@@ -1000,6 +1028,99 @@ class TestPCCF:
                 assert np.isnan(
                     result[h - 1]
                 ), f"lag {h}: {n_obs} obs, {n_cols} cols should be NaN"
+
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    @pytest.mark.parametrize("method", ["yw", "ywm"])
+    @pytest.mark.parametrize("scale", [1e-200, 1e-8, 1e8, 1e200])
+    @pytest.mark.parametrize("scaled", ["x", "y"])
+    def test_yw_scale_invariant(self, method, scale, scaled):
+        # The PCCF does not depend on the scales of x and y. The singularity
+        # checks used absolute tolerances, so rescaling one series made every
+        # lag NaN, and 1e200 overflowed.
+        x = np.diff(np.log(self.x.to_numpy()))
+        y = np.diff(np.log(self.y.to_numpy()))
+        expected = pccf(x, y, nlags=5, method=method)
+        assert np.all(np.isfinite(expected))
+        if scaled == "x":
+            x = scale * x
+        else:
+            y = scale * y
+        result = pccf(x, y, nlags=5, method=method)
+        assert_allclose(result, expected, rtol=1e-12)
+
+    # A negative variance must stop the recursion, not reach np.sqrt
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    @pytest.mark.parametrize(
+        "method, expected",
+        [
+            ("ywm", [1 / 8, 3 / np.sqrt(217), -1 / 14, np.nan]),
+            ("yw", [1 / 7, np.nan, np.nan, np.nan]),
+        ],
+    )
+    def test_yw_singular_step_later_lags_nan(self, method, expected):
+        # In rational arithmetic, the "ywm" prediction error covariance
+        # matrices after two lags are singular for these periodic series,
+        # with diagonals 21/104. Lag 3 only needs the diagonals and is
+        # (-3/208) / (21/104) = -1/14. Lag 4 needs the inverses, so it is NaN;
+        # it came from solving the singular system and depended on rounding.
+        # With "yw", the forward prediction error variance after one lag is
+        # -1/49, so the lags from 2 on are NaN.
+        x = np.tile([1.0, -1.0], 4)
+        y = np.tile([1.0, 1.0, -1.0, -1.0], 2)
+        result = pccf(x, y, nlags=4, method=method)
+        assert_allclose(result, expected, rtol=1e-12)
+
+    def test_yw_lag_before_singular_step_kept(self):
+        # y_t = x_{t+1}, and every step here is exact in binary floating
+        # point. Gamma(0) = I and Gamma(1)[0, 1] = -7/8. The "ywm" prediction
+        # error covariance after one lag is singular, with diagonal 7/32, so
+        # np.linalg.solve raised and lag 2 was discarded, although it only
+        # needs the diagonal. Lags 3 and 4 need the inverse and are NaN.
+        x = np.tile([-1.0, -1.0, 1.0, 1.0], 2)
+        y = np.roll(x, -1)
+        result = pccf(x, y, nlags=4, method="ywm")
+        # lag 2 is exactly 0, which rtol cannot check, hence atol
+        assert_allclose(result[:2], [-7 / 8, 0.0], rtol=1e-12, atol=1e-14)
+        assert np.all(np.isnan(result[2:]))
+
+    @pytest.mark.parametrize(
+        "method, expected",
+        [
+            (
+                "ywm",
+                [
+                    -0.163137921011545,
+                    -0.0395017554720548,
+                    -0.022027194791587,
+                    -0.140490723788968,
+                ],
+            ),
+            (
+                "yw",
+                [
+                    -0.165902970520216,
+                    -0.0409034423438503,
+                    -0.023252913269295,
+                    -0.151223237958104,
+                ],
+            ),
+        ],
+    )
+    def test_yw_collinear_to_working_precision_nan(self, method, expected):
+        # y = x + noise * e. The expected values for noise = 1e-3 are from
+        # exact rational arithmetic on the same floats. With noise = 1e-7
+        # the correlation of x and y is 1 - O(1e-14), so x and y are
+        # collinear to working precision: the values were off by up to 0.03
+        # against exact arithmetic, and are now NaN, as for exactly
+        # collinear series (noise = 0).
+        rng = np.random.default_rng(3)
+        x = rng.standard_normal(60)
+        e = rng.standard_normal(60)
+        result = pccf(x, x + 1e-3 * e, nlags=4, method=method)
+        assert_allclose(result, expected, rtol=1e-8)
+        for noise in (1e-7, 0.0):
+            result = pccf(x, x + noise * e, nlags=4, method=method)
+            assert np.all(np.isnan(result))
 
 
 class TestBlockJackknife:
@@ -1267,6 +1388,45 @@ class TestBreakvarHeteroskedasticityTest:
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
+    @pytest.mark.parametrize(
+        "subset_length",
+        [40, np.int64(40), 40.0, np.float64(40.0), 0.25],
+        ids=["int", "int64", "float", "float64", "fraction"],
+    )
+    def test_subset_length_integer_like(self, subset_length):
+        # Any integer-like value and the fraction 0.25 of 160 observations
+        # give subsets of 40 observations
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        res = breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+        expected_statistic = np.sum(resid[-40:] ** 2) / np.sum(resid[:40] ** 2)
+        expected_pvalue = 2 * min(
+            self.f.cdf(expected_statistic, 40, 40),
+            self.f.sf(expected_statistic, 40, 40),
+        )
+        assert_allclose(res.statistic, expected_statistic, rtol=1e-12)
+        assert_allclose(res.pvalue, expected_pvalue, rtol=1e-12)
+
+    def test_subset_length_one(self):
+        # One observation in each subset is too few for the statistic
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.warns(UserWarning, match="too few non-missing observations"):
+            res = breakvar_heteroskedasticity_test(resid, subset_length=1.0)
+        assert np.isnan(res.statistic)
+
+    @pytest.mark.parametrize(
+        "subset_length", [0, 0.0, -1, -0.25, 1.5, 40.5, np.nan, np.inf]
+    )
+    def test_subset_length_invalid_value(self, subset_length):
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.raises(ValueError, match="subset_length must be a fraction"):
+            breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+
+    @pytest.mark.parametrize("subset_length", ["40", True, None])
+    def test_subset_length_invalid_type(self, subset_length):
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.raises(TypeError, match="subset_length must be float_like"):
+            breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+
 
 class CheckCoint:
     """
@@ -1451,6 +1611,55 @@ def test_coint_perfect_collinearity():
     assert np.isneginf(c.coint_t)
 
 
+@pytest.mark.filterwarnings("error:return_results has no effect:FutureWarning")
+@pytest.mark.parametrize("return_results", [None, True, False])
+def test_coint_return_results_deprecated(return_results):
+    # A CointResult, which also unpacks as a tuple, is returned for every
+    # value of return_results. Any value other than None warns that the
+    # argument has no effect.
+    rng = np.random.default_rng(20261119)
+    y1 = rng.standard_normal(200).cumsum()
+    y0 = 0.5 * y1 + rng.standard_normal(200)
+    if return_results is None:
+        res = coint(y0, y1, maxlag=2, autolag=None, return_results=None)
+    else:
+        with pytest.warns(
+            FutureWarning, match="return_results has no effect"
+        ) as record:
+            res = coint(y0, y1, maxlag=2, autolag=None, return_results=return_results)
+        # the warning points at the caller
+        assert record[0].filename == __file__
+    assert isinstance(res, CointResult)
+    coint_t, pvalue, crit = res
+    # The test statistic is the ADF statistic of the residuals of the
+    # cointegrating regression, without a trend in the ADF regression
+    resid = OLS(y0, add_constant(y1)).fit().resid
+    adf = adfuller(resid, maxlag=2, autolag=None, regression="n", result_object=True)
+    assert_allclose(coint_t, adf.statistic, rtol=1e-10)
+    default = coint(y0, y1, maxlag=2, autolag=None)
+    assert_allclose(pvalue, default.pvalue, rtol=1e-12)
+    assert_allclose(crit, default.critical_values, rtol=1e-12)
+
+
+@pytest.mark.parametrize("trend", ["c", "ct", "ctt", "n"])
+def test_coint_critical_values_ndarray(trend):
+    # critical_values is an ndarray of the 1%, 5% and 10% critical values for
+    # every trend. MacKinnon (2010) has no critical values without a
+    # constant, so they are NaN with trend="n". Otherwise a smaller size has
+    # a more negative critical value.
+    rng = np.random.default_rng(20261119)
+    y1 = rng.standard_normal(200).cumsum()
+    y0 = 0.5 * y1 + rng.standard_normal(200)
+    crit = coint(y0, y1, trend=trend, maxlag=2, autolag=None).critical_values
+    assert isinstance(crit, np.ndarray)
+    assert crit.shape == (3,)
+    assert crit.dtype == np.float64
+    if trend == "n":
+        assert np.all(np.isnan(crit))
+    else:
+        assert np.all(np.diff(crit) > 0)
+
+
 class TestGrangerCausality:
     def test_grangercausality(self):
         # some example data
@@ -1482,6 +1691,42 @@ class TestGrangerCausality:
         rs = np.random.RandomState(3239291)
         x = rs.rand(10, 2)
         grangercausalitytests(x, 2)  # This should pass.
+        # The test needs more than 3 * maxlag + 1 observations
+        with pytest.raises(ValueError, match="Insufficient observations"):
+            grangercausalitytests(x, 3)
+        with pytest.raises(ValueError, match="Insufficient observations"):
+            grangercausalitytests(x[:7], 2)
+
+    @pytest.mark.parametrize("nobs", [5, 6, 7, 8, 11, 13])
+    def test_granger_maximum_allowable_lag(self, nobs):
+        # The test needs nobs > 3 * maxlag + 1, so the largest lag is
+        # floor((nobs - 2) / 3). The message used to say one less unless
+        # nobs - 1 was a multiple of 3.
+        max_lag = (nobs - 2) // 3
+        x = np.random.default_rng(20261120).standard_normal((nobs, 2))
+        res = grangercausalitytests(x, max_lag)
+        assert max(res) == max_lag
+        match = rf"Insufficient observations. Maximum allowable lag is {max_lag}\."
+        with pytest.raises(ValueError, match=match):
+            grangercausalitytests(x, max_lag + 1)
+
+    @pytest.mark.parametrize("nobs", [1, 3, 4])
+    def test_granger_too_few_observations_for_any_lag(self, nobs):
+        # The message used to give a maximum allowable lag of 0 or -1
+        x = np.random.default_rng(20261120).standard_normal((nobs, 2))
+        match = "Insufficient observations. x has too few observations for any lag"
+        with pytest.raises(ValueError, match=match):
+            grangercausalitytests(x, 1)
+
+    @pytest.mark.parametrize("shape", [(50,), (50, 1), (50, 3), (50, 0)])
+    def test_granger_fails_on_number_of_columns(self, shape):
+        # The error used to come from deep inside, for example "wrong shape
+        # for coefs", or an IndexError for no column
+        x = np.random.default_rng(20261120).standard_normal(shape)
+        ncols = 1 if len(shape) == 1 else shape[1]
+        match = f"x must have exactly 2 columns, but it has {ncols}"
+        with pytest.raises(ValueError, match=match):
+            grangercausalitytests(x, 2)
 
     def test_granger_fails_on_finite_check(self):
         rs = np.random.RandomState(1234)
@@ -1499,6 +1744,15 @@ class TestGrangerCausality:
             match="maxlag must be a non-empty list containing only positive integers",
         ):
             grangercausalitytests(x, [0, 1, 2])
+
+    @pytest.mark.parametrize("maxlag", [[], ()], ids=["list", "tuple"])
+    def test_granger_fails_on_empty_lags(self, maxlag):
+        x = np.random.default_rng(20261126).standard_normal((100, 2))
+        with pytest.raises(
+            ValueError,
+            match="maxlag must be a non-empty list containing only positive integers",
+        ):
+            grangercausalitytests(x, maxlag)
 
 
 class TestKPSS:
@@ -1705,6 +1959,27 @@ class TestKPSS:
         assert res.resstore.nobs == len(self.x)
         assert res.resstore.lags == 3
 
+    def test_statistic_below_table_warns(self):
+        # For x = 1, -1, 1, ... the partial sums are 1, 0, 1, ..., so with
+        # no lags eta = (n / 2) / n**2 and s_hat = 1, and the statistic
+        # 1 / (2 n) is below the 10% critical value
+        nobs = 100
+        x = np.tile([1.0, -1.0], nobs // 2)
+        msg = "The actual p-value is greater than the p-value returned"
+        with pytest.warns(InterpolationWarning, match=msg):
+            res = kpss(x, "c", nlags=0, result_object=True)
+        assert_allclose(res.statistic, 1 / (2 * nobs), rtol=1e-12)
+        assert_allclose(res.pvalue, 0.10, rtol=1e-12)
+
+    @pytest.mark.parametrize("nobs, expected", [(20, 9), (240, 15)])
+    def test_legacy_lags_formula(self, nobs, expected):
+        # ceil(12 * (nobs / 100) ** (1 / 4)): 8.02 and 14.94 round up
+        x = np.random.default_rng(nobs).standard_normal(nobs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", InterpolationWarning)
+            res = kpss(x, nlags="legacy", result_object=True)
+        assert res.lags == expected
+
 
 class TestRUR:
     """
@@ -1905,6 +2180,22 @@ class TestRUR:
             res = range_unit_root_test(x, result_object=True)
         assert res.pvalue == 0.95
 
+    @pytest.mark.parametrize("store", [False, True])
+    def test_result_object_default_warns(self, store):
+        # 20 new extremes in 250 observations, inside the table
+        x = np.r_[np.arange(21.0), np.full(229, 10.0)]
+        with pytest.warns(FutureWarning, match="result_object"):
+            res = range_unit_root_test(x, store=store)
+        assert isinstance(res, tuple)
+        assert len(res) == 3 + store
+        assert_allclose(res[0], 20 / np.sqrt(250), rtol=1e-12)
+        assert_allclose(res[1], 0.10, rtol=1e-12)
+        # 250 observations is a row of Table 1 of Aparicio et al. (2006)
+        crit = [res[2][key] for key in ("10%", "5%", "2.5%", "1%")]
+        assert_allclose(crit, [1.3632, 1.2242, 1.1137, 0.9982], rtol=1e-12)
+        if store:
+            assert res[3].nobs == 250
+
 
 def test_pandasacovf():
     s = Series(lrange(1, 11))
@@ -2034,6 +2325,95 @@ def test_ccf_nlags_validation():
         ccf(x, y, nlags=2.5)
     # the default output length, len(x), remains a valid request
     assert ccf(x, y, nlags=100).shape == (100,)
+
+
+def _ccf_input(form, a):
+    if form == "column":
+        return a[:, None]
+    if form == "dataframe":
+        return pd.DataFrame({"a": a})
+    if form == "list":
+        return a.tolist()
+    if form == "series":
+        return pd.Series(a)
+    return a
+
+
+# Pairs of (x form, y form): each form on its own, and a column mixed with
+# a 1-D series
+CCF_INPUT_FORMS = [
+    ("column", "column"),
+    ("dataframe", "dataframe"),
+    ("list", "list"),
+    ("series", "series"),
+    ("column", "ndarray"),
+    ("ndarray", "dataframe"),
+]
+
+
+@pytest.fixture
+def ccf_data():
+    rng = np.random.default_rng(10795)
+    # y is shorter than x, so the adjusted denominators depend on len(y)
+    return rng.standard_normal(120), rng.standard_normal(100)
+
+
+@pytest.mark.parametrize("x_form, y_form", CCF_INPUT_FORMS)
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccovf_input_forms(ccf_data, x_form, y_form, adjusted):
+    # An (nobs, 1) column is the same series as the 1-D array. Columns for
+    # both x and y used to give an (nobs, nobs) array, or an (nobs, 1) one
+    # with adjusted=False.
+    x, y = ccf_data
+    expected = ccovf(x, y, adjusted=adjusted)
+    result = ccovf(_ccf_input(x_form, x), _ccf_input(y_form, y), adjusted=adjusted)
+    assert result.shape == (120,)
+    assert_allclose(result, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("x_form, y_form", CCF_INPUT_FORMS)
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("nlags", [None, 5])
+def test_ccf_input_forms(ccf_data, x_form, y_form, adjusted, nlags):
+    x, y = ccf_data
+    x_in, y_in = _ccf_input(x_form, x), _ccf_input(y_form, y)
+    n_ret = 120 if nlags is None else nlags
+    kwargs = {"adjusted": adjusted, "nlags": nlags}
+
+    expected = ccf(x, y, **kwargs)
+    result = ccf(x_in, y_in, **kwargs)
+    assert result.shape == (n_ret,)
+    assert_allclose(result, expected, rtol=1e-12)
+
+    res_obj = ccf(x_in, y_in, result_object=True, **kwargs)
+    assert res_obj.confint is None
+    assert_allclose(res_obj.ccf, expected, rtol=1e-12)
+
+    expected_alpha = ccf(x, y, alpha=0.05, **kwargs)
+    res_alpha = ccf(x_in, y_in, alpha=0.05, **kwargs)
+    assert res_alpha.ccf.shape == (n_ret,)
+    assert_allclose(res_alpha.ccf, expected_alpha.ccf, rtol=1e-12)
+    assert res_alpha.confint.shape == (n_ret, 2)
+    assert_allclose(res_alpha.confint, expected_alpha.confint, rtol=1e-12)
+
+
+@pytest.mark.parametrize("func", [ccf, ccovf])
+@pytest.mark.parametrize("bad", ["x", "y", "both"])
+@pytest.mark.parametrize("form", ["ndarray", "dataframe"])
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccf_ccovf_two_columns_raises(func, bad, form, adjusted):
+    # With adjusted=False, (nobs, 2) arrays for both x and y used to return
+    # an (nobs, 3) array without an error
+    rng = np.random.default_rng(10796)
+    two = rng.standard_normal((50, 2))
+    if form == "dataframe":
+        two = pd.DataFrame(two, columns=["a", "b"])
+    one = rng.standard_normal(50)
+    x = one if bad == "y" else two
+    y = one if bad == "x" else two
+    name = "y" if bad == "y" else "x"
+    with pytest.raises(ValueError, match=f"{name} is required to have ndim 1"):
+        func(x, y, adjusted=adjusted)
 
 
 @pytest.mark.smoke
@@ -2784,6 +3164,33 @@ def test_clark_west_horizon_unused_with_lags(cw_data):
     assert res.lags == 0
 
 
+def test_clark_west_zero_lags_is_ols_tstat():
+    # The identity holds for any forecasts, so the forecasts need not be
+    # out-of-sample: a constant forecast against a regression on x.
+    rng = np.random.default_rng(20261117)
+    nobs = 150
+    x = rng.standard_normal(nobs)
+    y = 0.2 * x + rng.standard_normal(nobs)
+    f_restricted = np.full(nobs, y.mean())
+    slope, intercept = np.polyfit(x, y, 1)
+    f_unrestricted = intercept + slope * x
+    adj_loss_diff = (y - f_restricted) ** 2 - (
+        (y - f_unrestricted) ** 2 - (f_restricted - f_unrestricted) ** 2
+    )
+    # OLS divides the variance by nobs - 1, the HAC estimator with no lags by
+    # nobs. The two statistics differ only by this factor, up to rounding.
+    ols_tstat = OLS(adj_loss_diff, np.ones(nobs)).fit().tvalues[0]
+    expected = ols_tstat * np.sqrt(nobs / (nobs - 1))
+    res = clark_west_test(y, f_restricted, f_unrestricted, lags=0)
+    assert res.lags == 0
+    assert_allclose(res.statistic, expected, rtol=1e-12)
+    assert_allclose(res.pvalue, stats.norm.sf(expected), rtol=1e-12)
+    # The default number of lags is larger and gives another statistic
+    default = clark_west_test(y, f_restricted, f_unrestricted)
+    assert default.lags > 0
+    assert not np.isclose(default.statistic, res.statistic, rtol=1e-3)
+
+
 def test_clark_west_unequal_length(cw_data):
     y, f_restricted, f_unrestricted = cw_data
     with pytest.raises(ValueError, match="equal length"):
@@ -2826,6 +3233,164 @@ def test_arma_order_select_ic_failure():
         arma_order_select_ic(y)
 
 
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_arma_order_select_ic_failed_fits_are_nan(trend):
+    # The Yule-Walker estimator only fits pure AR models, so the models with
+    # an MA term fail and are given NaN, with one warning that lists them
+    from statsmodels.tsa.arima.model import ARIMA
+
+    y = np.random.default_rng(20261119).standard_normal(100)
+    fit_kw = {"method": "yule_walker"}
+    match = (
+        r"The fits of 3 of 6 ARMA models failed, and their information "
+        r"criteria are NaN. Orders \(p, q\): \(0, 1\), \(1, 1\), \(2, 1\). "
+        r"The first, order \(0, 1\), raised ValueError: Yule-Walker"
+    )
+    with pytest.warns(EstimationWarning, match=match) as record:
+        res = arma_order_select_ic(
+            y, max_ar=2, max_ma=1, ic=["aic", "bic"], trend=trend, fit_kw=fit_kw
+        )
+    assert len(record) == 1
+    # The warning points at the caller
+    assert record[0].filename == __file__
+    for ic in ("aic", "bic"):
+        frame = res[ic]
+        assert np.all(np.isnan(frame[1]))
+        expected = [
+            getattr(ARIMA(y, order=(p, 0, 0), trend=trend).fit(**fit_kw), ic)
+            for p in range(3)
+        ]
+        assert_allclose(frame[0], expected, rtol=1e-12)
+        # The minimum ignores the failed fits, it used to point at the first
+        assert res[f"{ic}_min_order"] == (np.argmin(expected), 0)
+
+
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_arma_order_select_ic_infinite_value_all_fail(trend):
+    # Every Yule-Walker fit fails for a series with an infinite value. The
+    # minimum order used to be (0, 0).
+    y = np.random.default_rng(20261119).standard_normal(100)
+    y[-1] = np.inf
+    match = r"No ARMA model could be fitted.*The first, order \(0, 0\), raised"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match=match) as excinfo:
+            arma_order_select_ic(
+                y,
+                max_ar=1,
+                max_ma=1,
+                ic="aic",
+                trend=trend,
+                fit_kw={"method": "yule_walker"},
+            )
+    # The error of the first fit is chained and its message included
+    cause = excinfo.value.__cause__
+    assert cause is not None
+    assert str(cause) in str(excinfo.value)
+
+
+def test_arma_order_select_ic_infinite_value():
+    # The models fitted to a series with an infinite value have a NaN
+    # log-likelihood, or their fit fails, so there is no minimum order. It
+    # used to be (0, 0). Whether the fit of the AR(1) model fails (and is
+    # listed in an EstimationWarning) or gives a NaN log-likelihood depends
+    # on the platform, so only the error is checked here; the warning is
+    # checked by the tests with failing fits above and below.
+    y = np.random.default_rng(20261119).standard_normal(100)
+    y[-1] = np.inf
+    with warnings.catch_warnings():
+        # The maximum likelihood fits run on the infinite value and do not
+        # converge
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        warnings.simplefilter("ignore", EstimationWarning)
+        warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match="No fitted ARMA model has a non-NaN aic"):
+            arma_order_select_ic(y, max_ar=1, max_ma=0, ic="aic", trend="c")
+
+
+def _arma_ic_table(y, max_ar, max_ma, trend, fit_kw, name):
+    # The criterion of each ARIMA model fitted directly, NaN if the fit raises
+    from statsmodels.tsa.arima.model import ARIMA
+
+    table = np.full((max_ar + 1, max_ma + 1), np.nan)
+    failed = []
+    for p in range(max_ar + 1):
+        for q in range(max_ma + 1):
+            try:
+                fit = ARIMA(y, order=(p, 0, q), trend=trend).fit(**fit_kw)
+            except (IndexError, ValueError):
+                failed.append((p, q))
+                continue
+            table[p, q] = getattr(fit, name)
+    return table, failed
+
+
+def test_arma_order_select_ic_start_params():
+    # start_params in fit_kw used to clash with the start_params argument of
+    # the internal retry, so every fit failed. Now only the fits of models
+    # with more parameters than start_params fail. Which fits fail is taken
+    # from the direct fits, since ARIMA.fit also accepts too long
+    # start_params, with a FutureWarning (deprecated).
+    y = np.random.default_rng(20261119).standard_normal(100)
+    fit_kw = {"start_params": [0.1, 0.2, 0.5]}
+    too_long = "start_params has 3 elements, but the model has"
+    with pytest.warns(FutureWarning, match=too_long):
+        expected, failed = _arma_ic_table(y, 3, 2, "n", fit_kw, "aic")
+    # The models with more than 3 parameters fail
+    assert {(1, 2), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2)} <= set(failed)
+    orders = ", ".join(rf"\({p}, {q}\)" for p, q in failed)
+    match = (
+        rf"The fits of {len(failed)} of 12 ARMA models failed, and their "
+        rf"information criteria are NaN. Orders \(p, q\): {orders}\."
+    )
+    with pytest.warns(FutureWarning, match=too_long):
+        with pytest.warns(EstimationWarning, match=match):
+            res = arma_order_select_ic(
+                y, max_ar=3, max_ma=2, ic="aic", trend="n", fit_kw=fit_kw
+            )
+    assert_allclose(res.aic, expected, rtol=1e-10)
+    loc = np.nanargmin(expected)
+    assert res.aic_min_order == np.unravel_index(loc, expected.shape)
+    # The minimum is in neither the first row nor the first column, of a grid
+    # that is not square
+    assert all(res.aic_min_order)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"fit_kw": {"bogus": 1}}, {"model_kw": {"bogus": 1}}],
+    ids=["fit_kw", "model_kw"],
+)
+def test_arma_order_select_ic_type_error(kwargs):
+    # A TypeError from the arguments, such as a mistyped keyword, used to
+    # make every fit fail silently
+    y = np.random.default_rng(20261119).standard_normal(100)
+    with pytest.raises(TypeError, match="bogus"):
+        arma_order_select_ic(y, max_ar=1, max_ma=0, **kwargs)
+
+
+def test_arma_order_select_ic_error_without_message(monkeypatch):
+    # An error without arguments used to crash the internal retry of a failed
+    # fit with an IndexError
+    from statsmodels.tsa.arima.model import ARIMA
+
+    fit = ARIMA.fit
+
+    def fit_without_ma(self, *args, **kwargs):
+        if self.model_orders["ma"]:
+            raise ValueError
+        return fit(self, *args, **kwargs)
+
+    monkeypatch.setattr(ARIMA, "fit", fit_without_ma)
+    y = np.random.default_rng(20261119).standard_normal(100)
+    match = r"Orders \(p, q\): \(0, 1\), \(1, 1\)\. .* raised ValueError: $"
+    with pytest.warns(EstimationWarning, match=match):
+        res = arma_order_select_ic(y, max_ar=1, max_ma=1, ic="aic", trend="n")
+    expected = [fit(ARIMA(y, order=(p, 0, 0), trend="n")).aic for p in range(2)]
+    assert_allclose(res.aic[0], expected, rtol=1e-12)
+    assert np.isnan(res.aic[1]).all()
+
+
 def test_acf_fft_dataframe():
     # regression test #322
 
@@ -2842,6 +3407,29 @@ def test_levinson_durbin_acov():
     assert_allclose(sigma2_eps, 1 - rho**2)
     assert_allclose(ar, np.array([rho] + [0] * (m - 1)), atol=1e-8)
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_levinson_durbin_acov_column(form):
+    # s is 1-D: the autocovariances of an AR(1) as an (n, 1) column give the
+    # AR(1) coefficient and innovation variance, as the 1-D array does
+    rho = 0.9
+    m = 20
+    acov = rho ** np.arange(200)
+    res = levinson_durbin(series_forms(acov)[form], m, isacov=True)
+    assert_allclose(res.sigma_v, 1 - rho**2, rtol=1e-12)
+    # atol: the coefficients beyond lag 1 are zero up to rounding
+    assert_allclose(res.arcoefs, np.array([rho] + [0] * (m - 1)), atol=1e-8)
+    expected = levinson_durbin(acov, m, isacov=True)
+    for value, expected_value in zip(res, expected, strict=True):
+        assert_allclose(value, expected_value, rtol=1e-12)
+
+
+@pytest.mark.parametrize("isacov", [False, True])
+def test_levinson_durbin_two_columns_raises(isacov):
+    s = np.column_stack([0.9 ** np.arange(20), 0.5 ** np.arange(20)])
+    with pytest.raises(ValueError, match="s is required to have ndim 1"):
+        levinson_durbin(s, 5, isacov=isacov)
 
 
 def test_levinson_durbin_nlags_too_long():
@@ -2996,6 +3584,67 @@ def test_pacf_burg_error():
         pacf_burg(np.empty(100), 101)
 
 
+def _column_input_cases():
+    """
+    Functions of one 1-D array_like argument that used to reject a column
+
+    Each returns the numeric values of its result as a flat array.
+    """
+    rng = np.random.default_rng(20261124)
+    x = rng.standard_normal(250).cumsum()
+    y = x + rng.standard_normal(250)
+    e = rng.standard_normal(250)
+    r = acf(e, nlags=10)[1:]
+
+    def kpss_values(v, regression):
+        res = kpss(v, regression, nlags=4, result_object=True)
+        return np.r_[res.statistic, res.pvalue, res.lags]
+
+    def rur_values(v):
+        res = range_unit_root_test(v, result_object=True)
+        return np.r_[res.statistic, res.pvalue, list(res.critical_values.values())]
+
+    return {
+        "pacf_burg": (lambda v: np.concatenate(pacf_burg(v, nlags=10)), x),
+        "pacf burg": (lambda v: pacf(v, nlags=10, method="burg"), x),
+        "kpss c": (lambda v: kpss_values(v, "c"), e),
+        "kpss ct": (lambda v: kpss_values(v, "ct"), e),
+        "range_unit_root_test": (rur_values, x),
+        "pccf x": (lambda v: pccf(v, y, nlags=5), x),
+        "pccf y": (lambda v: pccf(x, v, nlags=5), y),
+        "pccf ols": (lambda v: pccf(v, y, nlags=5, method="ols"), x),
+        "q_stat": (lambda v: np.concatenate(q_stat(v, 250)), r),
+    }
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series", "column", "dataframe"])
+@pytest.mark.parametrize("name", sorted(_column_input_cases()))
+def test_column_input(name, form):
+    # x is documented as a 1-D array_like: every form of the series, including
+    # an (n, 1) column, gives the result of the ndarray
+    func, x = _column_input_cases()[name]
+    index = pd.date_range("2000-01-01", periods=x.shape[0], freq="MS")
+    x_form = {
+        "list": x.tolist(),
+        "tuple": tuple(x.tolist()),
+        "series": pd.Series(x, index=index, name="x"),
+        "column": x[:, None],
+        "dataframe": pd.DataFrame({"x": x}, index=index),
+    }[form]
+    with warnings.catch_warnings():
+        # The p-values of kpss and range_unit_root_test may be at the edge
+        # of their tables
+        warnings.simplefilter("ignore", InterpolationWarning)
+        assert_allclose(func(x_form), func(x), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", sorted(_column_input_cases()))
+def test_column_input_two_columns_raises(name):
+    func, x = _column_input_cases()[name]
+    with pytest.raises(ValueError, match="required to have ndim 1"):
+        func(np.column_stack([x, x[::-1]]))
+
+
 def test_innovations_algo_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma**2, ma])
@@ -3029,6 +3678,12 @@ def test_innovations_errors():
         innovations_algo(np.empty((2, 2)))
     with pytest.raises(TypeError):
         innovations_algo(acovf, rtol="none")
+
+
+def test_innovations_algo_negative_rtol():
+    acovf = np.array([1.81, -0.9])
+    with pytest.raises(ValueError, match="rtol must be a non-negative float"):
+        innovations_algo(acovf, rtol=-1.0)
 
 
 def test_innovations_filter_brockwell_davis():
@@ -3156,6 +3811,44 @@ def test_adfuller_no_trend_even_nobs_maxlag_too_large():
         adfuller(y, maxlag=9, regression="n")
     res = adfuller(y, maxlag=8, regression="n", autolag=None, result_object=True)
     assert_allclose(res.statistic, _adf_tstat_no_trend(y, 8), rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "nobs, regression, maxlag",
+    [
+        # ceil(12 * 2.4 ** (1 / 4)) = ceil(14.94)
+        (240, "c", 15),
+        # ceil(12 * 0.2 ** (1 / 4)) = 9 is larger than the bound
+        # min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+        (20, "c", 8),
+        (20, "ct", 7),
+        # ceil(12 * 0.21 ** (1 / 4)) = ceil(8.12) is the bound, as ntrend = 0
+        (21, "n", 9),
+    ],
+)
+def test_adfuller_default_maxlag(nobs, regression, maxlag):
+    x = np.random.default_rng(nobs).standard_normal(nobs).cumsum()
+    res = adfuller(x, regression=regression, autolag=None, result_object=True)
+    assert res.lags == maxlag
+    expected = adfuller(
+        x, maxlag=maxlag, regression=regression, autolag=None, result_object=True
+    )
+    assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "regression, max_maxlag", [("n", 8), ("c", 8), ("ct", 7), ("ctt", 6)]
+)
+def test_adfuller_maxlag_bound(regression, max_maxlag):
+    # min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2) for nobs = 20
+    x = np.random.default_rng(20).standard_normal(20).cumsum()
+    match = f"maxlag must be less than or equal to {max_maxlag} "
+    with pytest.raises(ValueError, match=match):
+        adfuller(x, maxlag=max_maxlag + 1, regression=regression, autolag=None)
+    res = adfuller(
+        x, maxlag=max_maxlag, regression=regression, autolag=None, result_object=True
+    )
+    assert res.lags == max_maxlag
 
 
 def test_coint_short_even_sample():
@@ -3428,7 +4121,8 @@ class TestZivotAndrews(SetupZivotAndrews):
         res = zivot_andrews(self.fail_mdl, autolag=autolag)
         assert res[3] == 1
 
-    # following tests compare results to R package urca.ur.za (1.13-0)
+    # following tests compare results to R package urca.ur.za (1.13-0). R
+    # counts observations from 1, so its break point is bpidx + 1.
     def test_rgnp_case(self):
         res = zivot_andrews(self.fail_mdl, maxlag=8, regression="c", autolag=None)
         assert_allclose([res[0], res[1], res[4]], [-5.57615, 0.00312, 20], rtol=1e-3)
@@ -3459,7 +4153,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         res = zivot_andrews(mdl, maxlag=12, regression="t", autolag="t-stat")
         assert_allclose(
             [res[0], res[1], res[3], res[4]],
-            [-3.02761, 0.63993, 12, 102],
+            [-3.02761, 0.63993, 12, 101],
             rtol=1e-3,
         )
 
@@ -3501,6 +4195,49 @@ def test_acf_nlags_validation():
         acf(e, nlags=20)
     # the largest valid lag is still allowed
     assert acf(e, nlags=19).shape == (20,)
+
+
+@pytest.mark.parametrize("nobs, nlags", [(10, 9), (200, 23)])
+def test_acf_default_nlags(nobs, nlags):
+    # min(10 * log10(nobs), nobs - 1): the second bound binds for nobs = 10
+    x = np.random.default_rng(nobs).standard_normal(nobs)
+    res = acf(x)
+    assert res.shape == (nlags + 1,)
+    assert_allclose(res, acf(x, nlags=nlags), rtol=1e-12)
+
+
+def _nan_acf(x, nlags):
+    # Sample autocorrelations that leave out the products with a NaN
+    resid = x - np.nanmean(x)
+    n = x.shape[0]
+    acov = [np.nansum(resid[k:] * resid[: n - k]) for k in range(nlags + 1)]
+    return np.array(acov) / acov[0]
+
+
+@pytest.mark.parametrize("missing", ["drop", "conservative"])
+@pytest.mark.parametrize(
+    "nobs, nmissing, nlags",
+    # min(10 * log10(nobs - nmissing), nobs - nmissing - 1); both bounds bind
+    [(200, 100, 20), (20, 12, 7)],
+)
+def test_acf_default_nlags_missing(missing, nobs, nmissing, nlags):
+    # The default used to count the NaNs as observations, which gave 23 lags
+    # for the first case and raised for the second
+    rng = np.random.default_rng(20261120)
+    x = rng.standard_normal(nobs)
+    x[rng.choice(nobs, nmissing, replace=False)] = np.nan
+    res = acf(x, missing=missing)
+    assert res.shape == (nlags + 1,)
+    # "drop" treats the non-missing values as contiguous
+    data = x[~np.isnan(x)] if missing == "drop" else x
+    assert_allclose(res, _nan_acf(data, nlags), rtol=1e-10)
+
+
+def test_acf_default_nlags_missing_none():
+    # missing="none" counts every observation, NaN or not
+    x = np.random.default_rng(20261120).standard_normal(200)
+    x[::2] = np.nan
+    assert acf(x, missing="none").shape == (24,)
 
 
 def test_pacf_nlags_error():
@@ -3610,11 +4347,9 @@ def test_ccf_constant(
 @pytest.mark.parametrize(
     "shape_x, shape_y, match",
     [
-        ((20, 1), (20,), "same dimensionality"),
-        ((20, 2), (20,), "same dimensionality"),
-        ((20,), (20, 1), "same dimensionality"),
-        ((20,), (20, 2), "same dimensionality"),
-        ((20, 2), (20, 2), "broadcast"),
+        ((20, 2), (20,), "x is required to have ndim 1"),
+        ((20,), (20, 2), "y is required to have ndim 1"),
+        ((20, 2), (20, 2), "x is required to have ndim 1"),
     ],
 )
 @pytest.mark.parametrize(
@@ -3632,6 +4367,32 @@ def test_ccf_constant_invalid_shape_raises(
         y = np.full(shape_y, 2.5)
     with pytest.raises(ValueError, match=match):
         ccf(x, y)
+
+
+@pytest.mark.parametrize(
+    "shape_x, shape_y", [((20, 1), (20,)), ((20,), (20, 1)), ((20, 1), (20, 1))]
+)
+@pytest.mark.parametrize(
+    "constant_x, constant_y", [(True, False), (False, True), (True, True)]
+)
+def test_ccf_constant_column(shape_x, shape_y, constant_x, constant_y):
+    # A constant (nobs, 1) column gives NaN, as a constant 1-D series does
+    x = np.arange(float(np.prod(shape_x))).reshape(shape_x)
+    y = np.arange(float(np.prod(shape_y))).reshape(shape_y)
+    if constant_x:
+        x = np.full(shape_x, 2.5)
+    if constant_y:
+        y = np.full(shape_y, 2.5)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        c = ccf(x, y)
+        res_c = ccf(x, y, alpha=0.05)
+    assert c.shape == (20,)
+    assert np.all(np.isnan(c))
+    assert res_c.ccf.shape == (20,)
+    assert np.all(np.isnan(res_c.ccf))
+    assert res_c.confint.shape == (20, 2)
+    assert np.all(np.isnan(res_c.confint))
 
 
 @pytest.mark.parametrize("method", PACF_METHODS)
@@ -3664,7 +4425,6 @@ def test_coint_auto_tstat():
         method="aeg",
         maxlag=0,
         autolag="t-stat",
-        return_results=False,
     )
     assert np.abs(res.coint_t) < 1.65
 
@@ -3693,6 +4453,15 @@ def test_granger_causality_exception_maxlag(gc_data):
         grangercausalitytests(gc_data, maxlag=-1)
     with pytest.raises(NotImplementedError):
         grangercausalitytests(gc_data, 3, addconst=False)
+
+
+def test_granger_causality_perfect_fit():
+    # The first series is the second lagged once, so the unrestricted
+    # regression fits the data exactly
+    x2 = np.random.default_rng(20261119).standard_normal(50)
+    x = np.column_stack([np.r_[0.0, x2[:-1]], x2])
+    with pytest.raises(InfeasibleTestError, match="perfect fit"):
+        grangercausalitytests(x, 2)
 
 
 @pytest.mark.parametrize("size", [3, 5, 7, 9])
@@ -3846,6 +4615,16 @@ def test_pacf_ols_large_mean():
         y = x + level
         expected = _pacf_ols_loop(y - y.mean(), 10, True, False)
         assert_allclose(pacf_ols(y, 10), expected, rtol=0, atol=1e-12)
+
+
+@pytest.mark.parametrize("nobs, nlags", [(10, 5), (20, 10), (240, 23)])
+def test_pacf_ols_default_nlags(nobs, nlags):
+    # min(10 * log10(nobs), nobs // 2): the second bound binds for nobs = 10
+    # and 20
+    x = np.random.default_rng(nobs).standard_normal(nobs)
+    res = pacf_ols(x)
+    assert res.shape == (nlags + 1,)
+    assert_allclose(res, pacf_ols(x, nlags=nlags), rtol=1e-12)
 
 
 def test_pacf_2d_input():
@@ -4030,26 +4809,27 @@ def test_za_break_tvalues_blocks(regression):
     [
         ("gnpdef", "ct", 8, -4.29645992991322, 41),
         ("stkprc", "ct", 5, -4.4188005626248, 65),
-        ("rgnpq", "t", 5, -3.15090901781973, 89),
+        ("rgnpq", "t", 5, -3.15090901781973, 88),
         ("rgnpq", "ct", 8, -4.51449473135603, 71),
         # without lagged differences, maxlag=0
         ("rgnp", "c", 0, -3.29267887535406, 20),
-        ("rgnp", "t", 0, -2.78828925514759, 24),
+        ("rgnp", "t", 0, -2.78828925514759, 23),
         ("rgnp", "ct", 0, -3.46782210885675, 20),
         ("gnpdef", "c", 0, -3.35278702063666, 37),
-        ("gnpdef", "t", 0, -2.00884754207356, 45),
+        ("gnpdef", "t", 0, -2.00884754207356, 44),
         ("gnpdef", "ct", 0, -3.49680587365043, 40),
         ("stkprc", "c", 0, -3.98489915452376, 82),
-        ("stkprc", "t", 0, -3.86734171259623, 72),
+        ("stkprc", "t", 0, -3.86734171259623, 71),
         ("stkprc", "ct", 0, -4.74799191482552, 59),
         ("rgnpq", "c", 0, -2.81646348557215, 130),
-        ("rgnpq", "t", 0, -2.57626456915402, 85),
+        ("rgnpq", "t", 0, -2.57626456915402, 84),
         ("rgnpq", "ct", 0, -3.16574448254965, 67),
     ],
 )
 def test_zivot_andrews_r_reference(name, regression, lags, statistic, bpidx):
-    # urca 1.3.4, ur.za(x, model, lag). The break point of R is bpidx + 1 for
-    # "c" and "ct" and bpidx for "t". The minimum is inside the default trim.
+    # urca 1.3.4, ur.za(x, model, lag). Both report the last observation
+    # before the break, which R counts from 1, so its break point is
+    # bpidx + 1 for all three models. The minimum is inside the default trim.
     x = _za_series(name, None, None)
     res = zivot_andrews(x, maxlag=lags, regression=regression, autolag=None)
     assert res[3] == lags
@@ -4070,7 +4850,37 @@ def test_zivot_andrews_maxlag_zero(regression):
     assert res[2] == expected[2]
     assert res[4] == expected[4]
     default = zivot_andrews(x, regression=regression, autolag=None)
-    assert default[3] == int(12.0 * (x.shape[0] / 100.0) ** 0.25)
+    assert default[3] == int(np.ceil(12.0 * (x.shape[0] / 100.0) ** 0.25))
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+@pytest.mark.parametrize("nobs", [100, 250])
+def test_zivot_andrews_default_maxlag(regression, nobs):
+    # Without autolag the default number of lags is the default maxlag of
+    # adfuller with regression="ct", the largest lag of the lag search:
+    # ceil(12 * (nobs / 100) ** (1 / 4)), or nobs // 2 - 3 if smaller. It is
+    # an integer for nobs=100, and 15.09 for nobs=250.
+    expected_lags = min(int(np.ceil(12 * (nobs / 100) ** 0.25)), nobs // 2 - 3)
+    rng = np.random.default_rng(20261120)
+    x = _za_series("trend_break", nobs, rng)
+    adf = adfuller(x, regression="ct", autolag=None, result_object=True)
+    assert adf.lags == expected_lags
+    res = zivot_andrews(x, regression=regression, autolag=None)
+    assert res[3] == expected_lags
+    explicit = zivot_andrews(
+        x, maxlag=expected_lags, regression=regression, autolag=None
+    )
+    assert_allclose(res[0], explicit[0], rtol=1e-12)
+    assert res[4] == explicit[4]
+
+
+@pytest.mark.parametrize("autolag", [None, "AIC"])
+def test_zivot_andrews_default_maxlag_too_short(autolag):
+    # adfuller with regression="ct" allows no lags for 5 observations,
+    # nobs // 2 - 3 < 0, with or without a lag search
+    x = np.random.default_rng(5).standard_normal(5).cumsum()
+    with pytest.raises(ValueError, match="sample size is too short"):
+        zivot_andrews(x, autolag=autolag)
 
 
 @pytest.mark.parametrize("autolag", [None, "AIC"])
@@ -4137,6 +4947,9 @@ def test_zivot_andrews_singular(kind, regression):
         warnings.simplefilter("ignore", SingularMatrixWarning)
         with pytest.raises(ValueError, match="not full rank"):
             zivot_andrews(x, maxlag=3, regression=regression, autolag=None)
+        # also when the first periods inside the trim are skipped
+        with pytest.raises(ValueError, match="not full rank"):
+            zivot_andrews(x, trim=0.05, maxlag=8, regression=regression, autolag=None)
 
 
 def _za_outcome(za, x, **kwargs):
@@ -4148,34 +4961,166 @@ def _za_outcome(za, x, **kwargs):
             return type(exc)
 
 
+def _za_deterministic(t, p, regression):
+    # The constant, the trend and the break dummies of break period p. The
+    # level shift is 1(t >= p). The trend shift is (t - p + 2) from t = p - 1
+    # on for "t", and from t = p on for "ct".
+    cols = [np.ones_like(t), t]
+    if regression != "t":
+        cols.append((t >= p).astype(float))
+    if regression == "t":
+        cols.append(np.maximum(t - p + 2, 0.0))
+    elif regression == "ct":
+        cols.append(np.where(t >= p, t - p + 2, 0.0))
+    return cols
+
+
+def _za_direct(x, lags, regression, periods):
+    # The statistic and break index from one OLS fit per break period, with
+    # the regressors built directly: Delta x_t, t = lags + 1, ..., nobs - 1,
+    # on the deterministic terms, x_{t-1} and the lagged differences. The
+    # break index is the last observation where the break dummies are zero.
+    nobs = x.shape[0]
+    dx = np.diff(x)
+    t = np.arange(lags + 1, nobs, dtype=float)
+    lagged = [dx[lags - j : nobs - 1 - j] for j in range(1, lags + 1)]
+    tvalues = []
+    for p in periods:
+        cols = _za_deterministic(t, p, regression)
+        exog = np.column_stack(cols + [x[lags : nobs - 1]] + lagged)
+        tvalues.append(OLS(dx[lags:], exog).fit().tvalues[len(cols)])
+    loc = int(np.argmin(tvalues))
+    dummies = _za_deterministic(np.arange(nobs, dtype=float), periods[loc], regression)
+    nonzero = np.flatnonzero(np.any(np.column_stack(dummies[2:]) != 0, axis=1))
+    return tvalues[loc], nonzero[0] - 1
+
+
+class _ZivotAndrewsPeriods(ZivotAndrewsUnitRoot):
+    # records the candidate break periods
+    def _break_tvalues(self, endog, exog, regression, periods, *args):
+        self.periods = periods
+        return super()._break_tvalues(endog, exog, regression, periods, *args)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_candidate_periods(regression):
+    # The candidate break periods are the periods inside the trim whose
+    # deterministic terms have full column rank over the rows of the
+    # regression. The terms are integers, so the rank is not borderline.
+    nobs = 40
+    x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    # the break of period p is after observation p - 2 for "t", one earlier
+    # than for "c" and "ct", so its trimmed periods are one later
+    shift = int(regression == "t")
+    for trim, lags in [(0.0, 0), (0.0, 3), (0.05, 8), (0.15, 8)]:
+        za = _ZivotAndrewsPeriods()
+        za(x, trim=trim, maxlag=lags, regression=regression, autolag=None)
+        t = np.arange(lags + 1, nobs, dtype=float)
+        trimcnt = int(nobs * trim)
+        expected = []
+        for p in range(trimcnt + 1 + shift, min(nobs - trimcnt + shift, nobs) + 1):
+            cols = _za_deterministic(t, p, regression)
+            if np.linalg.matrix_rank(np.column_stack(cols)) == len(cols):
+                expected.append(p)
+        assert_equal(za.periods, expected)
+
+
+# The break periods whose dummies are not collinear with the constant and
+# the trend in the regression, which starts at period lags + 1
+_ZA_VALID = {
+    "c": lambda nobs, lags: (lags + 2, nobs - 1),
+    "t": lambda nobs, lags: (lags + 4, nobs),
+    "ct": lambda nobs, lags: (lags + 3, nobs - 2),
+}
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_direct_regressions(regression):
+    # The direct regressions give the statistic and break period of an
+    # ordinary case, where no candidate break period is skipped
+    rng = np.random.default_rng(10583)
+    x = _za_series("random_walk", 200, rng)
+    res = zivot_andrews(x, maxlag=4, regression=regression, autolag=None)
+    shift = int(regression == "t")
+    periods = np.arange(31 + shift, 171 + shift)
+    statistic, bpidx = _za_direct(x, 4, regression, periods)
+    assert_allclose(res[0], statistic, rtol=1e-8)
+    assert res[4] == bpidx
+
+
+def _za_check_skipped(x, trim, lags, regression):
+    # The candidate periods whose dummies are collinear are skipped: the
+    # statistic is the minimum over the others, and the per-period loop agrees
+    nobs = x.shape[0]
+    trimcnt = int(nobs * trim)
+    first, last = _ZA_VALID[regression](nobs, lags)
+    shift = int(regression == "t")
+    periods = np.arange(
+        max(trimcnt + 1 + shift, first), min(nobs - trimcnt + shift, last) + 1
+    )
+    kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
+    res = zivot_andrews(x, **kwargs)
+    statistic, bpidx = _za_direct(x, lags, regression, periods)
+    assert_allclose(res[0], statistic, rtol=1e-8)
+    assert res[4] == bpidx
+    expected = _ZivotAndrewsLoop()(x, **kwargs)
+    assert_allclose(res[0], expected[0], rtol=1e-8)
+    assert res[4] == expected[4]
+
+
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
 def test_zivot_andrews_dummies_wrap_around(regression):
     # With trim=0, or more lags than trimmed observations, the dummies of the
     # first or last periods are zero or wrap around the start of the sample.
-    # The per-period loop is used.
+    # These periods used to give a NaN or meaningless statistic, or raise.
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 100, rng)
     for trim, lags in [(0.0, 0), (0.05, 8)]:
         tvalues, _ = _za_break_tvalues(x, lags, regression, trim)
         assert tvalues is None
-        kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
-        res = _za_outcome(zivot_andrews, x, **kwargs)
-        expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
-        assert_equal(res, expected)
+        _za_check_skipped(x, trim, lags, regression)
 
 
 @pytest.mark.parametrize("regression, lags", [("c", 5), ("t", 4), ("t", 3), ("ct", 4)])
 def test_zivot_andrews_dummy_collinear(regression, lags):
     # The dummies of the first period are collinear with the constant and
-    # the trend. The per-period loop is used.
+    # the trend, and the period is skipped
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 100, rng)
     tvalues, _ = _za_break_tvalues(x, lags, regression, 0.05)
     assert tvalues is None
-    kwargs = dict(trim=0.05, maxlag=lags, regression=regression, autolag=None)
-    res = _za_outcome(zivot_andrews, x, **kwargs)
-    expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
-    assert_equal(res, expected)
+    _za_check_skipped(x, 0.05, lags, regression)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_lags_beyond_trim(regression):
+    # 8 lags and 3 trimmed observations of 24: the first periods are
+    # degenerate. The statistic was NaN for "c" (with a RuntimeWarning).
+    x = np.random.default_rng(24).standard_normal(24).cumsum()
+    _za_check_skipped(x, 0.15, 8, regression)
+
+
+@pytest.mark.parametrize("trim", [0.1, 0.15, 0.25])
+def test_zivot_andrews_same_trimmed_breaks(trim):
+    # The three models consider the same trimmed candidate breaks, from
+    # observation trimcnt to nobs - trimcnt - 1 (the last observation before
+    # the break), when the lags are too few to make any of them collinear
+    nobs = 62
+    x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    trimcnt = int(nobs * trim)
+    expected = np.arange(trimcnt, nobs - trimcnt)
+    for regression, before in (("c", 1), ("t", 2), ("ct", 1)):
+        za = _ZivotAndrewsPeriods()
+        za(x, trim=trim, maxlag=1, regression=regression, autolag=None)
+        assert_equal(np.asarray(za.periods) - before, expected)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_no_break_period_left(regression):
+    # 20 lags of 24 observations leave no period with full rank dummies
+    x = np.random.default_rng(24).standard_normal(24).cumsum()
+    with pytest.raises(ValueError, match="No break period is left: with 20 lags"):
+        zivot_andrews(x, maxlag=20, regression=regression, autolag=None)
 
 
 @pytest.mark.parametrize("regression", ["c", "ct"])
@@ -4223,6 +5168,66 @@ class TestLeybourneMcCabe:
             leybourne(fail_mdl, arlags=250)
         with pytest.raises(ValueError):
             leybourne(fail_mdl, arlags="error")
+
+    def test_numpy_integer_arlags(self):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(mdl, regression="ct", arlags=3)
+        res_np = leybourne(mdl, regression="ct", arlags=np.int64(3))
+        assert_allclose(res_np[0:3], res[0:3])
+
+    @pytest.mark.parametrize(
+        "given, message",
+        [
+            (
+                {},
+                (
+                    "The defaults of leybourne.run will change from arlags=1 and "
+                    "method='mle' to arlags=None and method='ols', the defaults "
+                    "of leybourne(x),"
+                ),
+            ),
+            (
+                {"method": "ols"},
+                (
+                    "The default of leybourne.run will change from arlags=1 to "
+                    "arlags=None, the default of leybourne(x),"
+                ),
+            ),
+            (
+                {"arlags": 0},
+                (
+                    "The default of leybourne.run will change from method='mle' "
+                    "to method='ols', the default of leybourne(x),"
+                ),
+            ),
+        ],
+    )
+    def test_run_changing_defaults(self, given, message):
+        # run warns for each default that will change to the __call__ one,
+        # and uses the current default
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with pytest.warns(FutureWarning, match=re.escape(message)) as record:
+            res = leybourne.run(mdl, **given)
+        assert len(record) == 1
+        assert record[0].filename == __file__
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            expected = leybourne.run(mdl, **({"arlags": 1, "method": "mle"} | given))
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+
+    def test_run_future_defaults(self):
+        # leybourne(x) is run with the future defaults, without a warning
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = leybourne(mdl)
+            expected = leybourne.run(mdl, arlags=None, method="ols")
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+        signature = str(inspect.signature(leybourne.run))
+        assert "arlags=1," in signature
+        assert "method='mle'," in signature
 
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13
@@ -4296,6 +5301,39 @@ class TestLeybourneMcCabe:
         y = rg.standard_normal(250)
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
+
+    @pytest.mark.parametrize(
+        "convert",
+        [
+            lambda x: x[:, 0],
+            lambda x: x[:, 0].tolist(),
+            lambda x: pd.Series(x[:, 0]),
+            pd.DataFrame,
+        ],
+        ids=["1d", "list", "series", "dataframe"],
+    )
+    def test_array_like_inputs(self, convert):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(convert(mdl), regression="ct")
+        # verified against Matlab 9.13, as in test_baa_results
+        assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
+        res_col = leybourne(mdl, regression="ct")
+        assert_allclose(res[0], res_col[0], rtol=1e-10)
+        assert res[2] == res_col[2]
+
+    @pytest.mark.parametrize(
+        "shape, match",
+        [
+            ((60, 2), r"x is required to have shape \(\*, 1\)"),
+            ((1, 60), r"x is required to have shape \(\*, 1\)"),
+            ((60, 1, 1), "x must have ndim <= 2"),
+        ],
+        ids=["two-columns", "row", "3d"],
+    )
+    def test_not_one_column_raises(self, shape, match):
+        x = np.random.default_rng(0).standard_normal(shape)
+        with pytest.raises(ValueError, match=match):
+            leybourne(x)
 
 
 def test_acovf_all_missing():
@@ -4394,6 +5432,74 @@ def test_arma_order_select_ic_negative_bounds():
         arma_order_select_ic(y, max_ar=2, max_ma=-1)
 
 
+@pytest.mark.parametrize(
+    "ic",
+    [
+        ("aic", "bic"),
+        ["aic", "bic"],
+        np.array(["aic", "bic"]),
+        pd.Index(["aic", "bic"]),
+        pd.Series(["aic", "bic"]),
+    ],
+    ids=["tuple", "list", "ndarray", "index", "series"],
+)
+def test_arma_order_select_ic_sequence(ic):
+    # ic is documented as a str or a sequence of str
+    from statsmodels.tsa.arima.model import ARIMA
+
+    y = np.random.default_rng(20261127).standard_normal(100)
+    res = arma_order_select_ic(y, max_ar=2, max_ma=0, ic=ic, trend="n")
+    assert sorted(res) == ["aic", "aic_min_order", "bic", "bic_min_order"]
+    assert all(type(key) is str for key in res)
+    fits = [ARIMA(y, order=(p, 0, 0), trend="n").fit() for p in range(3)]
+    for name in ("aic", "bic"):
+        expected = np.array([getattr(fit, name) for fit in fits])
+        assert_allclose(res[name][0], expected, rtol=1e-10)
+        assert res[f"{name}_min_order"] == (np.argmin(expected), 0)
+
+
+def test_arma_order_select_ic_all_criteria():
+    # Every valid name is accepted and gives the criterion of a direct fit
+    from statsmodels.tsa.arima.model import ARIMA
+
+    y = np.random.default_rng(20261127).standard_normal(100)
+    names = ["aic", "aicc", "bic", "hqic"]
+    res = arma_order_select_ic(y, max_ar=1, max_ma=0, ic=names, trend="n")
+    fits = [ARIMA(y, order=(p, 0, 0), trend="n").fit() for p in range(2)]
+    for name in names:
+        expected = [getattr(fit, name) for fit in fits]
+        assert_allclose(res[name][0], expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "ic",
+    [5, [5], ["aic", 5], np.array([1, 2])],
+    ids=["int", "list of int", "mixed list", "int ndarray"],
+)
+def test_arma_order_select_ic_invalid_type(ic):
+    y = np.random.default_rng(20261127).standard_normal(100)
+    with pytest.raises(ValueError, match="ic must be a str or a sequence of str"):
+        arma_order_select_ic(y, max_ar=0, max_ma=0, ic=ic)
+
+
+@pytest.mark.parametrize(
+    "ic, unknown",
+    [
+        ("bogus", "bogus"),
+        (["aic", "bogus"], "bogus"),
+        (np.array(["bogus"]), "bogus"),
+        ("AIC", "AIC"),
+    ],
+    ids=["str", "list", "ndarray", "upper"],
+)
+def test_arma_order_select_ic_unknown_criterion(ic, unknown):
+    # An unknown name used to raise an AttributeError from the first fit
+    y = np.random.default_rng(20261127).standard_normal(100)
+    match = rf"Unknown information criteria in ic: \['{unknown}'\]"
+    with pytest.raises(ValueError, match=match):
+        arma_order_select_ic(y, max_ar=0, max_ma=0, ic=ic)
+
+
 def test_q_stat_invalid_nobs():
     # nobs <= len(x) previously divided by zero (nobs=-1) or returned a
     # degenerate statistic without any error
@@ -4405,3 +5511,208 @@ def test_q_stat_invalid_nobs():
     assert np.isfinite(q).all()
     assert np.isfinite(p).all()
 
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+def test_acf_pacf_adfuller_input_forms(form):
+    # x is documented as array_like: every form of a 1-D series gives the
+    # result of the ndarray
+    x = np.random.default_rng(20261120).standard_normal(200).cumsum()
+    x_form = series_forms(x)[form]
+    assert_allclose(acf(x_form, nlags=10), acf(x, nlags=10), rtol=1e-12)
+    for method in ("yw", "ols", "burg", "ldb"):
+        assert_allclose(
+            pacf(x_form, nlags=10, method=method),
+            pacf(x, nlags=10, method=method),
+            rtol=1e-12,
+        )
+    res = adfuller(x_form, maxlag=4, autolag=None, result_object=True)
+    expected = adfuller(x, maxlag=4, autolag=None, result_object=True)
+    assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-12)
+
+
+def _numeric_leaves(res):
+    """The numeric values of a result, flattened, to compare two results"""
+    if isinstance(res, dict):
+        return np.concatenate([_numeric_leaves(res[key]) for key in sorted(res)])
+    if isinstance(res, tuple):
+        return np.concatenate([_numeric_leaves(item) for item in res])
+    return np.asarray(res, dtype=float).ravel()
+
+
+def _series_contract_cases():
+    """
+    Functions of one 1-D array_like argument, and the ndarray to pass
+
+    The other arguments are fixed.
+    """
+    rng = np.random.default_rng(20261121)
+    x = rng.standard_normal(200).cumsum()
+    dx = np.diff(x)
+    y1 = x + rng.standard_normal(200)
+    acov = acovf(dx)[:6]
+    theta = innovations_algo(acov)[0]
+    return {
+        "acovf": (lambda v: acovf(v, nlag=10), x),
+        "arma_order_select_ic": (
+            lambda v: arma_order_select_ic(v, max_ar=1, max_ma=0, ic="aic").aic,
+            dx[:100],
+        ),
+        "block_jackknife": (lambda v: block_jackknife(v, np.mean, n_blocks=10), x),
+        "breakvar_heteroskedasticity_test": (breakvar_heteroskedasticity_test, dx),
+        "coint y0": (lambda v: coint(v, y1, maxlag=2, autolag=None), x),
+        "coint y1": (lambda v: coint(x, v, maxlag=2, autolag=None), y1),
+        "innovations_algo": (innovations_algo, acov),
+        "innovations_filter": (lambda v: innovations_filter(v, theta), dx[:6]),
+        "levinson_durbin": (lambda v: levinson_durbin(v, nlags=5), dx),
+        "levinson_durbin_pacf": (levinson_durbin_pacf, pacf(dx, nlags=5)),
+        "leybourne": (leybourne, x),
+        "pacf_ols": (lambda v: pacf_ols(v, nlags=10), x),
+        "pacf_yw": (lambda v: pacf_yw(v, nlags=10), x),
+        "zivot_andrews": (lambda v: zivot_andrews(v, maxlag=2, autolag=None), x),
+    }
+
+
+_SERIES_CONTRACT_NAMES = tuple(sorted(_series_contract_cases()))
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+@pytest.mark.parametrize("name", _SERIES_CONTRACT_NAMES)
+def test_stattools_input_forms(name, form):
+    # The argument is documented as array_like: every form of a 1-D series
+    # gives the result of the ndarray
+    func, x = _series_contract_cases()[name]
+    expected = _numeric_leaves(func(x))
+    res = _numeric_leaves(func(series_forms(x)[form]))
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        name
+        for name in _SERIES_CONTRACT_NAMES
+        if name not in ("innovations_algo", "levinson_durbin_pacf")
+    ],
+)
+def test_stattools_integer_input(name):
+    # Integer data gives the result of the same values as floats
+    func, x = _series_contract_cases()[name]
+    x_int = np.round(4 * x).astype(np.int64)
+    expected = _numeric_leaves(func(x_int.astype(float)))
+    assert_allclose(_numeric_leaves(func(x_int)), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+@pytest.mark.parametrize("position", [0, 1, 2])
+@pytest.mark.parametrize("test", [diebold_mariano_test, clark_west_test])
+def test_forecast_comparison_input_forms(test, position, form):
+    # y and the two forecasts are documented as 1-D array_like: every form,
+    # including an (n, 1) column, gives the result of the ndarray
+    rng = np.random.default_rng(20261122)
+    y = rng.standard_normal(100)
+    args = [y, y + 0.5 * rng.standard_normal(100), y + 0.8 * rng.standard_normal(100)]
+    expected = test(*args)
+    args[position] = series_forms(args[position])[form]
+    res = test(*args)
+    assert_allclose(
+        [res.statistic, res.pvalue], [expected.statistic, expected.pvalue], rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize("position", [0, 1, 2])
+@pytest.mark.parametrize("test", [diebold_mariano_test, clark_west_test])
+def test_forecast_comparison_two_columns_raises(test, position):
+    rng = np.random.default_rng(20261122)
+    y = rng.standard_normal(100)
+    args = [y, y + 0.5 * rng.standard_normal(100), y + 0.8 * rng.standard_normal(100)]
+    args[position] = np.column_stack([args[position], args[position]])
+    names = {
+        diebold_mariano_test: ("y", "forecast_a", "forecast_b"),
+        clark_west_test: ("y", "forecast_restricted", "forecast_unrestricted"),
+    }
+    name = names[test][position]
+    with pytest.raises(ValueError, match=f"^{name} is required to have ndim 1"):
+        test(*args)
+
+
+@pytest.mark.parametrize("form", ["dataframe", "list", "int"])
+def test_two_column_input_forms(form):
+    # x of grangercausalitytests and resid of
+    # breakvar_heteroskedasticity_test are documented as 2-D array_like
+    rng = np.random.default_rng(20261123)
+    x = np.round(4 * rng.standard_normal((100, 2)))
+    index = pd.date_range("2000-01-01", periods=100, freq="MS")
+    x_form = {
+        "dataframe": pd.DataFrame(x, index=index, columns=["a", "b"]),
+        "list": x.tolist(),
+        "int": x.astype(np.int64),
+    }[form]
+    res = grangercausalitytests(x_form, 2)
+    expected = grangercausalitytests(x, 2)
+    assert sorted(res) == [1, 2]
+    for lag in (1, 2):
+        for name in ("ssr_ftest", "ssr_chi2test", "lrtest", "params_ftest"):
+            # The lag 2 F statistic is about 0.0015: the restricted and full
+            # sums of squared residuals agree to about 3e-5 (relative), so a
+            # rounding difference from another memory layout of x (macOS
+            # Accelerate) changes the statistics by about 1e-11 (relative).
+            assert_allclose(res[lag][0][name], expected[lag][0][name], rtol=1e-9)
+    res = breakvar_heteroskedasticity_test(x_form)
+    expected = breakvar_heteroskedasticity_test(x)
+    assert_allclose(_numeric_leaves(res), _numeric_leaves(expected), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "maxlag, lags",
+    [
+        (2, [1, 2]),
+        (np.int64(2), [1, 2]),
+        ([2], [2]),
+        ((2,), [2]),
+        (range(1, 3), [1, 2]),
+        (np.array(2), [1, 2]),
+        (np.array([2]), [2]),
+        (pd.Series([2]), [2]),
+        (pd.Index([2]), [2]),
+        (np.array([1, 2]), [1, 2]),
+        # Not an int and not an array
+        ({1, 2}, [1, 2]),
+    ],
+)
+def test_grangercausalitytests_maxlag_forms(gc_data, maxlag, lags):
+    # An int gives the lags up to maxlag, a sequence only the lags in it. A
+    # one-element ndarray or Series used to be read as an int.
+    res = grangercausalitytests(gc_data, maxlag)
+    assert sorted(res) == lags
+    expected = grangercausalitytests(gc_data, [1, 2])
+    for lag in lags:
+        assert_allclose(
+            res[lag][0]["ssr_ftest"], expected[lag][0]["ssr_ftest"], rtol=1e-12
+        )
+
+
+@pytest.mark.parametrize(
+    "arlags",
+    [np.int64(2), np.int32(2), np.array(2), 2.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+def test_leybourne_int_like_arlags(arlags):
+    # A 0-d integer array or an integral float is a number of AR terms, as an
+    # int is. They raised a ValueError. The int result is the reference.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    expected = leybourne(x, arlags=2)
+    res = leybourne(x, arlags=arlags)
+    assert_allclose(res[:2], expected[:2], rtol=1e-12)
+    assert res[2] == 2
+    assert type(res[2]) is int
+
+
+@pytest.mark.parametrize("arlags", [True, np.True_], ids=["True", "np.True_"])
+def test_leybourne_bool_arlags(arlags):
+    # A bool is not a number of AR terms. True raised a TypeError from a
+    # later step.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    with pytest.raises(ValueError, match="arlags must be an integer"):
+        leybourne(x, arlags=arlags)

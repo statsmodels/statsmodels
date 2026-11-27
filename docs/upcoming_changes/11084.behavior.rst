@@ -1,0 +1,4 @@
+- The one-sided p-values of ``het_goldfeldquandt`` (``alternative="increasing"``
+  and ``"decreasing"``) used F(df1, df2) instead of F(df2, df1), so they were
+  wrong when the two subsamples had different residual degrees of freedom.
+  :pr:`11084`

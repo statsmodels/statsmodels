@@ -571,3 +571,44 @@ def test_set_default_unbiased_with_fixed_params():
     assert_allclose(p_1.ma_params, p_2.ma_params)
     assert_allclose(p_1.sigma2, p_2.sigma2)
     assert_allclose(other_results_1.resid, other_results_2.resid)
+
+
+def test_hannan_rissanen_seasonal():
+    # Seasonal AR or MA terms are not supported, but seasonal differencing is.
+    # A pure AR model is the least squares regression of the demeaned
+    # seasonal difference on its lags
+    x = np.random.default_rng(20261131).standard_normal(200).cumsum()
+    with pytest.raises(ValueError, match="does not support seasonal"):
+        hannan_rissanen(x, ar_order=1, seasonal_order=(1, 0, 0, 4))
+    p, _ = hannan_rissanen(x, ar_order=1, seasonal_order=(0, 1, 0, 4))
+    dx = x[4:] - x[:-4]
+    dx = dx - dx.mean()
+    reg, dep = dx[:-1], dx[1:]
+    phi = (reg @ dep) / (reg @ reg)
+    resid = dep - phi * reg
+    assert_allclose(p.ar_params, [phi], rtol=1e-10)
+    assert_allclose(p.sigma2, resid @ resid / (resid.shape[0] - 1), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "ar_order", [[1, 2], (1, 2), np.array([1, 2])], ids=["list", "tuple", "ndarray"]
+)
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "integer"]
+)
+def test_hannan_rissanen_input_forms(form, ar_order):
+    # endog is documented as array_like and ar_order as int or a sequence
+    from statsmodels.tsa.tests._contract import series_forms
+
+    e = np.random.default_rng(20261132).standard_normal(201)
+    x = np.zeros(200)
+    for t in range(1, 200):
+        x[t] = 0.5 * x[t - 1] + e[t + 1] + 0.3 * e[t]
+    if form == "integer":
+        x = np.round(4 * x)
+        endog = x.astype(np.int64)
+    else:
+        endog = series_forms(x)[form]
+    p, _ = hannan_rissanen(endog, ar_order=ar_order, ma_order=1)
+    expected, _ = hannan_rissanen(x, ar_order=2, ma_order=1)
+    assert_allclose(p.params, expected.params, rtol=1e-12)

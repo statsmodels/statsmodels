@@ -1,0 +1,5 @@
+- Collapsed filtering of state space models (``filter_collapsed``) needs
+  a design matrix of full column rank. Without one, for example for a
+  dynamic factor model with lagged factors in the state vector, it
+  raised ``LinAlgError: Non-positive-definite ZHZ matrix``. The error
+  names the requirement, which is now documented. :pr:`11072`

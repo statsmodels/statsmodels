@@ -143,7 +143,7 @@ def to_table(data, bins=None):
     data : array_like, 2-Dim
         Data containing category assignment with subjects in rows and raters
         in columns.
-    bins : None, int or tuple of array_like, optional
+    bins : None, int or array_like, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
@@ -151,8 +151,10 @@ def to_table(data, bins=None):
         already assumed to be in integers, 0,1,2,...,n_cat-1. In this case,
         the returned array may contain columns with zero count, if no
         subject has been categorized with this level.
-        If bins are a tuple of two array_like, then the bins are directly
-        used by ``numpy.histogramdd``. This is useful if we want to merge
+        If bins are a 1-D array_like, then the same bin edges are used for
+        every rater. A sequence with one array_like of bin edges per rater
+        can be used to specify different edges. The bins are directly used
+        by ``numpy.histogramdd``. This is useful if we want to merge
         categories.
 
     Returns
@@ -160,8 +162,9 @@ def to_table(data, bins=None):
     arr : ndarray, (n_cat, n_cat)
         Contingency table that contains counts of category level with rater1
         in rows and rater2 in columns.
-    bins : ndarray
-        The bin edges used to construct the contingency table.
+    bins : ndarray or sequence of array_like
+        The bin edges used to construct the contingency table. For a single
+        shared set of edges, this is the object passed by the user.
 
     Notes
     -----
@@ -172,14 +175,7 @@ def to_table(data, bins=None):
     instead of 2-dimensional.
     """
 
-    data = np.asarray(data)
-    if data.ndim != 2:
-        # without the 2-d check a 1-d table crashed with a bare
-        # "not enough values to unpack" from the shape assignment
-        raise ValueError(
-            f"data must be a 2-d array of subjects by raters, got a "
-            f"{data.ndim}-d array"
-        )
+    data = array_like(data, "data", dtype=None, shape=(None, None))
     n_rows, n_cols = data.shape
     if bins is None:
         # I could add int conversion (reverse_index) to np.unique
@@ -187,18 +183,25 @@ def to_table(data, bins=None):
         n_cat = len(cat_uni)
         data_ = cat_int.reshape(data.shape)
         bins_ = np.arange(n_cat+1) - 0.5
+        bins_hist = (bins_,) * n_cols
         # alternative implementation with double loop
         # tt = np.asarray([[(x == [i,j]).all(1).sum() for j in cat_uni]
         #                 for i in cat_uni] )
         # other altervative: unique rows and bincount
     elif np.isscalar(bins):
         bins_ = np.arange(bins+1) - 0.5
+        bins_hist = (bins_,) * n_cols
         data_ = data
     else:
         bins_ = bins
         data_ = data
+        first_bin = bins.iloc[0] if hasattr(bins, "iloc") else bins[0]
+        if np.ndim(first_bin) == 0:
+            bins_hist = (bins,) * n_cols
+        else:
+            bins_hist = bins
 
-    tt = np.histogramdd(data_, (bins_,)*n_cols)
+    tt = np.histogramdd(data_, bins_hist)
 
     return tt[0], bins_
 
@@ -477,6 +480,19 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for.
+        One dimensional weights have one value for each category, so their
+        length is the number of rows and columns of table. Two dimensional
+        weights have the shape of table.
+
+        .. versionchanged:: 0.15.1
+
+           One dimensional weights of another length raise a ValueError.
+           Weights of length 1 were broadcast and gave nan, or a kappa of
+           zero up to rounding with ``wt="toeplitz"``. Linear and quadratic
+           weights whose first and last values are equal raise a
+           ValueError. They gave nan with a RuntimeWarning. A 1 x 1 table
+           with these weights gives nan, as with other weights, without the
+           RuntimeWarning.
     return_results : bool, optional
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -510,7 +526,8 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     Weights for 'linear' and 'quadratic' are interpreted as scores for the
     categories, the weights in the computation are based on the pairwise
-    difference between the scores.
+    difference between the scores, divided by the difference between the
+    last and the first score, which therefore must not be equal.
     Weights for 'toeplitz' are interpreted as weighted distance. The
     distance only depends on how many levels apart two entries in the table
     are but not on the levels themselves.
@@ -528,34 +545,92 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
     weights and using wt = 'toeplitz'.
 
+    If one rater uses a single category, then kappa is 0, its standard
+    errors and confidence limits are 0, and the z statistic and the p-values
+    are nan. If both raters use the same single category, which includes a
+    table with a single row and column, then kappa and all other statistics
+    are nan.
+
+    .. versionchanged:: 0.15.1
+
+       The results if a rater uses a single category are set explicitly.
+       Before, they depended on rounding errors, and NumPy emitted a
+       ``RuntimeWarning``.
+
+    Kappa depends on the prevalence of the categories, not only on the
+    accuracy of the raters. Chance agreement is computed from the margins of
+    the table. If one category is rare, both raters mostly assign the common
+    category, chance agreement is close to the observed agreement, and kappa
+    is small even if raw agreement is high. See the example below.
+
     References
     ----------
     Wikipedia
     SAS Manual
+
+    Examples
+    --------
+    Two raters each have sensitivity and specificity of 0.9, and their errors
+    are independent given the true class. The expected tables for 10000
+    subjects (rows: rater 1 positive, negative; columns: rater 2) differ only
+    in the proportion of positive subjects.
+
+    >>> from statsmodels.stats.inter_rater import cohens_kappa
+
+    With 50% positive subjects, observed agreement is 0.82 and chance
+    agreement is 0.50.
+
+    >>> table_balanced = [[4100, 900], [900, 4100]]
+    >>> print(f"{cohens_kappa(table_balanced, return_results=False):.4f}")
+    0.6400
+
+    With 1% positive subjects, observed agreement is still 0.82, but chance
+    agreement from the margins is 0.8073, so kappa is much smaller.
+
+    >>> table_rare = [[180, 900], [900, 8020]]
+    >>> print(f"{cohens_kappa(table_rare, return_results=False):.4f}")
+    0.0658
     '''
-    table = np.asarray(table, float)  # avoid integer division
-    if table.ndim != 2 or table.shape[0] != table.shape[1]:
-        # without this a 1-d table crashed with a raw AxisError from the
-        # diag/axis-1 operations below
+    table = array_like(table, "table", shape=(None, None))  # avoid integer division
+    if table.shape[0] != table.shape[1]:
         raise ValueError(
             f"table must be a square 2-d array, got shape {table.shape}"
         )
+    if not np.isfinite(table).all():
+        raise ValueError("table must contain only finite counts")
     agree = np.diag(table).sum()
     nobs = table.sum()
+    if not np.isfinite(nobs):
+        raise ValueError("the sum of the table must be finite")
+    if nobs == 0:
+        raise ValueError("table must have a positive number of observations")
     probs = table / nobs
     freqs = probs  # TODO: rename to use freqs instead of probs for observed
     probs_diag = np.diag(probs)
     freq_row = table.sum(1) / nobs
     freq_col = table.sum(0) / nobs
     prob_exp = freq_col * freq_row[:, None]
-    assert np.allclose(prob_exp.sum(), 1)
-    # print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
+    # If a rater uses a single category, then kappa and its variances are 0,
+    # and if both raters use the same single category, then they are 0 / 0.
+    # The computation below gives rounding errors or 0 / 0 in these cases.
+    rows_used = np.flatnonzero(table.sum(1))
+    cols_used = np.flatnonzero(table.sum(0))
+    one_category = len(rows_used) == 1 or len(cols_used) == 1
+    same_category = (
+        len(rows_used) == 1 and len(cols_used) == 1 and rows_used[0] == cols_used[0]
+    )
+    one_category_value = np.nan if same_category else 0.0
     if weights is None and wt is None:
         kind = "Simple"
-        kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
+        if one_category:
+            kappa = one_category_value
+        else:
+            kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
-        if return_results:
+        if return_results and one_category:
+            var_kappa = var_kappa0 = one_category_value
+        elif return_results:
             # variance
             term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
             term_a = term_a.sum()
@@ -577,12 +652,29 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         kind = "Weighted"
         weights = np.asarray(weights, float)
         if weights.ndim == 1:
+            if weights.shape[0] != table.shape[0]:
+                raise ValueError(
+                    f"1-d weights must have length {table.shape[0]}, the number "
+                    f"of categories in table, but they have length "
+                    f"{weights.shape[0]}"
+                )
+            # Linear and quadratic weights divide the score differences by the
+            # difference between the last and the first score
+            scale = weights[-1] - weights[0]
+            if scale == 0 and weights.shape[0] == 1:
+                # A table with one category has no differences to scale
+                scale = 1.0
+            elif scale == 0 and wt in ["ca", "linear", "fc", "quadratic", None]:
+                raise ValueError(
+                    "the first and last 1-d weights must differ with linear or "
+                    "quadratic weights, since the differences between the "
+                    "weights are divided by weights[-1] - weights[0], but both "
+                    f"are {weights[0]}"
+                )
             if wt in ["ca", "linear", None]:
-                weights = np.abs(weights[:, None] - weights) /  \
-                           (weights[-1] - weights[0])
+                weights = np.abs(weights[:, None] - weights) / scale
             elif wt in ["fc", "quadratic"]:
-                weights = (weights[:, None] - weights)**2 /  \
-                           (weights[-1] - weights[0])**2
+                weights = (weights[:, None] - weights)**2 / scale**2
             elif wt == "toeplitz":
                 # assume toeplitz structure
                 from scipy.linalg import toeplitz
@@ -594,11 +686,20 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         else:
             rows, cols = table.shape
             if (table.shape != weights.shape):
-                raise ValueError("weights are not square")
+                raise ValueError(
+                    "weights must be 1-d with one value for each category or "
+                    f"have the shape of table, {table.shape}, but they have "
+                    f"shape {weights.shape}"
+                )
         # this is formula from Wikipedia
-        kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
+        if one_category:
+            kappa = one_category_value
+        else:
+            kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
         # TODO: add var_kappa for weighted version
-        if return_results:
+        if return_results and one_category:
+            var_kappa = var_kappa0 = one_category_value
+        elif return_results:
             var_kappa = np.nan
             var_kappa0 = np.nan
             # switch to SAS manual weights, problem if user specifies weights
@@ -618,8 +719,11 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             var_kappa0 -= agree_wexp**2
             var_kappa0 *= fac
 
-    kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
-                (1 - agree_exp)
+    if same_category:
+        kappa_max = np.nan
+    else:
+        kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
+                    (1 - agree_exp)
 
     if return_results:
         res = KappaResults(
@@ -725,7 +829,11 @@ class KappaResults(ResultsBunch):
         self["std_kappa"] = np.sqrt(self["var_kappa"])
         self["std_kappa0"] = np.sqrt(self["var_kappa0"])
 
-        self["z_value"] = self["kappa"] / self["std_kappa0"]
+        if self["std_kappa0"] > 0:
+            self["z_value"] = self["kappa"] / self["std_kappa0"]
+        else:
+            # kappa is 0 or nan if its variance under H0 is 0 or nan
+            self["z_value"] = np.nan
 
         self["pvalue_one_sided"] = stats.norm.sf(self["z_value"])
         self["pvalue_two_sided"] = stats.norm.sf(np.abs(self["z_value"])) * 2

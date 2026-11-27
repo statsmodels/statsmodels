@@ -285,15 +285,15 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp2 = &self.tmp2[0,0]
 
     cpdef draw_measurement_disturbance_variates(self, rng):
-        self.measurement_disturbance_variates = rng.normal(size=self.n_measurement_disturbance_variates)
+        self.measurement_disturbance_variates = rng.normal(size=self.n_measurement_disturbance_variates).astype({{dtype}})
         self.pretransformed_measurement_disturbance_variates = False
 
     cpdef draw_state_disturbance_variates(self, rng):
-        self.state_disturbance_variates = rng.normal(size=self.n_state_disturbance_variates)
+        self.state_disturbance_variates = rng.normal(size=self.n_state_disturbance_variates).astype({{dtype}})
         self.pretransformed_state_disturbance_variates = False
 
     cpdef draw_initial_state_variates(self, rng):
-        self.initial_state_variates = rng.normal(size=self.n_initial_state_variates)
+        self.initial_state_variates = rng.normal(size=self.n_initial_state_variates).astype({{dtype}})
         self.pretransformed_initial_state_variates = False
         self.fixed_initial_state = False
 
@@ -620,7 +620,7 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         # alpha_{t+1} = T_t alpha_t + \\#
         if self.model.identity_transition:
-            blas.{{prefix}}axpy(&k_states, &alpha, input_state, &inc, state, &inc)
+            blas.{{prefix}}axpy(&k_states, &alpha, input_state, &inc, state, &inc)  # pragma: no cover
         else:
             blas.{{prefix}}gemv("N", &k_states, &k_states,
                                 &alpha, &self.model.transition[0,0,transition_t], &k_states,

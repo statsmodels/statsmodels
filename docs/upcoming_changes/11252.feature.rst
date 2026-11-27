@@ -1,0 +1,3 @@
+- :func:`~statsmodels.tools.validation.is_bool_like` checks whether a value is
+  a scalar bool (``bool``, ``np.bool_`` and, unless ``strict=True``, the
+  integers 0 and 1). :pr:`11252`

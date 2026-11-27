@@ -1,12 +1,8 @@
-from statsmodels.compat.pandas import (
-    QUARTER_END,
-    assert_frame_equal,
-    assert_index_equal,
-    make_dataframe,
-)
+from statsmodels.compat.pandas import PD_LT_3_1_0, QUARTER_END, assert_index_equal
 
 from datetime import datetime
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy import array, column_stack
@@ -15,11 +11,10 @@ from numpy.testing import (
     assert_almost_equal,
     assert_equal,
 )
-from pandas import DataFrame, concat, date_range, read_csv
+from pandas import DataFrame, Series, concat, date_range, read_csv
 import pytest
 
 from statsmodels.datasets import macrodata
-from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.tsa.filters.bk_filter import bkfilter
 from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.filtertools import (
@@ -31,6 +26,7 @@ from statsmodels.tsa.filters.filtertools import (
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -1177,35 +1173,64 @@ class TestFilters:
         assert res.index[-1] == end
 
 
-def dummy_func(x):
-    return x
+def test_convolution_filter_2d_filter_matches_r():
+    # each column of x is filtered with its column of filt. R 4.6.2:
+    # filter(1:10, c(1, 2, 3), sides=s) and filter(10 * (1:10), c(3, 2, 1),
+    # sides=s) from stats
+    x = np.c_[np.arange(1.0, 11.0), 10 * np.arange(1.0, 11.0)]
+    filt = np.array([[1.0, 3.0], [2.0, 2.0], [3.0, 1.0]])
+    col0 = np.arange(10, 53, 6, dtype=float)
+    col1 = np.arange(140, 561, 60, dtype=float)
+    nan2 = [np.nan, np.nan]
+    expected = {
+        1: np.r_[[nan2, nan2], np.c_[col0, col1]],
+        2: np.r_[[nan2], np.c_[col0, col1], [nan2]],
+    }
+    for nsides in (1, 2):
+        res = convolution_filter(x, filt, nsides=nsides)
+        assert_allclose(res, expected[nsides], rtol=1e-12)
 
 
-def dummy_func_array(x):
-    return x.values
+CONVOLUTION_2D_CASES = [
+    (kind, nlags, nsides)
+    for kind in ("1d", "column", "2d")
+    for nlags in (1, 2, 3, 4)
+    for nsides in (1, 2)
+    # a (1, nvar) filter is not a separate lag polynomial per column
+    if not (kind == "2d" and nlags == 1)
+]
 
 
-def dummy_func_pandas_columns(x):
-    return x.values
-
-
-def dummy_func_pandas_series(x):
-    return x["A"]
-
-
-def test_pandas_freq_decorator():
-    x = make_dataframe()
-    # in x, get a function back that returns an x with the same columns
-    func = pandas_wrapper(dummy_func)
-
-    np.testing.assert_equal(func(x.values), x)
-
-    func = pandas_wrapper(dummy_func_array)
-    assert_frame_equal(func(x), x)
-
-    expected = x.rename(columns=dict(zip("ABCD", "EFGH", strict=True)))
-    func = pandas_wrapper(dummy_func_array, names=list("EFGH"))
-    assert_frame_equal(func(x), expected)
+@pytest.mark.parametrize("kind, nlags, nsides", CONVOLUTION_2D_CASES)
+def test_convolution_filter_2d_x_matches_columns(kind, nlags, nsides):
+    # nsides=1 raised a ValueError for a 2-d filter, and for 2-d x with a
+    # filter of length one. 2-d x is filtered column by column, with the
+    # column's own lag polynomial for a 2-d filter and with the same one for a
+    # 1-d or (nlags, 1) filter, as the 1-d filter path filters 1-d x.
+    rng = np.random.default_rng(20261201)
+    # integer data, so that every sum is exact
+    x = rng.integers(-9, 10, size=(25, 2)).astype(float)
+    filt = rng.integers(-5, 6, size=(nlags, 2)).astype(float)
+    if kind == "1d":
+        filt_in, columns = filt[:, 0], [filt[:, 0], filt[:, 0]]
+    elif kind == "column":
+        filt_in, columns = filt[:, :1], [filt[:, 0], filt[:, 0]]
+    else:
+        filt_in, columns = filt, [filt[:, 0], filt[:, 1]]
+    res = convolution_filter(x, filt_in, nsides=nsides)
+    assert res.shape == x.shape
+    for i in range(2):
+        expected = convolution_filter(x[:, i], columns[i], nsides=nsides)
+        # atol keeps a sum that cancels to zero from failing if scipy
+        # convolves by FFT
+        assert_allclose(res[:, i], expected, rtol=1e-12, atol=1e-10)
+    # pandas input keeps the index and columns
+    index = date_range("2000-01-01", periods=25)
+    df = DataFrame(x, columns=["a", "b"], index=index)
+    res_df = convolution_filter(df, filt_in, nsides=nsides)
+    assert list(res_df.columns) == ["a", "b"]
+    assert_index_equal(res_df.index, df.index)
+    assert_allclose(res_df.to_numpy(), res, rtol=1e-12)
 
 
 @pytest.mark.parametrize("mode", ["full", "same", "valid"])
@@ -1315,6 +1340,141 @@ def test_miso_lfilter_useic_zero_matches_default():
     assert_allclose(inp_ic, inp_false)
 
 
+def _miso_lfilter_recursion(ar, ma, x, past=None):
+    # ar(L) y_t = ma(L) x_t evaluated directly: the combined input is
+    # inp_t = sum_lag ma[lag] . x[t - lag] with x zero before t = 0, and
+    # y_t = inp_t - ar[1] y[t-1] - ... with y[-1], y[-2], ... = past (or zero)
+    nobs = x.shape[0]
+    inp = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(ma.shape[0]):
+            if t - lag >= 0:
+                inp[t] += ma[lag] @ x[t - lag]
+    past = [0.0] * (len(ar) - 1) if past is None else list(past)
+    y = np.zeros(nobs)
+    for t in range(nobs):
+        y[t] = inp[t] - sum(ar[j + 1] * past[j] for j in range(len(past)))
+        past = ([y[t]] + past)[:-1]
+    return y, inp
+
+
+def _miso_lfilter_data(nvars=2):
+    rng = np.random.default_rng(20261131)
+    x = rng.standard_normal((12, nvars))
+    ma = rng.standard_normal((3, nvars))
+    return array([1.0, -0.5, 0.2]), ma, x
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_miso_lfilter_x_list(form):
+    # x is documented as array_like, but a list or tuple raised an
+    # AttributeError because x.shape was read before x was converted
+    ar, ma, x = _miso_lfilter_data()
+    x_form = x.tolist() if form == "list" else tuple(map(tuple, x))
+    y, inp = miso_lfilter(ar, ma, x_form)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_miso_lfilter_ar_column(form):
+    # a column of AR coefficients raised in scipy.signal.lfilter
+    ar, ma, x = _miso_lfilter_data()
+    ar_form = ar[:, None] if form == "column" else DataFrame({"ar": ar})
+    y, inp = miso_lfilter(ar_form, ma, x)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("x_1d", [True, False], ids=["x-1d", "x-column"])
+@pytest.mark.parametrize("ma_1d", [True, False], ids=["ma-1d", "ma-column"])
+def test_miso_lfilter_one_variable(ma_1d, x_1d):
+    # one input variable as a 1-d array or a column, which raised for a 1-d
+    # x or ma, is the ARMA filter ma(L) / ar(L) of scipy.signal.lfilter
+    from scipy import signal
+
+    ar, ma, x = _miso_lfilter_data(nvars=1)
+    y, inp = miso_lfilter(ar, ma[:, 0] if ma_1d else ma, x[:, 0] if x_1d else x)
+    assert_allclose(inp, signal.lfilter(ma[:, 0], [1.0], x[:, 0]), rtol=1e-12)
+    assert_allclose(y, signal.lfilter(ma[:, 0], ar, x[:, 0]), rtol=1e-10)
+
+
+@pytest.mark.parametrize("ma_shape", [(3, 1), (3, 3)])
+def test_miso_lfilter_ma_columns_mismatch_deprecated(ma_shape):
+    # a 2-d ma without one column per column of a 2-d x silently returned the
+    # filter of a misaligned part of x. It warns and keeps that result: the
+    # middle column of the full 2-d correlation, filtered by ar.
+    from scipy import signal
+
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal((12, 2))
+    ar = array([1.0, -0.5])
+    with pytest.warns(FutureWarning, match="ma must have one column per column"):
+        y, inp = miso_lfilter(ar, ma, x)
+    expected_inp = signal.correlate(x, ma[::-1, :])[:12, 1]
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, signal.lfilter([1.0], ar, expected_inp), rtol=1e-12)
+
+
+@pytest.mark.parametrize("ma_shape, x_shape", [((3,), (12, 2)), ((3, 2), (12,))])
+def test_miso_lfilter_ma_columns_mismatch_1d(ma_shape, x_shape):
+    # a 1-d ma or x is a single column, which raised before; a mismatch with
+    # the other argument raises
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal(x_shape)
+    with pytest.raises(ValueError, match="ma must have one column per column of x"):
+        miso_lfilter(array([1.0, -0.5]), ma, x)
+
+
+def test_miso_lfilter_complex_x():
+    # the filter is linear with real coefficients, so a complex x gives the
+    # filter of its real part plus i times the filter of its imaginary part
+    ar, ma, x = _miso_lfilter_data()
+    x_imag = np.random.default_rng(1).standard_normal(x.shape)
+    y, inp = miso_lfilter(ar, ma, x + 1j * x_imag)
+    y_real, inp_real = _miso_lfilter_recursion(ar, ma, x)
+    y_imag, inp_imag = _miso_lfilter_recursion(ar, ma, x_imag)
+    assert np.iscomplexobj(y)
+    assert_allclose(inp, inp_real + 1j * inp_imag, rtol=1e-12)
+    assert_allclose(y, y_real + 1j * y_imag, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "useic", [[1.5, -2.0], [0.0, 0.0], []], ids=["values", "zeros", "empty"]
+)
+def test_miso_lfilter_useic_ndarray(useic):
+    # an ndarray of initial conditions raised "The truth value of an array
+    # ... is ambiguous". The values before the first observation are useic in
+    # reverse time order, y[-1] = useic[0], and zero if useic is empty.
+    ar, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(ar, ma, x, useic=np.array(useic))
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic or None)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+    # a list gives the same result
+    assert_allclose(miso_lfilter(ar, ma, x, useic=useic)[0], y, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "useic",
+    [False, None, 0, [], [0.0], np.array([0.0])],
+    ids=["false", "none", "zero", "empty", "list-zero", "ndarray-zero"],
+)
+def test_miso_lfilter_zero_useic_without_ar_lags(useic):
+    # without AR lags there are no initial conditions; zero or empty useic
+    # gives the combined input, as False, None, 0 and [] did before
+    _, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(array([1.0]), ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(array([1.0]), ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-12)
+    assert_allclose(y, inp, rtol=1e-12)
+
+
 def test_bkfilter_too_short_series():
     # shorter than the 2K + 1 weights of the centered moving average, the
     # convolution silently produced garbage; it must report the shortfall
@@ -1337,3 +1497,669 @@ def test_bkfilter_band_order():
     # a non-positive low used to crash with ZeroDivisionError (2*pi/low)
     with pytest.raises(ValueError, match="0 < low < high, got low=0"):
         bkfilter(np.arange(100.0), low=0, high=32, K=3)
+
+
+RF_AR_COEFF = [0.6, -0.3, 0.2]
+RF_INIT = [1.5, -0.5, 2.0]
+RF_NOBS = 40
+
+
+def _recursive_filter_data():
+    return np.random.default_rng(20261119).standard_normal(RF_NOBS)
+
+
+def _recursive_filter_reference(x, ar_coeff, init=None):
+    # The recursion in the recursive_filter docstring, evaluated directly:
+    #     y[t] = ar_coeff[0] * y[t-1] + ... + ar_coeff[k-1] * y[t-k] + x[t]
+    # The values before the first observation are init in reverse time
+    # order (init[0] is y[-1], as in R's stats::filter), or zero.
+    k = len(ar_coeff)
+    past = [0.0] * k if init is None else list(init)
+    y = []
+    for xt in x:
+        yt = xt + sum(ar_coeff[j] * past[j] for j in range(k))
+        y.append(yt)
+        past = [yt] + past[:-1]
+    return np.array(y)
+
+
+def test_recursive_filter_reference_matches_lfilter():
+    # check the loop reference against scipy for the zero initial values
+    from scipy import signal
+
+    x = _recursive_filter_data()
+    expected = signal.lfilter([1.0], np.r_[1.0, -np.array(RF_AR_COEFF)], x)
+    res = _recursive_filter_reference(x, RF_AR_COEFF)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+def test_recursive_filter_1d_matches_reference(init):
+    x = _recursive_filter_data()
+    res = recursive_filter(x, RF_AR_COEFF, init=init)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (RF_NOBS,)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe", "nested-list"])
+@pytest.mark.parametrize("arg", ["ar_coeff", "init"])
+def test_recursive_filter_coefficient_column(arg, form):
+    # ar_coeff or init as an (n_coeff, 1) column raised a ValueError from
+    # NumPy or scipy.signal.lfiltic; it gives the result of the 1-d values
+    x = _recursive_filter_data()
+    kwargs = {"ar_coeff": np.array(RF_AR_COEFF), "init": np.array(RF_INIT)}
+    value = kwargs[arg]
+    if form == "column":
+        kwargs[arg] = value[:, None]
+    elif form == "dataframe":
+        kwargs[arg] = DataFrame({arg: value})
+    else:
+        kwargs[arg] = [[v] for v in value]
+    res = recursive_filter(x, **kwargs)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, RF_INIT)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+def test_recursive_filter_coefficient_column_zero_init():
+    # a column of AR coefficients without init
+    x = _recursive_filter_data()
+    res = recursive_filter(x, np.array(RF_AR_COEFF)[:, None])
+    expected = _recursive_filter_reference(x, RF_AR_COEFF)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+def test_recursive_filter_one_coefficient_nested_init():
+    # init=[[2.0]] with one AR coefficient raised "setting an array element
+    # with a sequence"; y[-1] is 2
+    x = np.array([1.0, 0.0, 0.0])
+    res = recursive_filter(x, [0.5], init=[[2.0]])
+    assert_allclose(res, [2.0, 1.0, 0.5], rtol=1e-12)
+
+
+@pytest.mark.parametrize("shape", [(1, 3), (3, 2)], ids=["row", "two-columns"])
+@pytest.mark.parametrize("arg", ["ar_coeff", "init"])
+def test_recursive_filter_coefficient_not_1d_raises(arg, shape):
+    # these raised unclear errors, or for a row init that its length differs
+    # from that of ar_coeff
+    kwargs = {"ar_coeff": RF_AR_COEFF, "init": RF_INIT}
+    kwargs[arg] = np.ones(shape)
+    with pytest.raises(ValueError, match=f"{arg} is required to have ndim 1"):
+        recursive_filter(_recursive_filter_data(), **kwargs)
+
+
+def _rf_index():
+    return date_range("2000-01-01", periods=RF_NOBS, freq="D")
+
+
+# Each case: how to build the input from the 1d data, the type and shape
+# that must be returned, and how to get the values out as 1d
+RF_CONTAINERS = {
+    "column": (
+        lambda x: x[:, None],
+        np.ndarray,
+        (RF_NOBS, 1),
+        lambda res: res[:, 0],
+    ),
+    "nested-list": (
+        lambda x: [[v] for v in x],
+        np.ndarray,
+        (RF_NOBS, 1),
+        lambda res: res[:, 0],
+    ),
+    "dataframe": (
+        lambda x: DataFrame({"y": x}, index=_rf_index()),
+        DataFrame,
+        (RF_NOBS, 1),
+        lambda res: res["y"].to_numpy(),
+    ),
+    "list": (
+        lambda x: x.tolist(),
+        np.ndarray,
+        (RF_NOBS,),
+        lambda res: res,
+    ),
+    "series": (
+        lambda x: Series(x, index=_rf_index(), name="y"),
+        Series,
+        (RF_NOBS,),
+        lambda res: res.to_numpy(),
+    ),
+}
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("container", list(RF_CONTAINERS))
+def test_recursive_filter_containers(container, init):
+    # GH10810: an (n, 1) column, documented as accepted, was filtered along the
+    # wrong axis, so no recursion was applied and the input came back
+    # unchanged; with init it raised. It must give the 1d values, and keep
+    # the container and shape of the input.
+    make_input, out_type, out_shape, values = RF_CONTAINERS[container]
+    x = _recursive_filter_data()
+    res = recursive_filter(make_input(x), RF_AR_COEFF, init=init)
+    assert type(res) is out_type
+    assert res.shape == out_shape
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(values(res), expected, rtol=1e-10)
+    if isinstance(res, (Series, DataFrame)):
+        assert_index_equal(res.index, _rf_index())
+    if isinstance(res, DataFrame):
+        assert list(res.columns) == ["y"]
+    if isinstance(res, Series):
+        assert res.name == "y"
+
+
+def _rf_row_dataframe(x):
+    columns = [f"c{i}" for i in range(x.shape[0])]
+    return DataFrame(x[None, :], index=_rf_index()[:1], columns=columns)
+
+
+# Each case: how to build a row from the 1d data, and the type and shape that
+# must be returned
+RF_ROWS = {
+    "row": (lambda x: x[None, :], np.ndarray, (1, RF_NOBS)),
+    "nested-list": (lambda x: [x.tolist()], np.ndarray, (1, RF_NOBS)),
+    "dataframe": (_rf_row_dataframe, DataFrame, (1, RF_NOBS)),
+    "row-3d": (lambda x: x[None, None, :], np.ndarray, (1, 1, RF_NOBS)),
+    "row-4d": (lambda x: x.reshape(1, 1, 1, -1), np.ndarray, (1, 1, 1, RF_NOBS)),
+}
+RF_ROW_WARNING = (
+    rf"x must be 1-D or an \(n, 1\) column, but has shape \((1, )+{RF_NOBS}\)\. "
+    r"A row with shape \(1, n\) or \(1, \.\.\., 1, n\) .* deprecated and will "
+    r"raise a ValueError in statsmodels 0\.17\.0\."
+)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("container", list(RF_ROWS))
+def test_recursive_filter_row_deprecated(container, init):
+    # GH10810: a row with shape (1, n) or (1, ..., 1, n) was filtered along its
+    # last axis, so it gave the values of the 1d input in the shape of the
+    # row. It keeps doing so, with a warning, until it raises in 0.17.0. With
+    # init it used to raise, as for a column.
+    make_input, out_type, out_shape = RF_ROWS[container]
+    x = _recursive_filter_data()
+    x_row = make_input(x)
+    with pytest.warns(FutureWarning, match=RF_ROW_WARNING):
+        res = recursive_filter(x_row, RF_AR_COEFF, init=init)
+    assert type(res) is out_type
+    assert res.shape == out_shape
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(np.asarray(res).ravel(), expected, rtol=1e-10)
+    if isinstance(res, DataFrame):
+        assert_index_equal(res.index, x_row.index)
+        assert_index_equal(res.columns, x_row.columns)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("container", ["ndarray", "ndarray-3d", "dataframe"])
+def test_recursive_filter_single_observation(container, init):
+    # a (1, 1) or (1, 1, 1) array is one observation, like an (n, 1) column
+    # with n = 1, and not a deprecated row
+    x = _recursive_filter_data()[:1]
+    if container == "ndarray":
+        x_in = x.reshape(1, 1)
+    elif container == "ndarray-3d":
+        x_in = x.reshape(1, 1, 1)
+    else:
+        x_in = DataFrame({"y": x}, index=_rf_index()[:1])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = recursive_filter(x_in, RF_AR_COEFF, init=init)
+    assert type(res) is type(x_in)
+    assert res.shape == x_in.shape
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(np.asarray(res).ravel(), expected, rtol=1e-10)
+    if isinstance(res, DataFrame):
+        assert_index_equal(res.index, x_in.index)
+        assert list(res.columns) == ["y"]
+
+
+@pytest.mark.parametrize(
+    "x",
+    [
+        np.ones((10, 2)),
+        DataFrame(np.ones((10, 2))),
+    ],
+    ids=["ndarray", "dataframe"],
+)
+@pytest.mark.parametrize("init", [None, [1.0]], ids=["zero-init", "init"])
+def test_recursive_filter_more_than_one_column_raises(x, init):
+    # these used to filter across the columns of each row
+    with pytest.raises(ValueError, match=r"x must be 1-D or an \(n, 1\) column"):
+        recursive_filter(x, [0.5], init=init)
+
+
+@pytest.mark.parametrize("shape", [(10, 1, 1), (1, 10, 1)], ids=["n-1-1", "1-n-1"])
+@pytest.mark.parametrize("init", [None, [1.0]], ids=["zero-init", "init"])
+def test_recursive_filter_3d_raises(shape, init):
+    # (n, 1, 1) and (1, n, 1) arrays used to be returned unchanged
+    with pytest.raises(ValueError, match=r"x must be 1-D or an \(n, 1\) column"):
+        recursive_filter(np.ones(shape), [0.5], init=init)
+
+
+def test_recursive_filter_init_reverse_time_order():
+    # init holds the values before the first observation in reverse time
+    # order, init[0] is y[-1]. R 4.6.2:
+    # filter(rep(0, 3), c(0.5, 0.25), method="recursive", init=c(1, 2))
+    res = recursive_filter(np.zeros(3), [0.5, 0.25], init=[1.0, 2.0])
+    assert_allclose(res, [1.0, 0.75, 0.625], rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+@pytest.mark.parametrize("arg", ["ar_coeff", "init"])
+def test_recursive_filter_coefficient_forms(arg, form):
+    # ar_coeff and init are documented as array_like
+    x = _recursive_filter_data()
+    kwargs = {"ar_coeff": RF_AR_COEFF, "init": RF_INIT}
+    kwargs[arg] = series_forms(kwargs[arg])[form]
+    res = recursive_filter(x, **kwargs)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, RF_INIT)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("form", ["tuple", "int"])
+def test_recursive_filter_tuple_and_int_input(form, init):
+    x = _recursive_filter_data()
+    if form == "tuple":
+        x_form = tuple(x.tolist())
+    else:
+        x = np.round(10 * x)
+        x_form = x.astype(np.int64)
+    res = recursive_filter(x_form, RF_AR_COEFF, init=init)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+# R 4.6.2, stats::filter(1:10, filt, sides=nsides) with the default
+# method="convolution"
+R_CONVOLUTION_FILTER = {
+    (2, (1.0, 2.0, 3.0)): [np.nan, 10, 16, 22, 28, 34, 40, 46, 52, np.nan],
+    (2, (1.0, 2.0, 3.0, 4.0)): [np.nan, 20, 30, 40, 50, 60, 70, 80, np.nan, np.nan],
+    (1, (1.0, 2.0, 3.0)): [np.nan, np.nan, 10, 16, 22, 28, 34, 40, 46, 52],
+    (1, (1.0, 2.0)): [np.nan, 4, 7, 10, 13, 16, 19, 22, 25, 28],
+}
+
+
+@pytest.mark.parametrize("nsides, filt", list(R_CONVOLUTION_FILTER))
+def test_convolution_filter_matches_r(nsides, filt):
+    res = convolution_filter(np.arange(1.0, 11.0), np.array(filt), nsides=nsides)
+    assert_allclose(res, R_CONVOLUTION_FILTER[(nsides, filt)], rtol=1e-12)
+
+
+def _convolution_filter_reference(x, filt, nsides):
+    # The convolution filter of stats::filter in R, evaluated directly. With
+    # sides=1, y[n] = filt[0] * x[n] + ... + filt[k-1] * x[n-k+1]; with
+    # sides=2 the filter is shifted forward by m = k // 2, so filt[0]
+    # multiplies x[n+m]. Values that need an observation outside x are NaN.
+    nobs, nfilt = x.shape[0], len(filt)
+    shift = 0 if nsides == 1 else nfilt // 2
+    y = np.full(x.shape, np.nan)
+    for n in range(nobs):
+        if n + shift - nfilt + 1 >= 0 and n + shift < nobs:
+            y[n] = sum(filt[j] * x[n + shift - j] for j in range(nfilt))
+    return y
+
+
+CONVOLUTION_DEFINITION_CASES = [
+    (nsides, nfilt, ndim)
+    for nsides in (1, 2)
+    for nfilt in (1, 2, 3, 4, 5)
+    for ndim in (1, 2)
+    # 2-d x with nsides=1 and a filter of length one raises, a separate bug
+    if not (nsides == 1 and nfilt == 1 and ndim == 2)
+]
+
+
+@pytest.mark.parametrize("nsides, nfilt, ndim", CONVOLUTION_DEFINITION_CASES)
+def test_convolution_filter_matches_definition(nsides, nfilt, ndim):
+    # odd and even filter lengths, including one, give the documented NaN
+    # padding for 1-d x and for each column of 2-d x
+    rng = np.random.default_rng(20261120)
+    shape = (30, 2) if ndim == 2 else (30,)
+    x = rng.integers(-9, 10, size=shape).astype(float)
+    filt = rng.integers(-5, 6, size=nfilt).astype(float)
+    res = convolution_filter(x, filt, nsides=nsides)
+    assert res.shape == x.shape
+    expected = _convolution_filter_reference(x, filt, nsides)
+    # integer data give exact sums by direct convolution; atol keeps a sum
+    # that cancels to zero from failing if scipy convolves by FFT
+    assert_allclose(res, expected, rtol=1e-12, atol=1e-10)
+
+
+@pytest.mark.parametrize("nsides", [0, 3])
+def test_convolution_filter_nsides_invalid(nsides):
+    with pytest.raises(ValueError, match="nsides must be 1 or 2"):
+        convolution_filter(np.arange(10.0), [0.5, 0.5], nsides=nsides)
+
+
+def _contract_forms(x):
+    # the forms of series_forms, and integer data
+    forms = series_forms(x)
+    forms["int"] = np.round(10 * x).astype(np.int64)
+    return forms
+
+
+def _contract_series(nobs=60):
+    rng = np.random.default_rng(20261124)
+    t = np.arange(nobs)
+    return 10 + 0.1 * t + np.sin(2 * np.pi * t / 12) + 0.3 * rng.standard_normal(nobs)
+
+
+def _as_float_1d(x_form):
+    # the 1-d float ndarray with the values of an input form
+    return np.asarray(x_form, dtype=float).squeeze()
+
+
+def _check_pandas_form(res, x_form, trim=0):
+    # pandas input gives pandas output with the index of the input, without
+    # the first and last trim values; other input gives an ndarray
+    if isinstance(x_form, (Series, DataFrame)):
+        assert isinstance(res, (Series, DataFrame))
+        assert_index_equal(res.index, x_form.index[trim : x_form.shape[0] - trim])
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+def _contract_2d():
+    x = _contract_series()
+    nobs = x.shape[0]
+    index = date_range("2000-01-01", periods=nobs, freq="MS")
+    other = x[::-1] + 0.5 * np.cos(np.arange(nobs))
+    return DataFrame({"a": x, "b": other}, index=index)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_bkfilter_input_forms(form):
+    x_form = _contract_forms(_contract_series())[form]
+    res = bkfilter(x_form, 6, 32, 12)
+    expected = bkfilter(_as_float_1d(x_form), 6, 32, 12)
+    # atol: the cycle is a difference of FFT convolutions of values of order
+    # ten, so values near zero carry absolute rounding
+    assert_allclose(np.asarray(res).squeeze(), expected, rtol=1e-12, atol=1e-12)
+    _check_pandas_form(res, x_form, trim=12)
+    if form in ("column", "dataframe"):
+        assert res.shape == (expected.shape[0], 1)
+
+
+def test_bkfilter_two_column_dataframe():
+    df = _contract_2d()
+    res = bkfilter(df, 6, 32, 12)
+    for col in ("a", "b"):
+        expected = bkfilter(df[col].to_numpy(), 6, 32, 12)
+        actual = res[f"{col}_cycle"].to_numpy()
+        # atol: values near zero carry the absolute rounding of the FFT
+        assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+    assert list(res.columns) == ["a_cycle", "b_cycle"]
+    assert_index_equal(res.index, df.index[12:-12])
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_cffilter_input_forms(form):
+    x_form = _contract_forms(_contract_series())[form]
+    res = cffilter(x_form)
+    expected = cffilter(_as_float_1d(x_form))
+    for actual, desired in zip(res, expected, strict=True):
+        assert_allclose(np.asarray(actual), desired, rtol=1e-12)
+        _check_pandas_form(actual, x_form)
+
+
+def test_cffilter_two_column_dataframe():
+    df = _contract_2d()
+    res = cffilter(df)
+    for col in ("a", "b"):
+        expected = cffilter(df[col].to_numpy())
+        cycle = res.cycle[f"{col}_cycle"].to_numpy()
+        assert_allclose(cycle, expected.cycle, rtol=1e-12)
+        trend = res.trend[f"{col}_trend"].to_numpy()
+        assert_allclose(trend, expected.trend, rtol=1e-12)
+    assert_index_equal(res.cycle.index, df.index)
+
+
+def test_cffilter_low_below_two():
+    with pytest.raises(ValueError, match="low must be >= 2"):
+        cffilter(np.arange(50.0), low=1.5, high=32)
+
+
+def test_cffilter_drift():
+    # drift=True removes the line t * (x[-1] - x[0]) / (nobs - 1) before
+    # filtering, so removing it by hand and filtering with drift=False gives
+    # the same cycle (both are checked against fixed reference values in
+    # test_cffilter_reference_values). The trend is the filtered series less
+    # its cycle.
+    dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
+    nobs = dta.shape[0]
+    line = np.arange(nobs)[:, None] * (dta[-1] - dta[0]) / (nobs - 1)
+    res_drift = cffilter(dta)
+    res = cffilter(dta - line, drift=False)
+    assert_allclose(res.cycle, res_drift.cycle, rtol=1e-10)
+    assert_allclose(res.cycle + res.trend, dta - line, rtol=1e-12)
+    assert_allclose(res_drift.cycle + res_drift.trend, dta - line, rtol=1e-12)
+    res_raw = cffilter(dta, drift=False)
+    assert_allclose(res_raw.cycle + res_raw.trend, dta, rtol=1e-12)
+    assert not np.allclose(res_raw.cycle, res_drift.cycle)
+
+
+@pytest.mark.parametrize("drift", [True, False])
+def test_cffilter_reference_values(drift):
+    # Fixed reference values of the cycle and the trend of a random walk with
+    # drift, 80 observations, low=6 and high=32, in results/cffilter.csv.
+    # With drift=True the drift line is removed before filtering and the
+    # trend is the drift-removed series less the cycle, so the trend does not
+    # contain the drift line.
+    # float_precision is deprecated in pandas 3.1; its default parser is used
+    kwargs = {"float_precision": "round_trip"} if PD_LT_3_1_0 else {}
+    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", **kwargs)
+    x = ref["x"].to_numpy()
+    suffix = "drift" if drift else "no_drift"
+    ref_cycle = ref[f"cycle_{suffix}"].to_numpy()
+    ref_trend = ref[f"trend_{suffix}"].to_numpy()
+    res = cffilter(x, low=6, high=32, drift=drift)
+    # The smallest cycle value is 6e-4, and the cycle has an absolute rounding
+    # error of about 2e-15 from sums of terms of order 1 to 10, so the
+    # relative error reaches 2e-12 there
+    assert_allclose(res.cycle, ref_cycle, rtol=1e-10)
+    assert_allclose(res.trend, ref_trend, rtol=1e-12)
+    # cycle + trend + drift line = x, where the drift line is zero without
+    # drift. The reference values have the same identity.
+    nobs = x.shape[0]
+    line = drift * np.arange(nobs) * (x[-1] - x[0]) / (nobs - 1)
+    assert_allclose(res.cycle + res.trend + line, x, rtol=1e-12)
+    assert_allclose(ref_cycle + ref_trend + line, x, rtol=1e-12)
+
+
+@pytest.mark.parametrize("one_sided", [False, True])
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_hpfilter_input_forms(form, one_sided):
+    x_form = _contract_forms(_contract_series())[form]
+    res = hpfilter(x_form, 1600, one_sided=one_sided)
+    expected = hpfilter(_as_float_1d(x_form), 1600, one_sided=one_sided)
+    for actual, desired in zip(res, expected, strict=True):
+        assert_allclose(np.asarray(actual), desired, rtol=1e-10)
+        _check_pandas_form(actual, x_form)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_convolution_filter_input_forms(form):
+    x_form = _contract_forms(_contract_series())[form]
+    filt = [0.25, 0.5, 0.25]
+    for nsides in (1, 2):
+        res = convolution_filter(x_form, filt, nsides=nsides)
+        expected = convolution_filter(_as_float_1d(x_form), filt, nsides=nsides)
+        assert_allclose(np.asarray(res).squeeze(), expected, rtol=1e-12)
+        _check_pandas_form(res, x_form)
+        assert np.ndim(res) == np.ndim(x_form)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_convolution_filter_filt_forms(form):
+    # a 1-d filt in any form, including an (n, 1) column, filters 1-d x
+    x = _contract_series()
+    filt = np.array([0.1, 0.4, 0.3, 0.2])
+    filt_form = _contract_forms(filt)[form]
+    expected = convolution_filter(x, _as_float_1d(filt_form))
+    assert_allclose(convolution_filter(x, filt_form), expected, rtol=1e-12)
+
+
+def test_convolution_filter_two_column_dataframe():
+    df = _contract_2d()
+    filt = [0.25, 0.5, 0.25]
+    res = convolution_filter(df, filt)
+    for col in ("a", "b"):
+        expected = convolution_filter(df[col].to_numpy(), filt)
+        assert_allclose(res[col].to_numpy(), expected, rtol=1e-12)
+    assert list(res.columns) == ["a", "b"]
+    assert_index_equal(res.index, df.index)
+
+
+def _miso_lfilter_reference(ar, ma, x, useic):
+    # ar(L) y_t = ma(L) x_t evaluated directly: the combined input is
+    # inp_t = sum_lag ma[lag] . x[t - lag] with x zero before t = 0, and
+    # y_t = inp_t - ar[1] * y[t-1] - ... with y[-1], y[-2], ... = useic
+    nobs = x.shape[0]
+    inp = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(ma.shape[0]):
+            if t - lag >= 0:
+                inp[t] += ma[lag] @ x[t - lag]
+    past = list(useic)
+    y = np.zeros(nobs)
+    for t in range(nobs):
+        y[t] = inp[t] - sum(ar[j + 1] * past[j] for j in range(len(past)))
+        past = [y[t]] + past[:-1]
+    return y, inp
+
+
+def test_miso_lfilter_useic_reverse_time_order():
+    # useic holds the values of y before the first observation in reverse
+    # time order, useic[0] is y[-1]
+    rng = np.random.default_rng(3)
+    nobs, nlags, nvars = 10, 2, 2
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+    ar = array([1.0, -0.5, 0.1])
+    useic = [1.5, -2.0]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_reference(ar, ma, x, useic)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+    y0, _ = miso_lfilter(ar, ma, x)
+    assert not np.allclose(y, y0)
+
+
+@pytest.mark.parametrize(
+    "arg, form",
+    [
+        ("x", "dataframe"),
+        ("x", "int"),
+        ("ma", "list"),
+        ("ma", "dataframe"),
+        ("ar", "list"),
+        ("ar", "tuple"),
+        ("ar", "series"),
+        ("ar", "int"),
+    ],
+)
+def test_miso_lfilter_input_forms(arg, form):
+    rng = np.random.default_rng(4)
+    args = {
+        # integer coefficients, so that the int form has the same values
+        "ar": array([1.0, -1.0, 0.0]),
+        "ma": rng.standard_normal((3, 2)),
+        "x": np.round(10 * rng.standard_normal((20, 2))),
+    }
+    expected = _miso_lfilter_reference(args["ar"], args["ma"], args["x"], [0.0, 0.0])
+    value = args[arg]
+    if form == "int":
+        args[arg] = value.astype(np.int64)
+    elif form == "dataframe":
+        args[arg] = DataFrame(value, columns=["a", "b"])
+    elif form == "list":
+        args[arg] = value.tolist()
+    else:
+        args[arg] = series_forms(value)[form]
+    y, inp = miso_lfilter(args["ar"], args["ma"], args["x"])
+    assert_allclose(y, expected[0], rtol=1e-10)
+    assert_allclose(inp, expected[1], rtol=1e-12)
+
+
+def test_fftconvolve3_requires_in2_or_in3():
+    with pytest.raises(ValueError, match="at least one of in2 and in3"):
+        fftconvolve3(np.ones(5))
+
+
+@pytest.mark.parametrize("order", ["long-short", "short-long"])
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+def test_fftconvolve3_without_in3_is_convolution(mode, order):
+    # without the inverse filter in3, the result is the convolution of in1
+    # and in2, with the modes of np.convolve: "same" has the length of the
+    # longer input and "valid" the difference of the lengths plus one
+    rng = np.random.default_rng(5)
+    x = rng.standard_normal(20)
+    filt = array([1.0, 0.5, 0.25, 0.1])
+    in1, in2 = (x, filt) if order == "long-short" else (filt, x)
+    res = fftconvolve3(in1, in2, mode=mode)
+    # atol: FFT rounding on values of order one
+    assert_allclose(res, np.convolve(in1, in2, mode=mode), rtol=1e-10, atol=1e-12)
+
+
+def test_fftconvolve3_int_input():
+    x = np.arange(-5, 15)
+    filt = np.array([2, -1, 1])
+    res = fftconvolve3(x, filt)
+    # atol: FFT rounding on values of order ten
+    assert_allclose(res, np.convolve(x, filt).astype(float), rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize("dtype", [float, complex])
+def test_fftconvolveinv_modes(dtype):
+    # in1 = np.convolve(x, filt) divided by filt in the frequency domain is
+    # x, so the full result is x followed by 2 * (len(filt) - 1) zeros.
+    # "same" keeps the centered len(in1) values and "valid" the centered
+    # len(in1) - len(filt) + 1 values, which are x.
+    rng = np.random.default_rng(6)
+    x = rng.standard_normal(20)
+    if dtype is complex:
+        x = x + 1j * rng.standard_normal(20)
+    filt = array([1.0, 0.5, 0.25, 0.1])
+    nfilt = filt.shape[0]
+    in1 = np.convolve(x, filt)
+    full = np.r_[x, np.zeros(2 * nfilt - 2)]
+    start = (nfilt - 1) // 2
+    expected = {
+        "full": full,
+        "same": full[start : start + in1.shape[0]],
+        "valid": full[nfilt - 1 : nfilt - 1 + x.shape[0]],
+    }
+    for mode, desired in expected.items():
+        res = fftconvolveinv(in1, filt, mode=mode)
+        assert np.iscomplexobj(res) == (dtype is complex)
+        # atol: the zeros are zero up to FFT rounding
+        assert_allclose(res, desired, rtol=1e-10, atol=1e-12)
+
+
+def test_fftconvolveinv_int_input():
+    # integer input gives the result of the same values as floats
+    res = fftconvolveinv(np.convolve(np.arange(6), [2, 1]), np.array([2, 1]))
+    # atol: the zeros are zero up to FFT rounding
+    assert_allclose(res, np.r_[np.arange(6.0), 0.0, 0.0], rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "mode, start, stop", [("full", 0, 6), ("same", 0, 5), ("valid", 1, 5)]
+)
+def test_fftconvolveinv_longer_in2(mode, start, stop):
+    # in1 is a unit impulse, so the result is the inverse of in2 = 1 - a L on
+    # the FFT grid of size 8, the circular geometric series a**j / (1 - a**8).
+    # The full result has len(in1) + len(in2) - 1 = 6 values, "same" keeps
+    # the centered len(in2) = 5 and "valid" the centered
+    # len(in2) - len(in1) + 1 = 4.
+    a = 0.6
+    geometric = a ** np.arange(8) / (1 - a**8)
+    in1 = array([1.0, 0.0])
+    in2 = array([1.0, -a, 0.0, 0.0, 0.0])
+    res = fftconvolveinv(in1, in2, mode=mode)
+    assert_allclose(res, geometric[start:stop], rtol=1e-12)

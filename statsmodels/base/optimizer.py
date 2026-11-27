@@ -572,8 +572,8 @@ def _fit_newton(
     start_params : array_like
         Initial guess of the solution for the loglikelihood maximization.
     fargs : tuple
-        Extra arguments passed to the objective function, i.e.
-        objective(x,*args)
+        Extra arguments passed to the objective function, its score and its
+        Hessian, i.e. objective(x,*args)
     kwargs : dict[str, Any]
         Extra keyword arguments passed to the objective function, i.e.
         objective(x,**kwargs)
@@ -668,13 +668,13 @@ def _fit_newton(
         # The score and the Hessian at a start for which f is not finite are
         # only used to look for a step, so that an overflow is not of interest.
         with _quiet_if(fcur is not None and not np.isfinite(fcur)):
-            H = np.asarray(hess(newparams))
+            H = np.asarray(hess(newparams, *fargs))
             # regularize Hessian, not clear what ridge factor should be
             # keyword option with absolute default 1e-10, see #1847
             if not np.all(ridge_factor == 0):
                 H[np.diag_indices(H.shape[0])] += ridge_factor
             oldparams = newparams
-            grad = score(oldparams)
+            grad = score(oldparams, *fargs)
             step = np.linalg.solve(H, grad)
         if step_halving:
             # Halve the step if it gives a value of f that is not finite or
@@ -740,8 +740,8 @@ def _fit_newton(
                 newparams,
                 fval,
                 iterations,
-                score(newparams),
-                hess(newparams),
+                score(newparams, *fargs),
+                hess(newparams, *fargs),
             )
         converged = not warnflag
         retvals = {
@@ -1194,6 +1194,7 @@ def _fit_cg(
         f,
         start_params,
         score,
+        args=fargs,
         gtol=gtol,
         norm=norm,
         epsilon=epsilon,

@@ -1,0 +1,7 @@
+- :meth:`~statsmodels.tsa.ardl.ARDL.predict`, and so ``predict``,
+  ``forecast``, ``get_prediction`` and ``plot_predict`` of
+  :class:`~statsmodels.tsa.ardl.ARDLResults`, raised "IndexError: tuple
+  index out of range" for any replacement ``exog`` or ``exog_oos``
+  of a model created with a 1-d array or a Series exog. A 1-d
+  array, a Series or an array with one column replaces such an
+  exog. :pr:`11182`

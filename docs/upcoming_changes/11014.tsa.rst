@@ -1,0 +1,6 @@
+- ``SARIMAXResults.extend`` restarted the time trend of ``trend="t"``,
+  ``"ct"`` or polynomial trends when the results were already extended or the
+  model had a ``trend_offset`` other than 1, and ``ARIMA`` ignored
+  ``trend_offset`` out of sample, so even one ``extend`` of an ``ARIMA`` with a
+  time trend gave wrong results and forecasts. The trend now continues from
+  the end of the previous sample. :pr:`11014`

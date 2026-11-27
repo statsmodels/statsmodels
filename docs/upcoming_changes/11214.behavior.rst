@@ -1,0 +1,6 @@
+- The statistic and the p-value of :func:`~statsmodels.stats.diagnostic.linear_reset`
+  change for results of ``WLS`` and ``GLS``, because the auxiliary regression now
+  uses the weights or the covariance ``sigma`` of the model instead of being
+  unweighted. Results of ``OLS`` are unchanged. In a simulated example with 100
+  observations (``WLS`` with random weights, ``power=2``, ``use_f=True``), F
+  changes from 49.75 (p-value 2.7e-10) to 41.72 (p-value 4.3e-09). :pr:`11214`

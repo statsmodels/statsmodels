@@ -30,10 +30,11 @@ from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.stattools import pccf
+from statsmodels.tsa.stattools import ccf, pccf
 
 try:
     from matplotlib import pyplot as plt
+    from matplotlib.collections import LineCollection
 except ImportError:
     pass
 
@@ -234,6 +235,56 @@ def test_plot_ccf(close_figures):
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
+@pytest.mark.parametrize("lags", [np.array([0, 2, 5]), np.arange(6), 6])
+@pytest.mark.parametrize("negative_lags", [False, True])
+@pytest.mark.parametrize("alpha", [None, 0.05])
+@pytest.mark.parametrize("use_vlines", [False, True])
+def test_plot_ccf_lag_artists(close_figures, lags, negative_lags, alpha, use_vlines):
+    rng = np.random.default_rng(123)
+    x = rng.standard_normal(50)
+    y = rng.standard_normal(50)
+    fig, ax = plt.subplots()
+
+    plot_ccf(
+        x,
+        y,
+        ax=ax,
+        lags=lags,
+        negative_lags=negative_lags,
+        alpha=alpha,
+        use_vlines=use_vlines,
+    )
+
+    expected_lags = np.arange(7) if np.isscalar(lags) else np.asarray(lags)
+    expected_ccf = ccf(x, y, adjusted=False, fft=False, nlags=7)[expected_lags]
+    plot_lags = -expected_lags if negative_lags else expected_lags
+
+    line = ax.lines[-1]
+    assert_equal(line.get_xdata(), plot_lags)
+    assert_allclose(line.get_ydata(), expected_ccf, rtol=1e-14, atol=1e-14)
+
+    vlines = [coll for coll in ax.collections if isinstance(coll, LineCollection)]
+    assert len(vlines) == int(use_vlines)
+    if use_vlines:
+        segments = vlines[0].get_segments()
+        assert_equal(
+            np.asarray(segments)[:, :, 0], np.column_stack((plot_lags, plot_lags))
+        )
+        assert_allclose(
+            np.asarray(segments)[:, :, 1],
+            np.column_stack((np.zeros(len(plot_lags)), expected_ccf)),
+            rtol=1e-14,
+            atol=1e-14,
+        )
+
+    fill_collections = [
+        coll for coll in ax.collections if not isinstance(coll, LineCollection)
+    ]
+    assert len(fill_collections) == int(alpha is not None)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
 def test_plot_pccf(close_figures):
     # Just test that it runs.
     fig = plt.figure()
@@ -363,8 +414,10 @@ def test_plot_month_locale(close_figures, locale_name, may_oct_dec):
         # month_plot and strftime get the names from the same place, so the
         # comparison above does not show that the locale was applied. Three
         # months have the same name in every variant of the locale (March is
-        # "Mär" or "Mrz").
-        assert_equal([labels[4], labels[9], labels[11]], may_oct_dec)
+        # "Mär" or "Mrz"). Newer macOS releases end some abbreviations with a
+        # period ("Okt.").
+        names = [labels[i].rstrip(".") for i in (4, 9, 11)]
+        assert_equal(names, may_oct_dec)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -615,3 +668,47 @@ def test_sdp_invalid_subplots(close_figures):
     with pytest.raises(TypeError):
         sp = range(13)
         _ = seasonal_diagnostic_plot(res, period=12, subplots=sp)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "subplots, reference, periods",
+    [
+        (np.int64(4), 4, [0, 3, 6, 9]),
+        (4.0, 4, [0, 3, 6, 9]),
+        (np.array([0, 1, 2, 10]), [0, 1, 2, 10], [0, 1, 2, 10]),
+        ([np.int64(0), np.int32(1), 2, 10], [0, 1, 2, 10], [0, 1, 2, 10]),
+    ],
+    ids=["int64", "float", "ndarray", "numpy-scalars"],
+)
+def test_sdp_int_like_subplots(subplots, reference, periods, close_figures):
+    # A NumPy integer or an integral float is a number of subplots, and an
+    # ndarray or a list of NumPy integers selects periods, as Python ints do
+    res = get_elnino_stl()
+    fig = seasonal_diagnostic_plot(res, period=12, subplots=subplots)
+    expected = seasonal_diagnostic_plot(res, period=12, subplots=reference)
+    axes = fig.get_axes()
+    titles = [ax.get_title() for ax in axes]
+    assert titles == [f"Cycle-subseries {p + 1}" for p in periods]
+    for ax, ax_ref in zip(axes, expected.get_axes(), strict=True):
+        lines = ax.get_lines()
+        lines_ref = ax_ref.get_lines()
+        assert len(lines) == len(lines_ref) == 2
+        for line, line_ref in zip(lines, lines_ref, strict=True):
+            assert_allclose(line.get_ydata(), line_ref.get_ydata(), rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "subplots",
+    [True, np.True_, [True, False], np.array([True, False])],
+    ids=["True", "np.True_", "list", "ndarray"],
+)
+def test_sdp_bool_subplots(subplots, close_figures):
+    # Bools are not integers: True was one subplot and [True, False] selected
+    # periods 1 and 0
+    res = get_elnino_stl()
+    with pytest.raises(TypeError, match="subplots must be either"):
+        seasonal_diagnostic_plot(res, period=12, subplots=subplots)

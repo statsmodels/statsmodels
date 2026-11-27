@@ -1,0 +1,4 @@
+- ``x13_arima_analysis`` with ``rawspec`` rejected ``start`` and ``freq``, so it could
+  not be used with an ``endog`` that is not a pandas object, and a
+  pandas ``exog`` gave pandas' "truth value is ambiguous" error
+  instead of the intended ``ValueError``. :pr:`11018`

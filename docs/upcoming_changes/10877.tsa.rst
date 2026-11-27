@@ -1,0 +1,4 @@
+- :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with an
+  ``initial_seasonal`` of length ``seasonal_periods - 1``, which is
+  documented, raised in ``fit``. The last value is computed to make the
+  average effect zero. :pr:`10877`

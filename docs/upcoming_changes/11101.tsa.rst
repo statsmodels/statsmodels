@@ -1,0 +1,6 @@
+- :class:`~statsmodels.tsa.ardl.ARDL`,
+  :class:`~statsmodels.tsa.ardl.UECM` and
+  :func:`~statsmodels.tsa.ardl.ardl_select_order` raised an
+  ``AssertionError`` for an order dict with numpy integer keys (the
+  column indices of an exog that is not a DataFrame). They are
+  accepted like int keys. :pr:`11101`

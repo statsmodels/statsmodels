@@ -490,6 +490,74 @@ def test_to_table():
     assert_equal(res5[0].sum(-1), res0)
 
 
+@pytest.mark.parametrize(
+    "bins",
+    [
+        None,
+        3,
+        [-0.5, 0.5, 1.5, 2.5],
+        (-0.5, 0.5, 1.5, 2.5),
+        np.array([[-0.5, 0.5, 1.5, 2.5], [-0.5, 0.5, 1.5, 2.5]]),
+        (
+            np.array([-0.5, 0.5, 1.5]),
+            np.array([-0.5, 0.5, 1.5, 2.5]),
+        ),
+    ],
+    ids=["none", "integer", "shared-list", "shared-tuple", "array", "per-rater"],
+)
+def test_to_table_bins(bins):
+    data = [[0, 0], [0, 2], [1, 1], [1, 2]]
+    expected = np.array([[1, 0, 1], [0, 1, 1], [0, 0, 0]])
+    if bins is not None and not np.isscalar(bins) and np.ndim(bins[0]) > 0:
+        if len(bins[0]) == 3:
+            expected = expected[:2]
+
+    table, returned_bins = to_table(data, bins)
+
+    assert_equal(table, expected)
+    assert table.sum() == len(data)
+    if bins is None or np.isscalar(bins):
+        assert isinstance(returned_bins, np.ndarray)
+        assert_equal(returned_bins, np.arange(4) - 0.5)
+    else:
+        # Preserve the existing API: return the original bins object.
+        assert returned_bins is bins
+
+
+def test_to_table_shared_bins_series_custom_index():
+    data = [[0, 0], [0, 2], [1, 1], [1, 2]]
+    bins = pd.Series([-0.5, 0.5, 1.5, 2.5], index=[10, 20, 30, 40])
+    expected = np.array([[1, 0, 1], [0, 1, 1], [0, 0, 0]])
+
+    table, returned_bins = to_table(data, bins)
+
+    assert_equal(table, expected)
+    assert returned_bins is bins
+
+
+def test_to_table_per_rater_bins_three_raters():
+    data = [[0, 0, 0], [0, 1, 2], [1, 2, 2], [1, 2, 1]]
+    bins = (
+        np.array([-0.5, 0.5, 1.5]),
+        np.array([-0.5, 0.5, 1.5, 2.5]),
+        np.array([-0.5, 0.5, 1.5, 2.5]),
+    )
+    expected = np.zeros((2, 3, 3), dtype=int)
+    for row in data:
+        category = [
+            np.searchsorted(edges, value, side="right") - 1
+            for edges, value in zip(bins, row, strict=True)
+        ]
+        expected[tuple(category)] += 1
+
+    table, returned_bins = to_table(data, bins)
+
+    assert table.shape == (2, 3, 3)
+    assert_equal(table, expected)
+    assert table.sum() == len(data)
+    assert returned_bins is bins
+
+
 def test_aggregate_raters():
     data = diagnoses
     data_, categories = aggregate_raters(data)
@@ -498,24 +566,283 @@ def test_aggregate_raters():
     assert_equal(np.unique(diagnoses), categories)
 
 
-def test_to_table_rejects_1d_data():
+@pytest.mark.parametrize(
+    "data",
+    [
+        [[0, 0], [0, 1], [1, 1], [1, 1]],
+        np.array([[0, 0], [0, 1], [1, 1], [1, 1]]),
+        pd.DataFrame([[0, 0], [0, 1], [1, 1], [1, 1]]),
+        [["a", "a"], ["a", "b"], ["b", "b"], ["b", "b"]],
+    ],
+    ids=["list", "ndarray", "dataframe", "str"],
+)
+def test_to_table_array_like(data):
+    # counts of the (rater 1, rater 2) pairs, counted by hand
+    table, bins = to_table(data)
+    assert_equal(table, [[1, 1], [0, 2]])
+    assert_equal(bins, [-0.5, 0.5, 1.5])
+
+
+@pytest.mark.parametrize(
+    "data",
+    [np.array([1, 2, 3]), np.ones((3, 2, 2)), 1],
+    ids=["1d", "3d", "scalar"],
+)
+def test_to_table_rejects_non_2d(data):
     # 1-d data used to crash with a bare "not enough values to unpack"
-    with pytest.raises(ValueError, match="2-d array"):
-        to_table(np.array([1, 2, 3]))
+    with pytest.raises(ValueError, match="data must have"):
+        to_table(data)
+
+
+@pytest.mark.parametrize("convert", [list, np.asarray, pd.DataFrame])
+def test_cohens_kappa_array_like(convert):
+    # observed agreement 0.82 and chance agreement 0.5 give kappa 0.64
+    table = convert([[4100, 900], [900, 4100]])
+    assert_allclose(cohens_kappa(table, return_results=False), 0.64, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "table",
+    [np.array([1, 2, 3]), np.ones((2, 2, 2)), np.ones((2, 2, 1)), 5.0],
+    ids=["1d", "3d", "2x2x1", "scalar"],
+)
+def test_cohens_kappa_rejects_non_2d_table(table):
+    # a 1-d table used to crash with a raw AxisError from np.diag
+    with pytest.raises(ValueError, match="table must have"):
+        cohens_kappa(table)
 
 
 def test_cohens_kappa_rejects_non_square_table():
-    # a 1-d table used to crash with a raw AxisError from np.diag
-    with pytest.raises(ValueError, match="square 2-d array"):
-        cohens_kappa(np.array([1, 2, 3]))
     with pytest.raises(ValueError, match="square 2-d array"):
         cohens_kappa(np.ones((2, 3)))
+
+
+@pytest.mark.parametrize(
+    "table, message",
+    [
+        ([[0, 0], [0, 0]], "positive number of observations"),
+        ([[0]], "positive number of observations"),
+        ([[1, np.nan], [2, 3]], "finite counts"),
+        ([[1, np.inf], [2, 3]], "finite counts"),
+        ([[1, -np.inf], [2, 3]], "finite counts"),
+    ],
+    ids=["zeros", "zero-1x1", "nan", "inf", "neg-inf"],
+)
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_rejects_invalid_counts(table, message, wt):
+    # an all-zero table and non-finite counts used to warn about invalid
+    # divisions and then fail with an AssertionError without a message
+    with warnings.catch_warnings():
+        # the ValueError has to be raised before any value is divided
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match=message):
+            cohens_kappa(table, wt=wt)
+
+
+@pytest.mark.parametrize(
+    "weights", [[1], [0, 1], [0, 1, 2, 3]], ids=["len1", "len2", "len4"]
+)
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic", "toeplitz"])
+def test_cohens_kappa_rejects_1d_weights_of_wrong_length(weights, wt):
+    # weights of length 1 were broadcast and gave nan (0 / 0), or a kappa of
+    # zero up to rounding with toeplitz; other lengths failed with a numpy
+    # broadcast error
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with warnings.catch_warnings():
+        # the ValueError has to be raised before any value is divided
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="1-d weights must have length 3"):
+            cohens_kappa(table, weights=weights, wt=wt)
+
+
+@pytest.mark.parametrize("weights", [[5, 5, 5], [0, 1, 0]])
+@pytest.mark.parametrize("wt", [None, "linear", "ca", "quadratic", "fc"])
+def test_cohens_kappa_rejects_equal_first_and_last_scores(weights, wt):
+    # the score differences are divided by weights[-1] - weights[0], which
+    # gave nan with a RuntimeWarning
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="first and last 1-d weights must"):
+            cohens_kappa(table, weights=weights, wt=wt)
+
+
+def test_cohens_kappa_toeplitz_equal_first_and_last_weights():
+    # toeplitz weights are not scaled, so they can start and end with the
+    # same value. Weighted kappa is 1 - sum(w * observed) / sum(w * expected)
+    table = np.array([[10, 2, 1], [3, 12, 2], [1, 2, 9]])
+    w = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    observed = table / table.sum()
+    expected = np.outer(observed.sum(1), observed.sum(0))
+    kappa = 1 - (w * observed).sum() / (w * expected).sum()
+    res = cohens_kappa(table, weights=[0, 1, 0], wt="toeplitz")
+    assert_allclose(res.kappa, kappa, rtol=1e-13)
+    assert_allclose(res.kappa, cohens_kappa(table, weights=w).kappa, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [np.ones((2, 2)), np.ones((3, 4)), np.ones((3, 3, 1)), 1.0],
+    ids=["2x2", "3x4", "3x3x1", "scalar"],
+)
+def test_cohens_kappa_rejects_weights_of_wrong_shape(weights):
+    # the message was "weights are not square", also for square weights
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with pytest.raises(ValueError, match=r"have the shape of table, \(3, 3\)"):
+        cohens_kappa(table, weights=weights)
+
+
+@pytest.mark.filterwarnings("ignore:overflow encountered")  # the sum overflows
+def test_cohens_kappa_rejects_overflowing_sum():
+    with pytest.raises(ValueError, match="sum of the table must be finite"):
+        cohens_kappa([[1e308, 1e308], [0, 0]])
 
 
 def test_fleiss_kappa_rejects_1d_table():
     # a 1-d table used to crash with a bare "not enough values to unpack"
     with pytest.raises(ValueError, match="2-d array"):
         fleiss_kappa(np.array([5, 5, 5]))
+
+
+# GH 5530, tables in which one rater uses a single category
+one_category_tables = [
+    [[60, 29], [0, 0]],
+    [[7, 3], [0, 0]],
+    [[1, 5], [0, 0]],
+    [[1, 4], [0, 0]],
+    [[60, 0], [29, 0]],
+    [[7, 0], [3, 0]],
+    [[1, 0], [5, 0]],
+    [[0, 10], [0, 0]],
+    [[20, 10, 5], [0, 0, 0], [0, 0, 0]],
+    [[20, 0, 0], [10, 0, 0], [5, 0, 0]],
+    [[0, 0, 0], [6, 0, 2], [0, 0, 0]],
+]
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+@pytest.mark.parametrize("table", one_category_tables)
+def test_cohens_kappa_one_category(table, wt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert_equal(kappa, 0)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+# GH 5530, tables in which both raters use the same single category
+same_category_tables = [
+    [[10, 0], [0, 0]],
+    [[0, 0], [0, 7]],
+    [[0, 0, 0], [0, 5, 0], [0, 0, 0]],
+]
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+@pytest.mark.parametrize("table", same_category_tables)
+def test_cohens_kappa_same_single_category(table, wt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert np.isnan(kappa)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    names += ["kappa_low", "kappa_upp", "kappa_max", "z_value"]
+    for name in names + ["pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+# the first row is the only one used; the first table gives exact zeros also
+# without the one category rule, the others gave rounding noise or nan in
+# the standard errors with user weights
+user_weights = {
+    "weights-1d": {"weights": [0, 1, 2]},
+    "toeplitz": {"weights": [0, 1, 4], "wt": "toeplitz"},
+    "weights-2d": {"weights": np.array([[0, 1, 2], [1, 0, 1], [2, 1, 0]])},
+}
+
+
+@pytest.mark.parametrize(
+    "kwds", list(user_weights.values()), ids=list(user_weights)
+)
+@pytest.mark.parametrize(
+    "first_row",
+    [[1, 5, 2], [1, 1, 3], [1, 2, 2], [1, 1, 1], [1, 1, 8]],
+    ids=lambda row: "-".join(map(str, row)),
+)
+def test_cohens_kappa_one_category_user_weights(first_row, kwds):
+    # user weights give the same exact result as the built-in weights
+    table = [first_row, [0, 0, 0], [0, 0, 0]]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, **kwds)
+        str(res)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_one_category_proportions(wt):
+    # a table of proportions: the standard error was 5e-9 instead of 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa([[0.3, 0.7], [0, 0]], wt=wt)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize(
+    "kwds",
+    [
+        {},
+        {"weights": [0], "wt": "toeplitz"},
+        {"weights": np.zeros((1, 1))},
+        {"wt": "linear"},
+        {"weights": [3], "wt": "quadratic"},
+    ],
+    ids=["simple", "toeplitz", "weights-2d", "linear", "quadratic"],
+)
+def test_cohens_kappa_single_cell_table(kwds):
+    # a 1 x 1 table is the same single category for both raters. Linear and
+    # quadratic weights divided by weights[-1] - weights[0] = 0 and warned
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa([[5]], **kwds)
+        str(res)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    names += ["kappa_low", "kappa_upp", "kappa_max", "z_value"]
+    for name in names + ["pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize(
+    "wt, kappa, ase",
+    [
+        (None, 0.2666666666666667, 0.0913617149738498),
+        ("linear", 0.347826086956522, 0.111651276225669),
+    ],
+)
+def test_cohens_kappa_empty_category(wt, kappa, ase):
+    # both raters use several categories, one category is not used
+    # R 4.5.3, vcd 1.4.14, Kappa(t), the weighted kappa with the default
+    # equal spacing weights, which are the linear weights
+    table = [[20, 10, 5], [0, 0, 0], [3, 4, 8]]
+    res = cohens_kappa(table, wt=wt)
+    assert_allclose(res.kappa, kappa, rtol=1e-13)
+    assert_allclose(res.std_kappa, ase, rtol=1e-13)
 
 
 # Krippendorff (2011), "Computing Krippendorff's Alpha-Reliability", section C:

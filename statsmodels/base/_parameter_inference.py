@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.stats.base import LimitedIterationMixin
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,10 +171,9 @@ def _full_rank_exog_extra(exog, exog_extra, tol=1e-7):
         If `exog_extra` has columns but its rank given `exog` is 0, i.e., all
         columns of `exog_extra` are in the span of `exog`.
     """
-    exog_extra = np.asarray(exog_extra)
-    if exog_extra.ndim == 1:
-        exog_extra = exog_extra[:, None]
-    if exog_extra.ndim != 2 or exog_extra.shape[0] != exog.shape[0]:
+    # a 1-d exog_extra is a single column
+    exog_extra = array_like(exog_extra, "exog_extra", dtype=None, maxdim=2, ndim=2)
+    if exog_extra.shape[0] != exog.shape[0]:
         raise ValueError(
             "exog_extra must have the same number of rows as exog, "
             f"{exog.shape[0]}, but has shape {exog_extra.shape}."

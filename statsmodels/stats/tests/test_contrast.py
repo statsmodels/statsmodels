@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pytest
 
 import statsmodels.stats.contrast as smc
 from statsmodels.stats.contrast import Contrast
@@ -149,3 +150,47 @@ def test_wald_test_results_direct_construction():
 
     with pytest.raises(ValueError, match="only F and chi2"):
         smc.WaldTestResults(stat_chi2, "t", dist_args=(4,))
+
+
+@pytest.mark.parametrize("rank_deficient", [False, True])
+def test_contrastfromcols_1d_contrast_row(rank_deficient):
+    # A 1-d L of length p != n is one row of a contrast matrix. The result is
+    # the projection of L onto the row space of D, pinv(D) @ D @ L.
+    rng = np.random.default_rng(20261126)
+    x = rng.standard_normal((8, 2))
+    if rank_deficient:
+        # The third column repeats the second, so the row space of D is
+        # spanned by e1 and (e2 + e3) / sqrt(2)
+        D = np.column_stack([x, x[:, 1]])
+        L = np.array([1.0, 1.0, 0.0])
+        expected = [1.0, 0.5, 0.5]
+    else:
+        # Full column rank: every contrast is estimable and is returned as is
+        D = np.column_stack([x, rng.standard_normal(8)])
+        L = np.array([1.0, -2.0, 0.5])
+        expected = L
+    c = smc.contrastfromcols(L, D)
+    assert_allclose(c, expected, rtol=1e-10)
+    # The same as the row given as a (1, p) matrix
+    assert_allclose(c, smc.contrastfromcols(L[None, :], D), rtol=1e-12)
+
+
+def test_contrastfromcols_1d_square_design_is_column():
+    # When n == p, a 1-d L is a column in the column space of D, and the
+    # contrast is pinv(D) @ L, which is solve(D, L) for an invertible D
+    rng = np.random.default_rng(20261127)
+    D = rng.standard_normal((3, 3))
+    L = rng.standard_normal(3)
+    assert_allclose(smc.contrastfromcols(L, D), np.linalg.solve(D, L), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "shape",
+    [(), (4,), (5, 4), (8, 3, 2)],
+    ids=["scalar", "1d-other-length", "2d-mismatch", "3d"],
+)
+def test_contrastfromcols_bad_shape(shape):
+    rng = np.random.default_rng(20261128)
+    D = rng.standard_normal((8, 3))
+    with pytest.raises(ValueError, match="L must be 2-d"):
+        smc.contrastfromcols(np.ones(shape), D)

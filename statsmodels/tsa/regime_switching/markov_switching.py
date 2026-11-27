@@ -19,6 +19,7 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
+from statsmodels.tools.validation import array_like, is_int_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     chamilton_filter_log,
@@ -162,7 +163,11 @@ def cy_hamilton_filter_log(
     k_regimes = len(initial_probabilities)
     nobs = conditional_loglikelihoods.shape[-1]
     order = conditional_loglikelihoods.ndim - 2
-    dtype = conditional_loglikelihoods.dtype
+    # The outputs and every input of the compiled filter share one dtype
+    dtype = np.result_type(
+        initial_probabilities, regime_transition, conditional_loglikelihoods
+    )
+    conditional_loglikelihoods = conditional_loglikelihoods.astype(dtype, copy=False)
 
     # Check for compatible shapes.
     incompatible_shapes = (
@@ -175,7 +180,9 @@ def cy_hamilton_filter_log(
 
     # Convert to log space
     initial_probabilities = np.log(initial_probabilities)
-    regime_transition = np.log(np.maximum(regime_transition, 1e-20))
+    regime_transition = np.log(np.maximum(regime_transition, 1e-20)).astype(
+        dtype, copy=False
+    )
 
     # Storage
     # Pr[S_t = s_t | Y_t]
@@ -370,14 +377,14 @@ class MarkovSwitchingParams:
 
     This implies the model has 7 parameters: 4 "regime_transition"-related
     parameters (2 parameters that each switch according to regimes) and 3
-    "exog"-related parameters (1 parameter that does not switch, and one 1 that
+    "exog"-related parameters (1 parameter that does not switch, and one that
     does).
 
     The order of parameters is then:
 
     1. The first "regime_transition" parameter, regime 0
     2. The first "regime_transition" parameter, regime 1
-    3. The second "regime_transition" parameter, regime 1
+    3. The second "regime_transition" parameter, regime 0
     4. The second "regime_transition" parameter, regime 1
     5. The first "exog" parameter
     6. The second "exog" parameter, regime 0
@@ -393,15 +400,15 @@ class MarkovSwitchingParams:
     In the above example, consider the following getters:
 
     >>> parameters[0]
-    array([0, 2, 4, 6])
+    array([0, 2, 4, 5])
     >>> parameters[1]
-    array([1, 3, 5, 6])
+    array([1, 3, 4, 6])
     >>> parameters['exog']
     slice(4, 7, None)
     >>> parameters[0, 'exog']
-    [4, 6]
+    [4, 5]
     >>> parameters[1, 'exog']
-    [4, 7]
+    [4, 6]
 
     Notice that in the last two examples, both lists of indexes include 4.
     That's because that is the index of the non-switching first "exog"
@@ -415,6 +422,13 @@ class MarkovSwitchingParams:
     4
     >>> parameters.k_parameters['exog']
     3
+
+    .. versionchanged:: 0.15.1
+
+       A 0-d integer array is a regime number, as an int is. It raised an
+       IndexError. A bool is not a regime number, so that a tuple key such
+       as ``(True, 'exog')`` raises an IndexError, as ``True`` alone did.
+       It was regime 1.
     """
 
     def __init__(self, k_regimes):
@@ -435,15 +449,15 @@ class MarkovSwitchingParams:
         if _type is str:
             return self.slices_purpose[key]
         # Get a slice for a block of parameters by regime
-        elif _type is int:
-            return self.index_regime[key]
+        elif is_int_like(key, strict=True):
+            return self.index_regime[int(key)]
         elif _type is tuple:
             if not len(key) == 2:
                 raise IndexError("Invalid index")
-            if type(key[1]) is str and type(key[0]) is int:
-                return self.index_regime_purpose[key[0]][key[1]]
-            elif type(key[0]) is str and type(key[1]) is int:
-                return self.index_regime_purpose[key[1]][key[0]]
+            if type(key[1]) is str and is_int_like(key[0], strict=True):
+                return self.index_regime_purpose[int(key[0])][key[1]]
+            elif type(key[0]) is str and is_int_like(key[1], strict=True):
+                return self.index_regime_purpose[int(key[1])][key[0]]
             else:
                 raise IndexError("Invalid index")
         else:
@@ -628,7 +642,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             one. Default is 1e-8.
         """
         self._initialization = "known"
-        probabilities = np.array(probabilities, ndmin=1)
+        # copy, so that the model does not share the caller's array
+        probabilities = array_like(
+            probabilities, "probabilities", dtype=None, shape=(None,)
+        ).copy()
         if not probabilities.shape == (self.k_regimes,):
             raise ValueError(
                 "Initial probabilities must be a vector of shape (k_regimes,)."
@@ -789,6 +806,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
+
+            .. versionchanged:: 0.15.1
+
+               An ndarray of joint probabilities, shaped like the
+               ``smoothed_joint_probabilities`` of the results, is accepted.
+               Before, an ndarray raised ValueError.
         conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
@@ -819,14 +842,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Check if we need to do weighted averaging
         if squeezed.ndim - 1 > conditional:
-            # Determine in-sample weighting probabilities
-            if probabilities is None or probabilities == "smoothed":
+            # Determine in-sample weighting probabilities; an array is used
+            # as given
+            is_str = isinstance(probabilities, str)
+            if probabilities is None or (is_str and probabilities == "smoothed"):
                 results = self.smooth(params, return_raw=True)
                 probabilities = results.smoothed_joint_probabilities
-            elif probabilities == "filtered":
+            elif is_str and probabilities == "filtered":
                 results = self.filter(params, return_raw=True)
                 probabilities = results.filtered_joint_probabilities
-            elif probabilities == "predicted":
+            elif is_str and probabilities == "predicted":
                 results = self.filter(params, return_raw=True)
                 probabilities = results.predicted_joint_probabilities
 
@@ -1652,6 +1677,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only transforms the transition-probability-
         related parameters.
         """
+        unconstrained = np.asarray(unconstrained)
         constrained = np.array(unconstrained, copy=True)
         constrained = constrained.astype(
             np.promote_types(np.float64, constrained.dtype)
@@ -1713,6 +1739,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only untransforms the transition-probability-
         related parameters.
         """
+        constrained = np.asarray(constrained)
         unconstrained = np.array(constrained, copy=True)
         unconstrained = unconstrained.astype(
             np.promote_types(np.float64, unconstrained.dtype)
@@ -2188,6 +2215,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
+
+            .. versionchanged:: 0.15.1
+
+               An ndarray of joint probabilities, shaped like the
+               ``smoothed_joint_probabilities`` of the results, is accepted.
+               Before, an ndarray raised ValueError.
         conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
@@ -2250,6 +2283,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         display_params : bool, optional
             Whether or not to display tables of estimated parameters. Default
             is True. Usually only used internally.
+
+            .. versionchanged:: 0.15.1
+
+               ``display_params=False`` leaves out the parameter tables.
+               Before, it was ignored.
 
         Returns
         -------
@@ -2359,21 +2397,22 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         for i in range(self.k_regimes):
             mask = regime_masks[i]
-            if len(mask) > 0:
+            if display_params and len(mask) > 0:
                 table = make_table(self, mask, f"Regime {i:d} parameters")
                 summary.tables.append(table)
 
         mask = []
         for _mask in other_masks.values():
             mask.extend(_mask)
-        if len(mask) > 0:
+        if display_params and len(mask) > 0:
             table = make_table(self, mask, "Non-switching parameters")
             summary.tables.append(table)
 
         # Transition parameters
-        mask = params["regime_transition"]
-        table = make_table(self, mask, "Regime transition parameters")
-        summary.tables.append(table)
+        if display_params:
+            mask = params["regime_transition"]
+            table = make_table(self, mask, "Regime transition parameters")
+            summary.tables.append(table)
 
         # Add warnings/notes, added to text format only
         etext = []
@@ -2409,6 +2448,17 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
     )
+    # Conditional predictions are not indexed by dates, see predict below
+    del _wrap_methods["predict"]
+
+    def predict(self, *args, **kwargs):
+        results = object.__getattribute__(self, "_results")
+        predict = results.predict(*args, **kwargs)
+        if predict.ndim == 1:
+            predict = results.model.data.wrap_output(predict, how="dates")
+        return predict
+
+    predict.__doc__ = MarkovSwitchingResults.predict.__doc__
 
 
 wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)

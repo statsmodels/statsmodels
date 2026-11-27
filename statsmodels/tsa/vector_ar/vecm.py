@@ -1,4 +1,5 @@
 from collections import defaultdict
+import warnings
 
 import numpy as np
 from numpy import hstack, vstack
@@ -10,7 +11,7 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import int_like, string_like
+from statsmodels.tools.validation import int_like, is_int_like, string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
@@ -30,6 +31,11 @@ from statsmodels.tsa.vector_ar.var_model import (
     ma_rep,
     orth_ma_rep,
     test_normality,
+)
+
+# The values of deterministic in VECM, "" and "nc" are aliases of "n"
+_DETERMINISTIC_OPTIONS = (
+    "", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"
 )
 
 
@@ -52,7 +58,7 @@ def select_order(
     maxlags : int
         All orders until maxlag will be compared according to the information
         criteria listed in the Results-section of this docstring.
-    deterministic : {"n", "co", "ci", "lo", "li"}, optional
+    deterministic : {"n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"}, optional
         * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
@@ -62,6 +68,13 @@ def select_order(
         Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
+
+        .. deprecated:: 0.15.1
+
+           Other values, which VECM does not accept, are deprecated and will
+           raise a ValueError after statsmodels 0.17 is released. They add a
+           constant if they contain "co" or "ci", and a linear trend if they
+           contain "lo" or "li".
     seasons : int, optional
         Number of periods in a seasonal cycle. 0 means no seasons.
     exog : ndarray (nobs_tot x #det_terms), optional
@@ -72,9 +85,27 @@ def select_order(
     Returns
     -------
     selected_orders : :class:`statsmodels.tsa.vector_ar.var_model.LagOrderResults`
+
+    Notes
+    -----
+    The information criteria are those of a VAR in levels with the
+    deterministic terms as exogenous variables and the constant that ``VAR``
+    adds by default. For ``"co"`` and ``"ci"`` the two constants are collinear,
+    which is not reported as a ``SingularMatrixWarning``, as it is not for a
+    collinear ``exog`` or ``exog_coint``.
     """
     ic = defaultdict(list)
     deterministic = string_like(deterministic, "deterministic")
+    if deterministic not in _DETERMINISTIC_OPTIONS:
+        documented = [v for v in _DETERMINISTIC_OPTIONS if v not in ("", "nc")]
+        options = ", ".join(f'"{v}"' for v in documented)
+        warnings.warn(
+            f"deterministic must be one of {options}, got {deterministic!r}. "
+            "Other values are deprecated and will raise a ValueError after "
+            "statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
     maxlags = int_like(maxlags, "maxlags", optional=False)
     if maxlags < 0:
         raise ValueError(f"maxlags must be non-negative, got {maxlags}")
@@ -93,7 +124,17 @@ def select_order(
         exogs = hstack(exogs) if exogs else None
         var_model = VAR(data, exogs)
         # exclude some periods ==> same amount of data used for each lag order
-        var_result = var_model._estimate_var(lags=p, offset=maxlags + 1 - p)
+        # warn_singular=False: when "co" or "ci" is requested, exogs already
+        # includes a constant column, which VAR's own default trend="c" then
+        # duplicates, matching JMulTi's lag-order-selection procedure; the
+        # resulting design matrix is rank-deficient by construction, so a
+        # warning would not tell the user anything. The duplicated column
+        # is counted in the number of parameters of AIC, BIC and HQIC, which
+        # therefore differ from those of the model without the duplicate.
+        # A rank deficiency of a user supplied exog is not reported either.
+        var_result = var_model._estimate_var(
+            lags=p, offset=maxlags + 1 - p, warn_singular=False
+        )
 
         for k, v in var_result.info_criteria.items():
             ic[k].append(v)
@@ -453,7 +494,9 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
     # p. 295:
     s01_s11_ = np.dot(s01, s11_)
     eig = np.linalg.eig(s01_s11_.T @ inv(s00) @ s01_s11_)
-    lambd = eig[0]
+    # NumPy 2.5 and later return complex arrays even for real eigenvalues. The
+    # eigenvectors are made real where they are used (beta in VECM.fit).
+    lambd = np.real_if_close(eig[0])
     v = eig[1]
     # reorder eig_vals to make them decreasing (and order eig_vecs accordingly)
     lambd_order = np.argsort(lambd)[::-1]
@@ -498,6 +541,16 @@ class CointRankResults:
         self.signif = signif
 
     def summary(self):
+        """
+        Summary table of the tests.
+
+        Returns
+        -------
+        SimpleTable
+            One row for each test with the rank in the null hypothesis
+            (``r_0``), the rank in the alternative (``r_1``), the test
+            statistic and the critical value.
+        """
         headers = ["r_0", "r_1", "test statistic", "critical value"]
         title = (
             "Johansen cointegration test using "
@@ -556,11 +609,19 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     rank : :class:`CointRankResults`
         A :class:`CointRankResults` object containing the cointegration rank suggested
         by the test and allowing a summary to be printed.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The test statistics, and so the rank, were wrong for ``k_ar_diff=0``
+       before, because the levels were not lagged. The results for
+       ``k_ar_diff`` of 1 or more are unchanged.
     """
     method = string_like(method, "method", options=("trace", "maxeig"), lower=False)
 
     if det_order not in [-1, 0, 1]:
-        if type(det_order) is int and det_order > 1:
+        if is_int_like(det_order) and det_order > 1:
             raise ValueError(
                 "A det_order greather than 1 is not supported."
                 "Use a value of -1, 0, or 1."
@@ -572,6 +633,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     if signif not in possible_signif_values:
         raise ValueError("Please choose a significance level from 0.1, 0.05, or 0.01")
 
+    endog = np.asarray(endog)
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
     crit_vals = coint_result.cvt if method == "trace" else coint_result.cvm
@@ -635,6 +697,12 @@ def coint_johansen(endog, det_order, k_ar_diff):
     ``LinAlgError`` is raised if these columns are linearly dependent, for
     example if ``endog`` contains a duplicated series.
 
+    .. versionchanged:: 0.15.1
+
+       The eigenvalues, the eigenvectors and the test statistics were wrong
+       for ``k_ar_diff=0`` before, because the levels were not lagged. The
+       results for ``k_ar_diff`` of 1 or more are unchanged.
+
     References
     ----------
     .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
@@ -645,6 +713,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     """
     import warnings
 
+    endog = np.asarray(endog)
     if det_order not in [-1, 0, 1]:
         warnings.warn(
             "Critical values are only available for a det_order of -1, 0, or 1.",
@@ -666,7 +735,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
             return y
         return OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1)).fit().resid
 
-    endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
     # why this?  f is detrend transformed series, det_order is detrend data
@@ -684,9 +752,11 @@ def coint_johansen(endog, det_order, k_ar_diff):
     dx = dx[k_ar_diff:]
 
     dx = detrend(dx, f)
-    # GH 5731, [:-0] does not work, need [:t-0]
-    lx = endog[: (endog.shape[0] - k_ar_diff)]
-    lx = lx[1:]
+    # levels lagged once, y_{t-1}, aligned with dx. For k_ar_diff > 0 any
+    # lag y_{t-j}, 1 <= j <= k_ar_diff + 1, gives the same residuals after
+    # partialling out the lagged differences, but for k_ar_diff = 0 there is
+    # nothing to partial out and the lag must be one.
+    lx = endog[k_ar_diff:-1]
     lx = detrend(lx, f)
     # Doornik and O'Brien (2002), Algorithm 3: the thin QR of the lagged
     # differences, the levels and the differences partials out the lagged
@@ -729,10 +799,10 @@ def coint_johansen(endog, det_order, k_ar_diff):
     d = np.sqrt(rkt.shape[0]) * scipy.linalg.solve_triangular(r11, u)
     aind = np.arange(neqs)
     # Normalize by first non-zero element of d, usually [0, 0]
-    # GH 5517
+    # GH 5517. d is nonsingular (r11 is checked above and u is orthogonal),
+    # so it has a non-zero element.
     non_zero_d = d.flat != 0
-    if np.any(non_zero_d):
-        d *= np.sign(d.flat[non_zero_d][0])
+    d *= np.sign(d.flat[non_zero_d][0])
 
     #  Compute the trace and max eigenvalue statistics
     lr1 = np.zeros(neqs)
@@ -788,12 +858,27 @@ class JohansenTestResult:
 
     @property
     def eig(self):
-        """Eigenvalues of VECM coefficient matrix"""
+        """
+        Eigenvalues of the Johansen problem, in decreasing order.
+
+        The squared canonical correlations of `r0t` and `rkt`, the
+        eigenvalues :math:`\\lambda` of
+        :math:`|\\lambda S_{kk} - S_{k0} S_{00}^{-1} S_{0k}| = 0` with the
+        moment matrices :math:`S_{ij}` of the residuals divided by the number
+        of observations (Lütkepohl 2005, p. 295).
+        """
         return self._eig
 
     @property
     def evec(self):
-        """Eigenvectors of VECM coefficient matrix"""
+        """
+        Eigenvectors of the Johansen problem, in the columns.
+
+        Normalized so that :math:`v' S_{kk} v = I`. The signs of the columns
+        are not normalized, except that the matrix is multiplied by -1 if
+        needed so that its first nonzero element (in general ``evec[0, 0]``)
+        is positive.
+        """
         return self._evec
 
     @property
@@ -865,8 +950,9 @@ class VECM(tsbase.TimeSeriesModel):
     ----------
     endog : array_like (nobs_tot x neqs)
         2-d endogenous response variable.
-    exog : ndarray (nobs_tot x #det_terms), optional
-        Deterministic terms outside the cointegration relation.
+    exog : array_like (nobs_tot x #det_terms), optional
+        Deterministic terms outside the cointegration relation. A 1-d array
+        is a single term.
     exog_coint : ndarray (nobs_tot x #det_terms_coint), optional
         Deterministic terms inside the cointegration relation.
     dates : array_like of datetime, optional
@@ -883,7 +969,7 @@ class VECM(tsbase.TimeSeriesModel):
     coint_rank : int, optional
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
-    deterministic : {"n", "co", "ci", "lo", "li"}, optional
+    deterministic : {"n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"}, optional
         * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
@@ -895,11 +981,13 @@ class VECM(tsbase.TimeSeriesModel):
         choose whether you want to restrict it to the cointegration relation
         (i.e., ``"ci"``) or leave it unrestricted (i.e., ``"co"``). Do not use
         both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
-        when using a linear term. See the Notes-section for more information.
+        when using a linear term. The string is not case sensitive. See the
+        Notes-section for more information.
     seasons : int, optional
         Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, optional
-        Season of the first observation.
+        Season of the first observation, 0 for the first season up to
+        ``seasons - 1`` for the last. Other values are taken modulo `seasons`.
 
     Notes
     -----
@@ -929,6 +1017,12 @@ class VECM(tsbase.TimeSeriesModel):
     an intercept we pass ``"co"`` and for a linear trend we pass ``"lo"`` where
     the `o` stands for `outside`.
 
+    The linear trend of ``"li"`` and ``"lo"`` is :math:`t = 1, 2, \\ldots`,
+    counted from the first row of `endog` (the presample included), so
+    ``"li"`` equals ``1 + np.arange(len(data))`` as `exog_coint` and ``"lo"``
+    equals the same array as `exog`. The seasonal dummies are centered and
+    enter :math:`D_t`.
+
     The following table shows the five cases considered in [2]_. The last
     column indicates which string to pass to the `deterministic` argument for
     each of these cases.
@@ -942,6 +1036,14 @@ class VECM(tsbase.TimeSeriesModel):
     IV    :math:`\\neq 0`                   :math:`- \\alpha \\beta^T \\gamma`      ``"coli"``
     V     :math:`\\neq 0`                   :math:`\\neq 0`                       ``"colo"``
     ====  ===============================  ===================================  =============
+
+    .. deprecated:: 0.15.1
+
+       A `coint_rank` larger than the number of variables is deprecated and
+       will raise a ValueError after statsmodels 0.17 is released. Such a
+       model is estimated with the rank equal to the number of variables,
+       but the larger rank is kept in the results (for example in the
+       degrees of freedom of ``test_whiteness``).
 
     References
     ----------
@@ -966,8 +1068,8 @@ class VECM(tsbase.TimeSeriesModel):
         first_season=0,
     ):
         super().__init__(endog, exog, dates, freq, missing=missing)
-        if exog_coint is not None and not exog_coint.shape[0] == endog.shape[0]:
-            raise ValueError("exog_coint must have as many rows as enodg_tot!")
+        if exog_coint is not None and not exog_coint.shape[0] == len(endog):
+            raise ValueError("exog_coint must have as many rows as endog")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
         self.y = self.endog.T
@@ -975,11 +1077,23 @@ class VECM(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.k_ar = k_ar_diff + 1
         self.k_ar_diff = k_ar_diff
+        if coint_rank < 0:
+            raise ValueError(
+                f"coint_rank must be between 0 and neqs ({self.neqs}), got "
+                f"{coint_rank}."
+            )
+        if coint_rank > self.neqs:
+            warnings.warn(
+                f"coint_rank must be between 0 and neqs ({self.neqs}), got "
+                f"{coint_rank}. The model is estimated with rank {self.neqs}. "
+                "A coint_rank larger than neqs is deprecated and will raise a "
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
         self.coint_rank = coint_rank
         deterministic = string_like(
-            deterministic,
-            "deterministic",
-            options=("", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"),
+            deterministic, "deterministic", options=_DETERMINISTIC_OPTIONS
         )
         deterministic = "n" if deterministic == "nc" else deterministic
 
@@ -1223,7 +1337,7 @@ class VECMResults:
         `det_coef` attributes.
     sigma_u : ndarray (neqs x neqs)
         Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
-    deterministic : {"n", "co", "ci", "lo", "li"}, optional
+    deterministic : {"n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"}, optional
         * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
@@ -1335,11 +1449,14 @@ class VECMResults:
         number of columns of :math:`\\alpha` and :math:`\\beta`.
     llf : float
         The model's log-likelihood.
-    cov_params : ndarray (d x d)
+    cov_params_default : ndarray (d x d)
         Covariance matrix of the parameters. The number of rows and columns, d
         (used in the dimension specification of this argument),
         is equal to neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
-        deterministic dummy variables outside the cointegration relation). For
+        deterministic dummy variables outside the cointegration relation),
+        in the order of
+        :math:`vec([\\alpha (\\beta', \\eta'), \\Gamma_1, \\ldots, \\Gamma_{k_{ar}-1}, C])`.
+        For
         the case with no deterministic terms this matrix is defined on p. 287
         in [1]_ as :math:`\\Sigma_{co}` and its relationship to the
         ML-estimators can be seen in eq. (7.2.21) on p. 296 in [1]_.
@@ -1347,7 +1464,7 @@ class VECMResults:
         Covariance matrix of the parameters
         :math:`\\tilde{\\Pi}, \\tilde{\\Gamma}` where
         :math:`\\tilde{\\Pi} = \\tilde{\\alpha} \\tilde{\\beta'}`.
-        Equals `cov_params` without the rows and columns related to
+        Equals `cov_params_default` without the rows and columns related to
         deterministic terms. This matrix is defined as :math:`\\Sigma_{co}` on
         p. 287 in [1]_.
     stderr_params : ndarray (d)
@@ -1432,12 +1549,6 @@ class VECMResults:
         self.first_season = first_season
 
         self.coint_rank = coint_rank
-        if alpha.dtype == np.complex128 and np.all(np.imag(alpha) == 0):
-            alpha = np.real_if_close(alpha)
-        if beta.dtype == np.complex128 and np.all(np.imag(beta) == 0):
-            beta = np.real_if_close(beta)
-        if gamma.dtype == np.complex128 and np.all(np.imag(gamma) == 0):
-            gamma = np.real_if_close(gamma)
 
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
@@ -1481,7 +1592,15 @@ class VECMResults:
                 self._delta_y_1_T,
                 self._y_lag1,
                 self._delta_x,
-            ) = _endog_matrices(endog, self.exog, k_ar, deterministic, seasons)
+            ) = _endog_matrices(
+                endog,
+                self.exog,
+                self.exog_coint,
+                k_ar - 1,
+                deterministic,
+                seasons,
+                first_season,
+            )
         self.nobs = self._y_lag1.shape[1]
 
     @cache_readonly
@@ -1697,20 +1816,91 @@ class VECMResults:
         return struct_arr
 
     def conf_int_alpha(self, alpha=0.05):
+        """
+        Confidence intervals of the loading coefficients alpha.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1. The intervals are the
+            estimates plus and minus ``norm.ppf(1 - alpha / 2)`` standard
+            errors.
+
+        Returns
+        -------
+        ndarray (neqs x `coint_rank`)
+            A structured array with the fields ``"lower"`` and ``"upper"``.
+        """
         return self._make_conf_int(self.alpha, self.stderr_alpha, alpha)
 
     def conf_int_beta(self, alpha=0.05):
+        """
+        Confidence intervals of the cointegration matrix beta.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (neqs x `coint_rank`)
+            A structured array with the fields ``"lower"`` and ``"upper"``.
+            The first `coint_rank` rows are normalized to the identity and
+            have intervals of width zero.
+        """
         return self._make_conf_int(self.beta, self.stderr_beta, alpha)
 
     def conf_int_det_coef_coint(self, alpha=0.05):
+        """
+        Confidence intervals of the deterministic terms inside the relation.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (#det. terms inside the coint. relation x `coint_rank`)
+            A structured array with the fields ``"lower"`` and ``"upper"``,
+            with no rows if the model has no such terms.
+        """
         return self._make_conf_int(
             self.det_coef_coint, self.stderr_det_coef_coint, alpha
         )
 
     def conf_int_gamma(self, alpha=0.05):
+        """
+        Confidence intervals of the short-run parameters Gamma.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (neqs x neqs*(k_ar-1))
+            A structured array with the fields ``"lower"`` and ``"upper"``.
+        """
         return self._make_conf_int(self.gamma, self.stderr_gamma, alpha)
 
     def conf_int_det_coef(self, alpha=0.05):
+        """
+        Confidence intervals of the deterministic terms outside the relation.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (neqs x #det. terms outside the coint. relation)
+            A structured array with the fields ``"lower"`` and ``"upper"``,
+            with no columns if the model has no such terms.
+        """
         return self._make_conf_int(self.det_coef, self.stderr_det_coef, alpha)
 
     @cache_readonly
@@ -1781,6 +1971,19 @@ class VECMResults:
         return vvt @ self.cov_params_wo_det @ vvt.T
 
     def ma_rep(self, maxn=10):
+        """
+        Compute the MA coefficient matrices of the VAR representation.
+
+        Parameters
+        ----------
+        maxn : int, optional
+            Number of coefficient matrices to compute after the identity.
+
+        Returns
+        -------
+        ndarray (maxn + 1 x neqs x neqs)
+            The matrices :math:`\\Phi_0 = I, \\Phi_1, \\ldots, \\Phi_{maxn}`.
+        """
         return ma_rep(self.var_rep, maxn)
 
     @cache_readonly
@@ -1804,7 +2007,7 @@ class VECMResults:
 
         Returns
         -------
-        coefs : ndarray (maxn x neqs x neqs)
+        coefs : ndarray (maxn + 1 x neqs x neqs)
         """
         return orth_ma_rep(self, maxn, P)
 
@@ -1819,26 +2022,34 @@ class VECMResults:
         alpha : float or None, optional
             If None, compute point forecast only. If float, compute
             confidence intervals too. In this case the argument (which must
-            satisfy 0 < `alpha` < 1) stands for the confidence level.
+            satisfy 0 < `alpha` < 1) is the significance level, so that
+            ``alpha=0.05`` gives 95% intervals.
         exog_fc : ndarray (steps x self.exog.shape[1]), optional
             If self.exog is not None, then information about the future values
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps
             rows will be considered.
-        exog_coint_fc : ndarray (steps x self.exog_coint.shape[1]), optional
+        exog_coint_fc : ndarray (steps - 1 x self.exog_coint.shape[1]), optional
             If self.exog_coint is not None, then information about the future
             values of exog_coint have to be passed via this parameter. The
-            ndarray may be larger in it's first dimension. In this case only
-            the first steps rows will be considered.
+            terms inside the cointegration relation enter lagged once, so the
+            forecast of the first period uses the last row of exog_coint and
+            only ``steps - 1`` future values are needed. The ndarray may be
+            larger in it's first dimension. In this case only the first
+            ``steps - 1`` rows will be considered. A 1-d array is a single
+            term.
 
         Returns
         -------
-        forecast : ndarray (steps x neqs) or three ndarrays
+        forecast : ndarray (steps x neqs) or ForecastInterval
             In case of a point forecast: each row of the returned ndarray
             represents the forecast of the neqs variables for a specific
             period. The first row (index [0]) is the forecast for the next
             period, the last row (index [steps-1]) is the steps-periods-ahead-
-            forecast.
+            forecast. If `alpha` is not None, a
+            :class:`~statsmodels.tsa.vector_ar.hypothesis_test_results.ForecastInterval`
+            with the point forecast and the lower and upper bounds, each an
+            ndarray (steps x neqs).
         """
         if self.exog is not None and exog_fc is None:
             raise ValueError(
@@ -1873,7 +2084,7 @@ class VECMResults:
         if exog_coint_fc is not None and exog_coint_fc.shape[0] < steps - 1:
             raise ValueError(
                 "The argument exog_coint_fc must have at least "
-                "steps elements in its first dimension"
+                "steps - 1 elements in its first dimension"
             )
 
         last_observations = self.y_all.T[-self.k_ar :]
@@ -1954,7 +2165,8 @@ class VECMResults:
         steps : int
             Prediction horizon.
         alpha : float, 0 < `alpha` < 1, optional
-            The confidence level.
+            The significance level of the confidence intervals, so that
+            ``alpha=0.05`` gives 95% intervals.
         plot_conf_int : bool, optional
             If True, plot bounds of confidence intervals.
         n_last_obs : int or None, optional
@@ -1999,6 +2211,12 @@ class VECMResults:
             If a sequence of int or str, test whether the corresponding
             variables are Granger-caused by the variable(s) specified
             by `causing`.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array is an index, as an int is, in `caused`
+               and `causing`. It raised a TypeError. A bool is not an index
+               and raises a TypeError: True was the variable with index 1.
         causing : int or str or sequence of int or str or None, optional
             If int or str, test whether the variable specified via this index
             (int) or name (str) is Granger-causing the variable(s) specified by
@@ -2027,28 +2245,36 @@ class VECMResults:
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, int)
-
-        if isinstance(caused, allowed_types):
+        # A variable is a name or an index (strict)
+        if isinstance(caused, str) or is_int_like(caused, strict=True):
             caused = [caused]
-        if not all(isinstance(c, allowed_types) for c in caused):
+        if not np.iterable(caused) or not all(
+            isinstance(c, str) or is_int_like(c, strict=True) for c in caused
+        ):
             raise TypeError(
                 "caused has to be of type string or int (or a "
                 "sequence of these types)."
             )
-        caused = [self.names[c] if type(c) is int else c for c in caused]
+        caused = [
+            self.names[int(c)] if is_int_like(c, strict=True) else c for c in caused
+        ]
         caused_ind = [get_index(self.names, c) for c in caused]
 
         if causing is not None:
 
-            if isinstance(causing, allowed_types):
+            if isinstance(causing, str) or is_int_like(causing, strict=True):
                 causing = [causing]
-            if not all(isinstance(c, allowed_types) for c in causing):
+            if not np.iterable(causing) or not all(
+                isinstance(c, str) or is_int_like(c, strict=True) for c in causing
+            ):
                 raise TypeError(
                     "causing has to be of type string or int (or "
                     "a sequence of these types) or None."
                 )
-            causing = [self.names[c] if type(c) is int else c for c in causing]
+            causing = [
+                self.names[int(c)] if is_int_like(c, strict=True) else c
+                for c in causing
+            ]
             causing_ind = [get_index(self.names, c) for c in causing]
 
         if causing is None:
@@ -2153,6 +2379,12 @@ class VECMResults:
             the variable(s) specified in caused.
             If sequence of int or str, test whether the corresponding variables
             are causing the variable(s) specified in caused.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array is an index, as an int is. It raised a
+               TypeError. A bool is not an index and raises a TypeError:
+               True was the variable with index 1.
         signif : float, 0 < `signif` < 1, optional
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level.
@@ -2177,6 +2409,21 @@ class VECMResults:
 
         .. |H1| replace:: H\ :sub:`1`
         """
+        # A variable is a name or an index (strict)
+        if isinstance(causing, str) or is_int_like(causing, strict=True):
+            causing = [causing]
+        if not np.iterable(causing) or not all(
+            isinstance(c, str) or is_int_like(c, strict=True) for c in causing
+        ):
+            raise TypeError(
+                "causing has to be of type string or int (or a sequence of "
+                "these types)."
+            )
+        # pass the names, which also covers integer indices of numpy types
+        causing = [
+            self.names[int(c)] if is_int_like(c, strict=True) else c for c in causing
+        ]
+
         exog = _deterministic_to_exog(
             self.deterministic,
             self.seasons,
@@ -2195,6 +2442,20 @@ class VECMResults:
         return var_results.test_inst_causality(causing=causing, signif=signif)
 
     def irf(self, periods=10):
+        """
+        Analyze the impulse responses of the VAR representation.
+
+        Parameters
+        ----------
+        periods : int, optional
+            Number of periods after the impulse.
+
+        Returns
+        -------
+        :class:`statsmodels.tsa.vector_ar.irf.IRAnalysis`
+            The impulse responses, with `irfs` from :meth:`ma_rep` and
+            `orth_irfs` from :meth:`orth_ma_rep`.
+        """
         return irf.IRAnalysis(self, periods=periods, vecm=True)
 
     @cache_readonly
@@ -2261,8 +2522,15 @@ class VECMResults:
         Parameters
         ----------
         nlags : int > 0, optional
+            Number of autocovariances of the residuals in the statistic. The
+            test has ``neqs**2 * (nlags - k_ar + 1) - neqs * coint_rank``
+            degrees of freedom.
         signif : float, 0 < `signif` < 1, optional
+            Significance level of the critical value and the conclusion.
         adjusted : bool, optional
+            If True, compute the adjusted (small sample) Portmanteau
+            statistic, which weights the autocovariance of lag i with
+            ``1 / (nobs - i)``.
 
         Returns
         -------
@@ -2284,8 +2552,6 @@ class VECMResults:
         # the calculation of autocovariances with lag > 0. (used in the
         # argument of trace() four rows below this comment.)
         c0_inv = inv(self.sigma_u)  # instead of inv(cov(0))
-        if c0_inv.dtype == np.complex128 and np.all(np.imag(c0_inv) == 0):
-            c0_inv = np.real(c0_inv)
         for t in range(1, nlags + 1):
             ct = acov_list[t]
             to_add = np.trace(ct.T @ c0_inv @ ct @ c0_inv)
@@ -2526,11 +2792,10 @@ class VECMResults:
             offset = 0
 
             # 1. Cointegration matrix (beta)
-            if self.coint_rank > 0:
-                start = i * self.neqs
-                end = start + self.neqs
-                masks.append(offset + np.arange(start, end))
-                offset += self.neqs * self.coint_rank
+            start = i * self.neqs
+            end = start + self.neqs
+            masks.append(offset + np.arange(start, end))
+            offset += self.neqs * self.coint_rank
 
             # 2. Deterministic terms inside cointegration relation
             if "ci" in self.deterministic:

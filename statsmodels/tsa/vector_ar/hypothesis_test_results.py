@@ -60,8 +60,9 @@ class HypothesisTestResults:
         The test's critical value.
     pvalue : float
         The test's p-value. Must be between 0 and 1.
-    df : int
-        Degrees of freedom.
+    df : int or tuple of int
+        Degrees of freedom, the numerator and the denominator degrees of
+        freedom for an F-test.
     signif : float
         Significance level. Must be between 0 and 1.
     method : str
@@ -71,6 +72,12 @@ class HypothesisTestResults:
     h0 : str
         A string describing the null hypothesis. It will be used in the
         summary.
+
+    Attributes
+    ----------
+    conclusion : str
+        ``"reject"`` if `test_statistic` is at least `crit_value`, otherwise
+        ``"fail to reject"``.
     """
     def __init__(self, test_statistic, crit_value, pvalue, df,
                  signif, method, title, h0):
@@ -90,7 +97,16 @@ class HypothesisTestResults:
         self.signif_str = f" at {self.signif:.0%} significance level"
 
     def summary(self):
-        """Return summary"""
+        """
+        Return a summary table of the test.
+
+        Returns
+        -------
+        SimpleTable
+            The test statistic, the critical value, the p-value and the
+            degrees of freedom, with the null hypothesis and the conclusion
+            in the title.
+        """
         title = self.title + ". " + self.h0 + ". " \
                                   + self.conclusion_str + self.signif_str + "."
         data_fmt = {"data_fmts": ["%#0.4g", "%#0.4g", "%#0.3F", "%s"]}
@@ -111,7 +127,7 @@ class HypothesisTestResults:
                    + " object. " + self.h0 + ": " + self.conclusion \
                    + self.signif_str \
                    + f". Test statistic: {self.test_statistic:.3f}" \
-                   + f", critical value: {self.crit_value:.3f}>" \
+                   + f", critical value: {self.crit_value:.3f}" \
                    + f", p-value: {self.pvalue:.3f}>"
 
     def __eq__(self, other):
@@ -144,8 +160,9 @@ class CausalityTestResults(HypothesisTestResults):
         The test's critical value.
     pvalue : float
         The test's p-value. Must be between 0 and 1.
-    df : int
-        Degrees of freedom.
+    df : int or tuple of int
+        Degrees of freedom, the numerator and the denominator degrees of
+        freedom for an F-test.
     signif : float
         Significance level.
     test : {"granger", "inst"}, optional
@@ -248,6 +265,11 @@ class WhitenessTestResults(HypothesisTestResults):
     adjusted : bool
         Whether the test statistic is adjusted for the number of
         observations used to estimate the autocorrelations.
+
+    Attributes
+    ----------
+    lags : int
+        The number of lags tested, `nlags`.
     """
     def __init__(self, test_statistic, crit_value, pvalue, df, signif, nlags,
                  adjusted):

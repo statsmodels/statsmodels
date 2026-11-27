@@ -1,0 +1,3 @@
+- ``reorder`` of ``VARResults`` raised for trends other than ``"c"`` and with
+  exog, and returned shifted coefficients for trend ``"n"`` with one
+  exog variable. It reorders every model. :pr:`10964`

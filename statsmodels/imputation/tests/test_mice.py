@@ -1,6 +1,7 @@
 from statsmodels.compat.pandas import PD_LT_3_1_0
 
 import itertools
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -10,6 +11,7 @@ import pytest
 
 import statsmodels.api as sm
 from statsmodels.imputation import mice
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -218,9 +220,11 @@ class TestMICEData:
             hist.append(imp.data.shape)
 
         for pm in "gaussian", "boot":
-            idata = mice.MICEData(
-                df, perturbation_method=pm, history_callback=cb, rng=gen
-            )
+            # row 40 is missing in all variables
+            with pytest.warns(ValueWarning, match="1 of the 300 rows"):
+                idata = mice.MICEData(
+                    df, perturbation_method=pm, history_callback=cb, rng=gen
+                )
             idata.set_imputer(
                 "time",
                 "0 + x1 + x2",
@@ -446,6 +450,28 @@ class TestMICE:
         assert_allclose(out.scale, 2.0)
         assert_allclose(out.cov_params(), total)
 
+    def test_MICE_fit_kwds(self):
+        # fit_kwds is not modified, its start_params is used for the first
+        # fit and the previous estimates are used for the following fits.
+        seen = []
+
+        class GLM(sm.GLM):
+            def fit(self, **kwargs):
+                seen.append(kwargs.get("start_params"))
+                return super().fit(**kwargs)
+
+        rs = np.random.RandomState(52983)
+        imp_data = mice.MICEData(gendat(), rng=rs)
+        start_params = np.array([0.1, 0.2, 0.3])
+        fit_kwds = {"start_params": start_params, "maxiter": 50}
+        mi = mice.MICE("y ~ x1 + x2", GLM, imp_data, fit_kwds=fit_kwds)
+        mi.fit(n_burnin=0, n_imputations=2)
+
+        assert list(fit_kwds) == ["start_params", "maxiter"]
+        assert fit_kwds["start_params"] is start_params
+        assert_equal(seen[0], start_params)
+        assert_allclose(seen[1], mi.results_list[0].params)
+
     def test_MICE1(self):
         rs = np.random.RandomState(821223)
         df = gendat()
@@ -588,7 +614,8 @@ def test_micedata_preserves_index():
     # an all-missing row is still dropped, but the other labels survive
     df.iloc[9, :] = np.nan
     df_orig = df.copy()
-    mid2 = mice.MICEData(df, rng=np.random.RandomState(0))
+    with pytest.warns(ValueWarning, match="1 of the 25 rows"):
+        mid2 = mice.MICEData(df, rng=np.random.RandomState(0))
     assert mid2.data.shape[0] == 24
     expected = np.array([x for x in range(100, 125) if x != 109])
     assert_equal(mid2.data.index.values, expected)
@@ -598,6 +625,58 @@ def test_micedata_preserves_index():
 
     # the user's frame is never modified in place
     pd.testing.assert_frame_equal(df, df_orig)
+
+
+def test_micedata_all_missing_rows_warn():
+    # gh-6532: rows in which all variables are missing were dropped silently
+    gen = np.random.RandomState(4567)
+    df = pd.DataFrame(gen.normal(size=(20, 3)), columns=["a", "b", "c"])
+    df.iloc[[4, 11], :] = np.nan
+    df.iloc[7, 1] = np.nan
+    with pytest.warns(ValueWarning, match="2 of the 20 rows") as rec:
+        mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    assert_equal(mid.data.index.values, np.delete(np.arange(20), [4, 11]))
+    # the warning points at the call of MICEData, not at statsmodels
+    value_warnings = [w for w in rec if w.category is ValueWarning]
+    assert len(value_warnings) == 1
+    assert Path(value_warnings[0].filename).samefile(__file__)
+
+    # no warning if no row is dropped
+    df = df.dropna(how="all")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ValueWarning)
+        mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    assert_equal(mid.data.shape[0], 18)
+
+
+@pytest.mark.parametrize(
+    "rows, message",
+    [
+        (
+            [4],
+            (
+                "1 of the 20 rows has missing values in all variables and is "
+                "dropped. It is not in MICEData.data."
+            ),
+        ),
+        (
+            [4, 11],
+            (
+                "2 of the 20 rows have missing values in all variables and are "
+                "dropped. They are not in MICEData.data."
+            ),
+        ),
+    ],
+    ids=["one_row", "two_rows"],
+)
+def test_micedata_all_missing_rows_warning_message(rows, message):
+    gen = np.random.RandomState(4567)
+    df = pd.DataFrame(gen.normal(size=(20, 3)), columns=["a", "b", "c"])
+    df.iloc[rows, :] = np.nan
+    with pytest.warns(ValueWarning) as rec:
+        mice.MICEData(df, rng=np.random.RandomState(0))
+    messages = [str(w.message) for w in rec if w.category is ValueWarning]
+    assert messages == [message]
 
 
 def test_micedata_duplicate_index():

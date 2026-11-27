@@ -35,6 +35,7 @@ from statsmodels.tools.numdiff import (
     approx_hess_cs,
 )
 from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
     DomainWarning,
     PerfectSeparationWarning,
     ValueWarning,
@@ -463,9 +464,16 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.data.endog = np.require(cls.data.endog, requirements="W")
         cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
-        cls.res1 = GLM(
-            cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
-        ).fit(method="newton")
+        with warnings.catch_warnings():
+            # With the badly conditioned Longley design, rounding error can
+            # change the intercept (about -3.5e6) by 1e-7 in every Newton
+            # step, more than the absolute tolerance of 1e-8, after the
+            # parameters agree with OLS to 1e-11: newton can stop at maxiter
+            # and warn
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            cls.res1 = GLM(
+                cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
+            ).fit(method="newton")
         from .results.results_glm import Longley
 
         cls.res2 = Longley()
@@ -2568,11 +2576,13 @@ def test_tweedie_EQL():
         atol=atol,
     )
 
-    # Series of ridge fits using gradients
+    # Series of ridge fits using gradients.  The values are the fits with
+    # a log-likelihood of scale 1, which the coordinate descent of
+    # fit_regularized with L1_wt=1e-8 reproduces to 2e-6.
     ev = (
-        np.array([1.001778, -0.99388, 0.00797, 0.506183]),
-        np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
-        np.array([0.206429, -0.164547, 0.000235, 0.102489]),
+        np.array([0.983342, -0.965747, 0.007411, 0.496125]),
+        np.array([0.830026, -0.762183, 0.004555, 0.415303]),
+        np.array([0.776406, -0.699885, 0.003953, 0.387769]),
     )
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
@@ -2654,6 +2664,137 @@ def test_tweedie_EQL_upper_limit():
         model1 = sm.GLM(y, x, family=fam)
         result1 = model1.fit(method="newton", scale=scale)
         assert_allclose(result1.params, np.r_[4, 1, 1], atol=1e-3, rtol=1e-1)
+
+
+def _gen_tweedie_zeros(p, phi=2.0, n=400, seed=8136):
+    # Compound Poisson-gamma data with exact zeros (9% to 43% for p in
+    # 1.2 to 1.8 with the defaults)
+    rng = np.random.default_rng(seed)
+    x = np.column_stack([np.ones(n), rng.normal(size=n)])
+    mu = np.exp(x @ np.r_[0.3, 0.5])
+    lam = mu ** (2 - p) / (phi * (2 - p))
+    alp = (2 - p) / (p - 1)
+    gscale = phi * (p - 1) * mu ** (p - 1)
+    counts = rng.poisson(lam)
+    y = np.zeros(n)
+    for i in range(n):
+        y[i] = rng.gamma(alp, gscale[i], counts[i]).sum()
+    return y, x
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8])
+def test_tweedie_EQL_zeros_finite(p):
+    # GH 8136: the EQL log-likelihood was +inf when endog has zeros
+    y, x = _gen_tweedie_zeros(p)
+    assert (y == 0).sum() >= 30
+
+    res_eql = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True)).fit()
+    res_ll = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=False)).fit()
+
+    assert np.isfinite(res_eql.llf)
+    assert np.isfinite(res_eql.aic)
+    assert np.isfinite(res_eql.bic_llf)
+    assert_allclose(res_eql.params, res_ll.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8])
+@pytest.mark.parametrize("var_weights", [1.0, np.array([0.5, 1.0, 2.0])])
+def test_tweedie_EQL_zeros_exact(p, var_weights):
+    # At y = 0 the EQL equals the exact log probability of a zero,
+    # log P(Y = 0) = -var_weights * mu**(2 - p) / (scale * (2 - p)),
+    # which is also what the full Tweedie likelihood (eql=False) returns.
+    mu = np.array([0.5, 1.0, 3.0])
+    scale = 1.7
+    endog = np.zeros(3)
+    fam_eql = sm.families.Tweedie(var_power=p, eql=True)
+    fam_ll = sm.families.Tweedie(var_power=p, eql=False)
+
+    expected = -var_weights * mu ** (2 - p) / (scale * (2 - p))
+    ll_eql = fam_eql.loglike_obs(endog, mu, var_weights=var_weights, scale=scale)
+    ll_ll = fam_ll.loglike_obs(endog, mu, var_weights=var_weights, scale=scale)
+    assert_allclose(ll_eql, expected, rtol=1e-12)
+    assert_allclose(ll_ll, expected, rtol=1e-12)
+
+
+# Reference values of the log of the saddlepoint density without the shift, which
+# is the EQL, from R 4.6.2 with the tweedie package 3.2.2:
+#   library(tweedie)
+#   y <- c(0, 0.3, 0, 1.2, 4.0, 0)
+#   mu <- c(0.5, 1, 3, 0.8, 2.5, 1.5)
+#   phi <- 1.7
+#   w <- c(1, 0.5, 2, 1, 3, 0.25)
+#   log(dtweedie_saddle(y, power = p, mu = mu, phi = phi, eps = 0))
+#   log(dtweedie_saddle(y, power = p, mu = mu, phi = phi / w, eps = 0))
+# For y = 0, dtweedie_saddle uses the exact probability exp(-lambda), and
+# log(dtweedie(0, power = p, mu = mu, phi = phi)) gives the same values.
+_EQL_R_SADDLE = {
+    1.2: (
+        [-0.422315571690086, -0.676288494662926, -1.770753445059333,
+         -1.345429762294018, -2.196226828224363, -1.017030784722494],
+        [-0.422315571690086, -0.915652325681534, -3.541506890118665,
+         -1.345429762294018, -2.007315789523649, -0.254257696180623],
+    ),
+    1.5: (
+        [-0.831890330807703, -0.521925861361504, -2.037706832433973,
+         -1.374144117483136, -2.354515733362609, -1.440876319284222],
+        [-0.831890330807703, -0.748173048706377, -4.075413664867947,
+         -1.374144117483136, -2.066294196602421, -0.360219079821056],
+    ),
+    1.8: (
+        [-2.560442833223895, -0.372724614266597, -3.663914528280934,
+         -1.402939340851760, -2.526592051708030, -3.189622856463820],
+        [-2.560442833223895, -0.583274464834479, -7.327829056561868,
+         -1.402939340851760, -2.166634843302716, -0.797405714115955],
+    ),
+}
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8], ids=lambda p: f"p={p}")
+def test_tweedie_EQL_zeros_R(p):
+    # Zeros and positive observations together against the R values above.
+    # rtol=1e-12: the R values are printed with 15 significant digits.
+    y = np.array([0, 0.3, 0, 1.2, 4.0, 0])
+    mu = np.array([0.5, 1, 3, 0.8, 2.5, 1.5])
+    phi = 1.7
+    w = np.array([1, 0.5, 2, 1, 3, 0.25])
+    fam = sm.families.Tweedie(var_power=p, eql=True)
+    expected, expected_w = _EQL_R_SADDLE[p]
+
+    ll = fam.loglike_obs(y, mu, scale=phi)
+    assert_allclose(ll, expected, rtol=1e-12)
+    ll_w = fam.loglike_obs(y, mu, var_weights=w, scale=phi)
+    assert_allclose(ll_w, expected_w, rtol=1e-12)
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8], ids=lambda p: f"p={p}")
+def test_tweedie_EQL_zeros_pseudo_rsquared(p):
+    # GH 8136: pseudo_rsquared was NaN with a RuntimeWarning (warnings are
+    # errors in the test configuration)
+    y, x = _gen_tweedie_zeros(p)
+    assert (y == 0).sum() >= 30
+    res = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True)).fit()
+    assert np.isfinite(res.llnull)
+    for kind in ("cs", "mcf"):
+        value = res.pseudo_rsquared(kind=kind)
+        assert np.isfinite(value)
+        assert 0 < value < 1
+
+
+def test_tweedie_EQL_positive_unchanged():
+    # positive observations keep the EQL value with V(y) = y**p
+    p = 1.5
+    y, x = _gen_tweedie_zeros(p)
+    mod = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True))
+    res = mod.fit()
+    mu = res.fittedvalues
+    pos = y > 0
+    ll_pos = mod.family.loglike_obs(y[pos], mu[pos], scale=res.scale)
+    expected = -0.5 * np.log(2 * np.pi * res.scale * y[pos] ** p) - (
+        mod.family.resid_dev(y[pos], mu[pos]) ** 2 / (2 * res.scale)
+    )
+    assert_allclose(ll_pos, expected, rtol=1e-10)
+    ll_all = mod.family.loglike_obs(y, mu, scale=res.scale)
+    assert_allclose(ll_all[pos], ll_pos, rtol=1e-12)
 
 
 def testTweediePowerEstimate():
@@ -2786,6 +2927,316 @@ def test_regularized_freq_weights_match_expanded_data(family, fit_kwds):
     res_w = weighted.fit_regularized(alpha=0.05, **fit_kwds)
     res_e = expanded.fit_regularized(alpha=0.05, **fit_kwds)
     assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+# glmnet 5.2 in R 4.6.1, coefficients at lambda = 0.05 of
+#   glmnet(cbind(x1, x2), y, weights=w, family=<family>(), alpha=<L1_wt>,
+#          lambda=c(0.1, 0.05), standardize=FALSE, intercept=TRUE,
+#          control=list(thresh=1e-15, maxit=1e7))
+# with family gaussian(), binomial() or poisson() objects (the string
+# family="gaussian" standardizes y and is not comparable for alpha < 1).
+# glmnet normalizes the weights to sum to one, so that its objective is
+# -loglike / sum(w) + lambda * penalty.  The coefficients are
+# (intercept, x1, x2); the intercept is not penalized.
+_GLMNET_X = np.array(
+    [
+        [-1.5, 0.5],
+        [-0.9, -1.1],
+        [-0.4, 0.9],
+        [0.1, -0.3],
+        [0.6, 1.4],
+        [1.2, -0.8],
+        [-0.2, 0.2],
+        [0.8, -1.6],
+        [1.6, 0.7],
+        [-0.7, 1.0],
+    ]
+)
+_GLMNET_WEIGHTS = np.array([1, 2, 3, 1, 2, 4, 1, 3, 2, 1], dtype=float)
+_GLMNET_ENDOG = {
+    "gaussian": np.array([-1.1, -0.4, 0.3, 0.6, 1.5, 1.9, 0.0, 0.5, 2.3, -0.2]),
+    "binomial": np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0], dtype=float),
+    "poisson": np.array([1, 0, 2, 1, 3, 4, 0, 2, 5, 1], dtype=float),
+}
+_GLMNET_FAMILY = {
+    "gaussian": sm.families.Gaussian,
+    "binomial": sm.families.Binomial,
+    "poisson": sm.families.Poisson,
+}
+_GLMNET_PARAMS = {
+    ("gaussian", 1.0): [0.509708349454511, 0.994210219261278, 0.188258616019091],
+    ("gaussian", 0.5): [0.510134669236970, 0.998738456435588, 0.207760873833476],
+    ("binomial", 1.0): [0.722158356609137, 1.981320957929859, 0.190660850592927],
+    ("binomial", 0.5): [0.699130656029896, 1.758602609605634, 0.270808310371468],
+    ("poisson", 1.0): [0.442847222150387, 0.732251879893724, 0.158090127698189],
+    ("poisson", 0.5): [0.438121461213865, 0.738352935954592, 0.167097604621228],
+}
+
+
+@pytest.mark.parametrize("family_name", ["gaussian", "binomial", "poisson"])
+@pytest.mark.parametrize(
+    "fit_kwds, atol",
+    [
+        ({"L1_wt": 1.0}, 1e-5),
+        ({"L1_wt": 0.5}, 1e-5),
+        ({"method": "l1_slsqp", "L1_wt": 1.0}, 1e-4),
+    ],
+    ids=["lasso", "elastic_net", "l1_slsqp"],
+)
+def test_regularized_freq_weights_glmnet(family_name, fit_kwds, atol):
+    # Reference values from glmnet, see _GLMNET_PARAMS.  The atol is the
+    # agreement that the two algorithms reach: the coordinate descent of
+    # glmnet and of fit_regularized stop at different convergence tolerances
+    # (1.6e-6 is the largest difference for the elastic net), and slsqp
+    # needs 1e-4 (largest difference 1e-5).
+    L1_wt = fit_kwds["L1_wt"]
+    exog = add_constant(_GLMNET_X)
+    family = _GLMNET_FAMILY[family_name]()
+    model = GLM(
+        _GLMNET_ENDOG[family_name], exog, family=family, freq_weights=_GLMNET_WEIGHTS
+    )
+    res = model.fit_regularized(alpha=np.array([0.0, 0.05, 0.05]), **fit_kwds)
+    assert_allclose(res.params, _GLMNET_PARAMS[(family_name, L1_wt)], rtol=0, atol=atol)
+
+
+# "gaussian3" is three times the gaussian endog, a fit whose estimated scale
+# is far from one.
+_GLMNET_ENDOG["gaussian3"] = 3 * _GLMNET_ENDOG["gaussian"]
+_GLMNET_FAMILY["gaussian3"] = sm.families.Gaussian
+
+# glmnet 5.2 in R 4.6.1, coefficients at lambda = 0.05 of the ridge fit
+#   glmnet(cbind(x1, x2), y, weights=w, family=<family>(), alpha=0,
+#          lambda=c(0.1, 0.05), standardize=<standardize>, intercept=TRUE,
+#          control=list(thresh=1e-15, maxit=1e7))
+# for the data above, keyed by (family, standardize).
+_GLMNET_RIDGE_PARAMS = {
+    ("gaussian", False): [0.510617305852763, 1.002798798238448, 0.226304497872358],
+    ("gaussian", True): [0.507375167371321, 1.013455083680229, 0.227510723479926],
+    ("gaussian3", False): [1.531851917558288, 3.008396394715344, 0.678913493617074],
+    ("gaussian3", True): [1.522125502113962, 3.040365251040688, 0.682532170439778],
+    ("binomial", False): [0.694534509059638, 1.638376304534531, 0.337697239564448],
+    ("binomial", True): [0.700131555014648, 1.760255781444299, 0.358205674504501],
+    ("poisson", False): [0.433493697370173, 0.744212456224561, 0.175919409656114],
+    ("poisson", True): [0.429531349130683, 0.749061735199303, 0.176059335523080],
+}
+# The same call with alpha=1 and alpha=0.5 and standardize=TRUE, keyed by
+# (family, L1_wt).
+_GLMNET_STANDARDIZED_PARAMS = {
+    ("gaussian", 1.0): [0.507901765688611, 0.999830775960993, 0.187878527540250],
+    ("gaussian", 0.5): [0.507599056296679, 1.006928816255381, 0.208227720180257],
+    ("binomial", 1.0): [0.730716709231770, 2.055864265964942, 0.194987333479025],
+    ("binomial", 0.5): [0.706741323493328, 1.868584142717468, 0.287684067143429],
+    ("poisson", 1.0): [0.440035166880792, 0.735703795858661, 0.157746087565982],
+    ("poisson", 0.5): [0.434745233729621, 0.742495056136925, 0.167002648710089],
+}
+
+
+def _glmnet_column_sd():
+    # glmnet standardizes with the weights and the divisor sum(weights)
+    mean = np.average(_GLMNET_X, axis=0, weights=_GLMNET_WEIGHTS)
+    var = np.average((_GLMNET_X - mean) ** 2, axis=0, weights=_GLMNET_WEIGHTS)
+    return np.sqrt(var)
+
+
+@pytest.mark.parametrize("standardize", [False, True])
+@pytest.mark.parametrize("family_name", ["gaussian", "gaussian3", "binomial", "poisson"])
+def test_ridge_glmnet(family_name, standardize):
+    # The ridge fit (L1_wt=0) minimizes the objective of glmnet with
+    # alpha=0, also for a family with an estimated scale (gaussian3).  The
+    # intercept is left unpenalized with a zero in alpha, and glmnet's
+    # standardize=TRUE is the weight alpha * sd**2 for each penalized
+    # coefficient (see the Notes of fit_regularized).  The atol is the
+    # tolerance of the BFGS solver of the ridge fit (largest difference 8e-6).
+    exog = add_constant(_GLMNET_X)
+    family = _GLMNET_FAMILY[family_name]()
+    model = GLM(
+        _GLMNET_ENDOG[family_name], exog, family=family, freq_weights=_GLMNET_WEIGHTS
+    )
+    penalty = _glmnet_column_sd() ** 2 if standardize else np.ones(2)
+    res = model.fit_regularized(alpha=0.05 * np.r_[0.0, penalty], L1_wt=0.0)
+    expected = _GLMNET_RIDGE_PARAMS[(family_name, standardize)]
+    assert_allclose(res.params, expected, rtol=0, atol=5e-5)
+
+
+@pytest.mark.parametrize("L1_wt", [1.0, 0.5])
+@pytest.mark.parametrize("family_name", ["gaussian", "binomial", "poisson"])
+def test_regularized_glmnet_standardized_columns(family_name, L1_wt):
+    # glmnet's standardize=TRUE: divide the columns of exog by their standard
+    # deviations, fit with the penalty weight alpha for each of them and
+    # divide the coefficients by the standard deviations.  For the lasso, the
+    # penalty weights alpha * sd on the unscaled columns are the same fit.
+    sd = _glmnet_column_sd()
+    expected = _GLMNET_STANDARDIZED_PARAMS[(family_name, L1_wt)]
+    family = _GLMNET_FAMILY[family_name]()
+    endog = _GLMNET_ENDOG[family_name]
+    model = GLM(
+        endog,
+        add_constant(_GLMNET_X / sd),
+        family=family,
+        freq_weights=_GLMNET_WEIGHTS,
+    )
+    res = model.fit_regularized(alpha=np.array([0.0, 0.05, 0.05]), L1_wt=L1_wt)
+    params = np.r_[res.params[0], res.params[1:] / sd]
+    assert_allclose(params, expected, rtol=0, atol=1e-5)
+    if L1_wt == 1.0:
+        model = GLM(
+            endog,
+            add_constant(_GLMNET_X),
+            family=family,
+            freq_weights=_GLMNET_WEIGHTS,
+        )
+        res = model.fit_regularized(alpha=0.05 * np.r_[0.0, sd], L1_wt=L1_wt)
+        assert_allclose(res.params, expected, rtol=0, atol=1e-5)
+
+
+def _regularized_freq_weights_data(family, seed=2):
+    rng = np.random.default_rng(seed)
+    n = 60
+    exog = add_constant(rng.normal(size=(n, 3)))
+    if family is sm.families.Binomial:
+        endog = (rng.random(n) < 0.4).astype(float)
+    elif family is sm.families.Poisson:
+        endog = rng.poisson(2, n).astype(float)
+    else:
+        endog = rng.normal(size=n)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    freq_weights = rng.integers(1, 5, size=n).astype(np.intp)
+    offset = 0.2 * rng.normal(size=n)
+    return endog, exog, freq_weights, offset
+
+
+_FIT_KWDS = [
+    {"L1_wt": 1.0},
+    {"L1_wt": 0.5},
+    {"L1_wt": 0.0},
+    {"method": "l1_slsqp"},
+]
+_FIT_KWDS_IDS = ["lasso", "elastic_net", "ridge", "l1_slsqp"]
+_FAMILIES = [sm.families.Gaussian, sm.families.Binomial, sm.families.Poisson]
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("fit_kwds", _FIT_KWDS, ids=_FIT_KWDS_IDS)
+def test_regularized_freq_weights_rescaled(family, fit_kwds):
+    # The penalty is relative to the total weight, so that rescaling the
+    # frequency weights does not change the estimates (glmnet has the same
+    # property).  The Gaussian ridge fit estimated a scale before.
+    endog, exog, freq_weights, _ = _regularized_freq_weights_data(family)
+    freq_weights = freq_weights.astype(float)
+    res = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    res_scaled = GLM(endog, exog, family=family(), freq_weights=0.3 * freq_weights)
+    p = res.fit_regularized(alpha=0.05, **fit_kwds).params
+    p_scaled = res_scaled.fit_regularized(alpha=0.05, **fit_kwds).params
+    assert_allclose(p_scaled, p, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("fit_kwds", _FIT_KWDS, ids=_FIT_KWDS_IDS)
+@pytest.mark.parametrize("variant", ["alpha_with_zero", "offset"])
+def test_regularized_freq_weights_alpha_array_offset(family, fit_kwds, variant):
+    endog, exog, freq_weights, offset = _regularized_freq_weights_data(family)
+    alpha = 0.05
+    kwds = {}
+    expanded_kwds = {}
+    if variant == "alpha_with_zero":
+        # no penalty for the constant, other penalty weights differ
+        alpha = np.array([0.0, 0.05, 0.1, 0.05])
+    else:
+        kwds["offset"] = offset
+        expanded_kwds["offset"] = np.repeat(offset, freq_weights)
+    weighted = GLM(
+        endog, exog, family=family(), freq_weights=freq_weights, **kwds
+    )
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+        **expanded_kwds,
+    )
+    res_w = weighted.fit_regularized(alpha=alpha, **fit_kwds)
+    res_e = expanded.fit_regularized(alpha=alpha, **fit_kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("L1_wt", [1.0, 0.5])
+def test_regularized_freq_weights_first_sweep(family, L1_wt):
+    # The Hessian (nphess in statsmodels.base.elastic_net) only sets the
+    # step of the coordinate descent, so that the estimates at convergence do
+    # not depend on it.  After a single sweep through the coefficients they do:
+    # the sweep on the weighted data has to equal the sweep on the data with
+    # each row repeated, which needs the Hessian divided by the sum of the
+    # frequency weights as well.
+    endog, exog, freq_weights, _ = _regularized_freq_weights_data(family)
+    weighted = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+    )
+    kwds = {"alpha": 0.05, "L1_wt": L1_wt, "maxiter": 1, "cnvrg_tol": 1e-15}
+    with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+        res_w = weighted.fit_regularized(**kwds)
+    with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+        res_e = expanded.fit_regularized(**kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "alpha",
+    [0.15, np.array([0.0, 0.1, 0.3, 0.3])],
+    ids=["scalar", "array_with_zero"],
+)
+def test_ridge_gaussian_matches_closed_form(alpha):
+    # With L1_wt=0 the objective is the penalized least squares problem
+    # RSS / (2 n) + sum(alpha * params**2) / 2, whose minimizer is
+    # solve(X'X / n + diag(alpha), X'y / n).  The ridge fit used to divide the
+    # residual sum of squares by the scale estimated at each parameter value.
+    rng = np.random.default_rng(20261117)
+    n = 100
+    exog = add_constant(rng.normal(size=(n, 3)))
+    endog = exog @ [0.5, 1.0, -0.5, 0.3] + rng.normal(size=n)
+    expected = np.linalg.solve(
+        exog.T @ exog / n + np.diag(np.ones(4) * alpha), exog.T @ endog / n
+    )
+    model = GLM(endog, exog, family=sm.families.Gaussian())
+    res = model.fit_regularized(alpha=alpha, L1_wt=0)
+    # atol: the ridge problem is solved with BFGS (gradient tolerance 1e-5)
+    assert_allclose(res.params, expected, rtol=1e-5, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "family",
+    [
+        sm.families.Gaussian(),
+        sm.families.Gamma(sm.families.links.Log()),
+        sm.families.Binomial(),
+        sm.families.Poisson(),
+    ],
+    ids=["Gaussian", "Gamma", "Binomial", "Poisson"],
+)
+def test_ridge_matches_elastic_net_with_tiny_l1_wt(family):
+    # L1_wt=0 is solved with scipy, any L1_wt > 0 with coordinate descent,
+    # which uses a log-likelihood with scale 1.  A tiny L1_wt gives the same
+    # problem, whatever the family.  Binomial and Poisson have a fixed scale.
+    rng = np.random.default_rng(20261118)
+    n = 100
+    exog = add_constant(rng.normal(size=(n, 3)))
+    eta = 0.3 + exog[:, 1:] @ [0.4, -0.3, 0.2]
+    if isinstance(family, sm.families.Binomial):
+        endog = (rng.random(n) < 1 / (1 + np.exp(-eta))).astype(float)
+    elif isinstance(family, sm.families.Poisson):
+        endog = rng.poisson(np.exp(eta)).astype(float)
+    elif isinstance(family, sm.families.Gamma):
+        endog = np.exp(eta) * rng.gamma(5, 0.2, size=n)
+    else:
+        endog = eta + rng.normal(size=n)
+    alpha = np.array([0.0, 0.1, 0.1, 0.1])
+    model = GLM(endog, exog, family=family)
+    res_ridge = model.fit_regularized(alpha=alpha, L1_wt=0)
+    res_enet = model.fit_regularized(alpha=alpha, L1_wt=1e-8)
+    # atol: BFGS stops at a gradient norm of 1e-5
+    assert_allclose(res_ridge.params, res_enet.params, rtol=1e-5, atol=1e-4)
 
 
 class TestRegularized:
@@ -4216,7 +4667,7 @@ def test_glm_formula_two_column_numeric_endog():
     counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
     x = np.arange(6.0)
     family = sm.families.Binomial()
-    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    res = GLM.from_formula("counts ~ x", pd.DataFrame({"x": x}), family=family).fit()
     expected = GLM(counts, add_constant(x), family=family).fit()
     assert_allclose(res.params.values, expected.params, rtol=1e-10)
 
@@ -4331,3 +4782,127 @@ def test_glm_formula_categorical_endog_coded_levels():
     res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
     assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
     assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "endog, params",
+    [([2.0, 5.0], [np.log(2.0), np.log(2.5)]), ([1.0, 1.0], [0.0, 0.0])],
+    ids=["divide", "exact"],
+)
+def test_glm_saturated_no_runtime_warning(endog, params):
+    # The scale of the WLS step of IRLS divides by the residual degrees of
+    # freedom, which are 0 in a saturated model; it warned "divide by zero"
+    # (or "invalid value" when the residuals are exactly 0) in every
+    # iteration. GLM only warns that the fit is perfect.
+    exog = add_constant(np.array([0.0, 1.0]))
+    with pytest.warns(PerfectSeparationWarning) as record:
+        res = GLM(np.array(endog), exog, family=sm.families.Poisson()).fit()
+    assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
+    # The fitted means are the observations; atol for the zero parameters
+    assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)
+
+
+# GH 9058, endog outside of the support of the family
+_x_domain = np.column_stack((np.ones(8), np.arange(8.0)))
+_endog_outside = [
+    (sm.families.Binomial(), [0, 1, 2, 0, 1, 1, 0, 3], 2, "in the interval"),
+    (sm.families.Binomial(), [0, 1, -0.5, 0, 1, 1, 0, 1], 1, "in the interval"),
+    (sm.families.Poisson(), [0, 1, -2, 3, 1, 0, 2, 4], 1, "nonnegative"),
+    (
+        sm.families.NegativeBinomial(alpha=1.0),
+        [0, 1, 2, -3, 1, -1, 2, 4],
+        2,
+        "nonnegative",
+    ),
+    (sm.families.Gamma(sm.families.links.Log()), [1, 2, 0, 3, 1, 2, 2, 4], 1, "positive"),
+    (
+        sm.families.InverseGaussian(sm.families.links.Log()),
+        [1, 2, -1, 3, 0, 2, 2, 4],
+        2,
+        "positive",
+    ),
+]
+
+
+@pytest.mark.parametrize("family, endog, n_outside, support", _endog_outside)
+def test_endog_outside_support(family, endog, n_outside, support):
+    msg = f"endog has {n_outside} values outside of the support of the"
+    with pytest.warns(DomainWarning, match=msg) as record:
+        GLM(np.asarray(endog, dtype=float), _x_domain, family=family)
+    messages = [str(w.message) for w in record if w.category is DomainWarning]
+    assert len(messages) == 1
+    assert support in messages[0]
+
+
+_endog_inside = [
+    (sm.families.Binomial(), [0, 1, 1, 0, 1, 0, 0, 1]),
+    (sm.families.Binomial(), [0, 0.25, 0.5, 1, 0.75, 0, 1, 0.1]),
+    (
+        sm.families.Binomial(),
+        [[0, 3], [1, 2], [3, 0], [2, 1], [1, 1], [0, 2], [2, 0], [1, 3]],
+    ),
+    (sm.families.Poisson(), [0, 1, 0, 3, 1, 0, 2, 4]),
+    (sm.families.Poisson(), [0, 0.5, 0.2, 3, 1, 0, 2, 4.5]),
+    (sm.families.NegativeBinomial(alpha=1.0), [0, 1, 0, 3, 1, 0, 2, 4]),
+    (sm.families.Gamma(sm.families.links.Log()), [0.1, 2, 1e-8, 3, 1, 2, 2, 4]),
+    (sm.families.InverseGaussian(sm.families.links.Log()), [1, 2, 0.5, 3, 1, 2, 2, 4]),
+    (sm.families.Gaussian(), [-1, 2, 0, 3, -5, 2, 2, 4]),
+    (sm.families.Tweedie(var_power=1.5), [0, 2, 0, 3, 1, 2, 2, 4]),
+    (sm.families.Poisson(), [0, 1, np.nan, 3, 1, 0, 2, 4]),
+]
+
+
+@pytest.mark.parametrize("family, endog", _endog_inside)
+def test_endog_inside_support(family, endog):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        GLM(np.asarray(endog, dtype=float), _x_domain, family=family)
+
+
+def test_endog_outside_support_binomial_counts():
+    # the example of GH 9058, counts instead of proportions without n_trials
+    endog = np.array([4.0, 10, 3, 2, 4, 3, 18, 7, 9, 12, 36])
+    exog = add_constant(np.arange(11.0))
+    with pytest.warns(DomainWarning, match="endog has 11 values outside"):
+        GLM(endog, exog, family=sm.families.Binomial())
+    # the same counts as successes and failures are valid
+    endog2 = np.column_stack((endog, 40 - endog))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        GLM(endog2, exog, family=sm.families.Binomial())
+
+
+@pytest.mark.parametrize(
+    "scale",
+    [2, np.int64(2), np.float32(2.0), np.array(2.0)],
+    ids=["int", "int64", "float32", "0-d array"],
+)
+def test_glm_fixed_scale_numeric_types(scale):
+    # Any real number is a fixed scale
+    rng = np.random.default_rng(20261126)
+    exog = add_constant(rng.standard_normal((80, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(80)
+    expected = GLM(endog, exog).fit(scale=2.0)
+    res = GLM(endog, exog).fit(scale=scale)
+    assert res.scale == 2.0
+    assert_allclose(res.bse, expected.bse, rtol=1e-12)
+    # the fixed scale multiplies the unscaled covariance
+    assert_allclose(res.cov_params(), 2.0 * res.normalized_cov_params, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "scale", [True, np.True_, 2 + 1j, np.array([2.0])],
+    ids=["bool", "np.bool_", "complex", "1 element array"],
+)
+def test_glm_fixed_scale_not_a_number(scale):
+    # float(scale) accepted a bool as the scale 1.0
+    rng = np.random.default_rng(20261127)
+    exog = add_constant(rng.standard_normal((30, 1)))
+    endog = exog @ [1.0, 0.5] + rng.standard_normal(30)
+    if isinstance(scale, np.ndarray):
+        with pytest.warns(FutureWarning, match="Passing scale of type ndarray"):
+            res = GLM(endog, exog).fit(scale=scale)
+        assert res.scale == 2.0
+        return
+    with pytest.raises(TypeError, match="scale must be float_like"):
+        GLM(endog, exog).fit(scale=scale)

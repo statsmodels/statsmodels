@@ -817,7 +817,10 @@ The `Initialization` class specifies how the initial state distribution
 (mean and covariance) is constructed for a `Representation`, and it supports
 combining different initialization types (`known`, `diffuse`,
 `approximate_diffuse`, or `stationary`) across different blocks of the state
-vector.
+vector. The `stationary` initialization needs a transition matrix without a
+unit root. At a unit root the filter raises a ``LinAlgError`` and
+``MLEModel.loglike`` returns ``-inf``; use `approximate_diffuse` or `diffuse`
+for such models.
 
 .. autosummary::
    :toctree: generated/

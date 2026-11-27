@@ -759,3 +759,34 @@ def test_fit_is_fit_map():
     assert_allclose(
         glmm.logposterior_grad(rslt.params), np.zeros_like(rslt.params), atol=1e-3
     )
+
+
+@pytest.mark.parametrize("convert", [list, pd.Series, np.asarray])
+def test_ident_array_like(convert):
+    y, exog_fe, exog_vc, _ = gen_simple_logit(5, 10, 2)
+    ident = np.array([0, 0, 1, 1, 1])
+    ref = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)
+    model = BinomialBayesMixedGLM(y, exog_fe, exog_vc, convert(ident.tolist()))
+    assert_equal(model.ident, ident)
+    # one variance parameter per distinct value of ident
+    assert model.k_vcp == 2
+    assert model.vcp_names == ["VC_1", "VC_2"]
+    # 2 fixed effects, 2 variance parameters and 5 random effects
+    params = np.linspace(-0.5, 0.5, 9)
+    assert_allclose(model.logposterior(params), ref.logposterior(params), rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "ident, match",
+    [
+        (np.zeros((5, 1), dtype=int), "ident must have"),
+        (np.zeros((1, 5), dtype=int), "ident must have"),
+        (0, "ident must have"),
+        (None, "ident must be a one-dimensional array"),
+    ],
+    ids=["column", "row", "scalar", "none"],
+)
+def test_ident_rejects_non_1d(ident, match):
+    y, exog_fe, exog_vc, _ = gen_simple_logit(5, 10, 2)
+    with pytest.raises(ValueError, match=match):
+        BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)

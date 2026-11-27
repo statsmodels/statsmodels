@@ -1,0 +1,8 @@
+- ``CalendarFourier`` and ``CalendarTimeTrend`` failed with an internal pandas
+  error for start-anchored frequencies such as ``"MS"``, ``"QS-FEB"``,
+  ``"YS"`` and ``"BQS"``, except with pandas 2.2 and 2.3. They are mapped to
+  the end-anchored frequency with the same periods (``"MS"`` to ``"ME"``,
+  ``"QS-FEB"`` to ``"QE-JAN"``) on every pandas version; the new keyword-only
+  ``map_start_anchored=False`` turns this off. Frequencies without periods,
+  such as ``"SMS"``, raise a ``ValueError`` when the term is created.
+  :pr:`10854`

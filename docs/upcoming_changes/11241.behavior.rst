@@ -1,0 +1,5 @@
+- Integer arguments validated with ``int_like`` reject ``np.bool_``, 0-d
+  boolean arrays and boolean Series or arrays with one element, which were
+  converted to 1 or 0; a ``bool`` was already rejected. Integer scalars of
+  other array libraries (objects that support ``__index__``) are accepted.
+  The error message lists what is accepted. :pr:`11241`

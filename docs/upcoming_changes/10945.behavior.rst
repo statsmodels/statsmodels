@@ -1,0 +1,4 @@
+- A quarter key such as ``"2001Q2"`` for which the date index of a time
+  series model has no date (for example annual or semiannual dates)
+  silently selected a date of another quarter. It raises a ``KeyError``.
+  :pr:`10945`

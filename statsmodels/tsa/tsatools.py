@@ -17,6 +17,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_int_like,
     string_like,
 )
 
@@ -70,6 +71,12 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         'trend' and 'trend_squared'.  A Series is only returned when
         ``trend='n'`` and x is a Series, since no columns are added.
 
+        .. versionchanged:: 0.15.1
+
+           With ``trend='n'``, a list or a tuple is returned as an ndarray,
+           as with the other trends. A list was returned as a list, and a
+           tuple raised an ``AttributeError``.
+
     See Also
     --------
     statsmodels.tools.tools.add_constant
@@ -89,7 +96,10 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     # TODO: could be generalized for trend of aribitrary order
     columns = ["const", "trend", "trend_squared"]
     if trend == "n":
-        return x.copy()
+        if _is_using_pandas(x, None):
+            return x.copy()
+        # array_like input is returned as an array, as for the other trends
+        return np.asanyarray(x).copy()
     elif trend == "c":  # handles structured arrays
         columns = columns[:1]
         trendorder = 0
@@ -184,6 +194,13 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         `col` can be an int of the zero-based column index, or the label of
         a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
         1d array `col` can be None.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d integer array is a column index, as an int is. It raised a
+           TypeError or was looked up as a label. A bool is a label, so it
+           raises a TypeError, or a KeyError for a DataFrame without such a
+           column. True raised a ValueError after adding an axis.
     lags : int, optional
         The number of lags desired.
     drop : bool, optional
@@ -212,7 +229,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
     lags = int_like(lags, "lags")
     drop = bool_like(drop, "drop")
-    if col is not None and not isinstance(col, (int, np.integer)):
+    if col is not None and not is_int_like(col, strict=True):
         # Resolve a pandas column label to its position before the
         # conversion below drops the labels; the docstring example passes a
         # column name.
@@ -221,12 +238,14 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
                 "col can only be a label when x is a pandas DataFrame"
             )
         loc = x.columns.get_loc(col)
-        if not isinstance(loc, (int, np.integer)):
+        if not is_int_like(loc, strict=True):
             raise ValueError(f"col={col!r} does not uniquely identify a column")
         col = int(loc)
     x = array_like(x, "x", ndim=2)
     if col is None:
         col = 0
+    else:
+        col = int(col)
 
     # handle negative index
     if col < 0:
@@ -269,7 +288,7 @@ def detrend(x, order=1, axis=0):
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray, Series, or DataFrame
         Data, 1d or 2d. If 2d, then each row or column is independently
         detrended with the same trendorder, but independent trend estimates.
     order : int, optional
@@ -281,9 +300,10 @@ def detrend(x, order=1, axis=0):
 
     Returns
     -------
-    ndarray
+    ndarray, Series, or DataFrame
         The detrended series is the residual of the linear regression of the
-        data on the trend of given order.
+        data on the trend of given order. It has the type, and for pandas
+        input the index and columns, of `x`.
     """
     order = int_like(order, "order")
     axis = int_like(axis, "axis")
@@ -433,7 +453,7 @@ def lagmat(
     if np.isscalar(maxlag):
         maxlag = int_like(maxlag, "maxlag")
         if maxlag < 0:
-            raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
+            raise ValueError(f"`maxlag` must be non-negative. Got {maxlag}.")
         # Convert to array to simplify and use only array path
         lag_indices = np.arange(1, maxlag + 1, dtype=int)
     else:
@@ -548,13 +568,13 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=Fa
     dropex : int, optional
         Exclude first dropex lags from other variables. For all variables,
         except the first, lags from dropex to maxlagex are included.
-    trim : {'forward', 'backward', 'both', 'none'}, optional
+    trim : {'forward', 'backward', 'both', 'none', None}, optional
         The trimming method to use.
 
         * 'forward' : trim invalid observations in front.
         * 'backward' : trim invalid initial observations.
         * 'both' : trim invalid observations on both sides.
-        * 'none' : no trimming of observations.
+        * 'none', None : no trimming of observations.
     use_pandas : bool, optional
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
@@ -645,7 +665,8 @@ def vech(mat):
     Parameters
     ----------
     mat : ndarray
-        A symmetric 2d array.
+        A square 2d array, usually symmetric. Only its lower triangle is
+        used.
 
     Returns
     -------
@@ -664,21 +685,11 @@ def vech(mat):
     return mat.T.take(_triu_indices(len(mat)))
 
 
-# tril/triu/diag, suitable for ndarray.take
-
-
-def _tril_indices(n):
-    rows, cols = np.tril_indices(n)
-    return rows * n + cols
+# triu, suitable for ndarray.take
 
 
 def _triu_indices(n):
     rows, cols = np.triu_indices(n)
-    return rows * n + cols
-
-
-def _diag_indices(n):
-    rows, cols = np.diag_indices(n)
     return rows * n + cols
 
 
@@ -713,7 +724,7 @@ def unvech(v):
 
     Parameters
     ----------
-    v : ndarray
+    v : array_like
         A 1d array containing the stacked lower-triangular elements of a
         symmetric matrix, as produced by :func:`vech`.
 
@@ -806,116 +817,13 @@ def commutation_matrix(p, q):
     return K.take(indices.ravel(), axis=0)
 
 
-def _ar_transparams(params):
-    """
-    Transforms params to induce stationarity/invertibility
-
-    Parameters
-    ----------
-    params : ndarray
-        The AR coefficients
-
-    Returns
-    -------
-    ndarray
-        The transformed AR coefficients.
-
-    References
-    ----------
-    Jones(1980)
-    """
-    newparams = np.tanh(params / 2)
-    tmp = np.tanh(params / 2)
-    for j in range(1, len(params)):
-        a = newparams[j]
-        for kiter in range(j):
-            tmp[kiter] -= a * newparams[j - kiter - 1]
-        newparams[:j] = tmp[:j]
-    return newparams
-
-
-def _ar_invtransparams(params):
-    """
-    Inverse of the Jones reparameterization
-
-    Parameters
-    ----------
-    params : ndarray
-        The transformed AR coefficients
-
-    Returns
-    -------
-    ndarray
-        The untransformed AR coefficients.
-    """
-    params = params.copy()
-    tmp = params.copy()
-    for j in range(len(params) - 1, 0, -1):
-        a = params[j]
-        for kiter in range(j):
-            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (1 - a**2)
-        params[:j] = tmp[:j]
-    invarcoefs = 2 * np.arctanh(params)
-    return invarcoefs
-
-
-def _ma_transparams(params):
-    """
-    Transforms params to induce stationarity/invertibility
-
-    Parameters
-    ----------
-    params : ndarray
-        The ma coefficients of an (AR)MA model.
-
-    Returns
-    -------
-    ndarray
-        The transformed MA coefficients.
-
-    References
-    ----------
-    Jones(1980)
-    """
-    newparams = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
-    tmp = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
-
-    # levinson-durbin to get macf
-    for j in range(1, len(params)):
-        b = newparams[j]
-        for kiter in range(j):
-            tmp[kiter] += b * newparams[j - kiter - 1]
-        newparams[:j] = tmp[:j]
-    return newparams
-
-
-def _ma_invtransparams(macoefs):
-    """
-    Inverse of the Jones reparameterization
-
-    Parameters
-    ----------
-    macoefs : ndarray
-        The transformed MA coefficients
-
-    Returns
-    -------
-    ndarray
-        The untransformed MA coefficients.
-    """
-    tmp = macoefs.copy()
-    for j in range(len(macoefs) - 1, 0, -1):
-        b = macoefs[j]
-        for kiter in range(j):
-            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (1 - b**2)
-        macoefs[:j] = tmp[:j]
-    invmacoefs = -np.log((1 - macoefs) / (1 + macoefs))
-    return invmacoefs
-
-
 def unintegrate_levels(x, d):
     """
     Returns the successive differences needed to unintegrate the series
+
+    .. deprecated:: 0.15.1
+        ``unintegrate_levels`` has no callers in statsmodels. It will be
+        removed after statsmodels 0.17 is released.
 
     Parameters
     ----------
@@ -934,6 +842,15 @@ def unintegrate_levels(x, d):
     --------
     unintegrate
     """
+    warnings.warn(
+        "statsmodels.tsa.tsatools.unintegrate_levels is deprecated and is not "
+        "exported from any public statsmodels API; it has no callers in "
+        "statsmodels. It will be removed after statsmodels 0.17 is released. "
+        "If you rely on this function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     d = int_like(d, "d")
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
@@ -943,13 +860,18 @@ def unintegrate(x, levels):
     """
     After taking n-differences of a series, return the original series
 
+    .. deprecated:: 0.15.1
+        ``unintegrate`` has no callers in statsmodels. It will be removed
+        after statsmodels 0.17 is released.
+
     Parameters
     ----------
     x : array_like
         The n-th differenced series
     levels : sequence of float
-        The first-value in each differenced series, for
-        [first-difference, second-difference, ..., n-th difference]
+        The first value of each differenced series ``np.diff(y, k)`` of the
+        original series ``y``, for k = 0, 1, ..., n - 1, as returned by
+        `unintegrate_levels`.
 
     Returns
     -------
@@ -965,10 +887,23 @@ def unintegrate(x, levels):
     >>> unintegrate(np.diff(x, 2), levels)
     array([  1.,   3.,   9.,  19.,   8.])
     """
+    warnings.warn(
+        "statsmodels.tsa.tsatools.unintegrate is deprecated and is not "
+        "exported from any public statsmodels API; it has no callers in "
+        "statsmodels. It will be removed after statsmodels 0.17 is released. "
+        "If you rely on this function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return _unintegrate(x, levels)
+
+
+def _unintegrate(x, levels):
     levels = list(levels)[:]  # copy
     if len(levels) > 1:
         x0 = levels.pop(-1)
-        return unintegrate(np.cumsum(np.r_[x0, x]), levels)
+        return _unintegrate(np.cumsum(np.r_[x0, x]), levels)
     x0 = levels[0]
     return np.cumsum(np.r_[x0, x])
 

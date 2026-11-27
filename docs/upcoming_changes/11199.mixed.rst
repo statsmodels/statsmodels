@@ -1,0 +1,4 @@
+- ``MICE`` no longer writes ``start_params`` into the ``fit_kwds`` dictionary
+  passed by the caller, and a ``start_params`` given in ``fit_kwds`` is used
+  for the first fit of the analysis model instead of being replaced by
+  ``None``. :issue:`11198`, :pr:`11199`

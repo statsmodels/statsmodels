@@ -1,0 +1,5 @@
+- With the formulaic engine and missing values dropped, the design
+  matrix of a one-sided formula keeps the row labels of the data
+  (it had positional labels), ``pandas=False`` no longer raises an
+  ``AttributeError``, and the missing-value mask is indexed by the
+  data's labels. :pr:`11219`

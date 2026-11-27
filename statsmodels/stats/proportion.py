@@ -1987,12 +1987,7 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
     alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    table = np.asarray(table, dtype=np.float64)
-    if table.shape != (2, 2):
-        raise ValueError(
-            "confint_proportions_paired requires a 2x2 contingency table, but "
-            f"the input has shape {table.shape}."
-        )
+    table = array_like(table, "table", shape=(2, 2))
     if not np.all(np.isfinite(table)):
         raise ValueError("table counts must be finite")
     if np.any(table < 0):
@@ -2515,8 +2510,10 @@ def test_proportions_2indep(
     p1 = count1 / nobs1
     p2 = count2 / nobs2
     diff = p1 - p2
-    ratio = p1 / p2
-    odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
+    # The estimates are inf (or nan) if a count is 0 or equal to nobs
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = p1 / p2
+        odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
     res = None
 
     if compare == "diff":
@@ -3337,7 +3334,9 @@ def _confint_riskratio_koopman(
     p_roots = p_roots_[:2][::-1]
 
     # equ 5
-    ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots)) / p_roots
+    # If count2 is 0, a root is 0 and the upper limit is inf
+    with np.errstate(divide="ignore"):
+        ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots)) / p_roots
 
     return KoopmanConfintResult(confint=ci, p_roots=p_roots_)
 

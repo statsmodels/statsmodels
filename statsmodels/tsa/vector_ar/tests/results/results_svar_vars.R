@@ -1,0 +1,185 @@
+## Reference values for statsmodels.tsa.vector_ar.svar_model.SVAR
+##
+## vars::SVAR (estmethod = "scoring") for an A-model, a B-model, a
+## just-identified AB-model and an over-identified AB-model of a VAR(3) with a
+## constant, on the log-differences of realgdp, realcons and realinv from
+## statsmodels/datasets/macrodata/macrodata.csv (the data of TestSVAR).
+##
+## vars uses the same residual covariance as statsmodels, crossprod(resid) / df
+## with df = T - p - Kp - 1, and the same concentrated log-likelihood, so the
+## values below are compared at fixed parameters:
+##   loglike_hat    log-likelihood (logLc of vars' "direct" method) at the estimate
+##   A_fixed, B_fixed
+##                  a point away from the estimate: the free entries of A times
+##                  1.05, 1.10, ... and those of B times 1.1, 1.2, ... (in
+##                  column-major order), and loglike_fixed, the log-likelihood
+##                  there. The factors differ, since the score at a multiple of
+##                  the estimate is zero for some entries.
+##   score_A_fixed, score_B_fixed
+##                  gradient of the log-likelihood with respect to all entries of
+##                  A and B at A_fixed, B_fixed (the score of vars' scoring method)
+##   cov_hat        inverse of the information matrix at the estimate, in the
+##                  coordinates (vec(A), vec(B)) (column-major, zero for fixed
+##                  entries); vars' Ase and Bse are the square roots of its
+##                  diagonal
+##   irf            irf(..., boot = FALSE) at the estimate, indexed
+##                  [horizon, response, impulse]
+##   lr             vars' LR over-identification statistic (over-identified model)
+## The estimates themselves (A, B) are those of vars' scoring iterations with a
+## convergence criterion of 1e-12. vars normalizes their signs so that the
+## diagonal of solve(A) %*% B (A- and B-models) or of B (AB-models) is positive;
+## statsmodels does not normalize the signs.
+##
+## Python test is: statsmodels/tsa/vector_ar/tests/test_svar.py
+## (the tests that use results_svar_vars)
+##
+## Run with R 4.6.2 and vars 1.6.1 (on Windows), from this directory:
+##   Rscript results_svar_vars.R
+## It writes results_svar_vars.py next to this script.
+library(vars)
+
+macro <- read.csv("../../../../datasets/macrodata/macrodata.csv")
+y <- data.frame(
+  realgdp = diff(log(macro$realgdp)),
+  realcons = diff(log(macro$realcons)),
+  realinv = diff(log(macro$realinv))
+)
+p <- 3
+K <- ncol(y)
+v <- VAR(y, p = p, type = "const")
+obs <- v$obs
+df <- summary(v$varresult[[1]])$df[2]
+sigma <- crossprod(resid(v)) / df
+
+loglike <- function(A, B) {
+  # logLc of vars::SVAR(estmethod = "direct"), which minimizes -logLc
+  -(K * obs / 2) * log(2 * pi) + obs / 2 * log(det(A)^2) -
+    obs / 2 * log(det(B)^2) -
+    obs / 2 * sum(diag(t(A) %*% solve(t(B)) %*% solve(B) %*% A %*% sigma))
+}
+
+score <- function(A, B) {
+  # score of vars::SVAR(estmethod = "scoring") with respect to vec(A), vec(B)
+  IK <- diag(K)
+  Btinv <- solve(t(B))
+  BinvA <- solve(B) %*% A
+  s_binva <- obs * c(solve(t(BinvA))) - obs * (kronecker(sigma, IK) %*% c(BinvA))
+  s_ab <- rbind(kronecker(IK, Btinv), -1 * kronecker(BinvA, Btinv)) %*% s_binva
+  list(A = matrix(s_ab[1:K^2], K, K), B = matrix(s_ab[(K^2 + 1):(2 * K^2)], K, K))
+}
+
+information <- function(A, B) {
+  # information matrix of vars::SVAR(estmethod = "scoring") for vec(A), vec(B)
+  Ksq <- K^2
+  IK <- diag(K)
+  Kkk <- diag(Ksq)[, c(sapply(1:K, function(i) seq(i, Ksq, K)))]
+  Binv <- solve(B)
+  Btinv <- solve(t(B))
+  BinvA <- Binv %*% A
+  m1 <- rbind(kronecker(solve(BinvA), Btinv), -1 * kronecker(IK, Btinv))
+  m3 <- cbind(kronecker(t(solve(BinvA)), Binv), -1 * kronecker(IK, Binv))
+  obs * (m1 %*% (diag(Ksq) + Kkk) %*% m3)
+}
+
+lower_na <- matrix(NA, K, K)
+lower_na[upper.tri(lower_na)] <- 0
+ab_a <- matrix(c(1, NA, NA, 0, 1, NA, 0, 0, 1), K, K)
+ab_b <- diag(NA, K)
+over_a <- matrix(c(1, NA, 0, 0, 1, NA, 0, 0, 1), K, K)
+
+models <- list(
+  a = list(Amat = lower_na, Bmat = NULL),
+  b = list(Amat = NULL, Bmat = lower_na),
+  ab = list(Amat = ab_a, Bmat = ab_b),
+  ab_over = list(Amat = over_a, Bmat = ab_b)
+)
+
+fmt <- function(x) sprintf("%.17g", x)
+to_py <- function(x) {
+  d <- dim(x)
+  if (is.null(d)) {
+    return(paste0("[", paste(fmt(x), collapse = ", "), "]"))
+  }
+  rows <- vapply(seq_len(d[1]), function(i) {
+    if (length(d) == 2) {
+      to_py(as.vector(x[i, ]))
+    } else {
+      to_py(matrix(x[i, , ], d[2], d[3]))
+    }
+  }, "")
+  rows <- gsub("\n", "\n    ", rows, fixed = TRUE)
+  paste0("[\n    ", paste0(rows, collapse = ",\n    "), "\n]")
+}
+entry <- function(key, x) {
+  # a keyword argument of dict(), indented by four spaces
+  value <- if (length(x) == 1) fmt(x) else paste0("np.array(", to_py(x), ")")
+  paste0("    ", key, "=", gsub("\n", "\n    ", value, fixed = TRUE), ",")
+}
+out <- c(
+  '"""',
+  "Reference values for SVAR from R's vars package, see results_svar_vars.R",
+  "",
+  "Generated by results_svar_vars.R with R 4.6.2 and vars 1.6.1.",
+  '"""',
+  "",
+  "import numpy as np",
+  "",
+  paste0("var_coef = np.array(", to_py(Bcoef(v)), ")"),
+  paste0("sigma_u = np.array(", to_py(sigma), ")"),
+  ""
+)
+
+for (name in names(models)) {
+  m <- models[[name]]
+  s <- SVAR(v, estmethod = "scoring", Amat = m$Amat, Bmat = m$Bmat,
+            max.iter = 1000, conv.crit = 1e-12, lrtest = name == "ab_over")
+  stopifnot(s$iter < 999)
+  A <- unname(s$A)
+  B <- unname(s$B)
+  free_a <- if (is.null(m$Amat)) matrix(FALSE, K, K) else is.na(m$Amat)
+  free_b <- if (is.null(m$Bmat)) matrix(FALSE, K, K) else is.na(m$Bmat)
+  if (name != "ab_over") {
+    # just identified: the estimate reproduces sigma
+    stopifnot(isTRUE(all.equal(solve(A) %*% B %*% t(B) %*% t(solve(A)), unname(sigma),
+                               tolerance = 1e-10)))
+  }
+  A_fixed <- A
+  A_fixed[free_a] <- A[free_a] * (1 + 0.05 * seq_len(sum(free_a)))
+  B_fixed <- B
+  B_fixed[free_b] <- B[free_b] * (1 + 0.1 * seq_len(sum(free_b)))
+  sc <- score(A_fixed, B_fixed)
+  free <- c(c(free_a), c(free_b))
+  inf <- information(A, B)[free, free]
+  cov_hat <- matrix(0, 2 * K^2, 2 * K^2)
+  cov_hat[free, free] <- solve(inf)
+  se <- sqrt(diag(cov_hat))
+  stopifnot(isTRUE(all.equal(c(unname(s$Ase), unname(s$Bse)), se, tolerance = 1e-6)))
+  irs <- irf(s, n.ahead = 10, boot = FALSE)$irf
+  irf_arr <- array(NA, c(11, K, K))
+  for (j in 1:K) {
+    irf_arr[, , j] <- irs[[j]]
+  }
+  out <- c(
+    out,
+    paste0(name, " = dict("),
+    entry("A", A),
+    entry("B", B),
+    entry("loglike_hat", loglike(A, B)),
+    entry("A_fixed", A_fixed),
+    entry("B_fixed", B_fixed),
+    entry("loglike_fixed", loglike(A_fixed, B_fixed)),
+    entry("score_A_fixed", sc$A),
+    entry("score_B_fixed", sc$B),
+    entry("cov_hat", cov_hat),
+    entry("irf", irf_arr)
+  )
+  if (name == "ab_over") {
+    out <- c(out, entry("lr", unname(s$LR$statistic)),
+             entry("lr_df", unname(s$LR$parameter)))
+  }
+  out <- c(out, ")", "")
+}
+out <- out[seq_len(length(out) - 1)]
+con <- file("results_svar_vars.py", open = "wb")  # LF line endings
+writeLines(out, con, sep = "\n")
+close(con)

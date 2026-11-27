@@ -1,0 +1,3 @@
+- ``MSTL`` accepts a NumPy integer ``periods`` or ``windows`` and ``leybourne``
+  a NumPy integer ``arlags``, like Python integers, instead of raising.
+  :issue:`11200`, :pr:`11201`

@@ -14,7 +14,7 @@ from statsmodels.base.wrapper import (
     union_dicts,
 )
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import int_like, is_int_like, string_like
 
 
 class HoltWintersResults(Results):
@@ -215,8 +215,10 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts.
+        forecast : ndarray or Series
+            The in-sample predictions and out-of-sample forecasts from
+            `start` to `end`: a Series with the matching index if `endog` is
+            a pandas object, otherwise an ndarray.
         """
         return self.model.predict(self.params, start, end)
 
@@ -230,25 +232,31 @@ class HoltWintersResults(Results):
             The number of out of sample forecasts from the end of the
             sample.
 
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, is a number of
+               steps, as an int is, and so is a 0-d integer array with a date
+               index. They raised a KeyError or a TypeError. A bool raises a
+               TypeError: True was one step without a date index.
+
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts
+        forecast : ndarray or Series
+            The out-of-sample forecasts: a Series with the index continued
+            past the sample if `endog` is a pandas object, otherwise an
+            ndarray.
         """
-        try:
-            freq = getattr(self.model._index, "freq", 1)
-            if not isinstance(freq, int) and isinstance(
-                self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
-            ):
-                start = self.model._index[-1] + freq
-                end = self.model._index[-1] + steps * freq
-            else:
-                start = self.model._index.shape[0]
-                end = start + steps - 1
-            return self.model.predict(self.params, start=start, end=end)
-        except AttributeError:
-            # May occur when the index does not have a freq
-            return self.model._predict(h=steps, **self.params).fcastvalues
+        steps = int_like(steps, "steps")
+        freq = getattr(self.model._index, "freq", 1)
+        if not is_int_like(freq) and isinstance(
+            self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
+        ):
+            start = self.model._index[-1] + freq
+            end = self.model._index[-1] + steps * freq
+        else:
+            start = self.model._index.shape[0]
+            end = start + steps - 1
+        return self.model.predict(self.params, start=start, end=end)
 
     def summary(self):
         """
@@ -332,12 +340,12 @@ class HoltWintersResults(Results):
             return fmt.format(x)
 
         tab = []
-        for _, vals in formatted.iterrows():
+        for vals in formatted.itertuples(index=False):
             tab.append(
                 [
-                    _fmt(vals.iloc[1]),
-                    f"{vals.iloc[0]:>20}",
-                    f"{bool(vals.iloc[2])!s:>20}",
+                    _fmt(vals[1]),
+                    f"{vals[0]:>20}",
+                    f"{bool(vals[2])!s:>20}",
                 ]
             )
         params_table = SimpleTable(
@@ -553,11 +561,10 @@ class HoltWintersResults(Results):
         elif anchor == "start":
             start_idx = 0
         else:
+            # A negative location has been converted by _get_index_loc
             start_idx, _, _ = self.model._get_index_loc(anchor)
             if isinstance(start_idx, slice):
                 start_idx = start_idx.start
-        if start_idx < 0:
-            start_idx += self.model.nobs
         if start_idx > self.model.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 

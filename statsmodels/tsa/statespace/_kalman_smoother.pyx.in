@@ -362,7 +362,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             'smoothed_measurement_disturbance_cov': np.array(self.smoothed_measurement_disturbance_cov, copy=True, order='F'),
             'smoothed_state_disturbance_cov': np.array(self.smoothed_state_disturbance_cov, copy=True, order='F'),
             'smoothed_state_autocov': np.array(self.smoothed_state_autocov, copy=True, order='F'),
-            'innovations_transition': np.array(self.smoothed_state_autocov, copy=True, order='F'),
+            'innovations_transition': np.array(self.innovations_transition, copy=True, order='F'),
             'tmp_autocov': np.array(self.tmp_autocov, copy=True, order='F'),
             'scaled_smoothed_diffuse_estimator': np.array(self.scaled_smoothed_diffuse_estimator, copy=True, order='F'),
             'scaled_smoothed_diffuse1_estimator_cov': np.array(self.scaled_smoothed_diffuse1_estimator_cov, copy=True, order='F'),

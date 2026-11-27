@@ -61,9 +61,10 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
   2. Added to the Sphinx docs — find the relevant `docs/source/*.rst` file
      (e.g. `docs/source/vector_ar.rst` for VAR-family models) and add an
      `autosummary` entry.
-  3. Noted in the current release notes file under `docs/source/release/`
-     (currently `version0.15.1.rst` — use the highest-numbered unreleased
-     `versionX.Y.Z.rst`; see "Release notes and version directives" below).
+  3. Noted in a release-note fragment in `docs/upcoming_changes/` (see
+     "Release notes and version directives" below). The fragments are
+     collected into the unreleased release notes file under
+     `docs/source/release/` (currently `version0.15.1.rst`) at release time.
 - If it's a substantial new feature, an example notebook is strongly encouraged.
   (see the "Add an example" step in `CONTRIBUTING.md`).
 
@@ -152,14 +153,26 @@ in review. Check before submitting:
 - Add a bullet for every user-visible change: new public API, a bug fix,
   different results or output for valid input, a deprecation, or a
   documentation-only fix. Tests, internals and style need none.
-- Pick the section by kind of change: changed results of an existing function
-  go under "Behavior changes" (not "Bug Fixes"), deprecations and removals
-  under "Breaking Changes and Deprecations", new API under "New Features and
-  Enhancements", fixes under "Bug Fixes" in the topic subsection, and docs-only
-  fixes under "Documentation". Append to the end of the list (the lists are in
-  merge order), with no blank lines between bullets.
-- End the bullet with the roles ``:issue:`1234`, :pr:`5678` ``. The PR number
-  is only known once the PR is open, so add it in a follow-up commit.
+- Do not edit the release notes file itself. Write the bullets in a fragment
+  file `docs/upcoming_changes/<pr number>.<key>.rst`, so that pull requests do
+  not conflict in the release notes; `docs/upcoming_changes/README.rst` lists
+  the keys and the format. A PR with notes in several sections adds one file
+  per section.
+- Pick the section (the key) by kind of change: changed results of an
+  existing function go under "Behavior changes" (`behavior`, not a "Bug
+  Fixes" key), deprecations and removals under "Deprecations"
+  (`deprecation`), new API under "New Features and Enhancements" (`feature`),
+  fixes under "Bug Fixes" in the topic subsection (`tsa`, `stats`,
+  `regression`, ...), and docs-only fixes under "Documentation"
+  (`documentation`). Bullets have no blank lines between them.
+- End every bullet with the roles ``:issue:`1234`, :pr:`5678` ``. `:pr:` is
+  required, so a bullet without it is incomplete. `:issue:` is required for
+  each issue the change fixes or addresses (several are written
+  ``:issue:`1234`, :issue:`1235` ``) and is left out only if there is none.
+  The PR number is only known once the PR is open, so add the fragment, named
+  with it, in a follow-up commit right after opening the PR, before asking for
+  review. Do not use a placeholder. Check the fragments with
+  `python tools/releasing/collect_release_notes.py --check`.
 - Say what a user sees: what was wrong, what changes, and that results of
   valid input change if they do. No internals, no timings from one machine,
   and no claim of agreement with R or Stata that you did not compute.

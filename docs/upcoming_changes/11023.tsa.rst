@@ -1,0 +1,4 @@
+- The x13 functions did not find the X-13 binary when ``x12path`` named
+  it in another case, such as the ``x13as_ascii.EXE`` that
+  ``shutil.which`` returns on Windows, and raised an
+  ``AttributeError`` for a ``pathlib.Path``. Both work. :pr:`11023`

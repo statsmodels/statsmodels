@@ -1,0 +1,5 @@
+- A single ``initial_seasonal`` value in
+  :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with
+  ``seasonal_periods=2`` is used for both seasons with a ``FutureWarning``;
+  after statsmodels 0.17 the second value will be computed to make the
+  average effect zero. :pr:`10877`

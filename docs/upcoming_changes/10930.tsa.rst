@@ -1,0 +1,2 @@
+- ``get_prediction`` of ``ETSResults`` with ``method="simulated"`` raised when
+  the prediction had exactly one in-sample period. :pr:`10930`

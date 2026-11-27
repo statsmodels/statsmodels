@@ -1,0 +1,4 @@
+- ``VARResults.test_causality`` and ``VARResults.test_inst_causality`` accept
+  NumPy integers (for example from ``np.argmin``) as variable indices, and the
+  parameters of the Markov switching models accept them as regime indices, as
+  they accept Python integers. :issue:`11190`, :pr:`11191`

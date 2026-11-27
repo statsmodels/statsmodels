@@ -3,6 +3,8 @@ from statsmodels.compat.python import lrange
 
 import sys
 
+from statsmodels.tools.validation import is_int_like
+
 __all__ = ["create_mpl_ax", "create_mpl_fig"]
 
 
@@ -156,6 +158,11 @@ def maybe_name_or_idx(idx, model):
         location.  If a str, it is treated as a column name.  If a list or
         tuple, each element is resolved recursively and the results are
         collected into lists.
+
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer or a 0-d integer array is an integer location, as
+           an int is. A bool is not: True was the location 1.
     model : Model
         A fitted or unfitted model instance exposing ``exog`` (the design
         matrix) and ``exog_names`` (the corresponding column names).
@@ -169,7 +176,8 @@ def maybe_name_or_idx(idx, model):
     """
     if idx is None:
         idx = lrange(model.exog.shape[1])
-    if isinstance(idx, int):
+    if is_int_like(idx, strict=True):
+        idx = int(idx)
         exog_name = model.exog_names[idx]
         exog_idx = idx
     # anticipate index as list and recurse

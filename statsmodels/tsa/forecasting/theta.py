@@ -14,6 +14,8 @@ The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
 from __future__ import annotations
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -81,11 +83,12 @@ class ThetaModel:
         Whether to test the period-th autocorrelation. If this test
         rejects using a size of 10%, then decomposition is used. Set to
         False to skip the test.
-    method : {"auto", "additive", "multiplicative"}, optional
+    method : {"auto", "additive", "multiplicative", "add", "mul"}, optional
         The model used for the seasonal decomposition. "auto" uses a
-        multiplicative decomposition if y is non-negative and all
+        multiplicative decomposition if y is strictly positive and all
         estimated seasonal components are positive. If either of these
-        conditions is False, then it uses an additive decomposition.
+        conditions is False, then it uses an additive decomposition. "add"
+        and "mul" are short forms of "additive" and "multiplicative".
     difference : bool, optional
         Whether to difference the data before testing for seasonality.
 
@@ -154,6 +157,9 @@ class ThetaModel:
         self._y = array_like(endog, "endog", ndim=1)
         if isinstance(endog, pd.DataFrame):
             self.endog_orig = endog.iloc[:, 0]
+        elif not hasattr(endog, "shape"):
+            # A sequence such as a list or a tuple
+            self.endog_orig = self._y
         else:
             self.endog_orig = endog
         self._period = int_like(period, "period", optional=True)
@@ -166,7 +172,7 @@ class ThetaModel:
         self._diff = bool_like(difference, "difference")
         self._method = string_like(
             method,
-            "model",
+            "method",
             options=("auto", "additive", "multiplicative", "mul", "add"),
         )
         if self._method == "auto":
@@ -177,7 +183,8 @@ class ThetaModel:
             if idx is not None:
                 pfreq = getattr(idx, "freq", None)
                 if pfreq is None:
-                    pfreq = getattr(idx, "inferred_freq", None)
+                    with _infer_freq_returns_offset():
+                        pfreq = getattr(idx, "inferred_freq", None)
             if pfreq is not None:
                 self._period = freq_to_period(pfreq)
             else:
@@ -321,8 +328,8 @@ class ThetaModelResults:
         The estimated SES parameter.
     sigma2 : float or None
         The estimated residual variance from the SES/IMA model. If None,
-        the variance is estimated lazily from an ARIMA(0,1,1) model when
-        first accessed.
+        the variance is estimated lazily from an ARIMA(0,1,1) model with
+        drift fit to the deseasonalized data when first accessed.
     one_step : float
         The one-step forecast from the SES.
     seasonal : ndarray
@@ -359,9 +366,29 @@ class ThetaModelResults:
 
     @property
     def sigma2(self) -> float:
-        """The estimated residual variance"""
+        """
+        The estimated residual variance
+
+        If the parameters were not estimated using MLE, the variance is
+        estimated from an ARIMA(0,1,1) with drift fit to the deseasonalized
+        data.
+
+        .. versionchanged:: 0.15.1
+
+           The ARIMA(0,1,1) is fit to the deseasonalized data, which the
+           forecasts and the MLE estimates use. It used to be fit to the
+           original data, so for a deseasonalized model the variance also
+           reflected the seasonal pattern, which the forecasts add back.
+        """
         if self._sigma2 is None:
-            mod = SARIMAX(self.model._y, order=(0, 1, 1), trend="c")
+            y = self.model._y
+            if self._seasonal.shape[0]:
+                seasonal = np.resize(self._seasonal, y.shape[0])
+                if self.model.method.startswith("mul"):
+                    y = y / seasonal
+                else:
+                    y = y - seasonal
+            mod = SARIMAX(y, order=(0, 1, 1), trend="c")
             res = mod.fit(disp=False)
             self._sigma2 = np.asarray(res.params)[-1]
         assert self._sigma2 is not None
@@ -382,7 +409,7 @@ class ThetaModelResults:
             The number of steps ahead to compute the forecast components.
         theta : float, optional
             The theta value to use when computing the weight to combine
-            the trend and the SES forecasts.
+            the trend and the SES forecasts. Must be at least 1.
 
         Returns
         -------
@@ -469,8 +496,7 @@ class ThetaModelResults:
         b0 = self._b0
         nobs = self._nobs
         h = np.arange(1, steps + 1, dtype=np.float64) - 1
-        if alpha > 0:
-            h += 1 / alpha - ((1 - alpha) ** nobs / alpha)
+        h += 1 / alpha - ((1 - alpha) ** nobs / alpha)
         trend = b0 * h
         ses = self._one_step * np.ones(steps)
         if self.model.method.startswith("add"):
@@ -556,13 +582,13 @@ class ThetaModelResults:
         smry.add_table_2cols(
             self, gleft=top_left, gright=top_right, title=title
         )
-        table_fmt = {"data_fmts": ["%s", "%#0.4g"], "data_aligns": "r"}
+        table_fmt = {"data_fmts": ["%#0.4g"], "data_aligns": "r"}
 
         data = np.asarray(self.params)[:, None]
         st = SimpleTable(
             data,
             ["Estimate"],
-            ["Parameters"] + list(self.params.index),
+            list(self.params.index),
             title="Parameter Estimates",
             txt_fmt=table_fmt,
         )
@@ -582,7 +608,7 @@ class ThetaModelResults:
             The number of steps ahead to compute the forecast components.
         theta : float, optional
             The theta value to use when computing the weight to combine
-            the trend and the SES forecasts.
+            the trend and the SES forecasts. Must be at least 1.
         alpha : float, optional
             Significance level for the confidence intervals.
 
@@ -594,14 +620,20 @@ class ThetaModelResults:
         Notes
         -----
         The variance of the h-step forecast is assumed to follow from the
-        integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`. The prediction interval
+        integrated Moving Average structure of the Theta model, an IMA(1,1)
+        with moving average coefficient :math:`\alpha-1`, and so is
+        :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
         assumes that innovations are normally distributed.
+
+        .. versionchanged:: 0.15.1
+
+           The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
+           be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
+           whenever :math:`\alpha < 1`, so the intervals were too wide after
+           the first step.
         """
         model_alpha = self.params.iloc[1]
-        sigma2_h = (
-            1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)
-        ) * self.sigma2
+        sigma2_h = (1 + np.arange(steps) * model_alpha**2) * self.sigma2
         sigma_h = np.sqrt(sigma2_h)
         quantile = stats.norm.ppf(alpha / 2)
         predictions = self.forecast(steps, theta)
@@ -630,7 +662,7 @@ class ThetaModelResults:
             The number of steps ahead to compute the forecast components.
         theta : float, optional
             The theta value to use when computing the weight to combine
-            the trend and the SES forecasts.
+            the trend and the SES forecasts. Must be at least 1.
         alpha : float or None, optional
             The tail probability not covered by the confidence interval. Must
             be in (0, 1). Confidence interval is constructed assuming normally
@@ -653,9 +685,17 @@ class ThetaModelResults:
         Notes
         -----
         The variance of the h-step forecast is assumed to follow from the
-        integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`. The prediction interval
+        integrated Moving Average structure of the Theta model, an IMA(1,1)
+        with moving average coefficient :math:`\alpha-1`, and so is
+        :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
         assumes that innovations are normally distributed.
+
+        .. versionchanged:: 0.15.1
+
+           The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
+           be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
+           whenever :math:`\alpha < 1`, so the intervals were too wide after
+           the first step.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
