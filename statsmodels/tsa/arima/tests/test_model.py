@@ -1090,3 +1090,79 @@ def test_fit_start_params_right_length(fixed, includes_fixed, start_params):
         warnings.simplefilter("error", FutureWarning)
         res = mod.fit(start_params=start_params, includes_fixed=includes_fixed)
     assert res.params.shape == (3,)
+
+
+def _arma11_data(nobs, integrated=False):
+    rng = np.random.default_rng(20261121)
+    eps = rng.standard_normal(nobs)
+    exog = rng.standard_normal(nobs)
+    endog = np.zeros(nobs)
+    for t in range(1, nobs):
+        endog[t] = 0.6 * endog[t - 1] + eps[t] + 0.3 * eps[t - 1]
+    if integrated:
+        endog = np.cumsum(endog)
+    return endog, exog
+
+
+@pytest.mark.parametrize("copy_initialization", [False, True])
+@pytest.mark.parametrize("use_exog", [False, True])
+def test_append_copy_initialization(copy_initialization, use_exog):
+    # append(copy_initialization=True) raised a TypeError since ARIMA does
+    # not accept the initialization keyword argument that append passes to
+    # clone. ARIMA without a trend is SARIMAX with the same order and exog,
+    # so SARIMAX's append with the same option is the reference. The
+    # original models have a known initialization that differs from the
+    # default, so copying it changes the results.
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+    endog, exog = _arma11_data(120)
+    exog_kwargs = {"exog": exog[:100]} if use_exog else {}
+    mod = ARIMA(endog[:100], order=(1, 0, 1), trend="n", **exog_kwargs)
+    ref_mod = SARIMAX(endog[:100], order=(1, 0, 1), **exog_kwargs)
+    initial_state = np.array([2.0, -1.0])
+    initial_state_cov = np.diag([0.5, 0.1])
+    for model in (mod, ref_mod):
+        model.ssm.initialize_known(initial_state, initial_state_cov)
+    params = [0.6, 0.3, 1.0]
+    if use_exog:
+        params = [0.5] + params
+    res = mod.smooth(params)
+    ref = ref_mod.smooth(params)
+
+    exog_kwargs = {"exog": exog[100:]} if use_exog else {}
+    res = res.append(
+        endog[100:], copy_initialization=copy_initialization, **exog_kwargs
+    )
+    ref = ref.append(
+        endog[100:], copy_initialization=copy_initialization, **exog_kwargs
+    )
+    assert_allclose(res.llf, ref.llf, rtol=1e-10)
+    assert_allclose(res.smoothed_state, ref.smoothed_state, rtol=1e-10)
+    if copy_initialization:
+        assert_allclose(res.filter_results.initial_state, initial_state)
+        assert_allclose(res.filter_results.initial_state_cov, initial_state_cov)
+    else:
+        # The default initialization is the stationary one
+        assert res.model.ssm.initialization.initialization_type == "stationary"
+
+
+def test_append_copy_initialization_integrated():
+    # With integration, the default initialization is approximate diffuse,
+    # and the loglikelihood excludes the first observation. The new model
+    # keeps the copied initialization and this burn-in, as apply does.
+    # SARIMAX's append drops the burn-in when it copies the initialization,
+    # so it is given explicitly to the reference.
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+    endog, _ = _arma11_data(120, integrated=True)
+    params = [0.6, 0.3, 1.0]
+    res = ARIMA(endog[:100], order=(1, 1, 1)).smooth(params)
+    ref = SARIMAX(endog[:100], order=(1, 1, 1)).smooth(params)
+    assert res.loglikelihood_burn == 1
+    res = res.append(endog[100:], copy_initialization=True)
+    expected = ref.apply(endog, copy_initialization=True)
+    assert res.loglikelihood_burn == 1
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+    assert_allclose(res.smoothed_state, expected.smoothed_state, rtol=1e-10)
+    expected = ref.append(endog[100:], copy_initialization=True, loglikelihood_burn=1)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
