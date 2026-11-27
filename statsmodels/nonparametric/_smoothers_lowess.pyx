@@ -147,6 +147,11 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         np.ndarray[DTYPE_t, ndim = 1] weights
         DTYPE_t xval, radius
 
+        # overhead if not given_xvals
+        np.ndarray std_resid = np.empty(np.PyArray_DIMS(exog)[0])
+        double median, scale
+        double* std_resid_data = <double *>np.PyArray_DATA(std_resid)
+
     y = endog   # now just alias
     x = exog
 
@@ -219,7 +224,27 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
 
         # Calculate residual weights
         if not given_xvals:
-            resid_weights = calculate_residual_weights(y, y_fit)
+
+            for j in range(n):
+                std_resid_data[j] = fabs(y[j] - y_fit[j])
+
+            median = <double>np.median(std_resid)
+            # algorithm is numerically unstable
+            if median <= 1e-7:
+                break
+            else:
+                scale = 6.0 * median
+                for j in range(n):
+                    std_resid_data[j] /= scale
+
+            # Some trimming of outlier residuals.
+            for j in range(n):
+                if std_resid_data[j] > 1:
+                    std_resid_data[j] = 1.0
+            # std_resid[std_resid >= 0.999] = 1.0
+            # std_resid[std_resid <= 0.001] = 0.0
+
+            resid_weights = bisquare(std_resid)
 
     return np.array([xvals, y_fit]).T, resid_weights
 
@@ -546,53 +571,6 @@ cpdef update_indices(const double[::1] xvals,
     return i, last_fit_i
 
 
-cpdef np.ndarray calculate_residual_weights(const double[::1] y, const double[::1] y_fit):
-    """
-    Calculate residual weights for the next `robustifying` iteration.
-
-    Parameters
-    ----------
-    y: 1-D numpy array
-        The vector of actual input y-values.
-    y_fit: 1-D numpy array
-        The vector of fitted y-values from the current
-        iteration.
-
-    Returns
-    -------
-    resid_weights: 1-D numpy array
-        The vector of residual weights, to be used in the
-        next iteration of regressions.
-    """
-    cdef:
-        Py_ssize_t j
-        np.npy_intp n = y.size
-        np.ndarray std_resid = np.empty(n)
-        double median, scale
-        double* std_resid_data = <double *>np.PyArray_DATA(std_resid)
-
-    for j in range(n):
-        std_resid_data[j] = fabs(y[j] - y_fit[j])
-
-    median = <double>np.median(std_resid)
-    if median == 0:
-        for j in range(n):
-            std_resid_data[j] = <double>(std_resid_data[j] > 0)
-    else:
-        scale = 6.0 * median
-        for j in range(n):
-            std_resid_data[j] /= scale
-
-    # Some trimming of outlier residuals.
-    for j in range(n):
-        if std_resid_data[j] > 1:
-            std_resid_data[j] = 1.0
-    # std_resid[std_resid >= 0.999] = 1.0
-    # std_resid[std_resid <= 0.001] = 0.0
-
-    return bisquare(std_resid)
-
-
 cdef void tricube(double[::1] x):
     """
     The tri-cubic function (1 - x**3)**3. Used to weight neighboring
@@ -649,8 +627,7 @@ cpdef np.ndarray bisquare(const double[::1] x):
     """
     The bi-square function (1 - x**2)**2.
 
-    Used to weight the residuals in the `robustifying`
-    iterations. Called by the calculate_residual_weights function.
+    Used to weight the residuals in the `robustifying` iterations.
 
     Parameters
     ----------
