@@ -349,6 +349,104 @@ class TestWeightstats:
         assert_(str(cm1.summary()) == str(cm2.summary()))
 
 
+def _comparemeans_direct(x1, x2, use_t, usevar, value, alpha=0.05):
+    """Independent closed-form oracle for a CompareMeans summary row."""
+    n1, n2 = x1.shape[0], x2.shape[0]
+    mean1 = np.mean(x1, axis=0)
+    mean2 = np.mean(x2, axis=0)
+    var1 = np.var(x1, axis=0, ddof=1)
+    var2 = np.var(x2, axis=0, ddof=1)
+    if usevar == "pooled":
+        pooled_var = ((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2)
+        std_err = np.sqrt(pooled_var * (1 / n1 + 1 / n2))
+        df = n1 + n2 - 2
+    else:
+        var_mean1 = var1 / n1
+        var_mean2 = var2 / n2
+        std_err = np.sqrt(var_mean1 + var_mean2)
+        df = std_err**4 / (var_mean1**2 / (n1 - 1) + var_mean2**2 / (n2 - 1))
+
+    effect = mean1 - mean2 - value
+    statistic = effect / std_err
+    dist = stats.t(df) if use_t else stats.norm
+    pvalue = 2 * dist.sf(np.abs(statistic))
+    crit = dist.ppf(1 - alpha / 2)
+    conf_int = np.column_stack((effect - crit * std_err, effect + crit * std_err))
+    expected = np.column_stack((effect, std_err, statistic, pvalue, conf_int))
+    return np.atleast_2d(expected)
+
+
+@pytest.mark.parametrize("use_t", [True, False])
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+@pytest.mark.parametrize("value", [0, 2])
+@pytest.mark.parametrize("multivariate", [False, True])
+def test_comparemeans_summary_value_direct_formula(use_t, usevar, value, multivariate):
+    if multivariate:
+        x1 = np.column_stack((np.arange(15.0), 2 * np.arange(15.0) + 3))
+        x2 = np.column_stack((np.arange(15.0) - 1, 2 * np.arange(15.0) + 1))
+    else:
+        x1 = np.arange(15.0)
+        x2 = x1 - 1
+
+    cm = CompareMeans(DescrStatsW(x1), DescrStatsW(x2))
+    smry = cm.summary(use_t=use_t, usevar=usevar, value=value)
+    actual = np.array([[float(cell) for cell in row[1:]] for row in smry.data[1:]])
+    expected = _comparemeans_direct(x1, x2, use_t, usevar, value)
+
+    # The table prints coefficients to 4 decimals, and the standard error,
+    # statistic, p-value, and CI limits to 3 decimals.
+    assert_allclose(actual[:, 0], expected[:, 0], rtol=0, atol=5e-5)
+    assert_allclose(actual[:, 1:], expected[:, 1:], rtol=0, atol=5e-4)
+
+
+@pytest.mark.parametrize("use_t", [True, False])
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+@pytest.mark.parametrize("multivariate", [False, True])
+def test_comparemeans_summary_value_underlying_methods_unchanged(
+    use_t, usevar, multivariate
+):
+    if multivariate:
+        x1 = np.column_stack((np.arange(15.0), 2 * np.arange(15.0) + 3))
+        x2 = np.column_stack((np.arange(15.0) - 1, 2 * np.arange(15.0) + 1))
+    else:
+        x1 = np.arange(15.0)
+        x2 = x1 - 1
+
+    cm = CompareMeans(DescrStatsW(x1), DescrStatsW(x2))
+    expected = _comparemeans_direct(x1, x2, use_t, usevar, value=2)
+    if use_t:
+        statistic, pvalue, df = cm.ttest_ind(usevar=usevar, value=2)
+        lower, upper = cm.tconfint_diff(usevar=usevar)
+    else:
+        statistic, pvalue = cm.ztest_ind(usevar=usevar, value=2)
+        lower, upper = cm.zconfint_diff(usevar=usevar)
+
+    assert_allclose(statistic, expected[:, 2], rtol=1e-13)
+    assert_allclose(pvalue, expected[:, 3], rtol=1e-13)
+    # Confidence-interval methods remain intervals for the raw mean
+    # difference; only the summary presentation is null-centered.
+    raw_expected = _comparemeans_direct(x1, x2, use_t, usevar, value=0)
+    assert_allclose(lower, raw_expected[:, 4], rtol=1e-13)
+    assert_allclose(upper, raw_expected[:, 5], rtol=1e-13)
+
+
+def test_comparemeans_summary_default_output_unchanged():
+    x1 = np.arange(15.0)
+    x2 = x1 - 1
+    smry = CompareMeans(DescrStatsW(x1), DescrStatsW(x2)).summary()
+    expected = "\n".join(
+        [
+            "Test for equality of means".center(78),
+            "=" * 78,
+            "                 coef    std err          t      P>|t|      [0.025      0.975]",
+            "-" * 78,
+            "subset #1      1.0000      1.633      0.612      0.545      -2.345       4.345",
+            "=" * 78,
+        ]
+    )
+    assert str(smry) == expected
+
+
 class CheckWeightstats1dMixin:
 
     def test_basic(self):
