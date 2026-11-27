@@ -1,5 +1,4 @@
-- ``test_causality`` and ``test_inst_causality`` of
-  ``VARResults`` accept numpy integers, ``FEVD(periods=None)`` uses 10 periods,
+- ``FEVD(periods=None)`` of ``VARResults`` uses 10 periods,
   ``FEVD.plot(periods=k)`` plots the first ``k`` horizons, and
   ``seasonal_dummies`` raises for a negative ``n_seasons``; they raised
   or returned None. :pr:`10970`
