@@ -776,6 +776,24 @@ class VAR(TimeSeriesModel):
         ndarray
             Array of in-sample predicted values and/or out-of-sample
             forecasts.
+
+        Notes
+        -----
+        The deterministic terms are those of ``fit``: the time trend of the
+        zero-indexed observation t is t + 1. Out-of-sample forecasts are not
+        available for a model with exog, since predict has no future values
+        of exog; use ``VARResults.forecast`` instead.
+
+        .. versionchanged:: 0.15.1
+
+           Out-of-sample forecasts work with every trend and with a start
+           after the sample, and in-sample predictions work with exog;
+           these raised errors. Some ranges that end out of sample returned
+           an empty array (``end - start`` twice the number of out-of-sample
+           observations), in-sample predictions with trend "ct" or "ctt"
+           could use a wrong time trend, and a start below lags could
+           return copies of one prediction. Such a start raises a
+           ValueError.
         """
         params = np.array(params)
 
@@ -790,37 +808,45 @@ class VAR(TimeSeriesModel):
             prediction_index,
         ) = self._get_prediction_index(start, end)
 
-        if end < start:
-            raise ValueError("end is before start")
-        if end == start + out_of_sample:
-            return np.array([])
+        if start < lags:
+            raise ValueError(
+                f"start must be at least lags ({lags}), the first observation "
+                f"that has a prediction, got {start}"
+            )
 
         k_trend = util.get_trendorder(trend)
         k = self.neqs
         k_ar = lags
-
-        predictedvalues = np.zeros((end + 1 - start + out_of_sample, k))
-        if k_trend != 0:
-            intercept = params[:k_trend]
-            predictedvalues += intercept
-
         y = self.endog
-        x = util.get_var_endog(y, lags, trend=trend, has_constant="raise")
-        fittedvalues = np.dot(x, params)
+        n_totobs = y.shape[0]
 
-        fv_start = start - k_ar
-        pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        fv_end = min(len(fittedvalues), end - k_ar + 1)
-        predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
+        # The regressors of fit for the observations k_ar, ..., n_totobs - 1:
+        # the trend terms (1, t + 1, (t + 1) ** 2), exog and the lags
+        time = np.arange(k_ar + 1.0, n_totobs + 1)
+        x = np.vander(time, k_trend, increasing=True)
+        if self.exog is not None:
+            x = np.column_stack((x, self.exog[k_ar:]))
+        x = np.column_stack((x, util.get_var_endog(y, k_ar, trend="n")))
+        predictedvalues = np.dot(x, params)[start - k_ar : end - k_ar + 1]
 
         if not out_of_sample:
             return predictedvalues
+        if self.exog is not None:
+            raise ValueError(
+                "predict cannot forecast out of sample with exog. Use the "
+                "forecast method of the results with exog_future."
+            )
 
-        # fit out of sample
-        y = y[-k_ar:]
+        # Forecasts of the observations n_totobs, ..., end + out_of_sample, with
+        # the trend terms built as in VARProcess.forecast
+        time = np.arange(n_totobs + 1.0, n_totobs + 1 + out_of_sample)
+        exog_future = np.vander(time, k_trend, increasing=True)
         coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1, 2)
-        predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
-        return predictedvalues
+        forecasts = forecast(
+            y[-k_ar:], coefs, params[:k_trend], out_of_sample, exog_future
+        )
+        # A start after the sample skips the first forecasts
+        return np.vstack((predictedvalues, forecasts[max(start - n_totobs, 0) :]))
 
     def fit(
         self,
