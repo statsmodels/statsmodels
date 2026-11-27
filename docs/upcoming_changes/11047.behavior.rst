@@ -1,0 +1,5 @@
+- ``smoothed_state_autocovariance`` of ``SmootherResults`` with ``lag < -1`` returned
+  the cached result of a call without ``extend_kwargs`` for
+  ``extend_kwargs={}``, and the reverse, so the number of periods it
+  returned depended on the order of the calls. Each call returns its
+  own result, so the second of such calls changes. :pr:`11047`

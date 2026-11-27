@@ -1,0 +1,7 @@
+- ``smooth`` of ``KalmanSmoother``, and so ``smooth`` of state space models, ignored
+  ``complex_step`` and ``smooth_method``: with ``complex_step=True`` the
+  stationary initialization of the state was computed as for real
+  parameters, so complex-step derivatives of the loglikelihood and the
+  smoothed state were wrong, and the smoothing method of the model was
+  always used. Both arguments are used, so results of calls that pass
+  them change. :pr:`11044`

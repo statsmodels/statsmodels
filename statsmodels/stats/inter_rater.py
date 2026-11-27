@@ -470,6 +470,14 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for.
+        One dimensional weights have one value for each category, so their
+        length is the number of rows and columns of table.
+
+        .. versionchanged:: 0.15.1
+
+           One dimensional weights of another length raise a ValueError.
+           Weights of length 1 were broadcast and gave nan, or a kappa of
+           zero up to rounding with ``wt="toeplitz"``.
     return_results : bool, optional
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -628,6 +636,12 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         kind = "Weighted"
         weights = np.asarray(weights, float)
         if weights.ndim == 1:
+            if weights.shape[0] != table.shape[0]:
+                raise ValueError(
+                    f"1-d weights must have length {table.shape[0]}, the number "
+                    f"of categories in table, but they have length "
+                    f"{weights.shape[0]}"
+                )
             if wt in ["ca", "linear", None]:
                 weights = np.abs(weights[:, None] - weights) /  \
                            (weights[-1] - weights[0])
