@@ -24,7 +24,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
 import pytest
-from scipy.linalg import solve_discrete_lyapunov
+from scipy.linalg import solve_discrete_are, solve_discrete_lyapunov
 from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tsa.statespace import _kalman_filter, _representation
@@ -32,6 +32,7 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_CONSERVE,
     MEMORY_NO_FORECAST,
     MEMORY_NO_PREDICTED,
+    KalmanFilter,
 )
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
@@ -931,3 +932,277 @@ def test_prediction_results_clear():
     for attr in cached_attrs:
         assert_allclose(getattr(pred, attr), values_before[attr])
         assert hasattr(pred, "_" + attr)
+
+
+@pytest.mark.parametrize("filter_univariate", [False, True])
+@pytest.mark.parametrize("k_states", [1, 2])
+def test_filtered_timing_converged_last_predicted_state_cov(k_states, filter_univariate):
+    # With filtered timing, the predicted state covariance matrix for the
+    # period after the sample (the last column of predicted_state_cov) was
+    # left at zero once the filter had converged, since a converged filter
+    # does not compute it. It is the converged matrix, as without convergence
+    # (tolerance=0) and as the solution of the Riccati equation.
+    endog = np.random.default_rng(5820).standard_normal((50, k_states))
+    design = np.eye(k_states)
+    obs_cov = np.diag([1.0, 0.6][:k_states])
+    transition = np.array([[0.5, 0.1], [0.0, 0.3]])[:k_states, :k_states]
+    state_cov = np.array([[1.0, 0.2], [0.2, 0.5]])[:k_states, :k_states]
+    kf = KalmanFilter(k_states, k_states, k_posdef=k_states)
+    kf.bind(endog)
+    kf["design"] = design
+    kf["obs_cov"] = obs_cov
+    kf["transition"] = transition
+    kf["selection"] = np.eye(k_states)
+    kf["state_cov"] = state_cov
+    kf.initialize_known(np.zeros(k_states), np.eye(k_states))
+    kf.timing_init_filtered = True
+    kf.filter_univariate = filter_univariate
+
+    res = kf.filter()
+    assert res.converged
+    assert res.period_converged < kf.nobs - 1
+    kf.tolerance = 0
+    desired = kf.filter()
+    assert not desired.converged
+    riccati = solve_discrete_are(transition.T, design.T, state_cov, obs_cov)
+
+    actual = res.predicted_state_cov[..., -1]
+    assert_allclose(actual, desired.predicted_state_cov[..., -1], rtol=1e-8)
+    assert_allclose(actual, riccati, rtol=1e-8)
+    assert_allclose(
+        res.predicted_state[..., -1], desired.predicted_state[..., -1], rtol=1e-8
+    )
+
+
+@pytest.mark.parametrize("dynamic", [None, 2])
+def test_filtered_timing_prediction(dynamic):
+    # FilterResults.predict (forecasts, dynamic prediction, and so
+    # get_forecast and get_prediction) runs a filter on missing data that
+    # starts from the predicted state of its first period. With filtered
+    # timing that filter treated it as the filtered state of the period before,
+    # so the predictions were one period late. They equal those with the
+    # predicted timing and the closed form of an AR(1) observed with noise.
+    phi, sigma2, obs_var = 0.5, 1.0, 0.8
+    endog = np.random.default_rng(3029).standard_normal((20, 1))
+
+    def predict(filtered_timing):
+        kf = KalmanFilter(1, 1, k_posdef=1)
+        kf.bind(endog)
+        kf["design"] = [[1.0]]
+        kf["obs_cov"] = [[obs_var]]
+        kf["transition"] = [[phi]]
+        kf["selection"] = [[1.0]]
+        kf["state_cov"] = [[sigma2]]
+        # The stationary distribution, the same for alpha_0 and alpha_1
+        kf.initialize_known(np.zeros(1), [[sigma2 / (1 - phi**2)]])
+        kf.timing_init_filtered = filtered_timing
+        res = kf.filter()
+        if dynamic is None:
+            start, end = kf.nobs, kf.nobs + 3
+        else:
+            start, end = 10, 15
+        return res, res.predict(start=start, end=end, dynamic=dynamic)
+
+    res, pred = predict(True)
+    _, desired = predict(False)
+    assert_allclose(pred.forecasts, desired.forecasts, rtol=1e-10)
+    assert_allclose(pred.forecasts_error_cov, desired.forecasts_error_cov, rtol=1e-10)
+
+    # Closed form: from the filtered state a_{t|t} and its variance P_{t|t}
+    # of the last observed period t, the h-step prediction has mean
+    # phi^h a_{t|t} and variance phi^(2h) P_{t|t} + sigma2 (1 + phi^2 + ...
+    # + phi^(2(h-1))) + obs_var
+    last = res.nobs - 1 if dynamic is None else 11
+    steps = np.arange(1, 4)
+    mean = phi**steps * res.filtered_state[0, last]
+    var = (
+        phi ** (2 * steps) * res.filtered_state_cov[0, 0, last]
+        + sigma2 * (1 - phi ** (2 * steps)) / (1 - phi**2)
+        + obs_var
+    )
+    assert_allclose(pred.forecasts[0, -3:], mean, rtol=1e-10)
+    assert_allclose(pred.forecasts_error_cov[0, 0, -3:], var, rtol=1e-10)
+    if dynamic is not None:
+        # The first two periods are one-step-ahead predictions
+        assert_allclose(pred.forecasts[0, :2], res.forecasts[0, 10:12], rtol=1e-10)
+
+
+def _filtered_timing_model(endog, matrices, initial_state, initial_state_cov,
+                           filtered_timing, **options):
+    k_states, k_posdef = matrices["selection"].shape[:2]
+    mod = MLEModel(endog, k_states=k_states, k_posdef=k_posdef, **options)
+    for name, value in matrices.items():
+        mod.ssm[name] = value
+    mod.ssm.initialize_known(initial_state, initial_state_cov)
+    mod.ssm.timing_init_filtered = filtered_timing
+    return mod.ssm
+
+
+def _period(matrix, t):
+    # Period t of a system matrix that may be time-invariant
+    return matrix[..., t if matrix.shape[-1] > 1 else 0]
+
+
+@pytest.mark.parametrize(
+    "time_varying, case",
+    [
+        ("all", "conventional"),
+        ("all", "univariate"),
+        ("all", "collapsed"),
+        ("all", "missing"),
+        ("all", "conserve_memory"),
+        ("transition", "conventional"),
+        ("state_intercept", "conventional"),
+        ("state_cov", "conventional"),
+        ("selection", "conventional"),
+        ("none", "conventional"),
+    ],
+)
+def test_filtered_timing_time_varying(time_varying, case):
+    # With the filtered timing (timing_init_filtered), period t >= 1 is
+    # predicted from the filtered state of period t - 1 with the transition
+    # matrix, state intercept and selected state covariance matrix of period
+    # t - 1 (column t - 1 is the transition from t - 1 to t, as with the
+    # predicted timing, in the smoother, in prediction and in the models), and
+    # period 0 from the initialization with those of period 0. The filter used
+    # those of period t, so the filter (and the smoother, which uses period t's
+    # for the transition from t to t + 1) differed from the model with the
+    # predicted timing whose initial state is the initialization pushed
+    # through period 0's transition. Time-invariant models are unchanged.
+    rng = np.random.default_rng(4471)
+    nobs, k_endog, k_states, k_posdef = 12, 3, 2, 2
+
+    def cov(k):
+        root = rng.standard_normal((k, k, nobs))
+        return np.einsum("ijt,kjt->ikt", root, root) + 0.5 * np.eye(k)[..., None]
+
+    matrices = {
+        "design": rng.standard_normal((k_endog, k_states, nobs)),
+        "obs_intercept": rng.standard_normal((k_endog, nobs)),
+        "obs_cov": cov(k_endog),
+        "transition": 0.6 * rng.standard_normal((k_states, k_states, nobs)),
+        "state_intercept": rng.standard_normal((k_states, nobs)),
+        "selection": rng.standard_normal((k_states, k_posdef, nobs)),
+        "state_cov": cov(k_posdef),
+    }
+    if time_varying != "all":
+        for name in matrices:
+            if name != time_varying:
+                matrices[name] = matrices[name][..., :1]
+    if case == "univariate":
+        # Without the diagonalization (and its OutputWarning) in smoothing
+        matrices["obs_cov"] = matrices["obs_cov"] * np.eye(k_endog)[..., None]
+    elif case == "collapsed":
+        # Not supported by the collapsed filter
+        matrices["obs_intercept"] = np.zeros((k_endog, 1))
+    endog = rng.standard_normal((nobs, k_endog))
+    if case == "missing":
+        endog[3, 1] = np.nan
+        endog[6] = np.nan
+    options = {
+        "univariate": {"filter_univariate": True},
+        "collapsed": {"filter_collapsed": True},
+        "conserve_memory": {"memory_conserve": True},
+    }.get(case, {})
+    initial_state = rng.standard_normal(k_states)
+    root = rng.standard_normal((k_states, k_states))
+    initial_state_cov = root @ root.T + np.eye(k_states)
+
+    # The equivalent model with the predicted timing
+    transition = _period(matrices["transition"], 0)
+    selection = _period(matrices["selection"], 0)
+    selected_state_cov = selection @ _period(matrices["state_cov"], 0) @ selection.T
+    desired = _filtered_timing_model(
+        endog,
+        matrices,
+        transition @ initial_state + _period(matrices["state_intercept"], 0),
+        transition @ initial_state_cov @ transition.T + selected_state_cov,
+        False,
+        **options,
+    )
+    actual = _filtered_timing_model(
+        endog, matrices, initial_state, initial_state_cov, True, **options
+    )
+    if case == "conserve_memory":
+        assert_allclose(actual.filter().llf, desired.filter().llf, rtol=1e-10)
+        return
+    res = actual.smooth()
+    desired = desired.smooth()
+    names = [
+        "llf_obs",
+        "forecasts",
+        "forecasts_error_cov",
+        "predicted_state",
+        "predicted_state_cov",
+        "filtered_state",
+        "filtered_state_cov",
+        "kalman_gain",
+        "smoothed_state",
+        "smoothed_state_cov",
+        "smoothed_state_disturbance",
+        "smoothed_state_disturbance_cov",
+        "smoothed_measurement_disturbance",
+    ]
+    for name in names:
+        assert_allclose(
+            getattr(res, name), getattr(desired, name), rtol=1e-10, err_msg=name
+        )
+
+    # The prediction step, from the initialization and the filtered states
+    for t in range(nobs + 1):
+        prev = max(t - 1, 0)
+        transition = _period(matrices["transition"], prev)
+        selection = _period(matrices["selection"], prev)
+        if t == 0:
+            state, state_cov = initial_state, initial_state_cov
+        else:
+            state = res.filtered_state[:, t - 1]
+            state_cov = res.filtered_state_cov[:, :, t - 1]
+        mean = transition @ state + _period(matrices["state_intercept"], prev)
+        cov = (
+            transition @ state_cov @ transition.T
+            + selection @ _period(matrices["state_cov"], prev) @ selection.T
+        )
+        assert_allclose(res.predicted_state[:, t], mean, rtol=1e-10)
+        assert_allclose(res.predicted_state_cov[:, :, t], cov, rtol=1e-10)
+
+
+def test_filtered_timing_time_varying_smoother():
+    # A time-varying AR(1) observed with noise with the filtered timing: the
+    # filtered states equalled those of the model with the predicted timing
+    # and the matrices shifted by one period, but the smoothed states did not
+    # (up to 0.146 apart here). Filter and smoother agree with the model with
+    # the predicted timing, the same matrices and the initialization pushed
+    # through period 0's transition.
+    rng = np.random.default_rng(0)
+    nobs = 8
+    endog = rng.standard_normal((nobs, 1))
+    intercept = rng.standard_normal(nobs + 1)[:nobs]
+    transition = (0.2 + 0.7 * rng.uniform(size=nobs + 1))[:nobs]
+    matrices = {
+        "design": [[1.0]],
+        "obs_cov": [[0.5]],
+        "transition": transition[None, None, :],
+        "state_intercept": intercept[None, :],
+        "selection": np.ones((1, 1, 1)),
+        "state_cov": [[1.0]],
+    }
+    res = _filtered_timing_model(endog, matrices, [0.3], [[2.0]], True).smooth()
+    desired = _filtered_timing_model(
+        endog,
+        matrices,
+        [transition[0] * 0.3 + intercept[0]],
+        [[transition[0] ** 2 * 2.0 + 1.0]],
+        False,
+    ).smooth()
+    assert_allclose(res.llf, desired.llf, rtol=1e-10)
+    for name in ["filtered_state", "smoothed_state", "smoothed_state_cov"]:
+        assert_allclose(
+            getattr(res, name), getattr(desired, name), rtol=1e-10, err_msg=name
+        )
+    # a_t = T_{t-1} a_{t-1|t-1} + c_{t-1} for t >= 1
+    assert_allclose(
+        res.predicted_state[0, 1:],
+        transition * res.filtered_state[0] + intercept,
+        rtol=1e-10,
+    )

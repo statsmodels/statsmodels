@@ -1,0 +1,8 @@
+- With the filtered timing convention (``timing_init_filtered=True``),
+  out-of-sample forecasts and dynamic predictions of state space
+  models (``forecast``, ``get_forecast``, ``predict`` and
+  ``get_prediction``, and the forecasts compared by ``news``) were one
+  period late: the filter run on the prediction period treated the
+  predicted state of its first period as the filtered state of the
+  period before. They equal those with the predicted timing.
+  :pr:`11152`

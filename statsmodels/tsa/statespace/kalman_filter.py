@@ -810,6 +810,23 @@ class KalmanFilter(Representation):
         **kwargs
             The boolean flags `timing_init_predicted` and
             `timing_init_filtered` may be used to set the timing convention.
+
+        Notes
+        -----
+        With either convention, the time-varying matrices of the transition
+        equation of period :math:`t` (:math:`T_t, c_t, R_t, Q_t`) describe the
+        transition from period :math:`t` to period :math:`t+1`. With the
+        alternate timing, the initialization describes the filtered state
+        before the first period, and the state of the first period is
+        predicted from it with the matrices of the first period.
+
+        .. versionchanged:: 0.15.1
+
+           With the alternate timing and time-varying matrices, the state of
+           period :math:`t \geq 1` was predicted with the matrices of period
+           :math:`t` instead of period :math:`t-1`, inconsistent with the
+           smoother, prediction and the models that set time-varying
+           matrices (for example VARMAX with exog or a time trend).
         """
         if alternate_timing is not None:
             self.filter_timing = int(alternate_timing)
@@ -1472,6 +1489,12 @@ class FilterResults(FrozenRepresentation):
         The predicted state vector at each time period.
     predicted_state_cov : ndarray
         The predicted state covariance matrix at each time period.
+
+        .. versionchanged:: 0.15.1
+
+           With the filtered timing convention (``timing_init_filtered``),
+           the matrix for the period after the sample (the last one) is set
+           when the filter has converged. It was zero.
     forecasts_error_diffuse_cov : ndarray
         Diffuse forecast error covariance matrix at each time period.
     predicted_diffuse_state_cov : ndarray
@@ -2013,6 +2036,12 @@ class FilterResults(FrozenRepresentation):
 
         Out-of-sample prediction first applies the Kalman filter to missing
         data for the number of periods desired to obtain the predicted states.
+
+        .. versionchanged:: 0.15.1
+
+           With the filtered timing convention (``timing_init_filtered``),
+           out-of-sample forecasts and dynamic predictions were one period
+           late. They equal those with the predicted timing convention.
         """
         # Get the start and the end of the entire prediction range
         if start is None:
@@ -2128,9 +2157,14 @@ class FilterResults(FrozenRepresentation):
                 constant = self.predicted_state[..., kf_start]
                 stationary_cov = self.predicted_state_cov[..., kf_start]
 
+            # The initial state is the predicted state of period kf_start, so
+            # the new filter uses the predicted timing convention (with the
+            # filtered timing, it would treat it as the filtered state of the
+            # period before and predict one period late)
             kwargs.update({"initialization": "known",
                            "constant": constant,
-                           "stationary_cov": stationary_cov})
+                           "stationary_cov": stationary_cov,
+                           "alternate_timing": False})
 
             # Construct the new endogenous array.
             endog = np.zeros((nforecast, self.k_endog)) * np.nan

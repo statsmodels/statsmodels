@@ -1,0 +1,14 @@
+- With the filtered timing convention (``timing_init_filtered=True``)
+  and time-varying transition, state intercept, selection or state
+  covariance matrices, the Kalman filter predicted the state of each
+  period after the first with the matrices of that period instead of
+  those of the period before, which describe the transition into it
+  with the default timing and in the smoother, in prediction and in
+  the models that set time-varying matrices. The filtered, predicted
+  and smoothed results and the log-likelihood of such models change:
+  they equal those of the model with the default timing whose initial
+  state is the initialization predicted with the matrices of the
+  first period. For example,
+  :class:`~statsmodels.tsa.statespace.varmax.VARMAX` with the filtered
+  timing raised with ``exog``, and with a time trend it used the trend
+  of the next period. Time-invariant models are unchanged. :pr:`11188`

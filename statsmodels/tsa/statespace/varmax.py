@@ -1059,6 +1059,9 @@ class VARMAXResults(MLEResults):
             tmp_trend_offset = self.model.trend_offset + self.nobs - 1
             tmp_mod = self.model.clone(tmp_endog, exog=tmp_exog,
                                        trend_offset=tmp_trend_offset)
+            # The initial state is the predicted state of the last period, so
+            # the temporary model uses the predicted timing convention
+            tmp_mod.ssm.timing_init_filtered = False
             constant = self.filter_results.predicted_state[:, -2]
             stationary_cov = self.filter_results.predicted_state_cov[:, :, -2]
             tmp_mod.ssm.initialize_known(constant=constant,
