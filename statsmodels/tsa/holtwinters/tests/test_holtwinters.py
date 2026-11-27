@@ -3504,3 +3504,67 @@ def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
     )
     assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
     assert res.params["use_boxcox"] is expected
+
+
+def _trend_seasonal_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+@pytest.mark.parametrize(
+    "missing",
+    ["smoothing_level", "smoothing_trend", "smoothing_seasonal", "damping_trend"],
+)
+@pytest.mark.parametrize("use_fix_params", [False, True])
+def test_fit_not_optimized_missing_parameter(missing, use_fix_params):
+    # Without optimization, a parameter that is neither given nor fixed
+    # raised a TypeError in the recursions
+    mod = ExponentialSmoothing(
+        _trend_seasonal_data(),
+        trend="add",
+        damped_trend=True,
+        seasonal="add",
+        seasonal_periods=12,
+    )
+    values = {
+        "smoothing_level": 0.3,
+        "smoothing_trend": 0.1,
+        "smoothing_seasonal": 0.2,
+        "damping_trend": 0.95,
+    }
+    del values[missing]
+    with pytest.raises(ValueError, match=f"{missing} must be given"):
+        if use_fix_params:
+            with mod.fix_params(values):
+                mod.fit(optimized=False)
+        else:
+            mod.fit(optimized=False, **values)
+
+
+def test_fit_not_optimized_fixed_smoothing_level():
+    # A smoothing_level fixed using fix_params does not need to be given.
+    # The reference is the simple exponential smoothing recursion.
+    y = _trend_seasonal_data()
+    mod = ExponentialSmoothing(y)
+    level = mod.initial_values()[0]
+    with mod.fix_params({"smoothing_level": 0.3}):
+        res = mod.fit(optimized=False)
+    expected = np.empty_like(y)
+    for t in range(y.shape[0]):
+        expected[t] = level
+        level = 0.3 * y[t] + 0.7 * level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("key", ["smoothing_level", "damping_trend"])
+@pytest.mark.parametrize(
+    "bound", [(0.1, None), (None, 0.5), (None, None), (-0.1, 0.5), (0.1, 1.5)]
+)
+def test_bounds_outside_unit_interval(key, bound):
+    # The bounds of the smoothing and damping parameters must lie in [0, 1].
+    # None, which means no bound for the initial values, raised a TypeError.
+    with pytest.raises(ValueError, match=f"{key} must have a lower bound >= 0.0"):
+        ExponentialSmoothing(
+            _trend_seasonal_data(), trend="add", damped_trend=True, bounds={key: bound}
+        )
