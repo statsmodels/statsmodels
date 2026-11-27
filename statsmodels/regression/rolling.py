@@ -1064,7 +1064,7 @@ class RollingRegressionResults:
 
         Parameters
         ----------
-        variables : {int, str, list[int], list[str], None}, optional
+        variables : int, str, or iterable of int or str, optional
             Integer index or string name of the variables whose coefficients
             to plot. Can also be an iterable of integers or strings. Default
             plots all coefficients.

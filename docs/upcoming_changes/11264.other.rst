@@ -1,0 +1,2 @@
+- ``statsmodels.datasets.utils.process_pandas`` accepts a str ``endog_idx``,
+  the label of a single column; it raised an AttributeError. :pr:`11264`

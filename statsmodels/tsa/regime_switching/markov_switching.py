@@ -377,14 +377,14 @@ class MarkovSwitchingParams:
 
     This implies the model has 7 parameters: 4 "regime_transition"-related
     parameters (2 parameters that each switch according to regimes) and 3
-    "exog"-related parameters (1 parameter that does not switch, and one 1 that
+    "exog"-related parameters (1 parameter that does not switch, and one that
     does).
 
     The order of parameters is then:
 
     1. The first "regime_transition" parameter, regime 0
     2. The first "regime_transition" parameter, regime 1
-    3. The second "regime_transition" parameter, regime 1
+    3. The second "regime_transition" parameter, regime 0
     4. The second "regime_transition" parameter, regime 1
     5. The first "exog" parameter
     6. The second "exog" parameter, regime 0
@@ -400,15 +400,15 @@ class MarkovSwitchingParams:
     In the above example, consider the following getters:
 
     >>> parameters[0]
-    array([0, 2, 4, 6])
+    array([0, 2, 4, 5])
     >>> parameters[1]
-    array([1, 3, 5, 6])
+    array([1, 3, 4, 6])
     >>> parameters['exog']
     slice(4, 7, None)
     >>> parameters[0, 'exog']
-    [4, 6]
+    [4, 5]
     >>> parameters[1, 'exog']
-    [4, 7]
+    [4, 6]
 
     Notice that in the last two examples, both lists of indexes include 4.
     That's because that is the index of the non-switching first "exog"

@@ -2561,6 +2561,101 @@ def test_causality_bool_float(value, call):
             res.test_inst_causality(value)
 
 
+@pytest.mark.parametrize("centered", [False, True])
+def test_seasonal_dummies_negative_raises(centered):
+    with pytest.raises(ValueError, match="n_seasons must be non-negative"):
+        util.seasonal_dummies(-1, 5, centered=centered)
+    # Observations in the seasons 1, 2, 3, 0, 1, 2 of 4; one column for each
+    # of the seasons 0, 1, 2
+    expected = np.zeros((6, 3))
+    expected[[3, 0, 1, 4, 5], [0, 1, 2, 1, 2]] = 1
+    if centered:
+        expected -= 1 / 4
+    actual = util.seasonal_dummies(4, 6, first_period=1, centered=centered)
+    assert_allclose(actual, expected, rtol=1e-14)
+
+
+@pytest.mark.parametrize("method", ["mle", "gls", 1])
+def test_var_fit_method_deprecated(method):
+    # Only "ols" is implemented, other values were ignored; "ols" in any
+    # case and None (the default) do not warn
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    with pytest.warns(FutureWarning, match="is ignored and the model is estimated"):
+        res = VAR(y).fit(2, method=method)
+    z = np.column_stack([np.ones(y.shape[0] - 2), y[1:-1], y[:-2]])
+    ols = np.linalg.lstsq(z, y[2:], rcond=None)[0]
+    assert_allclose(res.params, ols, rtol=1e-10)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for quiet in ("ols", "OLS", None):
+            res = VAR(y).fit(2, method=quiet)
+            assert_allclose(res.params, ols, rtol=1e-10)
+
+
+def _fevd_written_out(res, periods):
+    # decomp[j, h - 1, k] = sum_{i<h} Theta_i[j, k] ** 2 / MSE_h[j, j] with
+    # Theta_i = Phi_i P, P the Cholesky factor of Sigma_u and the MA weights
+    # Phi_0 = I, Phi_i = sum_{l=1}^{min(i, p)} Phi_{i-l} A_l
+    k, p = res.neqs, res.k_ar
+    phis = [np.eye(k)]
+    for i in range(1, periods):
+        lags = range(1, min(i, p) + 1)
+        phis.append(sum(phis[i - lag] @ res.coefs[lag - 1] for lag in lags))
+    thetas = np.array([phi @ np.linalg.cholesky(res.sigma_u) for phi in phis])
+    num = np.cumsum(thetas**2, axis=0)
+    return (num / num.sum(2, keepdims=True)).swapaxes(0, 1)
+
+
+def test_fevd_default_periods():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    expected = _fevd_written_out(res, 10)
+    for fevd in (var_model.FEVD(res), res.fevd(None)):
+        assert fevd.periods == 10
+        assert_allclose(fevd.decomp, expected, rtol=1e-10)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("periods", [4, 10, None])
+def test_fevd_plot_periods(periods, close_figures):
+    # The bars of variable i stack the shares of the shocks for the first
+    # periods horizons
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    fig = res.fevd(10).plot(periods=periods)
+    n_periods = 10 if periods is None else periods
+    expected = _fevd_written_out(res, n_periods)
+    assert len(fig.axes) == 3
+    for i, ax in enumerate(fig.axes):
+        assert len(ax.patches) == 3 * n_periods
+        heights = np.array([p.get_height() for p in ax.patches])
+        bottoms = np.array([p.get_y() for p in ax.patches])
+        centers = np.array([p.get_x() + p.get_width() / 2 for p in ax.patches])
+        shares = expected[i].T
+        assert_allclose(heights.reshape(3, n_periods), shares, rtol=1e-10)
+        stacked = np.vstack([np.zeros(n_periods), np.cumsum(shares, axis=0)[:-1]])
+        assert_allclose(bottoms.reshape(3, n_periods), stacked, rtol=1e-10)
+        # The centers are x - width / 2 + width / 2, exact up to the rounding
+        # of width = 0.8, which atol allows for at the center 0
+        ticks = np.tile(np.arange(n_periods), (3, 1))
+        assert_allclose(centers.reshape(3, n_periods), ticks, rtol=0, atol=1e-12)
+
+
+@pytest.mark.matplotlib
+def test_fevd_plot_periods_invalid(close_figures):
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    fevd = VAR(y).fit(2).fevd(5)
+    for periods in (6, 0, -1):
+        with pytest.raises(ValueError, match="periods must be between 1 and 5"):
+            fevd.plot(periods=periods)
+    with pytest.raises(TypeError, match="periods must be integer_like"):
+        fevd.plot(periods=2.5)
+
+
 @pytest.fixture
 def macro_var2():
     """The VAR(2) of the macrodata log differences used by results_var_r"""

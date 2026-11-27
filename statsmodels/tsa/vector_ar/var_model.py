@@ -849,6 +849,12 @@ class VAR(TimeSeriesModel):
             select_order.
         method : {'ols'}, optional
             Estimation method to use
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the model was estimated by OLS.
+               They issue a FutureWarning and will raise a ValueError after
+               statsmodels 0.17 is released.
         ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
@@ -887,6 +893,16 @@ class VAR(TimeSeriesModel):
         trend = string_like(
             trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
         )
+        if method is not None and not (
+            isinstance(method, str) and method.lower() == "ols"
+        ):
+            warnings.warn(
+                f'method={method!r} is ignored and the model is estimated by '
+                'OLS. Values other than "ols" are deprecated and will raise a '
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
         if maxlags is not None:
             if maxlags < 0:
                 raise ValueError(f"maxlags must be non-negative, got {maxlags}")
@@ -2901,7 +2917,11 @@ class FEVD:
         Matrix such that Sigma_u = PP', used to orthogonalize the impulse
         responses. Defaults to the Cholesky decomposition of Sigma_u.
     periods : int, optional
-        Number of periods to compute the FEVD for.
+        Number of periods to compute the FEVD for. The default is 10.
+
+        .. versionchanged:: 0.15.1
+
+           None gives the default. It raised a TypeError.
 
     Attributes
     ----------
@@ -2918,6 +2938,8 @@ class FEVD:
     """
 
     def __init__(self, model, P=None, periods=None):
+        if periods is None:
+            periods = 10
         self.periods = periods
 
         self.model = model
@@ -2970,7 +2992,13 @@ class FEVD:
         Parameters
         ----------
         periods : int, optional
-            Defaults to number originally specified. Can be at most that number
+            Defaults to number originally specified. Can be at most that number.
+            The first periods horizons are plotted.
+
+            .. versionchanged:: 0.15.1
+
+               A smaller number plots the first periods horizons. It raised
+               a ValueError. 0 raises a ValueError. It plotted all horizons.
         figsize : tuple of float, optional
             Figure size (width, height in inches), passed to
             `matplotlib.pyplot.subplots`. The default is (10, 10).
@@ -2985,7 +3013,13 @@ class FEVD:
         plt = _import_mpl()
 
         k = self.neqs
-        periods = periods or self.periods
+        if periods is None:
+            periods = self.periods
+        periods = int_like(periods, "periods")
+        if not 1 <= periods <= self.periods:
+            raise ValueError(
+                f"periods must be between 1 and {self.periods}, got {periods}"
+            )
 
         fig, axes = plt.subplots(nrows=k, figsize=figsize)
 
@@ -2994,7 +3028,7 @@ class FEVD:
         colors = [str(c) for c in np.arange(k, dtype=float) / k]
         ticks = np.arange(periods)
 
-        limits = self.decomp.cumsum(2)
+        limits = self.decomp[:, :periods].cumsum(2)
         ax = axes[0]
         for i in range(k):
             ax = axes[i]

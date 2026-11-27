@@ -675,7 +675,8 @@ class Initialization:
 
                A 0-d integer array selects a state, as an int does. It
                raised a ValueError. A bool is not an integer and raises a
-               ValueError: True selected state 1.
+               ValueError: True selected state 1. An integer index equal to
+               `k_states` raises a ValueError, as in `set`. It did nothing.
 
         Notes
         -----
@@ -687,7 +688,7 @@ class Initialization:
         """
         if is_int_like(index, strict=True):
             index = int(index)
-            if index < 0 or index > self.k_states:
+            if index < 0 or index >= self.k_states:
                 raise ValueError("Invalid index.")
             index = (index, index + 1)
         elif index is None:

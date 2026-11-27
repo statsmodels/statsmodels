@@ -1,10 +1,34 @@
+import warnings
+
 import numpy as np
 
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.validation import array_like, is_int_like, string_like
 import statsmodels.tsa._leybourne
 from statsmodels.tsa.stattools._stattools import lagmat, pacf
+
+
+class _ChangingDefault:
+    """
+    Default of a ``run`` argument that will change to the ``__call__`` one
+
+    ``run`` uses ``current`` and warns that the default will be ``future``.
+    The repr is that of ``current``, so that the signature shows the value
+    that is used.
+    """
+
+    def __init__(self, current, future):
+        self.current = current
+        self.future = future
+
+    def __repr__(self):
+        return repr(self.current)
+
+
+_RUN_ARLAGS = _ChangingDefault(1, None)
+_RUN_METHOD = _ChangingDefault("mle", "ols")
 
 
 class LeybourneMcCabeStationarity:
@@ -135,7 +159,9 @@ class LeybourneMcCabeStationarity:
         )
         return arlags
 
-    def run(self, x, arlags=1, regression="c", method="mle", varest="var94"):
+    def run(
+        self, x, arlags=_RUN_ARLAGS, regression="c", method=_RUN_METHOD, varest="var94"
+    ):
         """
         Leybourne-McCabe stationarity test
 
@@ -148,8 +174,10 @@ class LeybourneMcCabeStationarity:
             data series
         arlags : None or int, optional
             Number of autoregressive terms to include. If None, the number
-            of lags is selected using the empirical autolag procedure.
-            Default is 1.
+            of lags is selected using the empirical autolag procedure. The
+            default is None for ``leybourne(x)`` and 1 for
+            ``leybourne.run(x)``, which warns that its default will change
+            to None after statsmodels 0.17 is released.
 
             .. versionchanged:: 0.15.1
 
@@ -157,6 +185,13 @@ class LeybourneMcCabeStationarity:
                array is a number of terms, as an int is. They raised a
                ValueError. A bool raises the same ValueError. It raised a
                TypeError from a later step.
+
+            .. deprecated:: 0.15.1
+
+               The default 1 of ``leybourne.run`` is deprecated and will
+               change to None, the default of ``leybourne(x)``. Pass
+               ``arlags=None`` to use the future default now, or
+               ``arlags=1`` to keep the current one.
         regression : {'c', 'ct'}, optional
             Constant and trend order to include in regression
 
@@ -166,8 +201,20 @@ class LeybourneMcCabeStationarity:
         method : {'mle', 'ols'}, optional
             Method used to estimate ARIMA(p, 1, 1) filter model
 
-            * 'mle' : conditional sum of squares maximum likelihood (default)
+            * 'mle' : maximum likelihood, estimated with
+              :class:`~statsmodels.tsa.arima.model.ARIMA`
             * 'ols' : two-stage least squares
+
+            The default is 'ols' for ``leybourne(x)`` and 'mle' for
+            ``leybourne.run(x)``, which warns that its default will change
+            to 'ols' after statsmodels 0.17 is released.
+
+            .. deprecated:: 0.15.1
+
+               The default 'mle' of ``leybourne.run`` is deprecated and will
+               change to 'ols', the default of ``leybourne(x)``. Pass
+               ``method="ols"`` to use the future default now, or
+               ``method="mle"`` to keep the current one.
 
         varest : {'var94', 'var99'}, optional
             Method used for residual variance estimation
@@ -226,6 +273,28 @@ class LeybourneMcCabeStationarity:
         Schwert, G W. (1987). Effects of model specification on tests for unit
         roots in macroeconomic data. Journal of Monetary Economics, 20: 73-103.
         """
+        changing = [
+            (name, value)
+            for name, value in (("arlags", arlags), ("method", method))
+            if isinstance(value, _ChangingDefault)
+        ]
+        if changing:
+            current = " and ".join(f"{name}={val.current!r}" for name, val in changing)
+            future = " and ".join(f"{name}={val.future!r}" for name, val in changing)
+            s = "s" if len(changing) > 1 else ""
+            warnings.warn(
+                f"The default{s} of leybourne.run will change from {current} to "
+                f"{future}, the default{s} of leybourne(x), after statsmodels "
+                f"0.17 is released. Pass {future} to use the future default{s} "
+                f"now, or {current} to keep the current one{s} and silence this "
+                "warning.",
+                FutureWarning,
+                stacklevel=_stacklevel_outside_statsmodels(),
+            )
+            if isinstance(arlags, _ChangingDefault):
+                arlags = arlags.current
+            if isinstance(method, _ChangingDefault):
+                method = method.current
         regression = string_like(
             regression, "regression", options=("c", "ct"), lower=False
         )

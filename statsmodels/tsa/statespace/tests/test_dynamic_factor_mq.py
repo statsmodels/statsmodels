@@ -3864,6 +3864,10 @@ def test_standardize_ndarray_like_dataframe(missing):
     # start (L1.eps_M.y1) is fitted to residuals that are zero up to rounding
     # and is itself zero up to rounding (about 1e-35), with a sign that
     # depends on the BLAS (macOS Accelerate): atol for it, rtol for the others
+    # atol: the factor fits a single variable exactly, so the start value of
+    # the idiosyncratic AR(1) coefficient comes from residuals that are
+    # rounding noise (it is about 2e-36, and the two were 5.5e-35 apart on
+    # the Azure macOS runners)
     assert_allclose(mod.start_params, params, rtol=1e-10, atol=1e-12)
     kwargs = {
         "measurement_shocks": rng.standard_normal((4, 1)),
