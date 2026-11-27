@@ -1,0 +1,8 @@
+- :meth:`~statsmodels.tsa.statespace.initialization.Initialization.set`
+  accepted an ``Initialization`` object with a different number of
+  states than the selected block of states, which gave a wrong
+  initialization: an object with one state was used for every state of
+  the block when the initialization was computed by the object, and for
+  the first state only by the Kalman filter, and a larger object
+  initialized states outside the block in the Kalman filter. It raises
+  a ``ValueError``. :pr:`11111`
