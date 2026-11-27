@@ -27,6 +27,8 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_bool_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.arima_process import arma2ma
@@ -114,6 +116,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behaves identically to 0.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d array that holds an integer is a number of lags, as an int
+           is. It raised a TypeError.
     trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
@@ -296,7 +303,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if lags is None:
             _lags: list[int] = []
             self._maxlag = 0
-        elif isinstance(lags, Iterable):
+        # A 0-d array is iterable, but holds a single number of lags
+        elif isinstance(lags, Iterable) and getattr(lags, "ndim", 1) > 0:
             _lags = []
             for lag in lags:
                 val = int_like(lag, "lags")
@@ -916,6 +924,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 )
                 raise ValueError(msg.format(num_oos, exog_oos.shape[0]))
 
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if (isinstance(dynamic, bool) and not dynamic) or self._maxlag == 0:
             # If model has no lags, static and dynamic are identical
             return self._static_predict(params, start, end, num_oos, exog, exog_oos)
@@ -1574,6 +1584,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
             steps must be an integer. The default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, and a 0-d integer
+               array are a number of steps, as an int is. Before, they were
+               used as the index of the last forecast, which raised or gave
+               the wrong number of forecasts. A bool is not a number of
+               steps: True was one step.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows
@@ -1592,8 +1610,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             In- and out-of-sample predictions and confidence intervals
         """
         start = self.model.data.orig_endog.shape[0]
-        if isinstance(steps, (int, np.integer)):
-            end = start + steps - 1
+        if is_int_like(steps):
+            end = start + int(steps) - 1
         else:
             end = steps
         return self.predict(start=start, end=end, dynamic=False, exog_oos=exog)

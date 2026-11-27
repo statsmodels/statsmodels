@@ -25,6 +25,7 @@ from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     bool_like,
     float_like,
+    is_int_like,
     required_int_like,
     string_like,
 )
@@ -1666,6 +1667,13 @@ you can pass additional components using the additional_terms input.""")
             The final observation. Inclusive to match most prediction
             function in statsmodels.
 
+            .. versionchanged:: 0.15.1
+
+               With a date index, a 0-d integer array is the location of an
+               observation, as an int is, for `start` and `stop`. It raised
+               a TypeError. A bool is not a location and raises a
+               TypeError.
+
         Returns
         -------
         DataFrame
@@ -1697,12 +1705,13 @@ when producing out-of-sample forecasts.
             # Add 1 to ensure that the end point is inclusive
             stop += 1
             return self._range_from_range_index(start, stop)
-        if isinstance(start, (int, np.integer)):
-            start = self._int_to_timestamp(start, "start")
+        # strict: an observation location, as in get_index_loc
+        if is_int_like(start, strict=True):
+            start = self._int_to_timestamp(int(start), "start")
         else:
             start = pd.Timestamp(start)
-        if isinstance(stop, (int, np.integer)):
-            stop = self._int_to_timestamp(stop, "stop")
+        if is_int_like(stop, strict=True):
+            stop = self._int_to_timestamp(int(stop), "stop")
         else:
             stop = pd.Timestamp(stop)
         return self._range_from_time_index(start, stop)

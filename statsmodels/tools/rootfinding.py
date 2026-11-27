@@ -13,6 +13,8 @@ from typing import NamedTuple
 import numpy as np
 from scipy import optimize
 
+from statsmodels.tools.validation import is_int_like
+
 
 class BrentqExpandingInfo(NamedTuple):
     """
@@ -144,9 +146,9 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     # The expansion multiplies the starting bounds. A Python int grows beyond
     # int64 if the function has no root, and then a function that creates an
     # array from it fails with an object array, so int bounds become floats.
-    if isinstance(sl, (int, np.integer)):
+    if is_int_like(sl):
         sl = float(sl)
-    if isinstance(su, (int, np.integer)):
+    if is_int_like(su):
         su = float(su)
 
     # increasing or not ?

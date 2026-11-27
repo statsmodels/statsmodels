@@ -22,6 +22,7 @@ from scipy.optimize import minimize
 
 import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.numdiff import approx_fprime
@@ -348,7 +349,22 @@ class ProcessMLE(base.LikelihoodModel):
         return mean_names, scale_names, smooth_names, noise_names
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
+    def from_formula(
+        cls,
+        formula,
+        data,
+        subset=None,
+        drop_cols=None,
+        *,
+        scale_formula,
+        smooth_formula,
+        time,
+        groups,
+        noise_formula=None,
+        cov=None,
+        eval_env=None,
+        **kwargs,
+    ):
         """
         Create a ProcessMLE model instance using a formula.
 
@@ -364,56 +380,60 @@ class ProcessMLE(base.LikelihoodModel):
         drop_cols : array_like, optional
             Not currently supported, must be None if provided.
         scale_formula : str
-            The formula for the scaling structure (required keyword
-            argument).
+            The formula for the scaling structure.
         smooth_formula : str
-            The formula for the smoothness structure (required
-            keyword argument).
-        noise_formula : None or str, optional
-            The formula for the (log) standard deviation of the
-            additive white noise (optional keyword argument). If not
-            provided, the model does not include additive white
-            noise.
+            The formula for the smoothness structure.
         time : array_like or str
             The univariate index values used to calculate distances
-            between observations in the same group (required keyword
-            argument). If a string, this is the name of a column in
-            `data`.
+            between observations in the same group. If a string, this is
+            the name of a column in `data`.
         groups : array_like or str
-            The group values (required keyword argument). If a
-            string, this is the name of a column in `data`.
+            The group values. If a string, this is the name of a column in
+            `data`.
+        noise_formula : str, optional
+            The formula for the (log) standard deviation of the
+            additive white noise. If not provided, the model does not
+            include additive white noise.
+        cov : ProcessCovariance, optional
+            The covariance model of the process. Defaults to
+            GaussianCovariance.
+
+            .. versionchanged:: 0.15.1
+
+               It is used. Before, it was ignored and GaussianCovariance
+               was always used.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formulas that are not
+            in `data` are looked up. None (the default) or 1 is the
+            namespace that calls ``from_formula``, an integer k the
+            namespace k stack frames above it, -1 an empty namespace, and a
+            dict maps names to values.
+
+            .. versionadded:: 0.15.1
+
+               It was ignored, and only variables in `data` were found.
+        **kwargs
+            Other keyword arguments, for example `hasconst`, are passed to
+            the model.
+
+            .. versionchanged:: 0.15.1
+
+               They were ignored.
 
         Returns
         -------
         ProcessMLE
             The model instance.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           The arguments after `drop_cols` are keyword-only and part of the
+           signature. A missing required argument raises a TypeError
+           (before, a ValueError), and further positional arguments, which
+           were ignored, raise a TypeError.
         """
-
-        if "scale_formula" in kwargs:
-            scale_formula = kwargs["scale_formula"]
-        else:
-            raise ValueError("scale_formula is a required argument")
-
-        if "smooth_formula" in kwargs:
-            smooth_formula = kwargs["smooth_formula"]
-        else:
-            raise ValueError("smooth_formula is a required argument")
-
-        if "noise_formula" in kwargs:
-            noise_formula = kwargs["noise_formula"]
-        else:
-            noise_formula = None
-
-        if "time" in kwargs:
-            time = kwargs["time"]
-        else:
-            raise ValueError("time is a required argument")
-
-        if "groups" in kwargs:
-            groups = kwargs["groups"]
-        else:
-            raise ValueError("groups is a required argument")
-
         if subset is not None:
             warnings.warn("'subset' is ignored", ValueWarning, stacklevel=2)
 
@@ -426,24 +446,28 @@ class ProcessMLE(base.LikelihoodModel):
         if isinstance(groups, str):
             groups = np.asarray(data[groups])
         mgr = FormulaManager()
-        exog_scale = mgr.get_matrices(scale_formula, data)
+        formula_env = get_matrices_eval_env(eval_env)
+        exog_scale = mgr.get_matrices(scale_formula, data, eval_env=formula_env)
         scale_model_spec = mgr.spec
         scale_names = list(scale_model_spec.column_names)
         exog_scale = np.asarray(exog_scale)
 
-        exog_smooth = mgr.get_matrices(smooth_formula, data)
+        exog_smooth = mgr.get_matrices(smooth_formula, data, eval_env=formula_env)
         smooth_model_spec = mgr.spec
         smooth_names = list(smooth_model_spec.column_names)
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
-            exog_noise = mgr.get_matrices(noise_formula, data)
+            exog_noise = mgr.get_matrices(noise_formula, data, eval_env=formula_env)
             noise_model_spec = mgr.spec
             noise_names = list(noise_model_spec.column_names)
             exog_noise = np.asarray(exog_noise)
         else:
             exog_noise, noise_model_spec, noise_names = None, None, []
 
+        # The formula is evaluated one stack frame further down
+        kwargs["eval_env"] = eval_env
+        advance_eval_env(kwargs)
         mod = super().from_formula(
             formula,
             data=data,
@@ -453,6 +477,8 @@ class ProcessMLE(base.LikelihoodModel):
             exog_noise=exog_noise,
             time=time,
             groups=groups,
+            cov=cov,
+            **kwargs,
         )
 
         mod.data.scale_model_spec = scale_model_spec

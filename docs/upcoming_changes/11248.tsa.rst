@@ -1,0 +1,3 @@
+- ``ExponentialSmoothing`` accepts a NumPy float ``use_boxcox`` as a fixed
+  lambda and a NumPy integer as a bool, as it does a Python float and int;
+  they raised a ``TypeError``. :pr:`11248`

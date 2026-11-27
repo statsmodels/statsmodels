@@ -1,0 +1,5 @@
+- ``constrain_stationary_multivariate`` and
+  ``constrain_stationary_multivariate_python`` in ``statsmodels.tsa.statespace.tools`` with
+  ``transform_variance=False`` returned an internal, scaled variance
+  instead of the input variance, as documented. They return the input
+  variance; the constrained coefficients do not change. :pr:`11051`

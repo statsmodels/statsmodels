@@ -151,6 +151,41 @@ def test_innovations():
     assert_allclose(res.params, desired_p[-1].params)
 
 
+def test_innovations_arma():
+    # Test for basic use of innovations estimation with AR terms
+    endog = dta["infl"].diff().iloc[1:101]
+
+    # ARMA(1, 1), no trend (since trend would imply GLS estimation)
+    desired_p = innovations(endog, ar_order=1, ma_order=1, demean=False).parameters
+    mod = ARIMA(endog, order=(1, 0, 1), trend="n")
+    res = mod.fit(method="innovations")
+    assert_allclose(res.params, desired_p[-1].params)
+
+    # The recursion level is passed through method_kwargs
+    desired_p = innovations(
+        endog, ar_order=1, ma_order=1, demean=False, m=10
+    ).parameters
+    res = mod.fit(method="innovations", method_kwargs={"m": 10})
+    assert_allclose(res.params, desired_p[-1].params)
+
+    # Estimates that imply a non-stationary, non-invertible process are only
+    # accepted without enforce_stationarity and enforce_invertibility
+    endog = dta["infl"].iloc[:50]
+    mod = ARIMA(endog, order=(1, 0, 1), trend="n")
+    with pytest.raises(ValueError, match="Non-stationary autoregressive"):
+        mod.fit(method="innovations")
+    desired_p = innovations(endog, ar_order=1, ma_order=1, demean=False).parameters
+    mod = ARIMA(
+        endog,
+        order=(1, 0, 1),
+        trend="n",
+        enforce_stationarity=False,
+        enforce_invertibility=False,
+    )
+    res = mod.fit(method="innovations")
+    assert_allclose(res.params, desired_p[-1].params)
+
+
 def test_innovations_mle():
     # Test for basic use of Yule-Walker estimation
     endog = dta["infl"].iloc[:100]

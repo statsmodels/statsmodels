@@ -9,6 +9,8 @@ Author : Josef Perktold
 
 import numpy as np
 
+from statsmodels.tools.validation import array_like
+
 from ._smoothers_lowess import lowess as _lowess
 
 
@@ -147,8 +149,8 @@ def lowess(
 
     """
 
-    endog = np.asarray(endog, float)
-    exog = np.asarray(exog, float)
+    endog = array_like(endog, "endog", mindim=0, shape=(None,))
+    exog = array_like(exog, "exog", mindim=0, shape=(None,))
 
     # Whether xvals argument was provided
 
@@ -157,10 +159,6 @@ def lowess(
     # Inputs should be vectors (1-D arrays) of the
     # same length.
 
-    if exog.ndim != 1:
-        raise ValueError("exog must be a vector")
-    if endog.ndim != 1:
-        raise ValueError("endog must be a vector")
     if endog.shape[0] != exog.shape[0]:
         raise ValueError("exog and endog must have same length")
     if xvals is not None:

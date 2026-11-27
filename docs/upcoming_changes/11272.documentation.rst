@@ -1,0 +1,4 @@
+- The ``leybourne`` docstring gives the defaults of ``leybourne(x)``
+  (``arlags=None``, ``method="ols"``) as well as those of ``leybourne.run``
+  (1, "mle"), and describes "mle" as maximum likelihood with ``ARIMA``.
+  :pr:`11272`

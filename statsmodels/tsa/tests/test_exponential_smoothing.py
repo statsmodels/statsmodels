@@ -3216,3 +3216,46 @@ def test_prediction_simulation_results(oildata, start):
     assert_allclose(
         pred.summary_frame()["mean_numerical"], expected.mean(axis=1), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(3), np.array(3), 3.0],
+    ids=["int64", "0d-array", "float"],
+)
+def test_forecast_int_like_steps(oildata, steps):
+    # An integral float is a number of steps, as an int is. It was the
+    # location of the last forecast, which raised a KeyError.
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    fcast = res.forecast(steps)
+    # The forecasts of simple exponential smoothing are the last level
+    level = 110.0
+    for value in oildata:
+        level = 0.3 * value + 0.7 * level
+    assert_allclose(np.asarray(fcast), np.full(3, level), rtol=1e-12)
+    assert fcast.index.equals(res.forecast(3).index)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(oildata, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises for the date index of oildata.
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    with pytest.raises(TypeError):
+        res.forecast(steps)
+
+
+@pytest.mark.parametrize(
+    "dynamic, expected",
+    [(np.True_, True), (np.False_, False), (np.array(False), False)],
+    ids=["np.True_", "np.False_", "0-d False"],
+)
+def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
+    # np.False_ equals 0, so it was taken as "dynamic from the start"
+    rng = np.random.default_rng(20261126)
+    y = pd.Series(10 + np.cumsum(rng.standard_normal(80)))
+    res = ETSModel(y, error="add", trend="add").fit(disp=False)
+    pred = res.predict(start=20, end=60, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=20, end=60, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=20, end=60, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-3

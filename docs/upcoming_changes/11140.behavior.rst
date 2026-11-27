@@ -1,0 +1,8 @@
+- The CFA simulation smoother (``simulation_smoother(method="cfa")``)
+  with a block initialization that makes only some states diffuse
+  depended on the order of the blocks: when a diffuse block was set
+  last, all states were treated as diffuse and the posterior mean,
+  covariance and draws were silently wrong; when a known block was set
+  last, it raised ``LinAlgError``. The diffuse states have prior
+  precision zero and the others their known prior, so the results
+  equal those of the exact diffuse Kalman smoother. :pr:`11140`

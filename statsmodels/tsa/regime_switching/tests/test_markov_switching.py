@@ -239,6 +239,47 @@ def test_initial_probabilities():
         mod.initialize_steady_state()
 
 
+@pytest.mark.parametrize("convert", [list, tuple, pd.Series, np.asarray])
+def test_initialize_known_array_like(convert):
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=3)
+    mod.initialize_known(convert([0.2, 0.3, 0.5]))
+    # Known initial probabilities do not depend on the parameters
+    params = np.full(6, 0.3)
+    assert_allclose(mod.initial_probabilities(params), [0.2, 0.3, 0.5], rtol=1e-15)
+
+
+def test_initialize_known_copies_probabilities():
+    # Changing the array afterwards does not change the model
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    probabilities = np.array([0.2, 0.8])
+    mod.initialize_known(probabilities)
+    probabilities[:] = [0.9, 0.1]
+    params = np.r_[0.5, 0.5]
+    assert_allclose(mod.initial_probabilities(params), [0.2, 0.8], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "probabilities, ndim",
+    [([[0.2], [0.8]], 2), ([[0.2, 0.8]], 2), ([[[0.2, 0.8]]], 3)],
+    ids=["column", "row", "3d"],
+)
+def test_initialize_known_not_1d_raises(probabilities, ndim):
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    match = f"probabilities must have 1 dimension, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        mod.initialize_known(probabilities)
+
+
+@pytest.mark.parametrize(
+    "probabilities", [1.0, [0.2, 0.2, 0.6]], ids=["scalar", "too-long"]
+)
+def test_initialize_known_wrong_length_raises(probabilities):
+    # A scalar is a vector with one element, which is too short
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    with pytest.raises(ValueError, match=r"a vector of shape \(k_regimes,\)"):
+        mod.initialize_known(probabilities)
+
+
 def test_logistic():
     logistic = markov_switching._logistic
 
@@ -528,6 +569,23 @@ def test_predict_with_probabilities_array(kind, as_list):
     assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)
 
 
+def test_parameters_getitem_numpy_integer():
+    # NumPy integers are accepted as regime indices in the parameters object
+    endog = np.random.default_rng(0).standard_normal(100)
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, trend="c", switching_variance=True
+    )
+    params = mod.parameters
+    for key in [np.int64(0), np.int32(1)]:
+        assert_equal(params[key], params[int(key)])
+        assert_equal(
+            params[key, "regime_transition"], params[int(key), "regime_transition"]
+        )
+        assert_equal(
+            params["regime_transition", key], params["regime_transition", int(key)]
+        )
+
+
 @pytest.mark.parametrize(
     "flag, expected", [(np.True_, True), (np.False_, False), (1, True), (0, False)]
 )
@@ -700,3 +758,40 @@ def test_complex_transition_with_real_loglikelihoods(lagged):
     llf_obs = complex_mod.loglikeobs(params)
     assert np.iscomplexobj(llf_obs)
     assert_allclose(llf_obs, mod.loglikeobs(params), rtol=1e-13)
+
+
+def _int_like_params():
+    # Two switching transition parameters, then a non-switching and a
+    # switching exog parameter
+    params = markov_switching.MarkovSwitchingParams(k_regimes=2)
+    params["regime_transition"] = [1, 1]
+    params["exog"] = [0, 1]
+    return params
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_params_int_like_regime(to_key):
+    # A NumPy integer or a 0-d integer array is a regime number, as an int
+    # is. A 0-d array raised an IndexError.
+    params = _int_like_params()
+    assert_equal(params[to_key(0)], [0, 2, 4, 5])
+    assert_equal(params[to_key(1)], [1, 3, 4, 6])
+    assert_equal(params[to_key(0), "exog"], [4, 5])
+    assert_equal(params["exog", to_key(1)], [4, 6])
+    assert_equal(params[to_key(1), "regime_transition"], [1, 3])
+
+
+@pytest.mark.parametrize(
+    "key", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+def test_params_bool_float_regime(key):
+    # A bool or a float is not a regime number: True was regime 1 in a tuple
+    params = _int_like_params()
+    with pytest.raises(IndexError, match="Invalid index"):
+        params[key]
+    with pytest.raises(IndexError, match="Invalid index"):
+        params[key, "exog"]
+    with pytest.raises(IndexError, match="Invalid index"):
+        params["exog", key]

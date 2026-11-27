@@ -1,0 +1,5 @@
+- ``from_formula`` of ``RecursiveLS``, ``BinomialBayesMixedGLM``,
+  ``PoissonBayesMixedGLM``, ``ARDL`` and ``UECM`` takes
+  ``eval_env``, and by default looks up variables that are not in
+  the data in the calling namespace, as other models do.
+  :pr:`11226`

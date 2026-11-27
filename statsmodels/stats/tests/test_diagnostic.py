@@ -34,11 +34,11 @@ from statsmodels.discrete.discrete_model import (
     Poisson,
     Probit,
 )
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 import statsmodels.stats.sandwich_covariance as sw
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl import ARDL
@@ -2045,6 +2045,123 @@ def test_encompasing_error():
         smsdia.compare_encompassing(4, 2)
 
 
+@pytest.mark.parametrize("model_class", [WLS, GLS])
+@pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+@pytest.mark.parametrize("use_f", [False, True])
+def test_reset_preserves_weighting(model_class, cov_type, use_f):
+    # The auxiliary regression must use the same whitening as the original fit.
+    rng = np.random.default_rng(8675309)
+    nobs = 100
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    weights = np.exp(rng.standard_normal(nobs))
+    weights_before = weights.copy()
+    if model_class is WLS:
+        model_kwds = {"weights": weights}
+    else:
+        model_kwds = {"sigma": 1 / weights}
+
+    res = model_class(y, exog, **model_kwds).fit()
+    actual = smsdia.linear_reset(res, power=2, use_f=use_f, cov_type=cov_type)
+
+    aug_exog = np.column_stack([exog, res.fittedvalues**2])
+    aux_res = model_class(y, aug_exog, **model_kwds).fit(cov_type=cov_type)
+    r_matrix = np.eye(1, aug_exog.shape[1], k=aug_exog.shape[1] - 1)
+    expected = aux_res.wald_test(r_matrix, use_f=use_f, scalar=True)
+
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+    assert actual.distribution == expected.distribution
+    assert_allclose(actual.dist_args, expected.dist_args, rtol=0, atol=0)
+    assert_array_equal(weights, weights_before)
+
+
+def test_reset_preserves_dense_gls_covariance():
+    rng = np.random.default_rng(8675310)
+    nobs = 80
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    distances = np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    sigma = 0.5**distances
+    sigma_before = sigma.copy()
+
+    res = GLS(y, exog, sigma=sigma).fit()
+    actual = smsdia.linear_reset(res, power=2, use_f=True, cov_type="HC0")
+
+    aug_exog = np.column_stack([exog, res.fittedvalues**2])
+    aux_res = GLS(y, aug_exog, sigma=sigma).fit(cov_type="HC0")
+    r_matrix = np.eye(1, aug_exog.shape[1], k=aug_exog.shape[1] - 1)
+    expected = aux_res.wald_test(r_matrix, use_f=True, scalar=True)
+
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+    assert actual.distribution == expected.distribution
+    assert_allclose(actual.dist_args, expected.dist_args, rtol=0, atol=0)
+    assert_array_equal(sigma, sigma_before)
+
+
+# Reference values from R 4.6.2 with car 3.1.5 and sandwich 3.1.3. The data are
+# generated as in the two tests above (seeds 8675309 and 8675310) and written
+# to csv with 17 digits. The auxiliary regression uses the same weights or
+# covariance as the original fit and adds the squared fitted values of that fit.
+# WLS, weights w, fv the fitted values of the original fit:
+#   m <- lm(y ~ x1 + x2, data = d, weights = w); d$fv <- fitted(m)
+#   m2 <- lm(y ~ x1 + x2 + I(fv^2), data = d, weights = w)
+#   linearHypothesis(m2, "I(fv^2) = 0")  # F and Pr(>F)
+#   linearHypothesis(m2, "I(fv^2) = 0", vcov = vcovHC(m2, type = "HC0"),
+#                    test = "F")
+# GLS with sigma = 0.5^|i - j|: S = L L' (L <- t(chol(S))) and y, the columns
+# of X and of cbind(X, fv^2) are premultiplied by the inverse of L
+# (forwardsolve(L, v)); fv is the fitted value of the whitened fit mapped back
+# by X %*% coef. The same two linearHypothesis calls are applied to the lm of
+# the whitened data on the whitened augmented design (formula without
+# intercept).
+@pytest.mark.parametrize(
+    "case, cov_type, f_stat, f_pvalue",
+    [
+        ("wls", "nonrobust", 41.7185783659091, 4.33224613429945e-09),
+        ("wls", "HC0", 29.2203495781763, 4.70725866822008e-07),
+        ("gls", "nonrobust", 23.9739675431011, 5.36064830884372e-06),
+        ("gls", "HC0", 14.8033403650459, 0.000246604653954206),
+    ],
+    ids=["wls-nonrobust", "wls-HC0", "gls-dense-nonrobust", "gls-dense-HC0"],
+)
+def test_reset_weighting_r_reference(case, cov_type, f_stat, f_pvalue):
+    if case == "wls":
+        rng = np.random.default_rng(8675309)
+        nobs = 100
+    else:
+        rng = np.random.default_rng(8675310)
+        nobs = 80
+    x = rng.standard_normal((nobs, 2))
+    exog = add_constant(x)
+    y = 1 + 2 * x[:, 0] - x[:, 1] + x[:, 0] ** 2 + rng.standard_normal(nobs)
+    if case == "wls":
+        res = WLS(y, exog, weights=np.exp(rng.standard_normal(nobs))).fit()
+    else:
+        distances = np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+        res = GLS(y, exog, sigma=0.5**distances).fit()
+
+    actual = smsdia.linear_reset(res, power=2, use_f=True, cov_type=cov_type)
+
+    # rtol: R prints 15 significant digits and a tail p-value amplifies the
+    # rounding of the statistic, the observed differences are below 1e-13
+    assert_allclose(actual.statistic, f_stat, rtol=1e-10)
+    assert_allclose(actual.pvalue, f_pvalue, rtol=1e-10)
+
+
+def test_reset_ols_does_not_pass_weights():
+    rng = np.random.default_rng(8675309)
+    x = add_constant(rng.standard_normal((100, 2)))
+    y = rng.standard_normal(100)
+    res = OLS(y, x).fit()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ValueWarning)
+        smsdia.linear_reset(res, power=2)
+
+
 @pytest.mark.smoke
 @pytest.mark.parametrize("power", [2, 3])
 @pytest.mark.parametrize("test_type", ["fitted", "exog", "princomp"])
@@ -2064,6 +2181,36 @@ def test_reset_smoke(power, test_type, use_f, cov):
     y = x @ np.ones((7, 1)) + e
     res = OLS(y, x[:, :4]).fit()
     smsdia.linear_reset(res, power=power, test_type=test_type, use_f=use_f, **cov)
+
+
+@pytest.mark.parametrize(
+    "power",
+    [3, np.int64(3), np.int32(3), 3.0],
+    ids=["int", "int64", "int32", "float"],
+)
+def test_reset_int_like_power(power):
+    # A NumPy integer or an integral float is the maximum power. The list of
+    # powers, which takes the other branch, is the reference.
+    rng = np.random.default_rng(20261126)
+    x = add_constant(rng.standard_normal((200, 2)))
+    y = x @ np.ones(3) + x[:, 1] ** 2 + rng.standard_normal(200)
+    res = OLS(y, x).fit()
+    expected = smsdia.linear_reset(res, power=[2, 3])
+    actual = smsdia.linear_reset(res, power=power)
+    assert_allclose(actual.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(actual.pvalue, expected.pvalue, rtol=1e-12)
+
+
+@pytest.mark.parametrize("power", [True, np.True_], ids=["True", "np.True_"])
+def test_reset_bool_power(power):
+    # A bool is not a power: True was rejected as a maximum power below 2,
+    # and is now rejected as a list of powers
+    rng = np.random.default_rng(20261126)
+    x = add_constant(rng.standard_normal((200, 2)))
+    y = x @ np.ones(3) + rng.standard_normal(200)
+    res = OLS(y, x).fit()
+    with pytest.raises(ValueError, match="distinct integers all >= 2"):
+        smsdia.linear_reset(res, power=power)
 
 
 @pytest.mark.smoke

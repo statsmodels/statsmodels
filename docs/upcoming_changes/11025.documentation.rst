@@ -1,0 +1,8 @@
+- Correct docstrings of the statespace smoothers and tools: the default
+  smoother output and smoothing method of ``KalmanSmoother`` and the
+  ``set_smooth_method`` examples, ``smoothing_error``, the sign of ``lag`` in
+  ``smoothed_state_autocovariance``, the shape of the initial state variates
+  of the simulation smoother, diffuse initialization in
+  ``CFASimulationSmoother``, the ``companion_matrix`` formula, the default
+  threshold of ``is_invertible``, and the return types of ``concat`` and
+  ``diff``. :pr:`11025`

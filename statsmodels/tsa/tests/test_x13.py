@@ -23,6 +23,7 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tsa.x13 import (
     _find_x12,
+    run_spec,
     x13_arima_analysis,
     x13_arima_select_order,
 )
@@ -900,3 +901,98 @@ def test_output_file_removed_by_other_process(gdp_res, tmp_path, monkeypatch):
 
     assert list(tmp_path.iterdir()) == []
     assert_allclose(res.seasadj.to_numpy(), gdp_res.seasadj.to_numpy(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["series", "dataframe"])
+def test_endog_without_dates(form):
+    gdp = quarterly_data.realgdp
+    endog = gdp.reset_index(drop=True)
+    if form == "dataframe":
+        endog = endog.to_frame()
+    expected = x13_arima_analysis(gdp.to_numpy(), start="1959-01-01", freq="QS")
+
+    res = x13_arima_analysis(endog, start="1959-01-01", freq="QS")
+
+    # the same results as for the values without an index, with the dates
+    # built from start and freq
+    index = pd.date_range("1959-01-01", periods=gdp.shape[0], freq="QS")
+    pd.testing.assert_index_equal(res.observed.index, index)
+    np.testing.assert_allclose(
+        np.squeeze(res.observed.to_numpy()), gdp.to_numpy(), rtol=1e-12
+    )
+    for name in ("seasadj", "trend", "irregular"):
+        table = getattr(res, name)
+        pd.testing.assert_index_equal(table.index, index)
+        np.testing.assert_allclose(
+            table.to_numpy(), getattr(expected, name).to_numpy(), rtol=1e-12
+        )
+
+
+@pytest.mark.parametrize("func", [x13_arima_analysis, x13_arima_select_order])
+def test_print_stdout(func, capsys, tmp_path):
+    res = func(quarterly_data.realgdp, print_stdout=True, tempdir=str(tmp_path))
+
+    printed = capsys.readouterr().out
+    # X-13 names itself and the spec file that it reads, which is in tempdir
+    assert "X-13ARIMA-SEATS Seasonal Adjustment Program" in printed
+    assert f"Reading input spec file from {tmp_path}" in printed
+    # what is printed is the stdout that is returned
+    assert printed == res.stdout.decode() + "\n"
+
+
+def test_subprocess_pipe_closed():
+    # A pipe that is not closed gives a ResourceWarning when it is collected
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always", ResourceWarning)
+        x13_arima_analysis(quarterly_data.realgdp)
+
+    leaked = [str(w.message) for w in record if w.category is ResourceWarning]
+    assert leaked == []
+
+
+def _write_gdp_spec(directory):
+    """Write the default spec of realgdp, return its path without .spc"""
+    spec = x13_arima_analysis(quarterly_data.realgdp, speconly=True)
+    (directory / "gdp.spc").write_text(spec, encoding="utf-8")
+    return str(directory / "gdp")
+
+
+@pytest.mark.parametrize("outname", [None, "out"])
+def test_run_spec(outname, tmp_path):
+    specpath = _write_gdp_spec(tmp_path)
+    if outname is not None:
+        outname = str(tmp_path / outname)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with run_spec(x13path, specpath, outname) as process:
+            stdout, _ = process.communicate()
+
+    # without outname, X-13 writes the output files next to the spec file
+    outpath = specpath if outname is None else outname
+    assert f"Storing any program output into {outpath}.out" in stdout.decode()
+    for extension in (".out", ".err", ".d11", ".d12", ".d13"):
+        assert Path(outpath + extension).exists()
+
+
+@pytest.mark.parametrize(
+    "kwargs, option",
+    [({"meta": True}, "-m"), ({"datameta": True}, "-d"), ({"meta": False}, None)],
+    ids=["meta", "datameta", "meta_false"],
+)
+def test_run_spec_meta_deprecated(kwargs, option, tmp_path):
+    specpath = _write_gdp_spec(tmp_path)
+
+    with pytest.warns(FutureWarning, match="meta and datameta arguments of run_spec"):
+        process = run_spec(x13path, specpath, **kwargs)
+    with process:
+        stdout, _ = process.communicate()
+
+    if option is None:
+        # the spec file is run as without meta
+        assert f"Reading input spec file from {specpath}.spc" in stdout.decode()
+    else:
+        # the option and the file name are passed as one argument, which
+        # X-13 does not accept
+        message = f"Program option {option} {specpath} not defined"
+        assert message in " ".join(stdout.decode().split())

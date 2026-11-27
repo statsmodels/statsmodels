@@ -1,0 +1,6 @@
+- For time series models whose dates have no frequency, a partial
+  date key that matches no date but lies between two of them (for
+  example ``"2000-02"``) used the next or the previous date without
+  a warning. As for dates with a frequency, this is deprecated and
+  will raise a ``KeyError`` after statsmodels 0.17 is released.
+  :pr:`11164`

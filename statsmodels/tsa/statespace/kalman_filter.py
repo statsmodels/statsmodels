@@ -13,6 +13,7 @@ from warnings import warn
 import numpy as np
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import is_bool_like, is_int_like
 
 from . import tools
 from .representation import FrozenRepresentation, OptionWrapper, Representation
@@ -1239,8 +1240,8 @@ class KalmanFilter(Representation):
 
             .. versionchanged:: 0.15.1
 
-               NumPy integers are accepted as the index of the state
-               innovation. They raised ValueError.
+               NumPy integers and 0-d integer arrays are accepted as the
+               index of the state innovation. They raised ValueError.
 
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
@@ -1303,13 +1304,13 @@ class KalmanFilter(Representation):
             steps += 1
 
         # Check for what kind of impulse we want (an index, but not a bool)
-        if isinstance(impulse, (int, np.integer)) and not isinstance(impulse, bool):
+        if is_int_like(impulse, strict=True):
             if impulse >= self.k_posdef or impulse < 0:
                 raise ValueError("Invalid value for `impulse`. Must be the"
                                  " index of one of the state innovations.")
 
             # Create the (non-orthogonalized) impulse vector
-            idx = impulse
+            idx = int(impulse)
             impulse = np.zeros(self.k_posdef)
             impulse[idx] = 1
         else:
@@ -2042,6 +2043,8 @@ class FilterResults(FrozenRepresentation):
 
         # If `dynamic=True`, then assume that we want to begin dynamic
         # prediction at the start of the sample prediction.
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if dynamic is True:
             dynamic = 0
         # If `dynamic=False`, then assume we want no dynamic prediction

@@ -12,6 +12,8 @@ from urllib.request import urlopen
 import numpy as np
 from pandas import Index, read_csv, read_stata
 
+from statsmodels.tools.validation import is_int_like
+
 
 def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
     """
@@ -94,11 +96,24 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     ----------
     data : DataFrame
         The full dataset, with variables as columns.
-    endog_idx : int or array_like, optional
-        The column index (or indices) of the endogenous variable(s).
+    endog_idx : int, str, or array_like, optional
+        The column index (or indices) of the endogenous variable(s). A str
+        is the label of a single column.
+
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer is a column position, as an int is. A bool is
+           not: True was the column at position 1. A str selects the column
+           with that label as a Series, as an int does. It raised an
+           AttributeError.
     exog_idx : int or array_like, optional
         The column index (or indices) of the exogenous variable(s). If
         None, all columns other than `endog_idx` are used.
+
+        .. versionchanged:: 0.15.1
+
+           An int selects a single column, and ``exog`` is a DataFrame with
+           that column. It raised an AttributeError.
     index_idx : int, optional
         The column index to use as the index of `data`, `endog` and
         `exog`. If None, the existing index is preserved.
@@ -111,22 +126,23 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
     """
     names = data.columns
 
-    if isinstance(endog_idx, int):
-        endog_name = names[endog_idx]
+    if is_int_like(endog_idx, strict=True):
+        endog_name = names[int(endog_idx)]
         endog = data[endog_name].copy()
-        if exog_idx is None:
-            exog = data.drop([endog_name], axis=1)
-        else:
-            exog = data[names[exog_idx]].copy()
     else:
         endog = data.loc[:, endog_idx].copy()
-        endog_name = list(endog.columns)
-        if exog_idx is None:
-            exog = data.drop(endog_name, axis=1)
-        elif isinstance(exog_idx, int):
-            exog = data[names[exog_idx]].copy()
-        else:
-            exog = data[names[exog_idx]].copy()
+        # A single label, such as a str, selects a Series
+        endog_name = endog.name if endog.ndim == 1 else list(endog.columns)
+    if exog_idx is None:
+        exog = data.drop(endog_name if endog.ndim == 2 else [endog_name], axis=1)
+    elif is_int_like(exog_idx, strict=True):
+        # pandas < 3 cannot index with a 0-d array
+        exog = data[names[int(exog_idx)]].copy()
+    else:
+        exog = data[names[exog_idx]].copy()
+    if exog.ndim == 1:
+        # An int exog_idx selects a Series; exog is always a DataFrame
+        exog = exog.to_frame()
 
     if index_idx is not None:  # NOTE: will have to be improved for dates
         index = Index(data.iloc[:, index_idx])

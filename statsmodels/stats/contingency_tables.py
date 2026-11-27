@@ -36,7 +36,7 @@ from scipy import stats
 from statsmodels import iolib
 from statsmodels.tools import sm_exceptions
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 
 def _make_df_square(table):
@@ -1551,12 +1551,7 @@ def mcnemar(table, exact=True, correction=True):
     """
 
     table = _make_df_square(table)
-    table = np.asarray(table, dtype=np.float64)
-    if table.ndim != 2:
-        raise ValueError(
-            "mcnemar requires a two-dimensional contingency table, but the input has "
-            f"shape {table.shape}."
-        )
+    table = array_like(table, "table", shape=(None, None))
     if table.shape != (2, 2):
         raise ValueError(
             "mcnemar requires a 2x2 contingency table, but the input has "

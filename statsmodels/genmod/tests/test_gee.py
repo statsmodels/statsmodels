@@ -36,6 +36,7 @@ from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
+    DomainWarning,
     SingularMatrixWarning,
     SpecificationWarning,
 )
@@ -755,7 +756,9 @@ class TestGEE:
         # Mismatched family
         mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
         res_sub = mod_sub.fit()
-        mod = gee.GEE(endog, exog, group, family=families.Poisson())
+        # endog has negative values, which are outside of the Poisson support
+        with pytest.warns(DomainWarning, match="support of the Poisson"):
+            mod = gee.GEE(endog, exog, group, family=families.Poisson())
         with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
@@ -3302,3 +3305,24 @@ def test_morel_bokossa_neerchal_not_available():
     res = gee.GEE(endog, exog, groups).fit()
     with pytest.raises(ValueError, match="morel_bokossa_neerchal"):
         res.standard_errors("morel_bokossa_neerchal")
+
+
+@pytest.mark.parametrize(
+    "scale",
+    [2, np.int64(2), np.float32(2.0), np.array(2.0)],
+    ids=["int", "int64", "float32", "0-d array"],
+)
+def test_gee_fixed_scale_numeric_types(scale):
+    # Only a Python float was used as a fixed scale; any other number was
+    # ignored and the scale estimated from the residuals
+    rng = np.random.default_rng(20261126)
+    exog = tools.add_constant(rng.standard_normal((200, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(200)
+    groups = np.repeat(np.arange(40), 5)
+    expected = gee.GEE(endog, exog, groups).fit(scale=2.0)
+    res = gee.GEE(endog, exog, groups).fit(scale=scale)
+    assert res.scale == 2.0
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert_allclose(res.bse, expected.bse, rtol=1e-12)
+    estimated = gee.GEE(endog, exog, groups).fit()
+    assert abs(estimated.scale - 2.0) > 0.5

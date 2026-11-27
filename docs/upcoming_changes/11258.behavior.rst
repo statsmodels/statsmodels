@@ -1,0 +1,2 @@
+- ``plot_ccf`` now indexes irregular non-negative lags correctly when
+  ``negative_lags=True`` and uses signed lags only for artist labels. :pr:`11258`

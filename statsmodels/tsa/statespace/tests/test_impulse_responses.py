@@ -977,3 +977,32 @@ def test_impulse_responses_direct_deprecated(direct):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         mod.ssm.impulse_responses(steps=3)
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_impulse_int_like_index(to_key):
+    # A NumPy integer or a 0-d integer array is the index of the state
+    # innovation, as an int is. A 0-d array raised a ValueError.
+    endog = np.random.default_rng(20261126).standard_normal((50, 2))
+    mod = varmax.VARMAX(endog, order=(1, 0), trend="n")
+    params = np.array([0.5, 0.1, -0.2, 0.3, 1.0, 0.2, 1.0])
+    irfs = mod.impulse_responses(params, steps=3, impulse=to_key(1))
+    # The responses of a VAR(1) to a unit innovation in variable 1: A^h e_1
+    coefs = params[:4].reshape(2, 2)
+    expected = [np.linalg.matrix_power(coefs, h)[:, 1] for h in range(4)]
+    assert_allclose(irfs, np.array(expected), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "impulse", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+def test_impulse_bool_float_index(impulse):
+    # A bool or a float is not the index of a state innovation, so it is
+    # taken as an impulse vector, which has the wrong shape
+    endog = np.random.default_rng(20261126).standard_normal((50, 2))
+    mod = varmax.VARMAX(endog, order=(1, 0), trend="n")
+    params = np.array([0.5, 0.1, -0.2, 0.3, 1.0, 0.2, 1.0])
+    with pytest.raises(ValueError, match="Invalid impulse vector"):
+        mod.impulse_responses(params, steps=3, impulse=impulse)

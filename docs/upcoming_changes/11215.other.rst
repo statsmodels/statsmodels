@@ -1,0 +1,5 @@
+- ``predict`` and ``get_prediction`` of models created with the
+  formula API work with the formulaic engine and
+  ``statsmodels.formula.options.ordering`` set to ``"degree"``,
+  ``"sort"`` or ``"none"``; they raised ``FormulaInvalidError``.
+  :pr:`11215`

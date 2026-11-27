@@ -926,6 +926,12 @@ class Grouping:
         ----------
         array : array_like
             1d or 2d data to transform, with `self.nobs` rows.
+
+            .. versionchanged:: 0.15.1
+
+               An array with another number of dimensions or rows raises a
+               ValueError. It raised an UnboundLocalError, an IndexError or
+               a bare Exception.
         function : callable
             Function called as ``function(subset, group_idx, **kwargs)``
             for each group, where `subset` is the group's rows of
@@ -944,19 +950,26 @@ class Grouping:
 
         Raises
         ------
-        Exception
-            If `array` does not have `self.nobs` rows.
+        ValueError
+            If `array` is not 1d or 2d, or does not have `self.nobs` rows.
         """
         array = np.asarray(array)
+        if array.ndim not in (1, 2):
+            raise ValueError(
+                f"array must be 1d or 2d, but it has {array.ndim} dimensions"
+            )
         if array.shape[0] != self.nobs:
-            raise Exception("array does not have the same shape as index")
+            raise ValueError(
+                f"array must have nobs={self.nobs} rows, one for each element of "
+                f"the index, but it has {array.shape[0]}"
+            )
         # always reset because level is given. need to refactor this.
         self.get_slices(level=level)
         processed = []
         for s in self.slices:
             if array.ndim == 2:
                 subset = array[s, :]
-            elif array.ndim == 1:
+            else:
                 subset = array[s]
             processed.append(function(subset, s, **kwargs))
         processed = np.array(processed)

@@ -1,5 +1,9 @@
 from collections import OrderedDict
+from decimal import Decimal
+from enum import IntEnum
+from fractions import Fraction
 from types import MappingProxyType
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -12,6 +16,10 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_bool_like,
+    is_float_like,
+    is_int_like,
+    required_int_like,
     string_like,
 )
 from statsmodels.tools.validation.validation import _right_squeeze
@@ -74,7 +82,7 @@ class TestArrayLike:
         assert a.shape == (20, 10)
         with pytest.raises(
             ValueError,
-            match=r"Provided shape \(20,\) does not have the correct dimension",
+            match="a must have 1 dimension, but has 2",
         ):
             array_like(data, "a", ndim=2, shape=(20,))
         assert a.shape == (20, 10)
@@ -115,7 +123,7 @@ class TestArrayLike:
         assert a.shape == (5, 6, 7, 1, 1)
         with pytest.raises(
             ValueError,
-            match=r"Provided shape \(10,\) does not have the correct dimension",
+            match="a must have 1 dimension, but has 3",
         ):
             array_like(data, "a", ndim=3, shape=(10,))
         with pytest.raises(ValueError, match="a is required to have shape"):
@@ -426,82 +434,258 @@ def test_string_deprecated_alias_removed_after():
     assert out == "new"
 
 
-@pytest.fixture(params=(1.0, 1.1, np.float32(1.2), np.array([1.2]), 1.2 + 0j))
-def floating(request):
-    return request.param
+class Color(IntEnum):
+    RED = 3
 
 
-@pytest.fixture(params=(np.empty(2), 1.2 + 1j, True, "3.2", None))
-def not_floating(request):
-    return request.param
+class IndexOnly:
+    """An integer scalar of another library: supports only __index__."""
+
+    def __index__(self):
+        return 3
 
 
-def test_float_like(floating):
-    assert isinstance(float_like(floating, "floating"), float)
-    assert isinstance(float_like(floating, "floating", optional=True), float)
-    assert float_like(None, "floating", optional=True) is None
-    if isinstance(floating, (int, np.integer, float, np.inexact)):
-        assert isinstance(float_like(floating, "floating", strict=True), float)
-        assert float_like(None, "floating", optional=True, strict=True) is None
+# (id, value, its int value) for values that are integers even if strict
+STRICT_INTEGERS = [
+    ("int", 3, 3),
+    ("negative int", -4, -4),
+    ("big int", 2**70, 2**70),
+    ("IntEnum", Color.RED, 3),
+    ("int64", np.int64(3), 3),
+    ("int8", np.int8(-3), -3),
+    ("uint64 max", np.uint64(2**64 - 1), 2**64 - 1),
+    ("0-d int array", np.array(3), 3),
+    ("__index__ only", IndexOnly(), 3),
+]
+# integers only if not strict
+INTEGRAL_FLOATS = [
+    ("float", 3.0, 3),
+    ("negative zero", -0.0, 0),
+    ("float64", np.float64(-2.0), -2),
+    ("float32", np.float32(3.0), 3),
+    ("float16", np.float16(4.0), 4),
+    ("0-d float array", np.array(5.0), 5),
+]
+# never integers, not even under the old rules
+NOT_INTEGERS = [
+    ("bool", True),
+    ("np.bool_", np.True_),
+    ("0-d bool array", np.array(True)),
+    ("bool Series", pd.Series([True])),
+    ("bool array", np.array([False])),
+    ("fraction", 3.2),
+    ("float32 fraction", np.float32(3.2)),
+    ("nearly integral", 1000 ** (1 / 3)),
+    ("nan", np.nan),
+    ("inf", np.inf),
+    ("complex", 3 + 0j),
+    ("complex128", np.complex128(3)),
+    ("str", "3"),
+    ("bytes", b"3"),
+    ("timedelta64", np.timedelta64(2, "s")),
+    ("0-d timedelta64 array", np.array(np.timedelta64(2, "s"))),
+    ("datetime64", np.datetime64("2000-01-01")),
+    ("Timedelta", pd.Timedelta(3)),
+    ("Timestamp", pd.Timestamp("2000-01-01")),
+    ("list", [3]),
+    ("tuple", (3,)),
+    ("2 element array", np.array([3, 4])),
+    ("2 element Series", pd.Series([3, 4])),
+    ("NA", pd.NA),
+    ("object", object()),
+]
+# rejected by is_int_like, accepted by int_like with a FutureWarning
+DEPRECATED_INTEGERS = [
+    ("1 element array", np.array([4]), 4, False),
+    ("1 element float array", np.array([4.0]), 4, False),
+    ("1x1 array", np.array([[3.0]]), 3, False),
+    ("1 element Series", pd.Series([3]), 3, True),
+    ("1x1 DataFrame", pd.DataFrame([[3]]), 3, True),
+    ("Decimal", Decimal(3), 3, False),
+    ("Fraction", Fraction(6, 2), 3, False),
+]
 
 
-def test_not_float_like(not_floating):
-    with pytest.raises(TypeError):
-        float_like(not_floating, "floating")
+def _ids(cases):
+    return [case[0] for case in cases]
 
 
-@pytest.fixture(params=(1.0, 2, np.float32(3.0), np.array([4.0])))
-def integer(request):
-    return request.param
-
-
-@pytest.fixture(
-    params=(
-        3.2,
-        np.float32(3.2),
-        3 + 2j,
-        complex(2.3 + 0j),
-        "apple",
-        1.0 + 0j,
-        np.timedelta64(2, "s"),
-    )
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize(
+    "name, value, expected", STRICT_INTEGERS, ids=_ids(STRICT_INTEGERS)
 )
-def not_integer(request):
-    return request.param
+def test_is_int_like_integers(name, value, expected, strict):
+    assert is_int_like(value, strict=strict) is True
+    converted = int_like(value, "value", strict=strict)
+    assert type(converted) is int
+    assert converted == expected
 
 
-def test_int_like(integer):
-    assert isinstance(int_like(integer, "integer"), int)
-    assert isinstance(int_like(integer, "integer", optional=True), int)
-    assert int_like(None, "floating", optional=True) is None
-    if isinstance(integer, (int, np.integer)):
-        assert isinstance(int_like(integer, "integer", strict=True), int)
-        assert int_like(None, "floating", optional=True, strict=True) is None
+@pytest.mark.parametrize(
+    "name, value, expected", INTEGRAL_FLOATS, ids=_ids(INTEGRAL_FLOATS)
+)
+def test_is_int_like_integral_floats(name, value, expected):
+    assert is_int_like(value) is True
+    converted = int_like(value, "value")
+    assert type(converted) is int
+    assert converted == expected
+    assert is_int_like(value, strict=True) is False
+    with pytest.raises(TypeError, match=r"value must be .*not a bool or a float"):
+        int_like(value, "value", strict=True)
 
 
-def test_not_int_like(not_integer):
-    with pytest.raises(TypeError):
-        int_like(not_integer, "integer")
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize("name, value", NOT_INTEGERS, ids=_ids(NOT_INTEGERS))
+def test_is_int_like_not_integers(name, value, strict):
+    assert is_int_like(value, strict=strict) is False
+    with pytest.raises(TypeError, match="value must be integer_like"):
+        int_like(value, "value", strict=strict)
+    with pytest.raises(TypeError, match=r"value must be integer_like.* or None"):
+        int_like(value, "value", optional=True, strict=strict)
 
 
-@pytest.fixture(params=[True, False, 1, 1.2, "a", ""])
-def boolean(request):
-    return request.param
-
-
-def test_bool_like(boolean):
-    assert isinstance(bool_like(boolean, "boolean"), bool)
-    assert bool_like(None, "boolean", optional=True) is None
-    if isinstance(boolean, bool):
-        assert isinstance(bool_like(boolean, "boolean", strict=True), bool)
+@pytest.mark.parametrize(
+    "name, value, expected, strict_too",
+    DEPRECATED_INTEGERS,
+    ids=_ids(DEPRECATED_INTEGERS),
+)
+def test_int_like_deprecated(name, value, expected, strict_too):
+    assert is_int_like(value) is False
+    assert is_int_like(value, strict=True) is False
+    match = (
+        rf"Passing nlags of type {type(value).__name__} is deprecated and will "
+        rf"raise a TypeError in statsmodels 0\.17\. Pass nlags={expected} as"
+    )
+    with pytest.warns(FutureWarning, match=match):
+        converted = int_like(value, "nlags")
+    assert type(converted) is int
+    assert converted == expected
+    if strict_too:
+        with pytest.warns(FutureWarning, match=match):
+            assert int_like(value, "nlags", strict=True) == expected
     else:
-        with pytest.raises(TypeError):
-            bool_like(boolean, "boolean", strict=True)
+        with pytest.raises(TypeError, match="nlags must be integer_like"):
+            int_like(value, "nlags", strict=True)
 
 
-def test_not_bool_like():
-    with pytest.raises(TypeError):
-        bool_like(np.array([True, True]), boolean)
+def test_int_like_none():
+    assert int_like(None, "value", optional=True) is None
+    assert int_like(None, "value", optional=True, strict=True) is None
+    with pytest.raises(TypeError, match="value must be integer_like"):
+        int_like(None, "value")
+    assert is_int_like(None) is False
+
+
+def test_int_like_error_message():
+    match = r"k must be integer_like \(an int, a NumPy integer or a float with"
+    with pytest.raises(TypeError, match=match):
+        int_like(2.5, "k")
+    match = r"k must be integer_like \(an int or a NumPy integer, but not a bool"
+    with pytest.raises(TypeError, match=match):
+        int_like(2.5, "k", strict=True)
+
+
+def test_required_int_like():
+    assert required_int_like(np.int64(3), "value") == 3
+    assert required_int_like(3.0, "value") == 3
+    with pytest.raises(TypeError, match="value must be integer_like"):
+        required_int_like(3.0, "value", strict=True)
+    with pytest.raises(TypeError, match="value must be integer_like"):
+        required_int_like(None, "value")
+    with pytest.raises(TypeError, match="value must be integer_like"):
+        required_int_like(np.True_, "value")
+
+
+# (id, value, its bool value) for values that are bools even if strict
+STRICT_BOOLS = [
+    ("True", True, True),
+    ("False", False, False),
+    ("np.True_", np.True_, True),
+    ("np.False_", np.False_, False),
+    ("0-d bool array", np.array(True), True),
+]
+# bools only if not strict
+INTEGER_BOOLS = [
+    ("int 1", 1, True),
+    ("int 0", 0, False),
+    ("int64 1", np.int64(1), True),
+    ("uint8 0", np.uint8(0), False),
+    ("0-d int array", np.array(1), True),
+]
+# not bools, but convertible: accepted by bool_like with a FutureWarning
+DEPRECATED_BOOLS = [
+    ("str False", "False", True),
+    ("empty str", "", False),
+    ("float", 1.0, True),
+    ("float zero", 0.0, False),
+    ("int 2", 2, True),
+    ("negative int", -1, True),
+    ("list", [0], True),
+    ("empty list", [], False),
+    ("None", None, False),
+    ("1 element bool array", np.array([False]), False),
+    ("1 element bool Series", pd.Series([True]), True),
+]
+
+
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize(
+    "name, value, expected", STRICT_BOOLS, ids=_ids(STRICT_BOOLS)
+)
+def test_is_bool_like_bools(name, value, expected, strict):
+    assert is_bool_like(value, strict=strict) is True
+    converted = bool_like(value, "value", strict=strict)
+    assert type(converted) is bool
+    assert converted is expected
+
+
+@pytest.mark.parametrize(
+    "name, value, expected", INTEGER_BOOLS, ids=_ids(INTEGER_BOOLS)
+)
+def test_is_bool_like_integers(name, value, expected):
+    assert is_bool_like(value) is True
+    converted = bool_like(value, "value")
+    assert type(converted) is bool
+    assert converted is expected
+    assert is_bool_like(value, strict=True) is False
+    with pytest.raises(TypeError, match=r"value must be a bool \(True, False or"):
+        bool_like(value, "value", strict=True)
+
+
+@pytest.mark.parametrize(
+    "name, value, expected", DEPRECATED_BOOLS, ids=_ids(DEPRECATED_BOOLS)
+)
+def test_bool_like_deprecated(name, value, expected):
+    assert is_bool_like(value) is False
+    assert is_bool_like(value, strict=True) is False
+    match = (
+        rf"Passing flag of type {type(value).__name__} is deprecated and will "
+        rf"raise a TypeError in statsmodels 0\.17\. Pass flag={expected} as"
+    )
+    with pytest.warns(FutureWarning, match=match):
+        converted = bool_like(value, "flag")
+    assert type(converted) is bool
+    assert converted is expected
+    with pytest.raises(TypeError, match="flag must be a bool"):
+        bool_like(value, "flag", strict=True)
+
+
+@pytest.mark.parametrize(
+    "value", [np.array([True, False]), pd.Series([1, 0])], ids=["array", "Series"]
+)
+@pytest.mark.parametrize("strict", [True, False])
+def test_bool_like_not_convertible(value, strict):
+    assert is_bool_like(value, strict=strict) is False
+    with pytest.raises(TypeError, match="flag must be a bool"):
+        bool_like(value, "flag", strict=strict)
+
+
+def test_bool_like_none():
+    assert bool_like(None, "value", optional=True) is None
+    assert bool_like(None, "value", optional=True, strict=True) is None
+    with pytest.raises(TypeError, match=r"value must be a bool.* or None"):
+        bool_like("a", "value", optional=True, strict=True)
+    assert is_bool_like(None) is False
 
 
 def test_array_like_mindim():
@@ -515,3 +699,183 @@ def test_array_like_mindim():
     y = [1, 2]
     arr = array_like(y, "y", mindim=2)
     assert arr.shape == (2, 1)
+
+
+# (id, value, its float value) for values that are real numbers even if strict
+STRICT_REALS = [
+    ("float", 1.5, 1.5),
+    ("negative float", -2.25, -2.25),
+    ("nan", np.nan, np.nan),
+    ("inf", np.inf, np.inf),
+    ("float64", np.float64(0.25), 0.25),
+    ("float32", np.float32(0.5), 0.5),
+    ("float16", np.float16(-0.5), -0.5),
+    ("int", 3, 3.0),
+    ("int64", np.int64(-3), -3.0),
+    ("IntEnum", Color.RED, 3.0),
+    ("0-d float array", np.array(0.75), 0.75),
+    ("0-d int array", np.array(2), 2.0),
+    ("__index__ only", IndexOnly(), 3.0),
+]
+# real numbers only if not strict
+NONSTRICT_REALS = [
+    ("Fraction", Fraction(1, 4), 0.25),
+]
+# never real numbers, not even under the old rules
+NOT_REALS = [
+    ("bool", True),
+    ("np.bool_", np.True_),
+    ("0-d bool array", np.array(False)),
+    ("bool Series", pd.Series([True])),
+    ("complex", 1.2 + 1j),
+    ("complex128", np.complex128(1 + 2j)),
+    ("complex Series", pd.Series([1 + 2j])),
+    ("str", "3.2"),
+    ("timedelta64", np.timedelta64(2, "s")),
+    ("datetime64", np.datetime64("2000-01-01")),
+    ("Timedelta", pd.Timedelta(3)),
+    ("Decimal", Decimal("0.5")),
+    ("list", [0.5]),
+    ("2 element array", np.empty(2)),
+    ("2 element Series", pd.Series([0.5, 1.5])),
+    ("NA", pd.NA),
+    ("object", object()),
+]
+# rejected by is_float_like, accepted by float_like with a FutureWarning
+DEPRECATED_REALS = [
+    ("1 element array", np.array([1.2]), 1.2, False),
+    ("1x1 int array", np.array([[3]]), 3.0, False),
+    ("1 element Series", pd.Series([1.2]), 1.2, True),
+    ("1x1 DataFrame", pd.DataFrame([[0.5]]), 0.5, True),
+    ("complex, zero imaginary part", 1.2 + 0j, 1.2, False),
+    ("complex128, zero imaginary part", np.complex128(2), 2.0, False),
+    ("0-d complex array", np.array(0.5 + 0j), 0.5, False),
+]
+
+
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize(
+    "name, value, expected", STRICT_REALS, ids=_ids(STRICT_REALS)
+)
+def test_is_float_like_reals(name, value, expected, strict):
+    assert is_float_like(value, strict=strict) is True
+    converted = float_like(value, "value", strict=strict)
+    assert type(converted) is float
+    np.testing.assert_equal(converted, expected)
+
+
+@pytest.mark.parametrize(
+    "name, value, expected", NONSTRICT_REALS, ids=_ids(NONSTRICT_REALS)
+)
+def test_is_float_like_nonstrict_reals(name, value, expected):
+    assert is_float_like(value) is True
+    converted = float_like(value, "value")
+    assert type(converted) is float
+    assert converted == expected
+    assert is_float_like(value, strict=True) is False
+    with pytest.raises(TypeError, match="value must be float_like"):
+        float_like(value, "value", strict=True)
+
+
+@pytest.mark.parametrize("strict", [True, False])
+@pytest.mark.parametrize("name, value", NOT_REALS, ids=_ids(NOT_REALS))
+def test_is_float_like_not_reals(name, value, strict):
+    assert is_float_like(value, strict=strict) is False
+    with pytest.raises(TypeError, match="value must be float_like"):
+        float_like(value, "value", strict=strict)
+    with pytest.raises(TypeError, match=r"value must be float_like.* or None"):
+        float_like(value, "value", optional=True, strict=strict)
+
+
+@pytest.mark.parametrize(
+    "name, value, expected, strict_too",
+    DEPRECATED_REALS,
+    ids=_ids(DEPRECATED_REALS),
+)
+def test_float_like_deprecated(name, value, expected, strict_too):
+    assert is_float_like(value) is False
+    assert is_float_like(value, strict=True) is False
+    match = (
+        rf"Passing alpha of type {type(value).__name__} is deprecated and will "
+        rf"raise a TypeError in statsmodels 0\.17\. Pass alpha={expected} as"
+    )
+    with pytest.warns(FutureWarning, match=match):
+        converted = float_like(value, "alpha")
+    assert type(converted) is float
+    assert converted == expected
+    if strict_too:
+        with pytest.warns(FutureWarning, match=match):
+            assert float_like(value, "alpha", strict=True) == expected
+    else:
+        with pytest.raises(TypeError, match="alpha must be float_like"):
+            float_like(value, "alpha", strict=True)
+
+
+def test_float_like_none():
+    assert float_like(None, "value", optional=True) is None
+    assert float_like(None, "value", optional=True, strict=True) is None
+    with pytest.raises(TypeError, match="value must be float_like"):
+        float_like(None, "value")
+    assert is_float_like(None) is False
+
+
+def test_float_like_error_message():
+    match = r"a must be float_like \(a real number such as a float, an int or a"
+    with pytest.raises(TypeError, match=match):
+        float_like("0.5", "a")
+    match = r"a must be float_like \(a float, an int or a NumPy real number, but"
+    with pytest.raises(TypeError, match=match):
+        float_like("0.5", "a", strict=True)
+
+
+class _Subclass(np.ndarray):
+    pass
+
+
+def _matrix(data):
+    # np.matrix warns that it is not recommended, which the test suite raises
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PendingDeprecationWarning)
+        return np.asmatrix(data)
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda: _matrix([[1.0, 2.0], [3.0, 4.0]]),
+        lambda: np.ma.masked_array([[1.0, 2.0], [3.0, 4.0]], mask=[[0, 1], [0, 0]]),
+        lambda: np.array([[1.0, 2.0], [3.0, 4.0]]).view(_Subclass),
+    ],
+    ids=["matrix", "masked", "subclass"],
+)
+@pytest.mark.parametrize("writeable", [True, False])
+def test_array_like_returns_base_ndarray(make, writeable):
+    # array_like returned subclasses unchanged, unlike np.asarray: a matrix
+    # kept matrix semantics and a masked array kept its mask
+    obj = make()
+    arr = array_like(obj, "obj", ndim=2, writeable=writeable)
+    assert type(arr) is np.ndarray
+    np.testing.assert_array_equal(arr, np.asarray(obj))
+
+
+def test_array_like_matrix_column_squeezed():
+    # a matrix is always 2-d, so a column could not be squeezed to 1-d
+    arr = array_like(_matrix([[1.0], [2.0], [3.0]]), "x", ndim=1)
+    assert type(arr) is np.ndarray
+    np.testing.assert_array_equal(arr, [1.0, 2.0, 3.0])
+
+
+@pytest.mark.parametrize(
+    "obj, shape, expected",
+    [
+        (3.0, (None, None), "x must have 2 dimensions, but has 0"),
+        ([1.0, 2.0], (None, None), "x must have 2 dimensions, but has 1"),
+        (np.ones((2, 2, 2)), (None, None), "x must have 2 dimensions, but has 3"),
+        (np.ones((2, 2)), (None,), "x must have 1 dimension, but has 2"),
+    ],
+)
+def test_array_like_shape_length_message(obj, shape, expected):
+    # the message reports the dimensions of the input, before a scalar is
+    # padded to 1-d by mindim
+    with pytest.raises(ValueError, match=expected):
+        array_like(obj, "x", shape=shape)

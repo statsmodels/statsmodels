@@ -566,3 +566,52 @@ def test_get_prediction_dynamic_key_covers_several_dates():
     assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
     assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
     pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(17), np.array(17), 17.0],
+    ids=["int64", "0d-array", "float"],
+)
+@pytest.mark.parametrize("form", ["ndarray", "series"])
+def test_forecast_int_like_steps(monthly, form, steps):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They are passed to the model as an int.
+    x = _stl_form(monthly, form)
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    locs = np.arange(NOBS, NOBS + 17)
+    expected = ar_res.forecast(17) + _seasonal_by_hand(seasonal, NOBS, locs)
+    assert_allclose(np.asarray(res.forecast(steps)), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(monthly, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises for a date index.
+    x = _stl_form(monthly, "series")
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    with pytest.raises(TypeError):
+        res.forecast(steps)
+
+
+@pytest.mark.parametrize(
+    "dynamic, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_get_prediction_dynamic_numpy_bool(dynamic, expected):
+    # A NumPy bool reached the integer checks: np.True_ was an offset of 1
+    # and np.False_ an offset of 0 (dynamic from the start)
+    rng = np.random.default_rng(20261126)
+    t = np.arange(96)
+    y = pd.Series(
+        10 + np.sin(2 * np.pi * t / 12) + np.cumsum(0.3 * rng.standard_normal(96)),
+        index=pd.date_range("2000-01-01", periods=96, freq=MONTH_END),
+    )
+    res = STLForecast(y, AutoReg, model_kwargs={"lags": 2}, period=12).fit()
+    pred = res.get_prediction(start=40, end=80, dynamic=dynamic).predicted_mean
+    ref = res.get_prediction(start=40, end=80, dynamic=expected).predicted_mean
+    assert_allclose(pred, ref, rtol=1e-12)
+    other = res.get_prediction(start=40, end=80, dynamic=not expected)
+    assert np.max(np.abs(pred - other.predicted_mean)) > 1e-3

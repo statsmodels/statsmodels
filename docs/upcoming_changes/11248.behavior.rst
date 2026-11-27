@@ -1,0 +1,7 @@
+- Float arguments validated with ``float_like`` reject ``np.bool_``,
+  ``np.timedelta64`` and boolean 0-d arrays, Series or arrays with one
+  element, which were converted to floats. ``GLM.fit`` rejects a bool
+  ``scale``, which was used as the scale 1.0. :pr:`11248`
+- ``GEE.fit`` uses an ``int``, a NumPy number or a 0-d array ``scale`` as a
+  fixed scale, as it did a float. Such a scale was ignored and the scale was
+  estimated, so the results of these calls change. :pr:`11248`

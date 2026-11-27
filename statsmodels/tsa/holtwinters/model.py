@@ -31,6 +31,9 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_bool_like,
+    is_float_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
@@ -313,6 +316,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         self._estimate_trend = estimated and self.trend is not None
         self._estimate_seasonal = estimated and self.seasonal is not None
         self._bounds = self._check_bounds(bounds)
+        if is_bool_like(use_boxcox, strict=True):
+            use_boxcox = bool(use_boxcox)
+        elif is_int_like(use_boxcox, strict=True):
+            use_boxcox = int(use_boxcox)
+        elif is_float_like(use_boxcox):
+            use_boxcox = float(use_boxcox)
         self._use_boxcox = use_boxcox
         self._lambda = np.nan
         self._y = self._boxcox()
@@ -580,7 +589,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         """
         if start is None:
             freq = getattr(self._index, "freq", 1)
-            if isinstance(freq, int):
+            if is_int_like(freq):
                 start = self._index.shape[0]
             else:
                 start = self._index[-1] + freq

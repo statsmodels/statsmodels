@@ -1,0 +1,6 @@
+- :func:`~statsmodels.tools.validation.is_int_like` checks whether a value is
+  a scalar integer, using the same rule as
+  :func:`~statsmodels.tools.validation.int_like`: integer types and objects
+  that support ``__index__``, a 0-d array holding one, and, unless
+  ``strict=True``, a finite float with an integral value such as ``3.0``.
+  Bools and ``timedelta64`` are never integers. :pr:`11241`
