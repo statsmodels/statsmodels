@@ -299,6 +299,186 @@ def test_model_copied_after_incomplete_initialization(roundtrip):
     assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)
 
 
+# Intercept, AR coefficient, measurement error variance and state variance.
+# The variances are not one, so that scaling a variate by its standard
+# deviation changes it, and the initial state mean 1 / (1 - 0.5) is not zero.
+SIMSMOOTH_PARAMS = [1.0, 0.5, 2.0, 3.0]
+SIMULATED = (
+    "simulated_state",
+    "simulated_measurement_disturbance",
+    "simulated_state_disturbance",
+)
+GENERATED = ("generated_obs", "generated_state")
+
+
+def _simsmooth_model(missing):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(15) + 2
+    if missing:
+        endog[[3, 9]] = np.nan
+    mod = sarimax.SARIMAX(
+        endog, order=(1, 0, 0), trend="c", measurement_error=True
+    )
+    # Creates and initializes the compiled state space model
+    mod.loglike(SIMSMOOTH_PARAMS)
+    return mod
+
+
+def _simsmooth_variates(rng, nobs):
+    return {
+        "measurement_disturbance_variates": rng.standard_normal(nobs),
+        "state_disturbance_variates": rng.standard_normal(nobs),
+        "initial_state_variates": rng.standard_normal(1),
+    }
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_simulation_smoother_pickle(missing):
+    # Pickling a simulation smoother raised AttributeError
+    mod = _simsmooth_model(missing)
+    sim = mod.simulation_smoother()
+    rng = np.random.default_rng(1122)
+    sim.simulate(**_simsmooth_variates(rng, mod.nobs))
+    sim2 = pickle.loads(pickle.dumps(sim))
+
+    # The stored draws are unchanged
+    for name in SIMULATED:
+        assert_allclose(getattr(sim2, name), getattr(sim, name), rtol=1e-12)
+
+    # A new simulation with the same variates gives the same draws
+    variates = _simsmooth_variates(rng, mod.nobs)
+    sim.simulate(**variates)
+    sim2.simulate(**variates)
+    for name in SIMULATED + GENERATED:
+        assert_allclose(getattr(sim2, name), getattr(sim, name), rtol=1e-12)
+
+    # With zero variates, the draws are the smoothed values
+    sim2.simulate(**{key: np.zeros_like(val) for key, val in variates.items()})
+    res = mod.smooth(SIMSMOOTH_PARAMS)
+    # atol: the smoothed disturbances can be close to zero, and the two
+    # computations differ by rounding (about 1e-16)
+    assert_allclose(sim2.simulated_state, res.smoothed_state, rtol=1e-10)
+    assert_allclose(
+        sim2.simulated_measurement_disturbance,
+        res.smoothed_measurement_disturbance,
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    assert_allclose(
+        sim2.simulated_state_disturbance,
+        res.smoothed_state_disturbance,
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+
+def test_simulation_smoother_pickle_settings():
+    # The unpickled simulation smoother keeps the filter settings and the
+    # output flags, and computes the Cholesky factors in its own work arrays
+    mod = _simsmooth_model(False)
+    ssm = mod.ssm
+    ssm.filter_univariate = True
+    ssm.solve_lu = True
+    ssm.stability_force_symmetry = False
+    ssm.memory_no_likelihood = True
+    ssm.timing_init_filtered = True
+    ssm.tolerance = 1e-12
+    ssm.loglikelihood_burn = 3
+    sim = mod.simulation_smoother(simulate_state=True)
+    # Pickled before any simulation, the work arrays are still zero
+    sim2 = pickle.loads(pickle.dumps(sim))
+
+    ss = sim2._simulation_smoother
+    kfilter = ss.simulated_kfilter
+    assert kfilter.filter_method == ssm.filter_method
+    assert kfilter.inversion_method == ssm.inversion_method
+    assert kfilter.stability_method == ssm.stability_method
+    assert kfilter.conserve_memory == ssm.conserve_memory
+    assert kfilter.filter_timing == ssm.filter_timing
+    assert_allclose(kfilter.tolerance, 1e-12, rtol=1e-15)
+    assert kfilter.loglikelihood_burn == 3
+    # simulate_state=True gives SIMULATION_STATE, which is also the smoother
+    # output
+    assert ss.simulation_output == 1
+    assert ss.simulated_smoother.smoother_output == 1
+
+    variates = _simsmooth_variates(np.random.default_rng(3), mod.nobs)
+    sim.simulate(**variates)
+    sim2.simulate(**variates)
+    assert_allclose(sim2.simulated_state, sim.simulated_state, rtol=1e-12)
+    # Cholesky factors of the initial state variance, the measurement error
+    # variance and the state variance
+    _, phi, obs_var, state_var = SIMSMOOTH_PARAMS
+    expected = {
+        "tmp0": state_var / (1 - phi**2),
+        "tmp1": obs_var,
+        "tmp2": state_var,
+    }
+    for name, var in expected.items():
+        assert_allclose(np.asarray(getattr(ss, name)), [[np.sqrt(var)]], rtol=1e-12)
+
+
+def test_simulator_pickle():
+    # A simulator only simulates, for a given number of periods
+    mod = _simsmooth_model(False)
+    nsimulations = mod.nobs
+    sim = mod.ssm.simulator(nsimulations)
+    sim2 = pickle.loads(pickle.dumps(sim))
+    variates = _simsmooth_variates(np.random.default_rng(2211), nsimulations)
+    sim2.simulate(**variates)
+
+    # The AR(1) recursion from a draw of the stationary distribution
+    intercept, phi, obs_var, state_var = SIMSMOOTH_PARAMS
+    state = np.empty(nsimulations + 1)
+    state[0] = intercept / (1 - phi) + np.sqrt(state_var / (1 - phi**2)) * (
+        variates["initial_state_variates"][0]
+    )
+    shocks = np.sqrt(state_var) * variates["state_disturbance_variates"]
+    for t in range(nsimulations):
+        state[t + 1] = intercept + phi * state[t] + shocks[t]
+    obs = state[:-1] + np.sqrt(obs_var) * variates["measurement_disturbance_variates"]
+    assert_allclose(sim2.generated_state[0], state, rtol=1e-10)
+    assert_allclose(sim2.generated_obs[0], obs, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "setup",
+    ["fixed_initial_state", "pretransformed_initial_state", "pretransformed_shocks"],
+)
+def test_simulation_smoother_pickle_variate_flags(setup):
+    # The unpickled compiled simulation smoother interprets the stored
+    # variates as the original does: as values that are already scaled (or
+    # as the initial state itself), or as standard normal draws
+    mod = _simsmooth_model(True)
+    sim = mod.simulation_smoother()
+    rng = np.random.default_rng(4)
+    # Initializes the state space model
+    sim.simulate(**_simsmooth_variates(rng, mod.nobs))
+    ss = sim._simulation_smoother
+    pretransformed = setup == "pretransformed_shocks"
+    ss.set_measurement_disturbance_variates(
+        rng.standard_normal(mod.nobs), pretransformed=pretransformed
+    )
+    ss.set_state_disturbance_variates(
+        rng.standard_normal(mod.nobs), pretransformed=pretransformed
+    )
+    initial = rng.standard_normal(1)
+    if setup == "fixed_initial_state":
+        ss.set_initial_state(initial)
+    else:
+        ss.set_initial_state_variates(
+            initial, pretransformed=setup == "pretransformed_initial_state"
+        )
+    ss2 = pickle.loads(pickle.dumps(ss))
+
+    ss.simulate()
+    ss2.simulate()
+    for name in SIMULATED + GENERATED:
+        assert_allclose(
+            np.asarray(getattr(ss2, name)), np.asarray(getattr(ss, name)), rtol=1e-12
+        )
+
+
 def test_cfa_simulation_smoother_pickle():
     rng = np.random.default_rng(1122)
     endog = rng.standard_normal((50, 1)) + 0.5 * rng.standard_normal((50, 3))
