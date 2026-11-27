@@ -640,8 +640,15 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         tol : float, optional
             The tolerance to use when checking that `probabilities` sums to
             one. Default is 1e-8.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           A call that raises a ValueError keeps the previous initialization.
+           It set the initialization to known without probabilities, so that
+           the model could no longer compute the initial probabilities.
         """
-        self._initialization = "known"
         # copy, so that the model does not share the caller's array
         probabilities = array_like(
             probabilities, "probabilities", dtype=None, shape=(None,)
@@ -652,6 +659,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             )
         if not np.abs(np.sum(probabilities) - 1) < tol:
             raise ValueError("Initial probabilities vector must sum to one.")
+        # Set only now, so that a failed call keeps the previous initialization
+        self._initialization = "known"
         self._initial_probabilities = probabilities
 
     def initial_probabilities(self, params, regime_transition=None):

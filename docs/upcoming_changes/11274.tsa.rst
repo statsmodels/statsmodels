@@ -1,0 +1,3 @@
+- A failed ``MarkovSwitching.initialize_known`` keeps the previous
+  initialization; before, ``initial_probabilities``, ``loglike`` and ``fit``
+  then raised a TypeError. :pr:`11274`
