@@ -1,0 +1,4 @@
+- ``cohens_kappa`` raises a ValueError for linear or quadratic 1-d weights whose
+  first and last values are equal (they gave nan), and names both shapes for
+  2-d weights of the wrong shape. A 1 x 1 table with these weights no longer
+  warns. :pr:`11263`
