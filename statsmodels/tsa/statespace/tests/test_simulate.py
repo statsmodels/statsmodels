@@ -19,6 +19,7 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tsa.statespace import (
     dynamic_factor,
+    mlemodel,
     sarimax,
     structural,
     varmax,
@@ -2161,3 +2162,130 @@ def test_time_varying_selection():
     assert_equal(mod["obs_cov"].shape, (mod.k_endog, mod.k_endog))
     assert_equal(mod["state_cov"].shape, (mod.ssm.k_posdef, mod.ssm.k_posdef))
     mod.simulate([], 10)
+
+
+def _ar_zero_shock_path(phi, initial_state, nsimulations):
+    # Observations of an AR(p) (SARIMAX state vector) without shocks
+    transition = np.eye(len(phi), k=1)
+    transition[:, 0] = phi
+    states = [np.asarray(initial_state)]
+    for _ in range(nsimulations - 1):
+        states.append(transition @ states[-1])
+    return np.array(states)[:, 0]
+
+
+@pytest.mark.parametrize("anchor, iloc", [("end", 12), (1, 1), (-3, 9)])
+def test_simulate_standardized_initial_state_anchor(anchor, iloc):
+    # With pretransformed_initial_state=False and an anchor after the start of
+    # the sample, MLEResults.simulate transformed the standard Normal draws in
+    # `initial_state` with the initialization of the model (mean zero here),
+    # not with the predicted state at the anchor from which an unspecified
+    # initial state is drawn: zero draws and zero shocks gave zeros instead of
+    # the forecasts. The initial state is the predicted state mean plus the
+    # lower triangular Cholesky factor of its covariance matrix times the
+    # draws, also with one column of draws for each repetition.
+    phi = np.array([0.5, 0.2, -0.1])
+    endog = np.random.default_rng(1913).standard_normal(12)
+    mod = sarimax.SARIMAX(endog, order=(3, 0, 0), measurement_error=True)
+    res = mod.smooth(np.r_[phi, 0.5, 1.0])
+    mean = res.predicted_state[:, iloc]
+    chol = np.linalg.cholesky(res.predicted_state_cov[:, :, iloc])
+    nsim = 3
+    zero = np.zeros((nsim, 1))
+    kwargs = {"anchor": anchor, "measurement_shocks": zero, "state_shocks": zero}
+
+    sim = res.simulate(
+        nsim, initial_state=np.zeros(3), pretransformed_initial_state=False, **kwargs
+    )
+    assert_allclose(sim, _ar_zero_shock_path(phi, mean, nsim), rtol=1e-10)
+    if anchor == "end":
+        assert_allclose(sim, res.forecast(nsim), rtol=1e-10)
+    z = np.array([0.8, -1.3, 0.6])
+    sim = res.simulate(
+        nsim, initial_state=z, pretransformed_initial_state=False, **kwargs
+    )
+    desired = _ar_zero_shock_path(phi, mean + chol @ z, nsim)
+    assert_allclose(sim, desired, rtol=1e-10)
+    z = np.array([[0.8, 0.1, -0.5], [-1.3, 0.9, 0.4], [0.6, -0.2, 1.1]])
+    sim = res.simulate(
+        nsim,
+        initial_state=z,
+        pretransformed_initial_state=False,
+        repetitions=3,
+        **kwargs,
+    )
+    for i in range(3):
+        desired = _ar_zero_shock_path(phi, mean + chol @ z[:, i], nsim)
+        assert_allclose(sim[:, 0, i], desired, rtol=1e-10)
+    # A pretransformed initial state is used as it is
+    sim = res.simulate(nsim, initial_state=z[:, 0], **kwargs)
+    assert_allclose(sim, _ar_zero_shock_path(phi, z[:, 0], nsim), rtol=1e-10)
+
+
+@pytest.mark.parametrize("filtered_timing", [False, True])
+def test_simulate_standardized_initial_state_start(filtered_timing):
+    # At the start of the sample, standard Normal draws are transformed with
+    # the mean and covariance matrix of the initialization of the model, by the
+    # results and the model (unchanged). The model uses them also with a later
+    # anchor. With the filtered timing they are not the predicted state of the
+    # first period.
+    phi = np.array([0.5, 0.2, -0.1])
+    params = np.r_[phi, 0.5, 1.0]
+    endog = np.random.default_rng(1913).standard_normal(12)
+    mod = sarimax.SARIMAX(
+        endog,
+        order=(3, 0, 0),
+        measurement_error=True,
+        timing_init_filtered=filtered_timing,
+    )
+    init_mean = np.array([0.3, -0.2, 0.1])
+    init_cov = np.array([[2.0, 0.3, 0.1], [0.3, 1.0, -0.2], [0.1, -0.2, 0.5]])
+    mod.ssm.initialize_known(init_mean, init_cov)
+    res = mod.smooth(params)
+    nsim = 3
+    zero = np.zeros((nsim, 1))
+    z = np.array([0.8, -1.3, 0.6])
+    desired = _ar_zero_shock_path(
+        phi, init_mean + np.linalg.cholesky(init_cov) @ z, nsim
+    )
+    kwargs = {
+        "initial_state": z,
+        "pretransformed_initial_state": False,
+        "measurement_shocks": zero,
+        "state_shocks": zero,
+    }
+    assert_allclose(res.simulate(nsim, **kwargs), desired, rtol=1e-10)
+    assert_allclose(res.simulate(nsim, anchor=0, **kwargs), desired, rtol=1e-10)
+    assert_allclose(
+        mod.simulate(params, nsim, anchor="end", **kwargs), desired, rtol=1e-10
+    )
+
+
+def test_simulate_standardized_initial_state_singular():
+    # The first state is always 1, so the predicted state covariance matrix at
+    # the end of the sample is diag(0, 2): the Cholesky factor has a zero first
+    # column, and the second draw is scaled by sqrt(2).
+    endog = np.random.default_rng(1913).standard_normal(12)
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=1)
+    mod["design"] = [[1.0, 1.0]]
+    mod["transition"] = [[0.0, 0.0], [0.0, 0.5]]
+    mod["state_intercept"] = [1.0, 0.0]
+    mod["selection"] = [[0.0], [1.0]]
+    mod["state_cov"] = [[2.0]]
+    mod.ssm.initialize_known([1.0, 0.0], np.diag([0.0, 2.0 / 0.75]))
+    res = mod.smooth([])
+    # The zeros are exact: the first rows of the transition and selection
+    # matrices are zero
+    assert_allclose(res.predicted_state_cov[:, :, -1], np.diag([0.0, 2.0]), rtol=1e-12)
+    z = np.array([0.7, -0.4])
+    zero = np.zeros((2, 1))
+    sim = res.simulate(
+        2,
+        anchor="end",
+        initial_state=z,
+        pretransformed_initial_state=False,
+        measurement_shocks=zero,
+        state_shocks=zero,
+    )
+    state = res.predicted_state[:, -1] + np.array([0.0, np.sqrt(2.0) * z[1]])
+    assert_allclose(sim, [state.sum(), 1.0 + 0.5 * state[1]], rtol=1e-10)
