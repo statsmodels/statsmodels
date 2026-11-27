@@ -568,15 +568,6 @@ Bug Fixes
 Regression and linear models
 ----------------------------
 
-- ``QuantReg.fit(vcov="robust")``, the default, did not give
-  heteroskedasticity robust standard errors. It used one estimate of the
-  density of the errors for all observations, so the covariance converged to
-  the one of ``vcov="iid"`` and was identical to it at ``q=0.5``. On the Engel
-  data the standard error of the income coefficient at the median was 0.0132
-  instead of 0.0373. The robust covariance is now the kernel sandwich of
-  Powell (1991), which estimates the density at each observation and matches
-  ``summary.rq(se="ker")`` of R's quantreg with ``kernel="gau"``. The default
-  standard errors of ``QuantReg`` change.
 - ``OLS.fit`` did not detect an exactly rank-deficient design, for example a
   duplicated constant, from about 1,000 observations on. The smallest singular
   value of such a design is a few multiples of the machine precision times the
