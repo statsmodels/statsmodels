@@ -396,6 +396,20 @@ See Also
     assert nds.__str__(func_role=func_role) == expected
 
 
+@pytest.mark.parametrize(
+    "after",
+    ["", "\nNotes\n-----\nSome notes.\n"],
+    ids=["last-section", "before-notes"],
+)
+def test_see_also_last_entry_without_description(after):
+    # A blank line ends See Also also when its last entry has no description,
+    # so that a following section is not read as part of See Also
+    doc = f"Summary.\n\nSee Also\n--------\neggs\n{after}"
+    out = str(Docstring(doc))
+    assert out == "\nSummary.\n\nSee Also\n--------\neggs\n    ..\n" + after
+    assert str(Docstring(out)) == out
+
+
 @pytest.mark.parametrize("line", ["foo bar", "foo:bar"])
 def test_see_also_parse_error(line):
     doc = f"Summary.\n\nSee Also\n--------\n{line}\n"

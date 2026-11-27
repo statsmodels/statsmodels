@@ -507,7 +507,6 @@ class NumpyDocString(Mapping):
             return []
         out = []
         out += self._str_header("See Also")
-        last_had_desc = True
         for funcs, desc in self["See Also"]:
             assert isinstance(funcs, list)
             links = []
@@ -523,13 +522,11 @@ class NumpyDocString(Mapping):
             out += [link]
             if desc:
                 out += self._str_indent([" ".join(desc)])
-                last_had_desc = True
             else:
-                last_had_desc = False
                 out += self._str_indent([self.empty_description])
 
-        if last_had_desc:
-            out += [""]
+        # End the section with a blank line, also after an empty description
+        out += [""]
         return out
 
     def _str_index(self):
