@@ -26,7 +26,11 @@ from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    MissingDataError,
+    ValueWarning,
+)
 
 
 class ProcessCovariance:
@@ -203,6 +207,82 @@ def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time, groups):
         raise ValueError(msg)
 
 
+def _null_rows(x):
+    # True for the rows of x that have a missing value
+    mask = pd.isna(np.asarray(x))
+    if mask.ndim > 1:
+        mask = mask.reshape(mask.shape[0], -1).any(axis=1)
+    return mask
+
+
+def _take_rows(x, keep):
+    if hasattr(x, "iloc"):
+        return x.iloc[keep]
+    return np.asarray(x)[keep]
+
+
+def _handle_missing(endog, exog, extra, missing, missing_idx):
+    """
+    Drop the rows with missing values from all the array arguments.
+
+    `extra` maps the names of the other array arguments (exog_scale,
+    exog_smooth, exog_noise, time and groups) to their values.  The
+    base class assumes that two-dimensional extra arrays are square, so
+    ProcessMLE handles missing values itself.  `missing_idx` marks the
+    rows that a formula already dropped from endog and exog; the extra
+    arrays still have these rows.
+    """
+    present = [v for v in extra.values() if v is not None]
+    if missing_idx is None:
+        nobs = len(endog)
+        dropped = np.zeros(nobs, dtype=bool)
+    else:
+        dropped = np.asarray(missing_idx, dtype=bool)
+        nobs = len(dropped)
+    if any(len(v) != nobs for v in present):
+        # _check_args reports the mismatch
+        return endog, exog, extra
+
+    null = np.zeros(nobs, dtype=bool)
+    for v in present:
+        null |= _null_rows(v)
+    if missing_idx is None:
+        null |= _null_rows(endog)
+        if exog is not None:
+            null |= _null_rows(exog)
+
+    if missing == "none" or not (null.any() or dropped.any()):
+        return endog, exog, extra
+    if missing == "raise" and null.any():
+        raise MissingDataError("NaNs were encountered in the data")
+
+    keep = ~(null | dropped)
+    if not keep.any():
+        raise MissingDataError(
+            "All observations were dropped because of missing values"
+        )
+    extra = {k: None if v is None else _take_rows(v, keep) for k, v in extra.items()}
+    keep_mean = keep[~dropped]
+    endog = _take_rows(endog, keep_mean)
+    if exog is not None:
+        exog = _take_rows(exog, keep_mean)
+    return endog, exog, extra
+
+
+def _restore_rows(mat, missing_mask):
+    # Put back the rows of a formula's design matrix that were dropped for
+    # missing values, as rows of NaN, so that they line up with the data
+    mat = np.asarray(mat, dtype=float)
+    if missing_mask is None:
+        return mat
+    missing_mask = np.asarray(missing_mask, dtype=bool)
+    if not missing_mask.any():
+        return mat
+    out = np.full((len(missing_mask),) + mat.shape[1:], np.nan)
+    out[~missing_mask] = mat
+    return out
+
+
 class ProcessMLE(base.LikelihoodModel):
     """
     Fit a Gaussian mean/variance regression model
@@ -271,6 +351,24 @@ class ProcessMLE(base.LikelihoodModel):
         **kwargs,
     ):
 
+        missing = kwargs.get("missing", "none")
+        missing_idx = kwargs.pop("missing_idx", None)
+        extra = {
+            "exog_scale": exog_scale,
+            "exog_smooth": exog_smooth,
+            "exog_noise": exog_noise,
+            "time": time,
+            "groups": groups,
+        }
+        endog, exog, extra = _handle_missing(endog, exog, extra, missing, missing_idx)
+        exog_scale = extra["exog_scale"]
+        exog_smooth = extra["exog_smooth"]
+        exog_noise = extra["exog_noise"]
+        time = extra["time"]
+        groups = extra["groups"]
+        # The rows with missing values are already dropped
+        kwargs["missing"] = "none"
+
         super().__init__(
             endog,
             exog,
@@ -315,10 +413,18 @@ class ProcessMLE(base.LikelihoodModel):
             cov = GaussianCovariance()
         self.cov = cov
 
-        _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time, groups)
+        _check_args(
+            self.endog,
+            self.exog,
+            self.exog_scale,
+            self.exog_smooth,
+            self.exog_noise,
+            self.time,
+            self.groups,
+        )
 
         groups_ix = collections.defaultdict(list)
-        for i, g in enumerate(groups):
+        for i, g in enumerate(self.groups):
             groups_ix[g].append(i)
         self._groups_ix = groups_ix
 
@@ -447,21 +553,29 @@ class ProcessMLE(base.LikelihoodModel):
             groups = np.asarray(data[groups])
         mgr = FormulaManager()
         formula_env = get_matrices_eval_env(eval_env)
-        exog_scale = mgr.get_matrices(scale_formula, data, eval_env=formula_env)
+        # Drop the rows with missing values, and record which they are
+        na_action = mgr.get_na_action(action="drop")
+        exog_scale = mgr.get_matrices(
+            scale_formula, data, eval_env=formula_env, na_action=na_action
+        )
         scale_model_spec = mgr.spec
         scale_names = list(scale_model_spec.column_names)
-        exog_scale = np.asarray(exog_scale)
+        exog_scale = _restore_rows(exog_scale, mgr.missing_mask)
 
-        exog_smooth = mgr.get_matrices(smooth_formula, data, eval_env=formula_env)
+        exog_smooth = mgr.get_matrices(
+            smooth_formula, data, eval_env=formula_env, na_action=na_action
+        )
         smooth_model_spec = mgr.spec
         smooth_names = list(smooth_model_spec.column_names)
-        exog_smooth = np.asarray(exog_smooth)
+        exog_smooth = _restore_rows(exog_smooth, mgr.missing_mask)
 
         if noise_formula is not None:
-            exog_noise = mgr.get_matrices(noise_formula, data, eval_env=formula_env)
+            exog_noise = mgr.get_matrices(
+                noise_formula, data, eval_env=formula_env, na_action=na_action
+            )
             noise_model_spec = mgr.spec
             noise_names = list(noise_model_spec.column_names)
-            exog_noise = np.asarray(exog_noise)
+            exog_noise = _restore_rows(exog_noise, mgr.missing_mask)
         else:
             exog_noise, noise_model_spec, noise_names = None, None, []
 
