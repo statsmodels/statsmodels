@@ -692,3 +692,22 @@ def test_set_unset_bool_float_index(index, method):
             init.set(index, "diffuse")
         else:
             init.unset(index)
+
+
+@pytest.mark.parametrize("method", ["set", "unset"])
+@pytest.mark.parametrize(
+    "index", [2, np.int64(2), -1], ids=["k_states", "int64-k_states", "negative"]
+)
+def test_set_unset_index_out_of_range(index, method):
+    # unset accepted an index equal to k_states and did nothing, since the
+    # slice of states it selected was empty. set raised.
+    init = Initialization(2)
+    init.set(1, "diffuse")
+    with pytest.raises(ValueError, match="Invalid index"):
+        if method == "set":
+            init.set(index, "diffuse")
+        else:
+            init.unset(index)
+    assert list(init.blocks) == [(1,)]
+    init.unset(1)
+    assert list(init.blocks) == []

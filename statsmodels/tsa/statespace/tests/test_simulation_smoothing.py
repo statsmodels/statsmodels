@@ -18,6 +18,7 @@ from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_DISTURBANCE,
     SIMULATION_STATE,
     SimulationSmoother,
+    SimulationSmoothResults,
 )
 
 current_path = Path(__file__).resolve().parent
@@ -945,3 +946,156 @@ def test_simulate_default_variates_dtype(dtype, prefix):
         # errors relative to the size of the values
         atol = 10 * np.finfo(dtype).eps * np.abs(actual.real).max()
         assert_allclose(actual.imag, 0, atol=atol)
+
+
+def bivariate_model(nobs=60, time_varying_obs_cov=False):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal((nobs, 2))
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["state_intercept"] = np.array([0.05, 0.02])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[0.5, 0.2], [0.2, 0.4]])
+    if time_varying_obs_cov:
+        mod["obs_cov"] = np.repeat(np.diag([1.0, 0.7])[:, :, None], nobs, axis=2)
+    mod.ssm.initialize_known(np.array([0.3, -0.1]), np.eye(2))
+    return mod
+
+
+def test_simulation_smooth_results_class():
+    class CustomResults(SimulationSmoothResults):
+        pass
+
+    mod = bivariate_model()
+    # Default class
+    assert type(mod.simulation_smoother()) is SimulationSmoothResults
+    # Class given to the model
+    ssm = SimulationSmoother(
+        2,
+        2,
+        simulation_smooth_results_class=CustomResults,
+        **{name: mod[name] for name in mod.ssm.shapes if name != "obs"},
+    )
+    ssm.bind(np.ascontiguousarray(mod.endog))
+    ssm.initialize_known(np.array([0.3, -0.1]), np.eye(2))
+    sim = ssm.simulation_smoother()
+    assert type(sim) is CustomResults
+    # Class given to the method
+    sim = mod.ssm.simulation_smoother(results_class=CustomResults)
+    assert type(sim) is CustomResults
+    # Both simulate the same draws
+    variates = dict(
+        measurement_disturbance_variates=np.zeros((mod.nobs, 2)),
+        state_disturbance_variates=np.zeros((mod.nobs, 2)),
+        initial_state_variates=np.zeros(2),
+    )
+    desired = mod.simulation_smoother()
+    desired.simulate(**variates)
+    sim.simulate(**variates)
+    assert_allclose(sim.simulated_state, desired.simulated_state, rtol=1e-12)
+
+
+def test_simulation_smoother_invalid_results_class():
+    mod = bivariate_model()
+    with pytest.raises(ValueError, match="Invalid results class"):
+        mod.ssm.simulation_smoother(results_class=object)
+
+
+@pytest.mark.parametrize(
+    "kwargs, desired",
+    [
+        (dict(simulate_state=True), SIMULATION_STATE),
+        (dict(simulate_disturbance=True), SIMULATION_DISTURBANCE),
+        (dict(simulate_all=True), SIMULATION_ALL),
+        (dict(simulate_state=True, simulate_disturbance=False), SIMULATION_STATE),
+        # Without any option: the smoother output, which includes both
+        ({}, SIMULATION_ALL),
+    ],
+)
+def test_simulation_output_options(kwargs, desired):
+    mod = bivariate_model()
+    sim = mod.simulation_smoother(**kwargs)
+    assert (sim.simulation_output & SIMULATION_ALL) == desired
+    assert sim.simulate_state is bool(desired & SIMULATION_STATE)
+    assert sim.simulate_disturbance is bool(desired & SIMULATION_DISTURBANCE)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(simulate_state=False),
+        dict(simulate_disturbance=False),
+        dict(simulate_all=False),
+    ],
+)
+def test_simulation_output_options_no_output(kwargs):
+    mod = bivariate_model()
+    with pytest.raises(ValueError, match="Invalid simulation output options"):
+        mod.simulation_smoother(**kwargs)
+
+
+def test_cfa_simulation_output():
+    mod = bivariate_model()
+    with pytest.raises(ValueError, match="Can only retrieve simulations of the state"):
+        mod.simulation_smoother(method="cfa", simulation_output=SIMULATION_DISTURBANCE)
+
+
+def test_generated_variates_and_series():
+    # With pretransformed variates the generated disturbances are the given
+    # variates, and the generated series follow the state space recursions
+    mod = bivariate_model(nobs=5)
+    rng = np.random.default_rng(1122)
+    eps = rng.standard_normal((5, 2))
+    eta = rng.standard_normal((5, 2))
+    initial_state = np.array([1.0, 2.0])
+    sim = mod.simulation_smoother()
+    sim.simulate(
+        measurement_disturbance_variates=eps,
+        state_disturbance_variates=eta,
+        initial_state_variates=initial_state,
+        pretransformed_measurement_disturbance_variates=True,
+        pretransformed_state_disturbance_variates=True,
+        pretransformed_initial_state_variates=True,
+    )
+
+    design, obs_intercept = mod["design"], mod["obs_intercept"]
+    transition, state_intercept = mod["transition"], mod["state_intercept"]
+    state = np.zeros((2, 6))
+    state[:, 0] = initial_state
+    obs = np.zeros((2, 5))
+    for t in range(5):
+        obs[:, t] = obs_intercept + design @ state[:, t] + eps[t]
+        state[:, t + 1] = state_intercept + transition @ state[:, t] + eta[t]
+
+    # Each property is computed on first access and then cached
+    for _ in range(2):
+        assert_allclose(sim.generated_measurement_disturbance, eps, rtol=1e-15)
+        assert_allclose(sim.generated_state_disturbance, eta, rtol=1e-15)
+        assert_allclose(sim.generated_obs, obs, rtol=1e-12)
+        assert_allclose(sim.generated_state, state, rtol=1e-12)
+
+
+def test_simulate_after_dimension_change():
+    mod = bivariate_model()
+    sim = mod.simulation_smoother()
+    # A time-varying matrix replaces the compiled representation
+    mod["obs_cov"] = np.repeat(np.diag([1.0, 0.7])[:, :, None], mod.nobs, axis=2)
+    with pytest.raises(ValueError, match="cannot replace the underlying"):
+        sim.simulate()
+
+
+@pytest.mark.parametrize(
+    "time_varying, kwargs, match",
+    [
+        (False, dict(nobs=0), "Invalid number of simulations"),
+        (False, dict(nobs=10), "Setting the `nobs` variable is not compatible"),
+        (True, dict(nobs=100, simulation_output=0), "cannot create more simulations"),
+    ],
+)
+def test_simulation_smoother_invalid_nobs(time_varying, kwargs, match):
+    mod = bivariate_model(time_varying_obs_cov=time_varying)
+    with pytest.raises(ValueError, match=match):
+        mod.ssm.simulation_smoother(**kwargs)

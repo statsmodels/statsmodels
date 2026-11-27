@@ -746,3 +746,127 @@ def test_fit_ic_verbose_and_unknown(capsys):
     assert f"Using {res.k_ar} based on bic criterion" in out
     with pytest.raises(ValueError, match="sic not recognized"):
         SVAR(data, "B", B=B).fit(maxlags=6, ic="sic")
+
+
+def _svar_ab_model():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+    B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+    return SVAR(data, svar_type="AB", A=A, B=B)
+
+
+def test_results_keep_a_b_after_refit():
+    # The results held the A and B arrays of the model, so a second fit
+    # overwrote the estimates of the first results
+    from .results import results_svar_st
+
+    stata = results_svar_st.results_svar1_small
+    model = _svar_ab_model()
+    res = model.fit(maxlags=3)
+    model.fit(maxlags=1)
+    fresh = _svar_ab_model().fit(maxlags=3)
+    assert_allclose(res.A, fresh.A, rtol=1e-12)
+    assert_allclose(res.B, fresh.B, rtol=1e-12)
+    assert_allclose(res.svar_ma_rep(4), fresh.svar_ma_rep(4), rtol=1e-12)
+    # Stata's estimates, to a tolerance for where the optimizer stops
+    assert_allclose(res.A, stata.A, rtol=1e-3)
+    assert_allclose(np.abs(res.B), stata.B, rtol=1e-3)
+
+
+def test_results_keep_a_b_after_loglike():
+    # loglike, and so score and hessian, wrote the parameters into the A and
+    # B of the model, which the results shared
+    model = _svar_ab_model()
+    res = model.fit(maxlags=3)
+    fresh = _svar_ab_model().fit(maxlags=3)
+    params = np.r_[res.A[res.A_mask], res.B[res.B_mask]]
+    other = params + 0.5
+    model.loglike(other)
+    model.score(other)
+    model.hessian(other)
+    assert_allclose(res.A, fresh.A, rtol=1e-12)
+    assert_allclose(res.B, fresh.B, rtol=1e-12)
+    assert_allclose(res.svar_ma_rep(4), fresh.svar_ma_rep(4), rtol=1e-12)
+    # The model keeps its restrictions, NaN for the estimated entries
+    nan = np.nan
+    assert_allclose(model.A, [[1, 0, 0], [nan, 1, 0], [nan, nan, 1]])
+    assert_allclose(model.B, [[nan, 0, 0], [0, nan, 0], [0, 0, nan]])
+
+
+def _svar_lower_b():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
+    B = np.asarray([["E", 0], ["E", "E"]], dtype="U")
+    return SVAR(data, "B", B=B)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"method": "gls"}, "method='gls' is ignored"),
+        ({"s_method": "scoring"}, "s_method='scoring' is ignored"),
+        ({"maxfun": 100}, "maxfun is ignored"),
+    ],
+)
+def test_fit_ignored_arguments_deprecated(kwargs, match):
+    # these arguments were ignored silently
+    expected = _svar_lower_b().fit(maxlags=1)
+    with pytest.warns(FutureWarning, match=match):
+        res = _svar_lower_b().fit(maxlags=1, **kwargs)
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert_allclose(res.B, expected.B, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"method": "OLS"}, {"method": None}, {"s_method": "MLE"}, {"s_method": None}],
+)
+def test_fit_default_arguments_no_warning(kwargs):
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        _svar_lower_b().fit(maxlags=1, **kwargs)
+
+
+def test_sirf_errband_mc_orth_deprecated():
+    # orth was ignored silently: the bands are those of the structural
+    # responses
+    import warnings
+
+    res = _svar_lower_b().fit(maxlags=1)
+    kwargs = {"repl": 5, "steps": 3, "burn": 10, "signif": 0.5}
+    # the ML fits of the replications may not converge, depending on the platform
+    with (
+        warnings.catch_warnings(),
+        warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+    ):
+        warnings.simplefilter("error", FutureWarning)
+        expected = res.sirf_errband_mc(rng=np.random.default_rng(0), **kwargs)
+    with (
+        pytest.warns(FutureWarning, match="orth=True is ignored"),
+        warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+    ):
+        band = res.sirf_errband_mc(orth=True, rng=np.random.default_rng(0), **kwargs)
+    assert_allclose(band.lower, expected.lower, rtol=1e-12)
+    assert_allclose(band.upper, expected.upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "svar_type, A, B",
+    [
+        ("B", [[1, 0], ["E", 1]], [["E", 0], [0, "E"]]),
+        ("B", [[1, 0], ["e", 1]], [["E", 0], ["E", "E"]]),
+        ("A", [[1, 0], ["E", 1]], [["E", 0], [0, "E"]]),
+    ],
+)
+def test_e_entries_not_estimated_raise(svar_type, A, B):
+    # svar_type="B" estimated the "E" entries of A too, with the free entries
+    # of B tied to one value, or raised in fit; svar_type="A" raised in fit
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
+    other = "A" if svar_type == "B" else "B"
+    match = f'svar_type="{svar_type}" does not estimate {other}'
+    with pytest.raises(ValueError, match=match):
+        SVAR(data, svar_type, A=np.array(A, dtype="U"), B=np.array(B, dtype="U"))
