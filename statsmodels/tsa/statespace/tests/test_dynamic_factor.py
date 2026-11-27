@@ -1392,3 +1392,46 @@ def test_error_cov_start_invalid():
     args = [endog, 1, 1, None, 1, True, "unstructured", True, "cholesky"]
     with pytest.raises(TypeError, match="positional argument"):
         dynamic_factor.DynamicFactor(*args)
+
+
+@pytest.mark.parametrize("error_cov_type", ["scalar", "unstructured"])
+@pytest.mark.parametrize(
+    "k_factors, error_order", [(0, 1), (1, 1), (1, 2)]
+)
+def test_start_params_error_ar_cov_type(k_factors, error_order, error_cov_type):
+    # With autoregressive errors (error_var=False), the start of the error
+    # covariance was the innovation variance of each series' autoregression
+    # for every error_cov_type, so with "scalar" and "unstructured" it raised
+    # "could not broadcast input array". As in the other cases, it is their
+    # mean ("scalar") or the Cholesky factor of their diagonal matrix
+    # ("unstructured"); the other starting parameters are those with
+    # "diagonal".
+    endog = error_var_data()
+    kwargs = dict(
+        k_factors=k_factors,
+        factor_order=k_factors,
+        error_order=error_order,
+        error_var=False,
+    )
+    mod = dynamic_factor.DynamicFactor(endog, error_cov_type=error_cov_type, **kwargs)
+    diagonal = dynamic_factor.DynamicFactor(
+        endog, error_cov_type="diagonal", **kwargs
+    )
+    start_params = mod.start_params
+    desired = diagonal.start_params
+    variances = desired[diagonal._params_error_cov]
+    if error_cov_type == "scalar":
+        error_cov = [variances.mean()]
+    else:
+        error_cov = np.diag(variances**0.5)[np.tril_indices(3)]
+    assert_allclose(start_params[mod._params_error_cov], error_cov, rtol=1e-12)
+    other = np.ones(mod.k_params, dtype=bool)
+    other[mod._params_error_cov] = False
+    other_desired = np.ones(diagonal.k_params, dtype=bool)
+    other_desired[diagonal._params_error_cov] = False
+    assert_allclose(start_params[other], desired[other_desired], rtol=1e-12)
+    if error_cov_type == "unstructured":
+        # The same error covariance matrix as the diagonal start
+        assert_allclose(
+            mod.loglike(start_params), diagonal.loglike(desired), rtol=1e-12
+        )

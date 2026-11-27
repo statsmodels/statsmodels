@@ -1,0 +1,7 @@
+- ``DynamicFactor`` with autoregressive errors (``error_order`` > 0,
+  ``error_var=False``) and ``error_cov_type="scalar"`` or
+  ``"unstructured"`` raised "could not broadcast input array" in
+  ``start_params`` (and so in ``fit``). The start of the error
+  covariance is the mean of the innovation variances of the
+  autoregressions ("scalar") or the Cholesky factor of their diagonal
+  matrix ("unstructured"). :pr:`11157`
