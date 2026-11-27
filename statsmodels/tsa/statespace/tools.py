@@ -2310,8 +2310,9 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
         Whether or not to re-perform filtering and smoothing prior to
         constructing the weights. Default is to resmooth if the smoothed_state
         vector is different between the given results object and the
-        underlying smoother. Caution is adviced when changing this setting.
-        See the Notes section below for more details.
+        underlying smoother, or if the model has not been smoothed (for
+        example for the results of `filter`). Caution is adviced when
+        changing this setting. See the Notes section below for more details.
 
     Returns
     -------
@@ -2399,10 +2400,12 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
     # Always update the parameters to be consistent with `res`
     mod.update(results.params)
     # By default, resmooth if it appears the results have changed; check is
-    # based on the smoothed state vector
+    # based on the smoothed state vector (or if the model was never smoothed,
+    # e.g. for the results of `filter`)
     if resmooth is None:
-        resmooth = np.any(results.smoothed_state !=
-                          mod.ssm._kalman_smoother.smoothed_state)
+        smoother = mod.ssm._kalman_smoother
+        resmooth = smoother is None or np.any(
+            results.smoothed_state != smoother.smoothed_state)
     # Resmooth if necessary, otherwise at least update the Cython model
     if resmooth:
         mod.ssm.smooth(conserve_memory=0, update_representation=False,

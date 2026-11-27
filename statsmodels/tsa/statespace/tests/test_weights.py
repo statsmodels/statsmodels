@@ -641,3 +641,30 @@ def test_compute_smoothed_state_weights_copied_results(copy_method, resmooth):
         + prior_weights @ res.filter_results.initial_state
     )
     assert_allclose(smoothed_state, res.smoothed_state.T, rtol=1e-10)
+
+
+@pytest.mark.parametrize("resmooth", [None, True])
+def test_weights_filter_results(resmooth):
+    # The results of filter() can be used, also if the model was never
+    # smoothed (it raised AttributeError): the weights then reproduce the
+    # smoothed state from the observations and the prior mean
+    endog = np.array([0.1, -0.3, np.nan, 0.5, 0.02, -0.4, 0.3])
+    params = [0.5, 0.4, 1.2]
+    kwargs = {
+        "order": (1, 0, 0),
+        "measurement_error": True,
+        "initialization": "known",
+        "initial_state": [0.3],
+        "initial_state_cov": [[1.5]],
+    }
+    res = sarimax.SARIMAX(endog, **kwargs).filter(params)
+    assert res.smoothed_state is None
+    weights, _, prior_weights = tools.compute_smoothed_state_weights(
+        res, resmooth=resmooth
+    )
+
+    smoothed = sarimax.SARIMAX(endog, **kwargs).smooth(params)
+    # weights: t, j, m, p; missing observations have NaN weights
+    actual = np.nansum(weights[..., 0, 0] * endog[None, :], axis=1)
+    actual += prior_weights[:, 0, 0] * 0.3
+    assert_allclose(actual, smoothed.smoothed_state[0], rtol=1e-12)
