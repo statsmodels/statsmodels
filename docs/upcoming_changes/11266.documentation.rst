@@ -1,0 +1,3 @@
+- The type of ``variables`` in the ``plot_recursive_coefficient`` docstrings of
+  ``RecursiveLSResults`` and ``RollingRegressionResults`` is ``int, str, or
+  iterable of int or str``. :pr:`11266`
