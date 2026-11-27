@@ -16,7 +16,7 @@ def dedent_lines(lines):
 
     Parameters
     ----------
-    lines : list of str
+    lines : sequence of str
         The lines to dedent.
 
     Returns
@@ -596,8 +596,10 @@ class Docstring:
 
     Parameters
     ----------
-    docstring : str
-        The docstring to modify.
+    docstring : str or None
+        The docstring to modify. None (docstrings are None under
+        ``python -OO``) or a blank string gives an empty instance whose
+        methods do nothing.
     """
 
     def __init__(self, docstring):
@@ -614,7 +616,7 @@ class Docstring:
 
         Parameters
         ----------
-        parameters : str or list of str
+        parameters : str or sequence of str
             The names of the parameters to remove.
         """
         if self._docstring is None:
@@ -639,7 +641,7 @@ class Docstring:
             If None, insert the parameters before the first parameter in the
             docstring. Otherwise, the name of the existing parameter after
             which the new parameters are inserted.
-        parameters : Parameter, list[Parameter]
+        parameters : Parameter or list of Parameter
             A Parameter or a list of Parameters.
         """
         if self._docstring is None:
@@ -689,7 +691,7 @@ class Docstring:
 
         Parameters
         ----------
-        parameters : str or list of str
+        parameters : str or sequence of str
             The names of the parameters to extract.
         indent : int, optional
             Number of spaces to indent every line of the output. Default is
@@ -697,8 +699,9 @@ class Docstring:
 
         Returns
         -------
-        str
-            A docstring fragment containing only the requested parameters.
+        str or None
+            A docstring fragment containing only the requested parameters, or
+            None if the docstring is None or blank.
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -735,15 +738,15 @@ def remove_parameters(docstring, parameters):
 
     Parameters
     ----------
-    docstring : str
+    docstring : str or None
         The docstring to modify.
-    parameters : str or list of str
+    parameters : str or sequence of str
         The names of the parameters to remove.
 
     Returns
     -------
-    str
-        The modified docstring.
+    str or None
+        The modified docstring, or None if `docstring` is None.
     """
     if docstring is None:
         return None
