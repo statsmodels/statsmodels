@@ -694,7 +694,9 @@ class ARDL(AutoReg):
 
         def pad_x(x: np.ndarray, pad: int) -> np.ndarray:
             if pad == 0:
-                return x
+                # Copy: dynamic forecasts are written into the returned array
+                # and x is a view of self._x
+                return x.copy()
             k = x.shape[1]
             return np.vstack([np.full((pad, k), np.nan), x])
 
