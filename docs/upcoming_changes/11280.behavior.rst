@@ -1,0 +1,6 @@
+- :meth:`~statsmodels.tsa.holtwinters.HoltWintersResults.simulate` uses
+  ``smoothing_level * smoothing_trend`` as the coefficient of the innovation
+  in the trend equation, which is what the fitted Holt-Winters recursion
+  implies. It used ``smoothing_trend``, so simulated paths of models with a
+  trend, and intervals computed from them, were too wide. Results of
+  ``simulate`` for such models change. :pr:`11280`
