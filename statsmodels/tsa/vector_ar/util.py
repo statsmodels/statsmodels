@@ -9,7 +9,7 @@ import pandas as pd
 from scipy import linalg, stats
 
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import array_like, int_like
+from statsmodels.tools.validation import array_like, int_like, is_int_like
 import statsmodels.tsa.tsatools as tsa
 
 #
@@ -295,7 +295,7 @@ def acf_to_acorr(acf):
 
     Parameters
     ----------
-    acf : ndarray
+    acf : array_like
         Autocovariance function, of shape (nlags, neqs, neqs).
 
     Returns
@@ -428,7 +428,13 @@ def get_index(lst, name):
         The list of variable names to search.
     name : str or int
         The variable name to look up. If `name` is already an int, it is
-        returned unchanged, interpreted as a position in `lst`.
+        returned as an int, interpreted as a position in `lst`.
+
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer or a 0-d integer array is a position, as an int
+           is. It raised a ValueError. A bool is not a position and raises
+           a ValueError: True was returned unchanged.
 
     Returns
     -------
@@ -438,9 +444,9 @@ def get_index(lst, name):
     try:
         result = lst.index(name)
     except Exception:
-        if not isinstance(name, int):
+        if not is_int_like(name, strict=True):
             raise
-        result = name
+        result = int(name)
     return result
 
 
@@ -451,7 +457,7 @@ def eigval_decomp(sym_array):
 
     Parameters
     ----------
-    sym_array : ndarray
+    sym_array : array_like
         A symmetric array.
 
     Returns
@@ -507,6 +513,10 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     n_seasons : int
         Number of seasons (e.g., 12 for monthly data and 4 for quarterly
         data). Must be non-negative.
+
+        .. versionchanged:: 0.15.1
+
+           A negative value raises a ValueError. It returned None.
     len_endog : int
         Total number of observations. Must be non-negative.
     first_period : int, optional
@@ -526,13 +536,14 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     ndarray
         Seasonal dummy variables, of shape (len_endog, n_seasons - 1).
     """
+    if n_seasons < 0:
+        raise ValueError(f"n_seasons must be non-negative, got {n_seasons}")
     if n_seasons == 0:
         return np.empty((len_endog, 0))
-    if n_seasons > 0:
-        season_exog = np.zeros((len_endog, n_seasons - 1))
-        for i in range(n_seasons - 1):
-            season_exog[(i - first_period) % n_seasons :: n_seasons, i] = 1
+    season_exog = np.zeros((len_endog, n_seasons - 1))
+    for i in range(n_seasons - 1):
+        season_exog[(i - first_period) % n_seasons :: n_seasons, i] = 1
 
-        if centered:
-            season_exog -= 1 / n_seasons
-        return season_exog
+    if centered:
+        season_exog -= 1 / n_seasons
+    return season_exog

@@ -3860,7 +3860,15 @@ def test_standardize_ndarray_like_dataframe(missing):
     mod_df = dynamic_factor_mq.DynamicFactorMQ(endog["y1"])
     mod = dynamic_factor_mq.DynamicFactorMQ(values[:, 0])
     params = mod_df.start_params
-    assert_allclose(mod.start_params, params, rtol=1e-10)
+    # With one variable the factor reproduces it, so the idiosyncratic AR
+    # start (L1.eps_M.y1) is fitted to residuals that are zero up to rounding
+    # and is itself zero up to rounding (about 1e-35), with a sign that
+    # depends on the BLAS (macOS Accelerate): atol for it, rtol for the others
+    # atol: the factor fits a single variable exactly, so the start value of
+    # the idiosyncratic AR(1) coefficient comes from residuals that are
+    # rounding noise (it is about 2e-36, and the two were 5.5e-35 apart on
+    # the Azure macOS runners)
+    assert_allclose(mod.start_params, params, rtol=1e-10, atol=1e-12)
     kwargs = {
         "measurement_shocks": rng.standard_normal((4, 1)),
         "state_shocks": rng.standard_normal((4, mod.ssm.k_posdef)),
@@ -3869,3 +3877,47 @@ def test_standardize_ndarray_like_dataframe(missing):
     sim_df = mod_df.smooth(params).simulate(4, **kwargs)
     assert_allclose(mod.smooth(params).simulate(4, **kwargs), sim_df,
                     rtol=1e-8)
+
+
+def _int_like_dfm_endog():
+    rng = np.random.default_rng(20261126)
+    return pd.DataFrame(
+        rng.standard_normal((60, 4)),
+        index=pd.period_range("2000-01", periods=60, freq="M"),
+        columns=list("abcd"),
+    )
+
+
+@pytest.mark.parametrize(
+    "convert", [np.int64, np.array, float], ids=["int64", "0d-array", "float"]
+)
+def test_int_like_factor_arguments(convert):
+    # A 0-d integer array or an integral float is an integer, as an int is.
+    # They raised a ValueError. The model with ints is the reference.
+    endog = _int_like_dfm_endog()
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=convert(2), factor_orders=convert(2)
+    )
+    expected = dynamic_factor_mq.DynamicFactorMQ(endog, factors=2, factor_orders=2)
+    assert mod.k_factors == 2
+    assert mod.max_factor_order == 2
+    assert mod.param_names == expected.param_names
+    assert_allclose(mod.ssm["transition"], expected.ssm["transition"], rtol=1e-15)
+
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, factor_multiplicities=convert(2)
+    )
+    expected = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, factor_multiplicities=2
+    )
+    assert mod.k_factors == 2
+    assert mod.param_names == expected.param_names
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("arg", ["factors", "factor_orders", "factor_multiplicities"])
+def test_bool_factor_arguments(value, arg):
+    # A bool is not an integer
+    endog = _int_like_dfm_endog()
+    with pytest.raises(ValueError, match=f"`{arg}` argument must"):
+        dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})

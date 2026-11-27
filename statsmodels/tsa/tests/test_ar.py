@@ -1610,6 +1610,38 @@ def test_autoreg_lags_sequence_forms(lags):
 
 
 @pytest.mark.parametrize(
+    "lags",
+    [np.array(2), np.array(2, dtype=np.int32), np.array(2.0)],
+    ids=["0d-int64", "0d-int32", "0d-float"],
+)
+def test_autoreg_lags_0d_array(lags):
+    # A 0-d array is a number of lags, as the number it holds is. It is
+    # iterable, so it raised "iteration over a 0-d array"
+    y, _ = _contract_ar_data()
+    res = AutoReg(y, lags).fit()
+    reg = np.column_stack([np.ones(118), y[1:-1], y[:-2]])
+    expected = np.linalg.lstsq(reg, y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    assert res.ar_lags == [1, 2]
+
+
+@pytest.mark.parametrize(
+    "lags, exception, match",
+    [
+        (np.array(True), TypeError, "lags must be integer_like"),
+        (np.array(2.5), TypeError, "lags must be integer_like"),
+        (np.array(-1), ValueError, "lags must be a non-negative scalar"),
+    ],
+    ids=["0d-bool", "0d-non-integral", "0d-negative"],
+)
+def test_autoreg_lags_0d_array_invalid(lags, exception, match):
+    # A 0-d array is checked as the number it holds
+    y, _ = _contract_ar_data()
+    with pytest.raises(exception, match=match):
+        AutoReg(y, lags)
+
+
+@pytest.mark.parametrize(
     "trend, names",
     [
         ("n", ["y.L1"]),
@@ -1874,3 +1906,63 @@ def test_diagnostic_summary_serial_correlation():
     assert_allclose(rows[:, 1], stat[3:], rtol=1e-8)
     assert_allclose(rows[:, 2], pvalue[3:], rtol=1e-8)
     assert_allclose(rows[:, 3], df[3:])
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(3), np.int32(3), np.array(3), 3.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_autoreg_forecast_int_like_steps(steps, use_pandas):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They were the location of the last forecast, which raised.
+    rng = np.random.default_rng(20261126)
+    y = rng.standard_normal(100)
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=100, freq="MS"))
+    res = AutoReg(y, 2).fit()
+    fcast = res.forecast(steps)
+    # The AR(2) recursion by hand
+    const, phi1, phi2 = np.asarray(res.params)
+    path = list(np.asarray(y)[-2:])
+    for _ in range(3):
+        path.append(const + phi1 * path[-1] + phi2 * path[-2])
+    assert_allclose(np.asarray(fcast), path[2:], rtol=1e-10)
+    if use_pandas:
+        expected = pd.date_range("2008-05-01", periods=3, freq="MS")
+        pd.testing.assert_index_equal(fcast.index, expected)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_autoreg_forecast_bool_steps(steps, use_pandas):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises.
+    rng = np.random.default_rng(20261126)
+    y = rng.standard_normal(100)
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=100, freq="MS"))
+    res = AutoReg(y, 2).fit()
+    with pytest.raises(TypeError if use_pandas else KeyError):
+        res.forecast(steps)
+
+
+NUMPY_BOOLS = [
+    (np.True_, True),
+    (np.False_, False),
+    (np.array(True), True),
+    (np.array(False), False),
+]
+NUMPY_BOOL_IDS = ["np.True_", "np.False_", "0-d True", "0-d False"]
+
+
+@pytest.mark.parametrize("dynamic, expected", NUMPY_BOOLS, ids=NUMPY_BOOL_IDS)
+def test_predict_dynamic_numpy_bool(ar2, dynamic, expected):
+    # A NumPy bool was taken as an integer offset: np.False_ as 0 (all
+    # predictions dynamic) and np.True_ as 1 (dynamic from the second one)
+    res = AutoReg(ar2, 2, trend="c").fit()
+    pred = res.predict(start=10, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=10, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=10, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-3

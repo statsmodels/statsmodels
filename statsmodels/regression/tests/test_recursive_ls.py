@@ -302,6 +302,10 @@ def test_plots(close_figures):
 
     # All variables
     res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
+
+    # NumPy integers select variables like Python integers
+    res.plot_recursive_coefficient(variables=np.int64(1))
+    res.plot_recursive_coefficient(variables=[np.int64(0), "m1"])
     plt.close("all")
     # Basic plot
     res.plot_cusum()
@@ -330,6 +334,66 @@ def test_plots(close_figures):
 
     # Basic plot
     res.plot_cusum_squares()
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "make_variables, names",
+    [
+        (lambda: ["m1"], ["m1"]),
+        (lambda: ("m1",), ["m1"]),
+        (lambda: (0, "pop"), ["const", "pop"]),
+        (lambda: iter(["pop", "m1"]), ["pop", "m1"]),
+    ],
+    ids=["list", "tuple", "tuple-mixed", "iterator"],
+)
+def test_plot_recursive_coefficient_variables(make_variables, names, close_figures):
+    # Names in a list were replaced by their positions, so the caller's list
+    # changed, and a tuple holding a name or an iterator raised a TypeError
+    exog = add_constant(dta[["m1", "pop"]])
+    res = RecursiveLS(endog, exog).fit()
+    variables = make_variables()
+    original = list(variables) if isinstance(variables, list) else None
+    fig = res.plot_recursive_coefficient(variables=variables)
+    if original is not None:
+        assert variables == original
+    assert len(fig.axes) == len(names)
+    for ax, name in zip(fig.axes, names, strict=True):
+        line = ax.get_lines()[0]
+        assert line.get_label() == f"Recursive estimates: {name}"
+        coef = res.recursive_coefficients.filtered[exog.columns.get_loc(name)]
+        ydata = line.get_ydata()
+        assert_allclose(ydata, coef[-len(ydata) :], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables",
+    [1, np.int64(1), np.array(1), "x1", [np.int64(1)]],
+    ids=["int", "int64", "0d-array", "name", "list"],
+)
+def test_plot_recursive_coefficient_int_like(variables, close_figures):
+    # A 0-d integer array selects a variable, as the integer it holds does
+    res = RecursiveLS(endog.values, exog.values).fit()
+    fig = res.plot_recursive_coefficient(variables=variables, alpha=None)
+    assert len(fig.axes) == 1
+    line = fig.axes[0].get_lines()[0]
+    assert line.get_label() == "Recursive estimates: x1"
+    d = max(res.nobs_diffuse, res.loglikelihood_burn)
+    expected = res.recursive_coefficients.filtered[1, d:]
+    assert_allclose(line.get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("variables", [True, np.True_], ids=["True", "np.True_"])
+def test_plot_recursive_coefficient_bool(variables, close_figures):
+    # A bool does not select a variable
+    res = RecursiveLS(endog.values, exog.values).fit()
+    with pytest.raises(TypeError):
+        res.plot_recursive_coefficient(variables=variables)
 
 
 def test_from_formula():

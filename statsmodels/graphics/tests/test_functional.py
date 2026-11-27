@@ -258,11 +258,13 @@ def test_hdr_plot(close_figures):
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
+    alpha = [0.7]
     try:
         # Pool() forks, which warns when the process is threaded (platform dependent)
         with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
-            _, hdr = hdrboxplot(data, alpha=[0.7], rng=12345, kernel_rng=1234567)
+            _, hdr = hdrboxplot(data, alpha=alpha, rng=12345, kernel_rng=1234567)
 
+        assert alpha == [0.7]
         extra_quant_t = np.vstack(
             [
                 [
@@ -383,13 +385,46 @@ def test_hdr_multiple_alpha(close_figures):
 @pytest.mark.slow
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
+def test_hdr_alpha_repeated(close_figures):
+    alpha = [0.8]
+    try:
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
+            _, first = hdrboxplot(data, alpha=alpha, rng=12345, kernel_rng=1234567)
+        assert alpha == [0.8]
+
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
+            _, second = hdrboxplot(data, alpha=alpha, rng=12345, kernel_rng=1234567)
+        assert alpha == [0.8]
+
+        for attr in (
+            "median",
+            "hdr_50",
+            "hdr_90",
+            "extra_quantiles",
+            "outliers",
+            "outliers_idx",
+        ):
+            assert_allclose(getattr(first, attr), getattr(second, attr))
+    except OSError:
+        pytest.xfail("Multiprocess randomly crashes in Windows testing")
+
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM, reason="Multiprocessing is not supported in WASM/Pyodide"
+)
+@pytest.mark.slow
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
+    alpha = [0.8]
     try:
         # Pool() forks, which warns when the process is threaded (platform dependent)
         with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(
-                data, alpha=[0.8], threshold=0.93, rng=12345, kernel_rng=1234567
+                data, alpha=alpha, threshold=0.93, rng=12345, kernel_rng=1234567
             )
+        assert alpha == [0.8]
         labels_pos = np.all(np.isin(data, hdr.outliers).reshape(data.shape), axis=1)
         outliers = labels[labels_pos]
         assert_equal([1968, 1982, 1983, 1997, 1998], outliers)

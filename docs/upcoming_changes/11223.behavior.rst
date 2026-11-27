@@ -1,0 +1,8 @@
+- ``eval_env`` in ``from_formula`` means the same in every model:
+  None or 1 is the namespace that calls ``from_formula`` and an
+  integer k the namespace k stack frames above it, as in
+  ``OLS.from_formula``. An integer referred to one frame lower in
+  GEE, NominalGEE, OrdinalGEE, PHReg, MixedLM, the conditional
+  models, QIF, OrderedModel and BetaModel (2 was the calling
+  namespace), and to one frame higher in ``RollingOLS``, whose
+  default looked in the namespace above the caller. :pr:`11223`

@@ -47,7 +47,7 @@ def test_sdp():
     rs = np.random.RandomState(2342)
     exog = rs.normal(size=(10, 4))
 
-    exog1, exog2, sl = _design_knockoff_sdp(exog)
+    exog1, exog2, sl = _design_knockoff_sdp(exog, rng=rs)
 
     exoga = np.concatenate((exog1, exog2), axis=1)
 

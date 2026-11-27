@@ -12,6 +12,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
+from statsmodels.tools.validation import is_int_like
 
 
 class PickandDependence:
@@ -355,11 +356,12 @@ class HR(PickandDependence):
         return transf
 
     def _derivs(self, t, lamda, order=(1, 2)):
-        if not isinstance(order, (int, np.integer)):
-            if (1 in order) and (2 in order):
-                order = -1
-            else:
-                raise ValueError("order should be 1, 2, or (1,2)")
+        if is_int_like(order):
+            order = int(order)
+        elif (1 in order) and (2 in order):
+            order = -1
+        else:
+            raise ValueError("order should be 1, 2, or (1,2)")
 
         dn = 1 / np.sqrt(2 * np.pi)
         a = lamda

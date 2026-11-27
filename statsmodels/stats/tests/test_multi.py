@@ -746,3 +746,22 @@ def test_local_fdr_param_validation():
     # the defaults still produce a full fdr curve
     fdr = local_fdr(zscores)
     assert fdr.shape == (200,)
+
+
+
+@pytest.mark.parametrize(
+    "method, expected", [("sidak", [True, False, False]),
+                         ("holm-sidak", [True, True, False])]
+)
+def test_sidak_tiny_alpha(method, expected):
+    # At this scale alpha is too small to change 1.0 in binary64.
+    # To first order the thresholds are alpha / [3, 2, 1] and the
+    # quadratic corrections (below 1e-39) cannot alter these decisions.
+    alpha = 1e-20
+    pvals = [2e-21, 4e-21, 2e-20]
+    reject, p_corrected, alpha_sidak, _ = multipletests(
+        pvals, alpha=alpha, method=method
+    )
+    assert_equal(reject, expected)
+    assert_equal(reject, p_corrected <= alpha)
+    assert_allclose(alpha_sidak, alpha / 3, rtol=1e-15, atol=0)

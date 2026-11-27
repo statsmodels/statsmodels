@@ -19,6 +19,7 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
+from statsmodels.tools.validation import array_like, is_int_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     chamilton_filter_log,
@@ -376,14 +377,14 @@ class MarkovSwitchingParams:
 
     This implies the model has 7 parameters: 4 "regime_transition"-related
     parameters (2 parameters that each switch according to regimes) and 3
-    "exog"-related parameters (1 parameter that does not switch, and one 1 that
+    "exog"-related parameters (1 parameter that does not switch, and one that
     does).
 
     The order of parameters is then:
 
     1. The first "regime_transition" parameter, regime 0
     2. The first "regime_transition" parameter, regime 1
-    3. The second "regime_transition" parameter, regime 1
+    3. The second "regime_transition" parameter, regime 0
     4. The second "regime_transition" parameter, regime 1
     5. The first "exog" parameter
     6. The second "exog" parameter, regime 0
@@ -399,15 +400,15 @@ class MarkovSwitchingParams:
     In the above example, consider the following getters:
 
     >>> parameters[0]
-    array([0, 2, 4, 6])
+    array([0, 2, 4, 5])
     >>> parameters[1]
-    array([1, 3, 5, 6])
+    array([1, 3, 4, 6])
     >>> parameters['exog']
     slice(4, 7, None)
     >>> parameters[0, 'exog']
-    [4, 6]
+    [4, 5]
     >>> parameters[1, 'exog']
-    [4, 7]
+    [4, 6]
 
     Notice that in the last two examples, both lists of indexes include 4.
     That's because that is the index of the non-switching first "exog"
@@ -421,6 +422,13 @@ class MarkovSwitchingParams:
     4
     >>> parameters.k_parameters['exog']
     3
+
+    .. versionchanged:: 0.15.1
+
+       A 0-d integer array is a regime number, as an int is. It raised an
+       IndexError. A bool is not a regime number, so that a tuple key such
+       as ``(True, 'exog')`` raises an IndexError, as ``True`` alone did.
+       It was regime 1.
     """
 
     def __init__(self, k_regimes):
@@ -441,15 +449,15 @@ class MarkovSwitchingParams:
         if _type is str:
             return self.slices_purpose[key]
         # Get a slice for a block of parameters by regime
-        elif _type is int:
-            return self.index_regime[key]
+        elif is_int_like(key, strict=True):
+            return self.index_regime[int(key)]
         elif _type is tuple:
             if not len(key) == 2:
                 raise IndexError("Invalid index")
-            if type(key[1]) is str and type(key[0]) is int:
-                return self.index_regime_purpose[key[0]][key[1]]
-            elif type(key[0]) is str and type(key[1]) is int:
-                return self.index_regime_purpose[key[1]][key[0]]
+            if type(key[1]) is str and is_int_like(key[0], strict=True):
+                return self.index_regime_purpose[int(key[0])][key[1]]
+            elif type(key[0]) is str and is_int_like(key[1], strict=True):
+                return self.index_regime_purpose[int(key[1])][key[0]]
             else:
                 raise IndexError("Invalid index")
         else:
@@ -634,7 +642,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             one. Default is 1e-8.
         """
         self._initialization = "known"
-        probabilities = np.array(probabilities, ndmin=1)
+        # copy, so that the model does not share the caller's array
+        probabilities = array_like(
+            probabilities, "probabilities", dtype=None, shape=(None,)
+        ).copy()
         if not probabilities.shape == (self.k_regimes,):
             raise ValueError(
                 "Initial probabilities must be a vector of shape (k_regimes,)."

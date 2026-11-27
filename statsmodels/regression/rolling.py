@@ -23,6 +23,7 @@ from scipy import stats
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import get_matrices_eval_env
 from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
@@ -32,6 +33,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_int_like,
     string_like,
 )
 
@@ -656,14 +658,7 @@ class RollingWLS:
     ):
         if subset is not None:
             data = data.loc[subset]
-        eval_env = kwargs.pop("eval_env", None)
-        if eval_env is None:
-            eval_env = 2
-        elif eval_env == -1:
-            mgr = FormulaManager()
-            eval_env = mgr.get_empty_eval_env()
-        else:
-            eval_env += 1  # we're going down the stack again
+        eval_env = get_matrices_eval_env(kwargs.pop("eval_env", None))
         missing = kwargs.get("missing", "skip")
 
         na_action = FormulaManager().get_na_action(action="raise", types=[])
@@ -1069,10 +1064,16 @@ class RollingRegressionResults:
 
         Parameters
         ----------
-        variables : {int, str, list[int], list[str], None}, optional
+        variables : int, str, or iterable of int or str, optional
             Integer index or string name of the variables whose coefficients
             to plot. Can also be an iterable of integers or strings. Default
             plots all coefficients.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a variable, as the integer it
+               holds does. A bool raises a TypeError, and a list that holds
+               a bool raises a ValueError.
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha)%. Set
             to None to exclude confidence intervals.
@@ -1105,15 +1106,17 @@ class RollingRegressionResults:
         if variables is None:
             variable_idx = list(range(k_variables))
         else:
-            if isinstance(variables, (int, str)):
+            if isinstance(variables, str):
                 variables = [variables]
+            elif is_int_like(variables, strict=True):
+                variables = [int(variables)]
             variable_idx = []
             for i in range(len(variables)):
                 variable = variables[i]
                 if variable in param_names:
                     variable_idx.append(param_names.index(variable))
-                elif isinstance(variable, int):
-                    variable_idx.append(variable)
+                elif is_int_like(variable, strict=True):
+                    variable_idx.append(int(variable))
                 else:
                     msg = (
                         "variable {} is not an integer and was not found "

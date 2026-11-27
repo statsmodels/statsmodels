@@ -2938,6 +2938,28 @@ def test_news_comparison_with_longer_exog_invalid_shape_raises(varx1_data, ncols
         res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
 
 
+def test_news_comparison_with_longer_exog_dataframe(varx1_data):
+    fitted, endog, exog, nobs = varx1_data
+    res = fitted(nobs)
+    comparison = pd.DataFrame(endog)
+    news = res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
+    post = _varx1_forecast(endog[nobs], exog[nobs + 1 : nobs + 2])[-1]
+    prev = _varx1_forecast(endog[nobs - 1], exog[nobs : nobs + 2])[-1]
+    assert_allclose(news.post_impacted_forecasts.to_numpy(), [post], rtol=1e-12)
+    assert_allclose(news.total_impacts.to_numpy(), [post - prev], rtol=1e-12)
+
+
+@pytest.mark.parametrize("ncols", [1, 2])
+def test_news_comparison_with_longer_exog_3d_raises(varx1_data, ncols):
+    # A 3-d comparison is rejected, also when it has a trailing axis of
+    # length one after the right number of columns
+    fitted, endog, exog, nobs = varx1_data
+    res = fitted(nobs)
+    comparison = endog[:, :ncols, None]
+    with pytest.raises(ValueError, match="comparison must have ndim <= 2"):
+        res.news(comparison, exog=exog[: nobs + 2], impact_date=nobs + 1)
+
+
 def test_news_time_varying_extends_updated_multivariate(varx1_data):
     # A VARX(1) is time-varying through exog in the state intercept. The
     # impact date is beyond the updated sample, so that the updated results
@@ -3158,3 +3180,54 @@ def test_forecast_numpy_integer_steps(method, nobs, steps, dtype):
     if method == "get_forecast":
         actual = actual.predicted_mean
     assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("flags", [{}, {"approx_centered": True}])
+def test_fit_flags_not_changed(flags):
+    # fit added its own entries to the dictionary of flags of the caller. It
+    # passes a copy with those entries to the optimizer.
+    infl = macrodata.load_pandas().data["infl"].to_numpy()
+    mod = sarimax.SARIMAX(infl, order=(1, 0, 0))
+    original = dict(flags)
+    res = mod.fit(disp=0, flags=flags)
+    assert flags == original
+    (used,) = res.mle_settings["fargs"]
+    assert used is not flags
+    assert used["transformed"] is False
+    assert used.get("approx_centered") is original.get("approx_centered")
+    # the flags do not change the estimates here (the score is computed by
+    # complex-step differentiation, so approx_centered has no effect)
+    desired = mod.fit(disp=0)
+    assert_allclose(res.params, desired.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("method", ["forecast", "get_forecast"])
+@pytest.mark.parametrize(
+    "steps",
+    [3.0, 15.0, np.array(3), np.array(15)],
+    ids=["3.0", "15.0", "0d-3", "0d-15"],
+)
+def test_forecast_int_like_steps(method, steps):
+    # An integral float or a 0-d integer array `steps` is the number of
+    # steps, as an int is. It was used as the index of the last forecast,
+    # which raised for 3 and gave 5 forecasts for 15 (a 0-d array) or raised
+    # (a float). The forecasts of a zero-mean AR(1) are phi**h y_T.
+    endog = np.random.default_rng(2468).standard_normal(11)
+    phi = 0.5
+    res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([phi, 1.0])
+    desired = phi ** np.arange(1, int(steps) + 1) * endog[-1]
+    actual = getattr(res, method)(steps)
+    if method == "get_forecast":
+        actual = actual.predicted_mean
+    assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["forecast", "get_forecast"])
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(method, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises.
+    endog = np.random.default_rng(2468).standard_normal(11)
+    res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 1.0])
+    with pytest.raises(KeyError):
+        getattr(res, method)(steps)

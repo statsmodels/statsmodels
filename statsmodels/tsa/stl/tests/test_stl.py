@@ -180,7 +180,7 @@ def test_parameter_checks_period(default_kwargs):
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=-12)
     with pytest.raises(ValueError, match=match):
-        STL(endog=endog, period=4.0)
+        STL(endog=endog, period=4.5)
 
 
 def test_parameter_checks_seasonal(default_kwargs):
@@ -193,7 +193,7 @@ def test_parameter_checks_seasonal(default_kwargs):
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=period, seasonal=-7)
     with pytest.raises(ValueError, match=match):
-        STL(endog=endog, period=period, seasonal=13.0)
+        STL(endog=endog, period=period, seasonal=13.5)
 
 
 def test_parameter_checks_trend(default_kwargs):
@@ -208,7 +208,7 @@ def test_parameter_checks_trend(default_kwargs):
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=period, trend=-19)
     with pytest.raises(ValueError, match=match):
-        STL(endog=endog, period=period, trend=19.0)
+        STL(endog=endog, period=period, trend=19.5)
 
 
 def test_parameter_checks_low_pass(default_kwargs):
@@ -224,7 +224,7 @@ def test_parameter_checks_low_pass(default_kwargs):
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=period, low_pass=-19)
     with pytest.raises(ValueError, match=match):
-        STL(endog=endog, period=period, low_pass=19.0)
+        STL(endog=endog, period=period, low_pass=19.5)
 
 
 def test_jump_errors(default_kwargs):
@@ -234,15 +234,15 @@ def test_jump_errors(default_kwargs):
     with pytest.raises(ValueError, match="low_pass_jump must be a positive"):
         STL(endog=endog, period=period, low_pass_jump=0)
     with pytest.raises(ValueError, match="low_pass_jump must be a positive"):
-        STL(endog=endog, period=period, low_pass_jump=1.0)
+        STL(endog=endog, period=period, low_pass_jump=1.5)
     with pytest.raises(ValueError, match="seasonal_jump must be a positive"):
         STL(endog=endog, period=period, seasonal_jump=0)
     with pytest.raises(ValueError, match="seasonal_jump must be a positive"):
-        STL(endog=endog, period=period, seasonal_jump=1.0)
+        STL(endog=endog, period=period, seasonal_jump=1.5)
     with pytest.raises(ValueError, match="trend_jump must be a positive"):
         STL(endog=endog, period=period, trend_jump=0)
     with pytest.raises(ValueError, match="trend_jump must be a positive"):
-        STL(endog=endog, period=period, trend_jump=1.0)
+        STL(endog=endog, period=period, trend_jump=1.5)
 
 
 def test_defaults_smoke(default_kwargs, robust):
@@ -565,3 +565,41 @@ def test_robust_outlier_block(case):
         # by orders of magnitude more
         atol = 1e-5 * np.max(np.abs(desired))
         assert_allclose(getattr(res, name), desired, rtol=0, atol=atol)
+
+
+INT_LIKE_PARAMETERS = [
+    "period",
+    "seasonal",
+    "trend",
+    "low_pass",
+    "seasonal_jump",
+    "trend_jump",
+    "low_pass_jump",
+]
+
+
+@pytest.mark.parametrize("name", INT_LIKE_PARAMETERS)
+@pytest.mark.parametrize(
+    "convert", [np.int64, np.int32, np.array, float], ids=["int64", "int32", "0d", "float"]
+)
+def test_int_like_parameters(default_kwargs, name, convert):
+    # A 0-d integer array or an integral float is accepted as an int is. They
+    # raised a ValueError. The baseline results are the reference.
+    class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
+    class_kwargs[name] = convert(class_kwargs[name])
+    mod = STL(**class_kwargs)
+    res = mod.fit(outer_iter=outer, inner_iter=inner)
+    expected = results.loc["baseline"].sort_index()
+    assert_allclose(res.trend, expected.trend)
+    assert_allclose(res.seasonal, expected.season)
+    assert_allclose(res.weights, expected.rw)
+
+
+@pytest.mark.parametrize("name", INT_LIKE_PARAMETERS)
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+def test_bool_parameters(default_kwargs, name, value):
+    # A bool is not an integer: True was a jump of 1
+    class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
+    class_kwargs[name] = value
+    with pytest.raises(ValueError, match=f"{name} must be"):
+        STL(**class_kwargs)

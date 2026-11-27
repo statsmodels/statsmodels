@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.testing import assert_allclose
+import pandas as pd
 import pytest
 
 from statsmodels.tools._lstsq import QRSVD, default_rcond, numerical_rank
@@ -135,6 +136,18 @@ def test_qrsvd_ill_conditioned_covariance():
     assert np.max(np.abs(cov - expected)) / np.max(np.abs(expected)) < 1e-8
 
 
-def test_qrsvd_invalid_input():
-    with pytest.raises(ValueError, match="2-dimensional"):
-        QRSVD(np.ones(5))
+@pytest.mark.parametrize(
+    "x", [np.ones(5), np.ones((5, 2, 1)), 1.0], ids=["1d", "3d", "scalar"]
+)
+def test_qrsvd_invalid_input(x):
+    with pytest.raises(ValueError, match="x must have"):
+        QRSVD(x)
+
+
+@pytest.mark.parametrize("convert", [lambda x: x.tolist(), pd.DataFrame])
+def test_qrsvd_array_like(full_rank, convert):
+    x, _ = full_rank
+    fact = QRSVD(convert(x))
+    assert fact.shape == x.shape
+    expected = np.linalg.svd(x, compute_uv=False)
+    assert_allclose(fact.singular_values, expected, rtol=1e-10)

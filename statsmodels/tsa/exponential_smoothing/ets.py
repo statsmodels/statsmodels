@@ -144,7 +144,6 @@ from collections import OrderedDict
 import contextlib
 import datetime as dt
 import functools
-import operator
 import warnings
 
 import numpy as np
@@ -165,6 +164,8 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_bool_like,
+    is_int_like,
     string_like,
 )
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -2225,6 +2226,13 @@ class ETSResults(base.StateSpaceMLEResults):
                of an internal array, which could crash the Python process,
                and otherwise returned NaN values.
 
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, is a number of
+               steps, as an int is. Before, it was used as the index of the
+               last forecast, which raised a KeyError. A bool is not a number
+               of steps: True was one step.
+
         Returns
         -------
         forecast : Series or ndarray
@@ -2232,12 +2240,10 @@ class ETSResults(base.StateSpaceMLEResults):
             by the forecast periods if `endog` is a pandas object, otherwise
             an ndarray.
         """
-        try:
-            steps = operator.index(steps)
-        except TypeError:
+        if not is_int_like(steps):
             # a date: forecast until it
             return self.predict(start=self.nobs, end=steps)
-        return self._forecast(steps, "end")
+        return self._forecast(int(steps), "end")
 
     def _forecast(self, steps, anchor):
         """
@@ -2267,6 +2273,8 @@ class ETSResults(base.StateSpaceMLEResults):
         # sample (_get_prediction_index raises if end lies before start)
 
         # Handle `dynamic`
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
             # A key that covers several dates gives a slice of locations

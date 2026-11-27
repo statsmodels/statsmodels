@@ -227,13 +227,30 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             int time_varying_selection = self.model.selection.shape[2] > 1
             int time_varying_state_cov = self.model.state_cov.shape[2] > 1
             int time_varying_selected_state_cov = time_varying_selection or time_varying_state_cov
+            blas_int k_known
+            {{cython_type}} [::1, :] known_cov
 
         self.model.seek(0, False, False)
 
         # Invert initial state covariance matrix
         # (we actually need the inverse here)
-        if self.model.initialized_diffuse:
+        # The diffuse states (nonzero diagonal of the diffuse initial state
+        # covariance matrix) have prior precision zero. A block initialization
+        # can make only some states diffuse (initialized_diffuse describes only
+        # its last block): the precision of the others is the inverse of their
+        # block of the initial state covariance matrix.
+        known = np.flatnonzero(np.diag(np.asarray(self.model.initial_diffuse_state_cov)) == 0)
+        if len(known) == 0:
             self.initial_state_cov_inv[:] = 0.
+        elif len(known) < k_states:
+            k_known = len(known)
+            known_cov = np.array(np.asarray(self.model.initial_state_cov)[np.ix_(known, known)], order='F')
+            lapack.{{prefix}}potrf("L", &k_known, &known_cov[0, 0], &k_known, &info)
+            if info > 0:
+                raise np.linalg.LinAlgError('Non-positive-definite initial state covariance matrix.')
+            lapack.{{prefix}}potri("L", &k_known, &known_cov[0, 0], &k_known, &info)
+            self.initial_state_cov_inv[:] = 0.
+            np.asarray(self.initial_state_cov_inv)[np.ix_(known, known)] = known_cov
         else:
             blas.{{prefix}}copy(&k_states2, self.model._initial_state_cov, &inc, self._initial_state_cov_inv, &inc)
             lapack.{{prefix}}potrf("L", &k_states, self._initial_state_cov_inv, &k_states, &info)

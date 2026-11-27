@@ -170,7 +170,48 @@ def _clean_order(order):
     return order, sorder
 
 
-def run_spec(x12path, specpath, outname=None, meta=False, datameta=False):
+def run_spec(x12path, specpath, outname=None, meta=None, datameta=None):
+    """
+    Run X-12/X-13 on a spec file
+
+    Parameters
+    ----------
+    x12path : str or Path
+        The path to the X-12/X-13 binary.
+    specpath : str
+        The path to the spec file, without its .spc extension.
+    outname : str, optional
+        The path of the output files, without an extension. If None, the
+        output files are written next to the spec file.
+    meta : bool, optional
+        Whether ``specpath`` is a metafile, passed to X-12/X-13 as
+        ``"-m " + specpath``.
+
+        .. deprecated:: 0.15.1
+           ``meta`` is deprecated and will be removed after statsmodels
+           0.17 is released. X-13ARIMA-SEATS does not accept the option and
+           the file name as a single argument.
+    datameta : bool, optional
+        Whether ``specpath`` is a data metafile, passed to X-12/X-13 as
+        ``"-d " + specpath``.
+
+        .. deprecated:: 0.15.1
+           ``datameta`` is deprecated and will be removed after statsmodels
+           0.17 is released. X-13ARIMA-SEATS does not accept the option and
+           the file name as a single argument.
+
+    Returns
+    -------
+    subprocess.Popen
+        The process, with stdout and stderr in the pipe ``stdout``.
+    """
+    if meta is not None or datameta is not None:
+        warn(
+            "The meta and datameta arguments of run_spec are deprecated and "
+            "will be removed after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
     if meta and datameta:
         raise ValueError("Cannot specify both meta and datameta.")
     if meta:
@@ -191,8 +232,10 @@ def _make_automdl_options(maxorder, maxdiff, diff):
     options += f"maxorder = ({maxorder[0]} {maxorder[1]})\n"
     if maxdiff is not None:  # maxdiff always takes precedence
         options += f"maxdiff = ({maxdiff[0]} {maxdiff[1]})\n"
-    else:
+    elif diff is not None:
         options += f"diff = ({diff[0]} {diff[1]})\n"
+    else:
+        raise ValueError("diff must be given if maxdiff is None")
     return options
 
 
@@ -444,10 +487,7 @@ def pandas_to_series_spec(x):
             "this extended."
         )
 
-    if hasattr(x, "name"):
-        name = str(x.name or "Unnamed Series")
-    else:
-        name = "Unnamed Series"
+    name = str(x.name or "Unnamed Series")
     series_spec = SeriesSpec(
         data=data, name=name, period=period, title=name, start=f"{year}.{stperiod}"
     )
@@ -642,13 +682,24 @@ def x13_arima_analysis(
     directory, invoking X12/X13 in a subprocess, and reading the output
     back in.
     """
-    if not isinstance(endog, (pd.DataFrame, pd.Series)):
+    is_pandas = isinstance(endog, (pd.DataFrame, pd.Series))
+    # Index types that can hold dates keep their index, as before. Others, such
+    # as a RangeIndex, cannot give the period and the start of the series.
+    has_dates = is_pandas and endog.index.inferred_type in (
+        "datetime64",
+        "datetime",
+        "date",
+        "period",
+        "categorical",
+    )
+    if not has_dates:
         if start is None or freq is None:
             raise ValueError(
-                "start and freq cannot be none if endog is not a pandas object"
+                "start and freq cannot be none if endog is not a pandas object "
+                "with dates in its index"
             )
         idx = pd.date_range(start=start, periods=len(endog), freq=freq)
-        endog = pd.Series(endog, index=idx)
+        endog = endog.set_axis(idx) if is_pandas else pd.Series(endog, index=idx)
 
     spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
@@ -739,11 +790,10 @@ def x13_arima_analysis(
             ftempin.close()
             ftempout.close()
             # call x12 arima
-            p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
-            p.wait()
-            stdout = p.stdout.read()
+            with run_spec(x12path, ftempin.name[:-4], ftempout.name) as p:
+                stdout, _ = p.communicate()
             if print_stdout:
-                print(p.stdout.read())
+                print(stdout.decode(errors="backslashreplace"))
             # check for errors
             errors = _open_and_read(ftempout.name + ".err")
             _check_errors(errors, rawspec)

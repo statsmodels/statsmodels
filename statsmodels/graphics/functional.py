@@ -396,6 +396,7 @@ def hdrboxplot(
     if alpha is None:
         alpha = [threshold, 0.9, 0.5]
     else:
+        alpha = list(alpha)
         alpha.extend([threshold, 0.9, 0.5])
         alpha = list(set(alpha))
     alpha.sort(reverse=True)

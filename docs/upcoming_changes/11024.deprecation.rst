@@ -1,0 +1,5 @@
+- The ``meta`` and ``datameta`` arguments of
+  ``statsmodels.tsa.x13.run_spec`` are deprecated and give a
+  ``FutureWarning``; they will be removed after statsmodels 0.17. They
+  passed the option and the file name as one argument, which
+  X-13ARIMA-SEATS does not accept. :pr:`11024`

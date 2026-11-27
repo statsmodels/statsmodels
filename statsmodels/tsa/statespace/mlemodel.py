@@ -31,7 +31,7 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning, PrecisionWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, is_int_like, string_like
 import statsmodels.tsa.base.prediction as pred
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
@@ -749,8 +749,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             )
             kwargs = {k: v for k, v in kwargs.items() if k not in disallow}
             # Maximum likelihood estimation
-            if flags is None:
-                flags = {}
+            # A copy, so that the dictionary of the caller is not changed
+            flags = {} if flags is None else dict(flags)
             flags.update(
                 {
                     "transformed": False,
@@ -4234,11 +4234,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         -----
         .. versionchanged:: 0.15.1
 
-           A NumPy integer `steps` is the number of steps, as an int is.
+           A NumPy integer, a 0-d integer array or a float with an integral
+           value, such as 3.0, is the number of steps, as an int is.
            Before, it was used as the index of the last forecast, which
-           raised or gave the wrong number of forecasts.
+           raised or gave the wrong number of forecasts. A bool is not a
+           number of steps: True was one step.
         """
-        if isinstance(steps, (int, np.integer)):
+        if is_int_like(steps):
             end = self.nobs + int(steps) - 1
         else:
             end = steps
@@ -4375,11 +4377,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         -----
         .. versionchanged:: 0.15.1
 
-           A NumPy integer `steps` is the number of steps, as an int is.
+           A NumPy integer, a 0-d integer array or a float with an integral
+           value, such as 3.0, is the number of steps, as an int is.
            Before, it was used as the index of the last forecast, which
-           raised or gave the wrong number of forecasts.
+           raised or gave the wrong number of forecasts. A bool is not a
+           number of steps: True was one step.
         """
-        if isinstance(steps, (int, np.integer)):
+        if is_int_like(steps):
             end = self.nobs + int(steps) - 1
         else:
             end = steps
@@ -4701,10 +4705,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     start=0, end=nobs_exog - 1
                 )
                 # TODO: check that the index of `comparison` matches the model
-                comparison = np.asarray(comparison)
-                if comparison.ndim < 2:
-                    comparison = np.atleast_2d(comparison).T
-                if comparison.ndim != 2 or comparison.shape[1] != self.model.k_endog:
+                comparison = array_like(
+                    comparison, "comparison", dtype=None, maxdim=2, ndim=2
+                )
+                if comparison.shape[1] != self.model.k_endog:
                     raise ValueError(
                         "Invalid shape for `comparison`. Must"
                         f" contain {self.model.k_endog} columns."
@@ -4859,6 +4863,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             revisions are grouped together. Default is False. Note that for
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
+
+            .. versionchanged:: 0.15.1
+
+               A NumPy integer or a 0-d integer array is a period, as an int
+               is, so that a negative value is an offset from the end of the
+               previous dataset. Before, a NumPy integer was looked up in the
+               index of the results whose `news` method is called, and a 0-d
+               array raised a TypeError for a date index.
         state_index : array_like, optional
             An optional index specifying a subset of states to use when
             constructing the impacts of revisions and news. For example, if
@@ -4912,7 +4924,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     f" ({self.model.k_states})."
                 )
 
-        if not isinstance(revisions_details_start, (int, bool)):
+        # A bool is a flag, tested first; an integer is a period (strict)
+        if isinstance(revisions_details_start, bool):
+            pass
+        elif is_int_like(revisions_details_start, strict=True):
+            revisions_details_start = int(revisions_details_start)
+        else:
             revisions_details_start, _, _, _ = self.model._get_prediction_index(
                 revisions_details_start, revisions_details_start
             )

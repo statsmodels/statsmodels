@@ -1,0 +1,3 @@
+- ``AutoReg``, ``ARDL`` and ``UECM`` accept a 0-d array as ``lags``, as the
+  number it holds; it raised ``TypeError: iteration over a 0-d array``.
+  :pr:`11267`

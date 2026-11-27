@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.validation import is_int_like
 
 from . import tools
 
@@ -487,6 +488,12 @@ class Initialization:
             inclusive), or an integer (to select a specific state), or None
             (to select all the states). The selected states must be
             consecutive.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a state, as an int does. It
+               raised a ValueError. A bool is not an integer and raises a
+               ValueError: True selected state 1.
         initialization_type : str or Initialization
             The type of initialization used for the states selected by `index`.
             If a string, must be one of 'known', 'diffuse',
@@ -511,7 +518,7 @@ class Initialization:
         # Construct the index, using a slice object as an intermediate step
         # to enforce regularity
         if not isinstance(index, slice):
-            if isinstance(index, (int, np.integer)):
+            if is_int_like(index, strict=True):
                 index = int(index)
                 if index < 0 or index >= self.k_states:
                     raise ValueError("Invalid index.")
@@ -664,6 +671,13 @@ class Initialization:
             an integer (to select a specific state), or None (to select all the
             states).
 
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a state, as an int does. It
+               raised a ValueError. A bool is not an integer and raises a
+               ValueError: True selected state 1. An integer index equal to
+               `k_states` raises a ValueError, as in `set`. It did nothing.
+
         Notes
         -----
         Note that this specifically unsets initializations previously created
@@ -672,9 +686,9 @@ class Initialization:
         initialization. To unset all initializations (including both global and
         block level), use the `clear` method.
         """
-        if isinstance(index, (int, np.integer)):
+        if is_int_like(index, strict=True):
             index = int(index)
-            if index < 0 or index > self.k_states:
+            if index < 0 or index >= self.k_states:
                 raise ValueError("Invalid index.")
             index = (index, index + 1)
         elif index is None:

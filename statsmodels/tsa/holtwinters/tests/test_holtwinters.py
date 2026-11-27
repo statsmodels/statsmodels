@@ -863,7 +863,7 @@ def test_start_params(trend, seasonal):
 def test_no_params_to_optimize():
     mod = ExponentialSmoothing(
         housing_data,
-        initial_level=housing_data.iloc[0],
+        initial_level=housing_data.iloc[0, 0],
         initialization_method="known",
     )
     with pytest.warns(EstimationWarning, match="Model has no free parameters"):
@@ -2898,6 +2898,47 @@ def test_period_and_range_index_output(index_type):
         pd.testing.assert_index_equal(value.index, expected_index)
 
 
+@pytest.mark.parametrize(
+    "steps",
+    [6.0, np.float64(6.0), np.array(6), np.int32(6)],
+    ids=["float", "float64", "0d-array", "int32"],
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date", "period", "range"])
+def test_forecast_int_like_steps(steps, index_type):
+    # A float with an integral value is a number of steps, as an int is, and
+    # so is a 0-d integer array with a date index. They raised a KeyError or
+    # a TypeError. The forecasts from R are the reference.
+    index = {
+        "ndarray": None,
+        "date": pd.date_range("2005-01-01", periods=30, freq="MS"),
+        "period": pd.period_range("2005Q1", periods=30, freq="Q"),
+        "range": pd.RangeIndex(30),
+    }[index_type]
+    endog = np.asarray(aust)
+    if index is not None:
+        endog = pd.Series(endog, index=index[:24])
+    fcast = _r_hw_fit(endog).forecast(steps)
+    assert_allclose(fcast, R_HW_FORECAST, rtol=1e-12)
+    if index is not None:
+        pd.testing.assert_index_equal(fcast.index, index[24:])
+
+
+@pytest.mark.parametrize(
+    "steps", [True, np.True_, 2.5], ids=["True", "np.True_", "2.5"]
+)
+@pytest.mark.parametrize("index_type", ["ndarray", "date"])
+def test_forecast_steps_not_int(steps, index_type):
+    # A bool was one step without a date index; 2.5 raised a KeyError or a
+    # TypeError from the date arithmetic
+    endog = np.asarray(aust)
+    if index_type == "date":
+        index = pd.date_range("2005-01-01", periods=24, freq="MS")
+        endog = pd.Series(endog, index=index)
+    res = _r_hw_fit(endog)
+    with pytest.raises(TypeError, match="steps must be integer_like"):
+        res.forecast(steps)
+
+
 def test_integer_endog_matches_float():
     y = np.round(np.asarray(aust))
     res_int = _r_hw_fit(y.astype(int))
@@ -3403,3 +3444,63 @@ def test_missing_drop_simulate():
     sim = res.simulate(6, repetitions=3, rng=np.random.default_rng(0))
     expected = ref.simulate(6, repetitions=3, rng=np.random.default_rng(0))
     assert_allclose(sim, expected, rtol=1e-12)
+
+
+# Fixed smoothing parameters for the use_boxcox tests, which compare two
+# models that are the same once use_boxcox is converted. Fitted by the
+# optimizer, the two did not stop at the same point on the Azure macOS runners
+# (fitted values up to 3e-8 apart).
+_BOXCOX_FIXED = {
+    "smoothing_level": 0.3,
+    "smoothing_trend": 0.1,
+    "smoothing_seasonal": 0.2,
+    "optimized": False,
+}
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [
+        (np.float32(0.5), 0.5),
+        (np.array(0.5), 0.5),
+        (np.float64(0.0), 0.0),
+        (np.int64(1), True),
+        (np.int64(0), False),
+    ],
+    ids=["float32 lambda", "0-d lambda", "float64 zero", "int64 one", "int64 zero"],
+)
+def test_use_boxcox_numpy_scalars(austourists, use_boxcox, expected):
+    # A NumPy float is a fixed lambda and a NumPy int is used as a bool, as a
+    # Python float and int are; a float32 lambda and an int64 raised TypeError
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    if expected is False:
+        assert res.params["lamda"] is None
+    else:
+        assert_allclose(res.params["lamda"], ref.params["lamda"], rtol=1e-12)
+    if not isinstance(expected, bool):
+        assert_allclose(res.params["lamda"], expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "use_boxcox, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
+    # A NumPy bool raised "use_boxcox must be True, False, 'log' or a float."
+    kwargs = dict(trend="add", seasonal="mul", seasonal_periods=4)
+    res = ExponentialSmoothing(austourists, use_boxcox=use_boxcox, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit(
+        **_BOXCOX_FIXED
+    )
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
+    assert res.params["use_boxcox"] is expected

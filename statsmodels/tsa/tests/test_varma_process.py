@@ -255,6 +255,36 @@ def test_varfilter_lists_and_1d_x(ndim):
     assert_allclose(y, expected, rtol=1e-10)
 
 
+@pytest.mark.parametrize("convert", [pd.Series, pd.DataFrame])
+def test_varfilter_pandas_x(convert):
+    rng = np.random.default_rng(20261126)
+    x = rng.standard_normal(15)
+    a = rng.standard_normal(3)
+    y = varfilter(convert(x), a)
+    assert y.shape == (13, 1)
+    assert_allclose(y, _varfilter_loop(x, a), rtol=1e-10)
+
+
+def test_varfilter_keeps_integer_x():
+    # x is not converted to float: the first differences of t**2 are the
+    # integers 2t - 1
+    y = varfilter(np.arange(10) ** 2, np.array([1, -1]))
+    assert np.issubdtype(y.dtype, np.integer)
+    assert_array_equal(y[:, 0], 2 * np.arange(1, 10) - 1)
+
+
+@pytest.mark.parametrize("shape", [(10, 2, 1), (10, 1, 1)], ids=["3d", "3d-column"])
+def test_varfilter_x_not_1d_or_2d_raises(shape):
+    with pytest.raises(ValueError, match="x must have ndim <= 2"):
+        varfilter(np.ones(shape), np.array([1.0, -0.5]))
+
+
+def test_varfilter_scalar_x_raises():
+    # a scalar is not taken as a series with one observation
+    with pytest.raises(ValueError, match="not enough values to unpack"):
+        varfilter(1.0, np.array([1.0, -0.5]))
+
+
 @pytest.fixture
 def var_data():
     # Stationary VAR(2): y_t = A1 y_{t-1} + A2 y_{t-2} + e_t

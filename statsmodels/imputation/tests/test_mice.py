@@ -450,6 +450,28 @@ class TestMICE:
         assert_allclose(out.scale, 2.0)
         assert_allclose(out.cov_params(), total)
 
+    def test_MICE_fit_kwds(self):
+        # fit_kwds is not modified, its start_params is used for the first
+        # fit and the previous estimates are used for the following fits.
+        seen = []
+
+        class GLM(sm.GLM):
+            def fit(self, **kwargs):
+                seen.append(kwargs.get("start_params"))
+                return super().fit(**kwargs)
+
+        rs = np.random.RandomState(52983)
+        imp_data = mice.MICEData(gendat(), rng=rs)
+        start_params = np.array([0.1, 0.2, 0.3])
+        fit_kwds = {"start_params": start_params, "maxiter": 50}
+        mi = mice.MICE("y ~ x1 + x2", GLM, imp_data, fit_kwds=fit_kwds)
+        mi.fit(n_burnin=0, n_imputations=2)
+
+        assert list(fit_kwds) == ["start_params", "maxiter"]
+        assert fit_kwds["start_params"] is start_params
+        assert_equal(seen[0], start_params)
+        assert_allclose(seen[1], mi.results_list[0].params)
+
     def test_MICE1(self):
         rs = np.random.RandomState(821223)
         df = gendat()

@@ -1328,16 +1328,15 @@ class MICE:
 
         # Impute missing values
         self.data.update_all(self.n_skip + 1)
-        start_params = None
+        fit_kwds = dict(self.fit_kwds)
         if len(self.results_list) > 0:
-            start_params = self.results_list[-1].params
+            fit_kwds["start_params"] = self.results_list[-1].params
 
         # Fit the analysis model.
         model = self.model_class.from_formula(
             self.model_formula, self.data.data, **self.init_kwds
         )
-        self.fit_kwds.update({"start_params": start_params})
-        result = model.fit(**self.fit_kwds)
+        result = model.fit(**fit_kwds)
 
         return result
 

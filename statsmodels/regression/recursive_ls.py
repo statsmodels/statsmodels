@@ -12,11 +12,13 @@ import numpy as np
 import pandas as pd
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.formula.formulatools import advance_eval_env
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import is_int_like
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel,
     MLEResults,
@@ -164,7 +166,7 @@ class RecursiveLS(MLEModel):
             self.k_endog = 1
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, constraints=None):
+    def from_formula(cls, formula, data, subset=None, constraints=None, eval_env=None):
         """
         Create a `RecursiveLS` model instance from a formula and dataframe.
 
@@ -180,13 +182,24 @@ class RecursiveLS(MLEModel):
             `pandas.DataFrame`.
         constraints : {None, array_like, str, tuple}, optional
             See `RecursiveLS` for details.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
         model : RecursiveLS instance
         """
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         return super(MLEModel, cls).from_formula(formula, data, subset,
-                                                 constraints=constraints)
+                                                 constraints=constraints,
+                                                 **kwargs)
 
     def _validate_can_fix_params(self, param_names):
         raise ValueError("Linear constraints on coefficients should be given"
@@ -673,10 +686,23 @@ class RecursiveLSResults(MLEResults):
 
         Parameters
         ----------
-        variables : {int, str, list[int], list[str]}, optional
+        variables : int, str, or iterable of int or str, optional
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
+
+            .. versionchanged:: 0.15.1
+
+               A list is no longer modified: names in it were replaced by
+               their positions. A tuple that holds a name, and an iterable
+               without a length such as a generator, work; they raised a
+               TypeError.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a variable, as the integer it
+               holds does. A bool raises a TypeError.
+
         alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
         legend_loc : str, optional
@@ -695,8 +721,13 @@ class RecursiveLSResults(MLEResults):
 
         """
         # Get variables
-        if isinstance(variables, (int, str)):
+        if isinstance(variables, str):
             variables = [variables]
+        elif is_int_like(variables, strict=True):
+            variables = [int(variables)]
+        else:
+            variables = list(variables)
+
         k_variables = len(variables)
 
         # If a string was given for `variable`, try to get it from exog names
