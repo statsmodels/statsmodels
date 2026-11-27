@@ -8,6 +8,7 @@ Created on Sat Dec 17 08:39:16 2011
 
 Author: Josef Perktold
 """
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -138,3 +139,153 @@ def test_cov_hac_negative_nlags():
         sw.cov_hac(res, nlags=-1)
     # nlags=0 (White) stays valid
     assert sw.cov_hac(res, nlags=0).shape == (3, 3)
+
+
+def test_get_sandwich_arrays_tuple_has_default_df_resid():
+    # the tuple form has no results instance, so df_resid falls back to
+    # nobs - k_params
+    rs = np.random.default_rng(12345)
+    xu = rs.standard_normal((20, 3))
+    hessian_inv = np.eye(3)
+
+    xu_out, hessian_inv_out, df_resid = sw._get_sandwich_arrays((xu, hessian_inv))
+
+    assert_allclose(xu_out, xu)
+    assert_allclose(hessian_inv_out, hessian_inv)
+    assert df_resid == 17
+
+
+def _make_panel_sample():
+    # small panel-like sample with a group and a time index
+    rs = np.random.default_rng(20240607)
+    n_groups, n_periods = 10, 12
+    nobs = n_groups * n_periods
+    group = np.repeat(np.arange(n_groups), n_periods)
+    time = np.tile(np.arange(n_periods), n_groups)
+    exog = add_constant(rs.standard_normal((nobs, 2)))
+    endog = exog @ np.array([1.0, 0.5, -0.25]) + rs.standard_normal(nobs)
+    bounds = np.arange(0, nobs + 1, n_periods)
+    groupidx = list(pairwise(bounds))
+    return endog, exog, group, time, groupidx
+
+
+@pytest.mark.parametrize(
+    "cov_type",
+    [
+        "white",
+        "hac",
+        "nw-panel-hac",
+        "nw-panel-cluster",
+        "nw-groupsum-hac",
+        "nw-groupsum-cluster",
+        "cluster",
+    ],
+)
+def test_correction_uses_adjusted_df_resid(cov_type):
+    # GH 9253: the small sample correction factor used to be hard coded as
+    # nobs - k_params, so changes to results.df_resid had no effect
+    endog, exog, group, time, groupidx = _make_panel_sample()
+    mod = OLS(endog, exog)
+    res = mod.fit()
+
+    if cov_type == "white":
+        cov_func, kwds = sw.cov_white_simple, {}
+    elif cov_type == "hac":
+        cov_func, kwds = sw.cov_hac_simple, {"nlags": 2}
+    elif cov_type == "nw-panel-hac":
+        cov_func = sw.cov_nw_panel
+        kwds = {"nlags": 2, "groupidx": groupidx, "use_correction": "hac"}
+    elif cov_type == "nw-panel-cluster":
+        cov_func = sw.cov_nw_panel
+        kwds = {"nlags": 2, "groupidx": groupidx, "use_correction": "cluster"}
+    elif cov_type == "nw-groupsum-hac":
+        cov_func = sw.cov_nw_groupsum
+        kwds = {"nlags": 2, "time": time, "use_correction": "hac"}
+    elif cov_type == "nw-groupsum-cluster":
+        cov_func = sw.cov_nw_groupsum
+        kwds = {"nlags": 2, "time": time, "use_correction": "cluster"}
+    else:
+        cov_func, kwds = sw.cov_cluster, {"group": group}
+
+    cov = cov_func(res, **kwds)
+
+    df_resid = res.df_resid
+    # adjust df_resid on the model, as in the issue
+    mod.df_resid = df_resid - 5
+    res_adj = mod.fit()
+    assert res_adj.df_resid == df_resid - 5
+
+    cov_adj = cov_func(res_adj, **kwds)
+
+    # only the small sample correction factor changed, it is scaled by the
+    # ratio of the old and the new residual degrees of freedom
+    assert_allclose(cov_adj, cov * df_resid / res_adj.df_resid)
+
+
+@pytest.mark.parametrize("cov_type", ["cluster", "hac-panel", "hac-groupsum"])
+def test_robust_cov_type_uses_adjusted_model_df_resid(cov_type):
+    # GH 9253: the df_resid adjusted on the model has to be used by the
+    # robust covariance, which is computed when the model is fitted
+    endog, exog, group, time, groupidx = _make_panel_sample()
+
+    if cov_type == "cluster":
+        cov_kwds = {"groups": group}
+    elif cov_type == "hac-panel":
+        cov_kwds = {"groups": group, "maxlags": 2}
+    else:
+        cov_kwds = {"time": time, "maxlags": 2}
+
+    res = OLS(endog, exog).fit(cov_type=cov_type, cov_kwds=cov_kwds)
+
+    n_absorbed = 5
+    mod = OLS(endog, exog)
+    mod.df_model += n_absorbed
+    mod.df_resid -= n_absorbed
+    res_adj = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
+
+    assert res_adj.df_resid == res.df_resid - n_absorbed
+
+    ratio = res.df_resid / res_adj.df_resid
+    assert_allclose(res_adj.cov_params(), res.cov_params() * ratio)
+    assert_allclose(res_adj.bse, res.bse * np.sqrt(ratio))
+
+
+@pytest.mark.parametrize("cov_type", ["white", "cluster"])
+def test_correction_ignores_increased_df_resid(cov_type):
+    # df_resid is larger than nobs - k_params for models with additional
+    # parameters, e.g. the dispersion parameter of NegativeBinomial, and for
+    # rank deficient designs. The small sample correction then uses the
+    # number of moment conditions, GH 9253
+    endog, exog, group, time, groupidx = _make_panel_sample()
+    mod = OLS(endog, exog)
+    res = mod.fit()
+
+    if cov_type == "white":
+        cov_func, kwds = sw.cov_white_simple, {}
+    else:
+        cov_func, kwds = sw.cov_cluster, {"group": group}
+
+    cov = cov_func(res, **kwds)
+
+    mod.df_resid = res.df_resid + 5
+    res_adj = mod.fit()
+    assert res_adj.df_resid == res.df_resid + 5
+
+    assert_allclose(cov_func(res_adj, **kwds), cov)
+
+
+def test_correction_without_results_df_resid():
+    # not all results instances define df_resid, e.g. the plain
+    # LikelihoodModelResults that discrete models use internally when the
+    # covariance is computed by fit(cov_type=...). The correction factor then
+    # falls back to nobs - k_params, GH 9253
+    from statsmodels.discrete.discrete_model import Poisson
+
+    endog, exog, group, time, groupidx = _make_panel_sample()
+    endog = np.round(np.abs(endog)).astype(int)
+
+    res = Poisson(endog, exog).fit(
+        disp=False, cov_type="cluster", cov_kwds={"groups": group}, use_t=False
+    )
+
+    assert_allclose(res.cov_params(), sw.cov_cluster(res._results, group))
