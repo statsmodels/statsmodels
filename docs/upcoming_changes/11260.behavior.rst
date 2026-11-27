@@ -1,0 +1,3 @@
+- ``CompareMeans.summary`` now centers confidence intervals on
+  ``mean1 - mean2 - value``, consistent with the reported coefficient when
+  ``value`` is nonzero. :pr:`11260`
