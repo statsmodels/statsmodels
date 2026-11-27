@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.validation import is_int_like
 
 from . import tools
 
@@ -487,13 +488,29 @@ class Initialization:
             inclusive), or an integer (to select a specific state), or None
             (to select all the states). The selected states must be
             consecutive.
+
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a state, as an int does. It
+               raised a ValueError. A bool is not an integer and raises a
+               ValueError: True selected state 1.
         initialization_type : str or Initialization
             The type of initialization used for the states selected by `index`.
             If a string, must be one of 'known', 'diffuse',
             'approximate_diffuse', or 'stationary'. Alternatively, a
             previously created `Initialization` object may be given, in which
             case it is used directly as the initialization for the selected
-            block of states.
+            block of states. It must have as many states as the block.
+
+            .. versionchanged:: 0.15.1
+
+               An `Initialization` object is also accepted for all the
+               states (`index` None); it raised ValueError. A call that
+               raises leaves the initialization unchanged; a failed call for
+               all the states left `initialization_type` set. An
+               `Initialization` object with a different number of states than
+               the block raises ValueError; it was accepted and gave a wrong
+               initialization of the block.
         constant : array_like, optional
             A vector of constant values, denoted :math:`a`. Most often used
             with 'known' initialization, but may also be used with
@@ -511,7 +528,7 @@ class Initialization:
         # Construct the index, using a slice object as an intermediate step
         # to enforce regularity
         if not isinstance(index, slice):
-            if isinstance(index, (int, np.integer)):
+            if is_int_like(index, strict=True):
                 index = int(index)
                 if index < 0 or index >= self.k_states:
                     raise ValueError("Invalid index.")
@@ -553,13 +570,24 @@ class Initialization:
                 " else unset the entire block before"
                 " re-initializing the subset."
             )
+        # Make sure that an initialization object fits the block
+        if (
+            isinstance(initialization_type, Initialization)
+            and initialization_type.k_states != len(index)
+        ):
+            raise ValueError(
+                "Invalid initialization object; it has"
+                f" {initialization_type.k_states} states, but the block of"
+                f" states {index!s} has {len(index)}."
+            )
 
         # If setting for all states, set this object's initialization
-        # attributes
+        # attributes (an Initialization object is used as a block of all the
+        # states)
         k_states = len(index)
-        if k_states == self.k_states:
-            self.initialization_type = initialization_type
-
+        if k_states == self.k_states and not isinstance(
+            initialization_type, Initialization
+        ):
             # General validation
             if (
                 approximate_diffuse_variance is not None
@@ -598,9 +626,6 @@ class Initialization:
                         "Invalid stationary covariance matrix;"
                         f" given shape {stationary_cov.shape!s} but require shape {(k_states, k_states)!s}."
                     )
-
-                # Set values
-                self.stationary_cov = stationary_cov
             elif initialization_type == "diffuse":
                 if constant is not None:
                     warnings.warn(
@@ -610,8 +635,8 @@ class Initialization:
                         stacklevel=2,
                     )
             elif initialization_type == "approximate_diffuse":
-                if approximate_diffuse_variance is not None:
-                    self.approximate_diffuse_variance = approximate_diffuse_variance
+                if approximate_diffuse_variance is None:
+                    approximate_diffuse_variance = self.approximate_diffuse_variance
             elif initialization_type == "stationary":
                 if constant is not None:
                     raise ValueError(
@@ -631,12 +656,27 @@ class Initialization:
                     f"Invalid constant vector; given shape {constant.shape!s}"
                     f" but require shape {(k_states,)!s}."
                 )
+
+            # Set the values only once they are validated, replacing a block
+            # of all the states
+            if index in self.blocks:
+                del self.blocks[index]
+                for i in index:
+                    self._initialization[i] = None
+            self.initialization_type = initialization_type
+            if initialization_type == "known":
+                self.stationary_cov = stationary_cov
+            elif initialization_type == "approximate_diffuse":
+                self.approximate_diffuse_variance = approximate_diffuse_variance
             self.constant = constant
         # Otherwise, if setting a sub-block, construct the new initialization
         # object
         else:
             if isinstance(initialization_type, Initialization):
                 init = initialization_type
+                if self.initialization_type is not None:
+                    # A global initialization of all the states is replaced
+                    self.unset(None)
             else:
                 if approximate_diffuse_variance is None:
                     approximate_diffuse_variance = self.approximate_diffuse_variance
@@ -664,6 +704,13 @@ class Initialization:
             an integer (to select a specific state), or None (to select all the
             states).
 
+            .. versionchanged:: 0.15.1
+
+               A 0-d integer array selects a state, as an int does. It
+               raised a ValueError. A bool is not an integer and raises a
+               ValueError: True selected state 1. An integer index equal to
+               `k_states` raises a ValueError, as in `set`. It did nothing.
+
         Notes
         -----
         Note that this specifically unsets initializations previously created
@@ -672,9 +719,9 @@ class Initialization:
         initialization. To unset all initializations (including both global and
         block level), use the `clear` method.
         """
-        if isinstance(index, (int, np.integer)):
+        if is_int_like(index, strict=True):
             index = int(index)
-            if index < 0 or index > self.k_states:
+            if index < 0 or index >= self.k_states:
                 raise ValueError("Invalid index.")
             index = (index, index + 1)
         elif index is None:

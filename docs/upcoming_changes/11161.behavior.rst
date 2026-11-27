@@ -1,0 +1,7 @@
+- :class:`~statsmodels.tsa.ardl.UECM` differenced integer exog
+  variables in their own dtype, which wraps around for unsigned
+  integers (also the nullable ``"UInt8"``, ... dtypes) and for
+  integer arrays whose differences do not fit in their type: a change
+  from 3 to 1 of a ``uint8`` variable was differenced as 254. Integer
+  variables are differenced as float, so results with such exog
+  change. :pr:`11161`

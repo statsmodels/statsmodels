@@ -248,7 +248,8 @@ class TestLowess:
         rs = np.random.RandomState(8437971)
         rfile = Path(rpath).joinpath("test_lowess_simple.csv")
         test_data = pd.read_csv(rfile)
-        y, x = test_data["y"], test_data["x"]
+        # Copies, since NaNs are set in y and x below
+        y, x = test_data["y"].copy(), test_data["x"].copy()
         target = lowess(y, x, is_sorted=True)
 
         # Test specifying exog_predict explicitly
@@ -303,3 +304,54 @@ def test_xvals_dtype():
     # Previously raised ValueError: Buffer dtype mismatch
     results_xvals = lowess(y, x, frac=0.4, xvals=x[:5])
     assert_allclose(results_xvals, np.zeros(5), atol=1e-12)
+
+
+@pytest.mark.parametrize("convert", [list, pd.Series, np.asarray])
+def test_lowess_array_like(convert):
+    x = np.linspace(0, 10, 21)
+    y = 2 + 3 * x
+    res = lowess(convert(y), convert(x), frac=0.5, it=0)
+    # a local linear regression reproduces a line
+    assert_allclose(res, np.column_stack([x, y]), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "endog, exog, name",
+    [
+        (np.ones((10, 1)), np.arange(10.0), "endog"),
+        (np.ones(10), np.arange(10.0)[:, None], "exog"),
+        (np.ones((1, 10)), np.arange(10.0)[None, :], "endog"),
+        (1.0, 2.0, "endog"),
+    ],
+    ids=["endog-column", "exog-column", "row", "scalar"],
+)
+def test_lowess_rejects_non_1d(endog, exog, name):
+    with pytest.raises(ValueError, match=f"{name} must have"):
+        lowess(endog, exog)
+
+
+@pytest.mark.parametrize(
+    "xvals, ndim",
+    [(np.array([[5.0], [10.0]]), 2), (np.array([[5.0, 10.0]]), 2), (5.0, 0)],
+    ids=["column", "row", "scalar"],
+)
+def test_lowess_rejects_non_1d_xvals(xvals, ndim):
+    # The message named exog_predict, which is not an argument of lowess
+    x = np.arange(20.0)
+    msg = f"xvals must have 1 dimension, but has {ndim}"
+    with pytest.raises(ValueError, match=msg):
+        lowess(np.sin(x), x, xvals=xvals)
+
+
+@pytest.mark.parametrize("convert", [list, pd.Series, np.asarray, tuple])
+def test_lowess_xvals_array_like(convert):
+    # Any 1-d array_like is accepted as xvals, and an int one gives the same
+    # fit as its float values
+    x = np.linspace(0, 10, 21)
+    y = 2 + 3 * x
+    xvals = [7, 1, 4]
+    res = lowess(y, x, frac=0.5, it=0, xvals=convert(xvals))
+    ref = lowess(y, x, frac=0.5, it=0, xvals=np.array(xvals, dtype=float))
+    assert_allclose(res, ref, rtol=1e-14)
+    # a local linear regression reproduces a line
+    assert_allclose(res, 2 + 3 * np.array(xvals, dtype=float), rtol=1e-10)

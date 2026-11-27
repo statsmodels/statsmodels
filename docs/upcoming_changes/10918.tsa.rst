@@ -1,0 +1,3 @@
+- :class:`~statsmodels.tsa.arima.specification.SARIMAXSpecification`
+  with a ``trend`` and no ``endog`` raised a ``ValueError`` from numpy.
+  :pr:`10918`

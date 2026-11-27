@@ -1,0 +1,6 @@
+- Correct docstrings in ``statsmodels.tsa.vector_ar``: ``IRAnalysis`` takes a
+  results instance and documents its attributes, ``subplot_params`` only uses
+  ``"fontsize"``, ``component`` and ``err_bands`` describe what the error band
+  methods accept, and ``LocalProjections`` documents its attributes, that
+  ``exog`` can be 1-d, and that no constant is added with ``trend="n"``.
+  :pr:`10939`

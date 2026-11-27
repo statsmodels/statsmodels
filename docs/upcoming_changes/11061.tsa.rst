@@ -1,0 +1,4 @@
+- ``hessian`` (with the default complex-step differentiation) and
+  ``transform_jacobian`` of state space models raised an
+  ``AttributeError`` for parameters given as a list or tuple.
+  :pr:`11061`

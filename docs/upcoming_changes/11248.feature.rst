@@ -1,0 +1,3 @@
+- :func:`~statsmodels.tools.validation.is_float_like` checks whether a value
+  is a scalar real number, using the same rule as
+  :func:`~statsmodels.tools.validation.float_like`. :pr:`11248`

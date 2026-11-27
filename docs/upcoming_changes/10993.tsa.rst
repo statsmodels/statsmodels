@@ -1,0 +1,3 @@
+- ``test_inst_causality`` of ``VARResults`` and ``VECMResults`` raised
+  when both the causing and the caused groups had more than one
+  variable. :pr:`10993`

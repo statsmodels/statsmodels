@@ -1,0 +1,6 @@
+- :class:`~statsmodels.tsa.ardl.UECM` raised "TypeError:
+  Categorical has no 'diff' method" for an exog DataFrame with a
+  categorical column. Categorical columns with numeric categories
+  are differenced as their values, which UECM and
+  :class:`~statsmodels.tsa.ardl.ARDL` use as the levels.
+  :pr:`11168`

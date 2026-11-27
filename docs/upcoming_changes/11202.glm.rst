@@ -1,0 +1,5 @@
+- With ``eql=True`` and zeros in ``endog``, the ``llf`` of a GLM with the
+  :class:`~statsmodels.genmod.families.family.Tweedie` family was ``+inf``,
+  ``aic`` was ``-inf`` and ``pseudo_rsquared`` was NaN with a warning. They
+  are now finite. The values for positive ``endog`` are unchanged.
+  :issue:`8136`, :pr:`11202`

@@ -1,0 +1,7 @@
+- :meth:`~statsmodels.tsa.ardl.UECM.predict`, and so ``predict``,
+  ``get_prediction`` and ``plot_predict`` of
+  :class:`~statsmodels.tsa.ardl.UECMResults`, ignored a replacement
+  ``exog`` or ``fixed`` and returned the predictions of the data
+  used to create the model. They are used, as in
+  :class:`~statsmodels.tsa.ardl.ARDL`, so that the predictions
+  with a replacement change. :pr:`11177`

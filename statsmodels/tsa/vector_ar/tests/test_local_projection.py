@@ -9,9 +9,12 @@ Projections. American Economic Review, 95(1), 161-182.
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pandas as pd
 import pytest
+from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.vector_ar.local_proj import (
     LocalProjections,
     LocalProjectionsResults,
@@ -589,3 +592,261 @@ def test_against_r_with_exog():
     assert_allclose(res.irfs[:, :, 0], r_irfs, atol=1e-6)
     assert_allclose(res.stderr[1:, :, 0], r_stderr[1:], atol=1e-6)
     assert res.stderr[0, 0, 0] < 1e-8
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [np.int64(1), np.int32(1), np.array(1)],
+    ids=["int64", "int32", "0d-array"],
+)
+def test_int_like_shock_idx(shock_idx):
+    # A NumPy integer or a 0-d integer array is a column index, as an int
+    # is. A 0-d array raised a TypeError. The list form, which takes the
+    # other branch, is the reference.
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    res = LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2).fit()
+    expected = LocalProjections(y, shock_idx=[1], lags=1, horizons=2).fit()
+    assert res.model.shock_idx == [1]
+    assert_allclose(res.irfs, expected.irfs, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [True, np.True_, 1.0, 1.5, np.float64(1.0), np.array(1.5), np.array(True), None],
+    ids=["True", "np.True_", "1.0", "1.5", "float64", "0d-float", "0d-bool", "None"],
+)
+def test_bool_float_shock_idx(shock_idx):
+    # A bool or a float is not a column index: True was column 1. These
+    # scalars raised "'float' object is not iterable" and the like
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    msg = r"shock_idx must be an int or a sequence of int, but it is "
+    with pytest.raises(TypeError, match=msg):
+        LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
+
+
+@pytest.mark.parametrize("shock_idx", ["1", "01", b"1"], ids=["1", "01", "bytes"])
+def test_str_shock_idx(shock_idx):
+    # A str was iterated by character, so the error said that it contained
+    # "1" (and "0" for "01") rather than that it is not an int
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    msg = rf"shock_idx must be an int or a sequence of int, but it is {shock_idx!r}"
+    with pytest.raises(TypeError, match=msg):
+        LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [np.array([0, 2]), [np.int64(0), np.int32(2)], [np.array(0), 2], range(0, 3, 2)],
+    ids=["array", "numpy-ints", "0d-array", "range"],
+)
+def test_shock_idx_sequence_int_like(shock_idx):
+    # Integers in any sequence are column indices. The list of ints is the
+    # reference.
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    res = LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2).fit()
+    expected = LocalProjections(y, shock_idx=[0, 2], lags=1, horizons=2).fit()
+    assert res.model.shock_idx == [0, 2]
+    assert_allclose(res.irfs, expected.irfs, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [[1.5], [1.0], np.array([0.0, 1.0]), [True], [0, np.True_], ["1"]],
+    ids=["1.5", "1.0", "float-array", "True", "np.True_", "str"],
+)
+def test_shock_idx_sequence_not_int(shock_idx):
+    # The values were passed to int(), so [1.5], [True] and ["1"] were all
+    # the column index 1
+    y = np.random.default_rng(20261126).standard_normal((80, 3))
+    with pytest.raises(TypeError, match="shock_idx must be an int or a sequence"):
+        LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=2)
+
+
+# ---------------------------------------------------------------------------
+# Contracts of the documented parameters, attributes and methods
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("form", ["list", "dataframe", "int"])
+def test_endog_input_forms(form):
+    rng = np.random.default_rng(1121)
+    y = rng.standard_normal((120, 3))
+    if form == "int":
+        y = np.round(10 * y)
+    index = pd.date_range("2000-01-01", periods=120, freq="MS")
+    endog = {
+        "list": y.tolist(),
+        "dataframe": pd.DataFrame(y, index=index, columns=["a", "b", "c"]),
+        "int": y.astype(np.int64),
+    }[form]
+    expected = LocalProjections(y, shock_idx=1, lags=2, horizons=4).fit()
+    lp = LocalProjections(endog, shock_idx=1, lags=2, horizons=4)
+    res = lp.fit()
+    names = ["a", "b", "c"] if form == "dataframe" else ["y0", "y1", "y2"]
+    assert lp.endog_names == names
+    assert lp.shock_names == [names[1]]
+    assert isinstance(lp.endog, np.ndarray)
+    assert lp.endog.dtype == np.float64
+    assert_allclose(res.irfs, expected.irfs, rtol=1e-10)
+    # atol: the h = 0 own response is an exact fit, its standard error is
+    # zero up to rounding
+    atol = 1e-12 * expected.stderr.max()
+    assert_allclose(res.stderr, expected.stderr, rtol=1e-10, atol=atol)
+
+
+def test_endog_series_matches_1d():
+    rng = np.random.default_rng(1122)
+    y = rng.standard_normal(150)
+    index = pd.date_range("2000-01-01", periods=150, freq="MS")
+    expected = LocalProjections(y, lags=1, horizons=3).fit()
+    lp = LocalProjections(pd.Series(y, index=index, name="gdp"), lags=1, horizons=3)
+    res = lp.fit()
+    assert lp.endog.shape == (150, 1)
+    assert lp.endog_names == ["y0"]
+    assert_allclose(res.irfs, expected.irfs, rtol=1e-10)
+    # atol: the h = 0 response is an exact fit, see test_endog_input_forms
+    atol = 1e-12 * expected.stderr.max()
+    assert_allclose(res.stderr, expected.stderr, rtol=1e-10, atol=atol)
+
+
+@pytest.mark.parametrize(
+    "shock_idx",
+    [2, np.int64(2), [2], (2,), np.array([2])],
+    ids=["int", "int64", "list", "tuple", "ndarray"],
+)
+def test_shock_idx_forms(shock_idx):
+    rng = np.random.default_rng(1123)
+    y = rng.standard_normal((100, 3))
+    expected = LocalProjections(y, shock_idx=2, lags=1, horizons=3).fit()
+    lp = LocalProjections(y, shock_idx=shock_idx, lags=1, horizons=3)
+    assert lp.shock_idx == [2]
+    assert_allclose(lp.fit().irfs, expected.irfs, rtol=1e-12)
+
+
+def _lp_by_hand(y, exog, shock_idx, lags, horizons, trend):
+    # Direct construction of the h-step regressions, with an uncentered
+    # trend: the centering of the trend in the code changes only the
+    # constant, not the coefficient on the shock or its standard error
+    nobs = y.shape[0]
+    t = np.arange(lags, nobs - horizons)
+    irfs = np.empty((horizons + 1, y.shape[1]))
+    stderr = np.empty_like(irfs)
+    cols = [y[t, shock_idx]] + [
+        y[t - lag, i] for lag in range(1, lags + 1) for i in range(y.shape[1])
+    ]
+    if exog is not None:
+        cols.append(exog[t])
+    if trend in ("c", "ct"):
+        cols.append(np.ones(t.shape[0]))
+    if trend == "ct":
+        cols.append(t.astype(float))
+    x = np.column_stack(cols)
+    for h in range(horizons + 1):
+        # documented automatic bandwidth
+        nlags = max(h, int(np.ceil(4 * (max(h, 1) / 100) ** (2 / 9))))
+        for i in range(y.shape[1]):
+            res = OLS(y[t + h, i], x).fit(
+                cov_type="HAC", cov_kwds={"maxlags": nlags, "use_correction": False}
+            )
+            irfs[h, i] = res.params[0]
+            stderr[h, i] = res.bse[0]
+    return irfs, stderr
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct"])
+@pytest.mark.parametrize("with_exog", [False, True])
+def test_trend_exog_and_bandwidth_by_hand(trend, with_exog):
+    y, _ = _make_var1(T=160, n=2, seed=1124)
+    rng = np.random.default_rng(1125)
+    exog = rng.standard_normal(160) if with_exog else None
+    res = LocalProjections(
+        y, shock_idx=1, lags=2, horizons=5, exog=exog, trend=trend
+    ).fit()
+    irfs, stderr = _lp_by_hand(y, exog, 1, 2, 5, trend)
+    assert_allclose(res.irfs[:, :, 0], irfs, rtol=1e-8)
+    # h = 0 own response is an exact fit with a zero standard error
+    assert_allclose(res.stderr[1:, :, 0], stderr[1:], rtol=1e-6)
+    assert_allclose(res.stderr[0, 0, 0], stderr[0, 0], rtol=1e-6)
+
+
+@pytest.mark.parametrize("alpha", [0.05, 0.32])
+def test_conf_int_closed_form(alpha):
+    y, _ = _make_var1(T=200)
+    res = LocalProjections(y, shock_idx=[0, 1], lags=1, horizons=4).fit()
+    q = stats.norm.ppf(1 - alpha / 2)
+    ci = res.conf_int(alpha=alpha)
+    assert_allclose(ci[..., 0], res.irfs - q * res.stderr, rtol=1e-12)
+    assert_allclose(ci[..., 1], res.irfs + q * res.stderr, rtol=1e-12)
+
+
+def test_cumulative_effects_and_attributes():
+    y, _ = _make_var1(T=200)
+    lp = LocalProjections(y, shock_idx=[0, 1], lags=3, horizons=6)
+    res = lp.fit()
+    assert_allclose(res.cumulative_effects(), np.cumsum(res.irfs, axis=0), rtol=1e-12)
+    assert res.model is lp
+    assert res.horizons == 6
+    assert res.nobs == 200 - 3 - 6
+    assert res.irfs.shape == res.stderr.shape == (7, 2, 2)
+    assert repr(res) == (
+        "LocalProjectionsResults(n_endog=2, n_shock=2, horizons=6, nobs=191)"
+    )
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_irfs_drawn(close_figures):
+    rng = np.random.default_rng(1126)
+    y = pd.DataFrame(rng.standard_normal((150, 3)), columns=["a", "b", "c"])
+    res = LocalProjections(y, shock_idx=[0, 2], lags=1, horizons=3).fit()
+    alpha = 0.2
+    ci = res.conf_int(alpha=alpha)
+
+    def check(ax, i, j):
+        shock = ["a", "c"][j]
+        assert ax.get_title() == f"{shock} → {['a', 'b', 'c'][i]}"
+        assert_allclose(ax.lines[0].get_ydata(), res.irfs[:, i, j], rtol=1e-12)
+        vertices = ax.collections[0].get_paths()[0].vertices
+        for h in range(4):
+            band = vertices[np.isclose(vertices[:, 0], h), 1]
+            assert_allclose(band.min(), ci[h, i, j, 0], rtol=1e-12)
+            assert_allclose(band.max(), ci[h, i, j, 1], rtol=1e-12)
+
+    fig = res.plot_irfs(alpha=alpha, n_cols=4)
+    assert len(fig.axes) == 8
+    assert [ax.get_visible() for ax in fig.axes] == [True] * 6 + [False] * 2
+    assert_allclose(fig.get_size_inches(), [16, 6])
+    pairs = [(i, j) for j in range(2) for i in range(3)]
+    for ax, (i, j) in zip(fig.axes, pairs, strict=False):
+        check(ax, i, j)
+
+    # An int impulse is the position in shock_idx, a str one the name
+    for impulse in (1, "c"):
+        fig = res.plot_irfs(impulse=impulse, alpha=alpha, figsize=(5, 4))
+        assert len(fig.axes) == 3
+        assert_allclose(fig.get_size_inches(), [5, 4])
+        for i, ax in enumerate(fig.axes):
+            check(ax, i, 1)
+    for response in (1, "b"):
+        fig = res.plot_irfs(response=response, alpha=alpha)
+        assert len(fig.axes) == 2
+        for j, ax in enumerate(fig.axes):
+            check(ax, 1, j)
+
+
+@pytest.mark.parametrize(
+    "convert",
+    [lambda a: a, lambda a: a.astype(np.int64), lambda a: a.tolist()],
+    ids=["float", "int64", "list"],
+)
+def test_exog_is_2d_float(convert):
+    # array_like converts exog to a 2-d float array, so an integer array or a
+    # list gives the same exog and fit as the float array
+    rng = np.random.default_rng(20261127)
+    y = rng.standard_normal((80, 2))
+    exog = rng.integers(0, 5, size=(80, 2)).astype(float)
+    lp = LocalProjections(y, lags=1, horizons=2, exog=convert(exog))
+    assert lp.exog.dtype == np.float64
+    assert_allclose(lp.exog, exog, rtol=0)
+    expected = LocalProjections(y, lags=1, horizons=2, exog=exog).fit()
+    assert_allclose(lp.fit().irfs, expected.irfs, rtol=1e-12)

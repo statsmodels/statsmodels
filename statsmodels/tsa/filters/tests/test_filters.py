@@ -1196,8 +1196,6 @@ CONVOLUTION_2D_CASES = [
     for kind in ("1d", "column", "2d")
     for nlags in (1, 2, 3, 4)
     for nsides in (1, 2)
-    # a (1, nvar) filter is not a separate lag polynomial per column
-    if not (kind == "2d" and nlags == 1)
 ]
 
 
@@ -2241,3 +2239,94 @@ def test_miso_lfilter_useic_true_deprecated(nlags, useic):
     expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
     assert_allclose(inp, expected_inp, rtol=1e-12)
     assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize("nvar", [1, 2, 3])
+def test_convolution_filter_row_filter(nvar, nsides):
+    # a (1, nvar) filter has one coefficient per column of x. It was
+    # convolved across the columns instead, which returned one column, 3 * x0
+    # + 2 * x1 = [[23], [46], ...] for nvar = 2. Each column of x is
+    # multiplied by its own coefficient, with no NaN padding for one lag.
+    t = np.arange(1.0, 7.0)
+    x = t[:, None] * np.array([1.0, 10.0, 100.0])[:nvar]
+    filt = np.array([[2.0, 3.0, 4.0][:nvar]])
+    expected = t[:, None] * np.array([2.0, 30.0, 400.0])[:nvar]
+    res = convolution_filter(x, filt, nsides=nsides)
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, expected, rtol=1e-12)
+    # a DataFrame raised, since the result had one column
+    columns = ["a", "b", "c"][:nvar]
+    index = date_range("2000-01-01", periods=6)
+    res_df = convolution_filter(
+        DataFrame(x, columns=columns, index=index), filt, nsides=nsides
+    )
+    assert isinstance(res_df, DataFrame)
+    assert list(res_df.columns) == columns
+    assert_index_equal(res_df.index, index)
+    assert_allclose(res_df.to_numpy(), expected, rtol=1e-12)
+
+
+CONVOLUTION_FILT_COLUMNS = "filt must have one column, or one column per column"
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize("case", ["fewer-columns", "one-observation"])
+def test_convolution_filter_row_filter_columns_deprecated(case, nsides):
+    # a filter with one row and more than one column, but not one column per
+    # column of x, is not one coefficient per column. It is still convolved
+    # across the columns of x as before, which warns.
+    t = np.arange(1.0, 7.0)
+    if case == "fewer-columns":
+        # column c of the result is 3 * x[:, c] + 2 * x[:, c + 1]
+        x = t[:, None] * np.array([1.0, 10.0, 100.0])
+        filt = [[2.0, 3.0]]
+        expected = t[:, None] * np.array([23.0, 230.0])
+    else:
+        # the valid part of the convolution of [1, 10] and [2, 3, 4]
+        x = np.array([[1.0, 10.0]])
+        filt = [[2.0, 3.0, 4.0]]
+        expected = np.array([[2.0 * 10 + 3.0 * 1, 3.0 * 10 + 4.0 * 1]])
+    with pytest.warns(FutureWarning, match=CONVOLUTION_FILT_COLUMNS):
+        res = convolution_filter(x, filt, nsides=nsides)
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+def test_convolution_filter_extra_filter_columns_deprecated(nsides):
+    # a 2-d filter with more columns than x ignored the extra columns. It
+    # warns, and each column of x is still filtered with its column of filt,
+    # as the 1-d filter path filters a 1-d series
+    rng = np.random.default_rng(20261121)
+    # integer data, so that every sum is exact
+    x = rng.integers(-9, 10, size=(25, 2)).astype(float)
+    filt = rng.integers(-5, 6, size=(3, 3)).astype(float)
+    index = date_range("2000-01-01", periods=25)
+    df = DataFrame(x, columns=["a", "b"], index=index)
+    for x_in in (x, df):
+        with pytest.warns(FutureWarning, match=CONVOLUTION_FILT_COLUMNS):
+            res = convolution_filter(x_in, filt, nsides=nsides)
+        assert res.shape == x.shape
+        for i in range(2):
+            expected = convolution_filter(x[:, i], filt[:, i], nsides=nsides)
+            # atol keeps a sum that cancels to zero from failing if scipy
+            # convolves by FFT
+            assert_allclose(np.asarray(res)[:, i], expected, rtol=1e-12, atol=1e-10)
+    assert list(res.columns) == ["a", "b"]
+    assert_index_equal(res.index, index)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize(
+    "x_shape, filt_shape",
+    [((25, 3), (3, 2)), ((25, 2), (1, 3))],
+    ids=["fewer-columns", "row-more-columns"],
+)
+def test_convolution_filter_filter_columns_raises(x_shape, filt_shape, nsides):
+    # a filter with more than one row and fewer columns than x raised an
+    # IndexError, and one with one row and more columns than x raised an
+    # unclear ValueError from scipy
+    x = np.ones(x_shape)
+    filt = np.ones(filt_shape)
+    with pytest.raises(ValueError, match=CONVOLUTION_FILT_COLUMNS):
+        convolution_filter(x, filt, nsides=nsides)

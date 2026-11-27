@@ -14,20 +14,31 @@ License: Simplified-BSD
 """
 import contextlib
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy import linalg
 
 from statsmodels import datasets
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tsa.statespace import mlemodel, sarimax, varmax
-from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
+from statsmodels.tsa.statespace import kalman_smoother, mlemodel, sarimax, varmax
+from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_UNIVARIATE,
+    INVERT_UNIVARIATE,
+    SOLVE_LU,
+)
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_ALTERNATIVE,
     SMOOTH_CLASSICAL,
     SMOOTH_UNIVARIATE,
+    SMOOTHER_DISTURBANCE,
+    SMOOTHER_STATE,
+    SMOOTHER_STATE_COV,
+    KalmanSmoother,
+    SmootherResults,
 )
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
@@ -1636,3 +1647,652 @@ def test_news_invalid(missing, filter_univariate, tvp):
         msg = "time-varying design while `previous` does not"
     with pytest.raises(ValueError, match=msg):
         res2.news(res, t=mod.nobs - 1)
+
+
+@pytest.mark.parametrize("extend_first", [False, True])
+@pytest.mark.parametrize("lag", [-2, -3])
+def test_smoothed_state_autocovariances_cache_extend_kwargs(lag, extend_first):
+    # For lag < -1 the default end depends on whether extend_kwargs is given
+    # (nobs + lag + 1 without, nobs with), also for a time-invariant model,
+    # and the cached results do not depend on the order of the calls
+    rng = np.random.default_rng(20261122)
+    nobs = 30
+    mod = mlemodel.MLEModel(rng.standard_normal((nobs, 2)), k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[0.5, 0.2], [0.2, 0.4]])
+    mod.ssm.initialize_known(np.zeros(2), np.eye(2))
+    res = mod.ssm.smooth()
+    if extend_first:
+        extended = res.smoothed_state_autocovariance(lag, extend_kwargs={})
+        default = res.smoothed_state_autocovariance(lag)
+    else:
+        default = res.smoothed_state_autocovariance(lag)
+        extended = res.smoothed_state_autocovariance(lag, extend_kwargs={})
+    assert default.shape == (2, 2, nobs + lag + 1)
+    assert extended.shape == (2, 2, nobs)
+
+    # Reference: Cov(alpha_t, alpha_s) from the joint posterior covariance of
+    # the states (CFA simulation smoother) in the sample and, beyond it, from
+    # the transition: Cov(alpha_t, alpha_{s + 1}) = Cov(alpha_t, alpha_s) T'
+    cfa = mod.simulation_smoother(method="cfa")
+    cfa.simulate(variates=np.zeros((2, nobs)))
+    posterior_cov = cfa.posterior_cov
+    desired = np.zeros((2, 2, nobs))
+    for t in range(nobs):
+        s = t - lag
+        last = min(s, nobs - 1)
+        block = posterior_cov[2 * t : 2 * t + 2, 2 * last : 2 * last + 2]
+        transition = np.linalg.matrix_power(mod["transition"].T, s - last)
+        desired[..., t] = block @ transition
+    # atol: some autocovariances are close to zero
+    assert_allclose(extended, desired, rtol=1e-8, atol=1e-12)
+    assert_allclose(default, desired[..., : nobs + lag + 1], rtol=1e-8, atol=1e-12)
+
+
+SMOOTH_ARGUMENTS_RESULTS = [
+    "scaled_smoothed_estimator",
+    "scaled_smoothed_estimator_cov",
+    "smoothing_error",
+    "smoothed_state",
+    "smoothed_state_cov",
+    "smoothed_state_autocov",
+    "smoothed_measurement_disturbance",
+    "smoothed_state_disturbance",
+    "smoothed_measurement_disturbance_cov",
+    "smoothed_state_disturbance_cov",
+]
+
+
+def _smooth_arguments_model():
+    # Bivariate model with correlated states and a diagonal observation
+    # covariance (so the univariate filter does not diagonalize it)
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal((40, 2)).cumsum(0) * 0.1 + rng.standard_normal((40, 2))
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["state_intercept"] = np.array([0.05, 0.02])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[0.5, 0.2], [0.2, 0.4]])
+    mod.ssm.initialize_known(np.array([0.3, -0.1]), np.eye(2))
+    return mod
+
+
+@pytest.mark.parametrize("use_ssm", [True, False])
+def test_smooth_complex_step(use_ssm):
+    # complex_step is passed on to the Kalman filter, so the stationary
+    # initialization of the AR(2) is complex-step safe and the derivative of
+    # the loglikelihood and of the smoothed state agree with central finite
+    # differences (the loglikelihood derivative also with filter())
+    rng = np.random.default_rng(20261122)
+    mod = sarimax.SARIMAX(rng.standard_normal(50), order=(2, 0, 0))
+    params = np.array([0.5, 0.2, 1.0])
+    # The step of MLEModel.score. The stationary initialization uses a
+    # complex Schur decomposition, whose intermediate results can have
+    # imaginary parts of order one (depending on the LAPACK library, e.g. on
+    # macOS), so their rounding error (1e-16) dominates a tiny step such as
+    # 1e-20; with this step it is 1e-8 relative
+    h = 1e-8
+    cs_params = params + np.array([h * 1j, 0, 0])
+    if use_ssm:
+        # As in MLEModel.smooth, the complex step needs an inversion method
+        # without the (conjugating) Cholesky factorization
+        mod.update(cs_params, complex_step=True)
+        res = mod.ssm.smooth(
+            complex_step=True, inversion_method=INVERT_UNIVARIATE | SOLVE_LU
+        )
+    else:
+        res = mod.smooth(cs_params, complex_step=True)
+    llf_derivative = np.imag(res.llf) / h
+    state_derivative = np.imag(res.smoothed_state) / h
+
+    filtered = mod.filter(cs_params, complex_step=True)
+    assert_allclose(llf_derivative, np.imag(filtered.llf) / h, rtol=1e-10)
+
+    # Central differences; their error is about 1e-9 relative here, so the
+    # tolerance catches a wrong derivative (it was 11% off) but not rounding
+    eps = 1e-6
+    step = np.array([eps, 0, 0])
+    llf_fd = (mod.loglike(params + step) - mod.loglike(params - step)) / (2 * eps)
+    assert_allclose(llf_derivative, llf_fd, rtol=1e-6)
+    state_plus = mod.smooth(params + step).smoothed_state
+    state_minus = mod.smooth(params - step).smoothed_state
+    state_fd = (state_plus - state_minus) / (2 * eps)
+    # atol: some derivatives are close to zero, so scale by the largest one.
+    # The first period is included: the results re-initialized the state
+    # without the complex step before smoothing, and the smoother reads the
+    # initial state covariance again in the first period.
+    atol = 1e-6 * np.max(np.abs(state_fd))
+    assert_allclose(state_derivative, state_fd, rtol=1e-6, atol=atol)
+
+
+def test_smooth_smooth_method_argument():
+    # smooth_method selects the smoothing method for this call only. The
+    # univariate smoother needs the univariate filter, and the univariate
+    # filter needs it: a method that cannot be used was ignored on main (the
+    # model's method was used), and still is, with a FutureWarning
+    conventional = _smooth_arguments_model().ssm.smooth()
+    mod = _smooth_arguments_model()
+    with pytest.warns(FutureWarning, match="smooth_method cannot be used"):
+        res = mod.ssm.smooth(smooth_method=SMOOTH_UNIVARIATE)
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(
+            getattr(res, name), getattr(conventional, name), rtol=1e-13
+        )
+    univariate = _smooth_arguments_model()
+    univariate.ssm.filter_univariate = True
+    with pytest.warns(FutureWarning, match="smooth_method cannot be used"):
+        res = univariate.ssm.smooth(
+            smooth_method=kalman_smoother.SMOOTH_CONVENTIONAL
+        )
+    desired = _smooth_arguments_model()
+    desired.ssm.filter_univariate = True
+    desired = desired.ssm.smooth()
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-13)
+
+    # The methods that can be used do not warn
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for method in [0, SMOOTH_ALTERNATIVE, SMOOTH_CLASSICAL]:
+            res = _smooth_arguments_model().ssm.smooth(smooth_method=method)
+            assert_allclose(
+                res.smoothed_state, conventional.smoothed_state, rtol=1e-10
+            )
+        for method in [0, SMOOTH_UNIVARIATE]:
+            univariate = _smooth_arguments_model()
+            univariate.ssm.filter_univariate = True
+            res = univariate.ssm.smooth(smooth_method=method)
+            assert_allclose(
+                res.smoothed_state, desired.smoothed_state, rtol=1e-13
+            )
+
+    # A model set to the conventional smoother cannot smooth the output of the
+    # univariate filter, unless the argument selects the univariate smoother
+    mod = _smooth_arguments_model()
+    mod.ssm.filter_univariate = True
+    mod.ssm.smooth_method = kalman_smoother.SMOOTH_CONVENTIONAL
+    with pytest.raises(ValueError, match="Invalid smoothing method"):
+        mod.ssm.smooth()
+    res = mod.ssm.smooth(smooth_method=SMOOTH_UNIVARIATE)
+    assert mod.ssm.smooth_method == kalman_smoother.SMOOTH_CONVENTIONAL
+
+    # The default method for the univariate filter is the univariate smoother
+    default = _smooth_arguments_model()
+    default.ssm.filter_univariate = True
+    desired = default.ssm.smooth()
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-13)
+
+    # and it agrees with the conventional (multivariate) filter and smoother
+    conventional = _smooth_arguments_model().ssm.smooth()
+    assert_allclose(res.smoothed_state, conventional.smoothed_state, rtol=1e-10)
+    assert_allclose(
+        res.smoothed_state_cov, conventional.smoothed_state_cov, rtol=1e-10
+    )
+
+
+def test_smooth_filter_method_argument():
+    # filter_method is passed to the Kalman filter, as the other keyword
+    # arguments are (it raised a TypeError: multiple values for filter_method)
+    mod = _smooth_arguments_model()
+    res = mod.ssm.smooth(filter_method=FILTER_UNIVARIATE)
+    assert np.all(res.univariate_filter == 1)
+
+    desired_mod = _smooth_arguments_model()
+    desired_mod.ssm.filter_univariate = True
+    desired = desired_mod.ssm.smooth()
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"results": kalman_smoother.SmootherResults},
+        {"run_filter": False},
+        {"run_filter": True},
+        {"prefix": "d"},
+        {"prefix": "s"},
+    ],
+)
+def test_smooth_unused_arguments_deprecated(kwargs):
+    # results, run_filter and prefix have no effect: they warn and the output
+    # is that of a call without them
+    mod = _smooth_arguments_model()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        desired = mod.ssm.smooth()
+    name = next(iter(kwargs))
+    with pytest.warns(FutureWarning, match=f"{name} has no effect") as record:
+        res = mod.ssm.smooth(**kwargs)
+    # The warning points to the caller
+    assert record[0].filename == __file__
+    assert type(res) is kalman_smoother.SmootherResults
+    assert res.smoothed_state.dtype == np.float64
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-14)
+
+
+@pytest.mark.parametrize("method", ["filter", "smooth"])
+def test_complex_step_initial_state_cov(method):
+    # The results re-initialized the state without the complex step after
+    # filtering, so the complex-step derivative of their initial state
+    # covariance was wrong (and of the first period of the smoothed state
+    # covariance, which the smoother computes from it). With measurement
+    # error, the first observation does not pin down the state
+    rng = np.random.default_rng(20261122)
+    mod = sarimax.SARIMAX(
+        rng.standard_normal(50), order=(2, 0, 0), measurement_error=True
+    )
+    params = np.array([0.5, 0.2, 0.5, 1.0])
+    # The step of MLEModel.score (a tiny step is dominated by rounding; see
+    # test_smooth_complex_step)
+    h = 1e-8
+    cs_params = params + np.array([h * 1j, 0, 0, 0])
+    res = getattr(mod, method)(cs_params, complex_step=True)
+    results = res.smoother_results if method == "smooth" else res.filter_results
+
+    # The stationary covariance of the AR(2) state from scipy, and its central
+    # differences (error about 1e-10 relative here; the derivative was wrong
+    # in every element, by up to 100%)
+    def stationary_cov(phi1):
+        transition = np.array([[phi1, 1.0], [params[1], 0.0]])
+        selected_cov = np.array([[params[3], 0.0], [0.0, 0.0]])
+        return linalg.solve_discrete_lyapunov(transition, selected_cov)
+
+    eps = 1e-6
+    cov_plus = stationary_cov(params[0] + eps)
+    cov_minus = stationary_cov(params[0] - eps)
+    assert_allclose(
+        np.real(results.initial_state_cov), stationary_cov(params[0]), rtol=1e-12
+    )
+    assert_allclose(
+        np.imag(results.initial_state_cov) / h,
+        (cov_plus - cov_minus) / (2 * eps),
+        rtol=1e-6,
+    )
+
+    if method == "smooth":
+        step = np.array([eps, 0, 0, 0])
+        plus = mod.smooth(params + step).smoothed_state_cov[:, :, 0]
+        minus = mod.smooth(params - step).smoothed_state_cov[:, :, 0]
+        assert_allclose(
+            np.imag(res.smoothed_state_cov[:, :, 0]) / h,
+            (plus - minus) / (2 * eps),
+            rtol=1e-6,
+        )
+
+
+def test_results_of_uninitialized_statespace():
+    # A results object for a model whose compiled statespace object exists
+    # (simulation_smoother creates it) but has not been initialized yet still
+    # initializes it, and stores the stationary covariance of the AR(2) state
+    rng = np.random.default_rng(20261122)
+    mod = sarimax.SARIMAX(rng.standard_normal(50), order=(2, 0, 0))
+    params = np.array([0.5, 0.2, 1.0])
+    mod.update(params)
+    mod.simulation_smoother()
+    res = mod.ssm.results_class(mod.ssm)
+
+    transition = np.array([[params[0], 1.0], [params[1], 0.0]])
+    selected_cov = np.array([[params[2], 0.0], [0.0, 0.0]])
+    desired = linalg.solve_discrete_lyapunov(transition, selected_cov)
+    assert_allclose(res.initial_state_cov, desired, rtol=1e-12)
+
+
+def correlated_model(diffuse=False, state_cov=None, initial_state_cov=None):
+    # Bivariate model with correlated states and non-zero intercepts, so that
+    # no entry of the smoother output is zero by construction. The diagonal
+    # observation covariance keeps the univariate (diffuse) filter from
+    # diagonalizing it.
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal((40, 2)).cumsum(0) * 0.1 + rng.standard_normal((40, 2))
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["state_intercept"] = np.array([0.05, 0.02])
+    mod["selection"] = np.eye(2)
+    if state_cov is None:
+        state_cov = np.array([[0.5, 0.2], [0.2, 0.4]])
+    mod["state_cov"] = state_cov
+    if diffuse:
+        mod.ssm.initialize_diffuse()
+    else:
+        if initial_state_cov is None:
+            initial_state_cov = np.eye(2)
+        mod.ssm.initialize_known(np.array([0.3, -0.1]), initial_state_cov)
+    return mod
+
+
+SMOOTHER_RESULTS = [
+    "scaled_smoothed_estimator",
+    "scaled_smoothed_estimator_cov",
+    "smoothing_error",
+    "smoothed_state",
+    "smoothed_state_cov",
+    "smoothed_state_autocov",
+    "smoothed_measurement_disturbance",
+    "smoothed_state_disturbance",
+    "smoothed_measurement_disturbance_cov",
+    "smoothed_state_disturbance_cov",
+]
+
+
+@pytest.mark.parametrize(
+    "smooth_method, flag",
+    [(SMOOTH_ALTERNATIVE, "smooth_alternative"), (SMOOTH_CLASSICAL, "smooth_classical")],
+)
+def test_exact_diffuse_alternative_classical_smoothers(smooth_method, flag):
+    # In the exact diffuse periods the alternative and classical smoothers use
+    # the diffuse recursions; all output equals the conventional smoother
+    desired = correlated_model(diffuse=True).ssm.smooth()
+    assert desired.nobs_diffuse > 0
+
+    mod = correlated_model(diffuse=True)
+    mod.ssm.set_smooth_method(**{flag: True})
+    assert mod.ssm.smooth_method == smooth_method
+    res = mod.ssm.smooth()
+    assert res.nobs_diffuse == desired.nobs_diffuse
+    for name in SMOOTHER_RESULTS:
+        actual = getattr(res, name)
+        expected = getattr(desired, name)
+        if name == "smoothing_error":
+            # The diffuse smoother does not define the smoothing error in the
+            # diffuse periods (the classical smoother fills them)
+            actual = actual[:, desired.nobs_diffuse :]
+            expected = expected[:, desired.nobs_diffuse :]
+        # The recursions differ in rounding, about 1e-11 here for entries of
+        # order one; atol covers entries that are zero in exact arithmetic
+        # (e.g. the scaled smoothed estimator after the last period)
+        assert_allclose(actual, expected, rtol=1e-8, atol=1e-9)
+
+
+def test_classical_smoother_singular_predicted_state_cov():
+    # The second state is deterministic, so its predicted variance is exactly
+    # zero and the classical smoother cannot invert the predicted state cov
+    kwargs = dict(
+        state_cov=np.diag([0.5, 0.0]), initial_state_cov=np.diag([1.0, 0.0])
+    )
+    mod = correlated_model(**kwargs)
+    # The conventional smoother handles it: the deterministic state is known
+    res = mod.ssm.smooth()
+    assert_allclose(res.smoothed_state_cov[1, 1], 0.0, atol=1e-12)
+
+    mod = correlated_model(**kwargs)
+    mod.ssm.smooth_classical = True
+    with pytest.raises(
+        np.linalg.LinAlgError, match="Singular predicted state covariance"
+    ):
+        mod.ssm.smooth()
+
+
+@pytest.mark.parametrize(
+    "option, match",
+    [
+        ("memory_no_predicted", "without all predicted states"),
+        ("memory_no_gain", "without all Kalman gains"),
+        ("memory_no_smoothing", "without all smoothing variables"),
+    ],
+)
+def test_smooth_conserve_memory_raises(option, match):
+    mod = correlated_model()
+    mod.ssm.set_conserve_memory(**{option: True})
+    # Filtering alone works
+    assert np.isfinite(mod.ssm.loglike())
+    with pytest.raises(ValueError, match=match):
+        mod.ssm.smooth()
+
+
+def test_smooth_univariate_requires_univariate_filter():
+    mod = correlated_model()
+    mod.ssm.smooth_univariate = True
+    with pytest.raises(ValueError, match="can only use univariate smoothing"):
+        mod.ssm.smooth()
+
+
+def test_smooth_invalid_smooth_method():
+    mod = correlated_model()
+    mod.ssm.smooth_method = 0x10
+    with pytest.raises(NotImplementedError, match="Smoother method not available"):
+        mod.ssm.smooth()
+
+
+def test_kalman_smoother_results_class():
+    class CustomSmootherResults(SmootherResults):
+        pass
+
+    mod = correlated_model()
+    desired = mod.ssm.smooth()
+    names = [
+        "design",
+        "obs_intercept",
+        "obs_cov",
+        "transition",
+        "state_intercept",
+        "selection",
+        "state_cov",
+    ]
+    ssm = KalmanSmoother(
+        2,
+        2,
+        results_class=CustomSmootherResults,
+        **{name: mod[name] for name in names},
+    )
+    ssm.bind(np.ascontiguousarray(mod.endog))
+    ssm.initialize_known(np.array([0.3, -0.1]), np.eye(2))
+    res = ssm.smooth()
+    assert type(res) is CustomSmootherResults
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-12)
+
+
+SMOOTHER_OUTPUT_ATTRIBUTES = {
+    SMOOTHER_STATE: ["scaled_smoothed_estimator", "smoothed_state"],
+    SMOOTHER_STATE_COV: ["scaled_smoothed_estimator_cov", "smoothed_state_cov"],
+    SMOOTHER_DISTURBANCE: [
+        "scaled_smoothed_estimator",
+        "smoothing_error",
+        "smoothed_measurement_disturbance",
+        "smoothed_state_disturbance",
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    "smoother_output", list(SMOOTHER_OUTPUT_ATTRIBUTES), ids=["state", "cov", "dist"]
+)
+def test_smoother_output_subset(smoother_output):
+    # Only the requested output is computed and stored; it equals the output
+    # of the full smoother, and everything else is None
+    desired = correlated_model().ssm.smooth()
+
+    mod = correlated_model()
+    mod.ssm.smoother_output = smoother_output
+    res = mod.ssm.smooth()
+    computed = SMOOTHER_OUTPUT_ATTRIBUTES[smoother_output]
+    for name in SMOOTHER_RESULTS:
+        if name in computed:
+            assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-12)
+        else:
+            assert getattr(res, name) is None
+    if "scaled_smoothed_estimator" in computed:
+        assert_allclose(
+            res.scaled_smoothed_estimator_presample,
+            desired.scaled_smoothed_estimator_presample,
+            rtol=1e-12,
+        )
+    else:
+        assert not hasattr(res, "scaled_smoothed_estimator_presample")
+
+    if smoother_output == SMOOTHER_STATE_COV:
+        assert_allclose(
+            res.smoothed_state_autocovariance(0),
+            desired.smoothed_state_cov,
+            rtol=1e-12,
+        )
+    else:
+        with pytest.raises(RuntimeError, match="Cannot return smoothed state cov"):
+            res.smoothed_state_autocovariance(0)
+
+
+def test_smoothed_state_autocovariance_forward_default_end():
+    # In a time-varying model without `extend_kwargs`, Cov(t, t + 2) is only
+    # available through period nobs - 2, so the default `end` is nobs - 1
+    mod, res = get_acov_model(None, False, True)
+    desired = res.smoothed_state_cov.transpose(2, 0, 1)[:, 4:6, :2]
+
+    acov = res.smoothed_state_autocovariance(-2)
+    assert_equal(acov.shape, (mod.k_states, mod.k_states, mod.nobs - 1))
+    acov = acov.transpose(2, 0, 1)
+    assert_allclose(acov[:-1, :2, :2], desired[2:], rtol=1e-6, atol=1e-10)
+    # The last one, Cov(nobs - 2, nobs), uses the predicted state cov at nobs
+    explicit = res.smoothed_state_autocovariance(-2, start=mod.nobs - 2, end=mod.nobs - 1)
+    assert_allclose(acov[-1], explicit[..., 0], rtol=1e-12)
+
+
+def get_news_models(oos=10, revise=False):
+    # Results before and after a data release (one new observation of both
+    # variables, and optionally a revision of the last published one), and
+    # the results with the new observation missing
+    mod, res = get_acov_model(None, False, False, oos=oos)
+    params = mod.start_params
+    nobs = mod.nobs - oos
+
+    endog2 = mod.endog.copy()
+    if revise:
+        endog2[nobs - 1] = [0.0, 0.0]
+    endog2[nobs] = [-0.3, -0.4]
+    res2 = mod.clone(endog2).smooth(params, return_ssm=True)
+
+    endog3 = endog2.copy()
+    endog3[nobs] = np.nan
+    res3 = mod.clone(endog3).smooth(params, return_ssm=True)
+    return nobs, res, res2, res3
+
+
+def test_news_default_periods():
+    # Without `t`, `start` and `end`, the news are for the last period of the
+    # sample; `end` defaults to the end of the sample
+    nobs, res, res2, res3 = get_news_models()
+    desired = (res2.smoothed_forecasts - res3.smoothed_forecasts).T
+
+    out = res2.news(res)
+    assert_allclose(out.update_impacts, desired[-1:], rtol=1e-8)
+
+    out = res2.news(res, start=nobs - 2)
+    assert_equal(out.update_impacts.shape, (res2.nobs - nobs + 2, 2))
+    # The impact on the period before the release is small, but not zero
+    assert_allclose(out.update_impacts, desired[nobs - 2 :], rtol=1e-8, atol=1e-14)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        (dict(t=1, start=1), "Cannot specify both `t`"),
+        (dict(t=1, end=2), "Cannot specify both `t`"),
+        (dict(t=-1), "Negative `t`"),
+        (dict(start=-2, end=3), "Negative `t`"),
+        (dict(start=5, end=5), "`end` must be after `start`"),
+    ],
+)
+def test_news_invalid_periods(kwargs, match):
+    _, res, res2, _ = get_news_models(oos=1)
+    with pytest.raises(ValueError, match=match):
+        res2.news(res, **kwargs)
+
+
+def test_news_state_index_partition():
+    # The impacts are linear in the states, so the impacts computed from a
+    # partition of the states add up to the impacts from all states
+    nobs, res, res2, _ = get_news_models(revise=True)
+    kwargs = dict(start=nobs - 3, end=nobs + 3)
+    desired = res2.news(res, **kwargs)
+
+    part1 = res2.news(res, state_index=[2, 0, 1], **kwargs)
+    part2 = res2.news(res, state_index=[3, 4, 5, 6, 7], **kwargs)
+    assert_equal(part1.state_index, [0, 1, 2])
+    assert_equal(desired.state_index, None)
+    for name in ["update_impacts", "revision_detailed_impacts"]:
+        actual = getattr(part1, name) + getattr(part2, name)
+        # atol: impacts on periods before the release are close to zero
+        assert_allclose(actual, getattr(desired, name), rtol=1e-8, atol=1e-14)
+    # The gain of the news is also linear in the states
+    assert_allclose(part1.gain + part2.gain, desired.gain, rtol=1e-8, atol=1e-14)
+    # The total revision impacts do not depend on the states used
+    assert_allclose(part1.revision_impacts, desired.revision_impacts, rtol=1e-12)
+
+
+def test_smoothed_state_gain():
+    # The gain maps the news (the forecast error of the new observation) to
+    # the change of the smoothed state: E[a_s | post] - E[a_s | previous]
+    # The previous results include the (missing) period of the release
+    nobs, res, res2, res3 = get_news_models(oos=1)
+    assert res.nobs == nobs + 1
+    updates_ix = [(nobs, 0), (nobs, 1)]
+    news = res2.endog[:, nobs] - res3.smoothed_forecasts[:, nobs]
+    desired = (res2.smoothed_state - res3.smoothed_state).T
+
+    # Default: the last period of the previous sample, here the release
+    gain = res.smoothed_state_gain(updates_ix)
+    assert_equal(gain.shape, (1, res.k_states, 2))
+    assert_allclose(gain @ news, desired[nobs:], rtol=1e-8)
+    # `end` defaults to the end of the previous sample
+    gain = res.smoothed_state_gain(updates_ix, start=nobs - 3)
+    assert_equal(gain.shape, (4, res.k_states, 2))
+    assert_allclose(gain @ news, desired[nobs - 3 :], rtol=1e-8)
+    # A single period
+    gain = res.smoothed_state_gain(updates_ix, t=nobs - 1)
+    assert_equal(gain.shape, (res.k_states, 2))
+    assert_allclose(gain @ news, desired[nobs - 1], rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        (dict(t=1, start=1), "Cannot specify both `t`"),
+        (dict(t=-1), "Negative `t`"),
+        (dict(start=5, end=5), "`end` must be after `start`"),
+    ],
+)
+def test_smoothed_state_gain_invalid(kwargs, match):
+    _, res = get_acov_model(None, False, False)
+    with pytest.raises(ValueError, match=match):
+        res.smoothed_state_gain([(res.nobs, 0)], **kwargs)
+
+
+def test_smoothed_state_gain_time_varying_requires_extension():
+    _, res = get_acov_model(None, False, True)
+    with pytest.raises(ValueError, match="time-varying design matrix"):
+        res.smoothed_state_gain([(res.nobs, 0)])
+
+
+def test_smoothed_decomposition_signal_state_index_partition():
+    # The contributions to the smoothed signal are linear in the states, so
+    # those from a partition of the states add up to those from all states
+    # (The state intercept contributions are left out: they do not use
+    # `state_index`.)
+    res = correlated_model().ssm.smooth()
+    desired = res.get_smoothed_decomposition("smoothed_signal")
+    part1 = res.get_smoothed_decomposition("smoothed_signal", state_index=[0])
+    part2 = res.get_smoothed_decomposition("smoothed_signal", state_index=[1])
+    for i in [0, 1, 3]:
+        # atol: the weights of observations far from t are close to zero
+        assert_allclose(part1[i] + part2[i], desired[i], rtol=1e-10, atol=1e-14)
+    # All contributions together give the smoothed signal Z a_t
+    data, obs_intercept, state_intercept, prior = desired
+    signal = (
+        data.sum(axis=(2, 3))
+        + obs_intercept.sum(axis=(2, 3))
+        + state_intercept.sum(axis=(2, 3))
+        + prior.sum(axis=2)
+    )
+    assert_allclose(
+        signal, (res.design[..., 0] @ res.smoothed_state).T, rtol=1e-10, atol=1e-12
+    )

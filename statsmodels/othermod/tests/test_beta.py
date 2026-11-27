@@ -496,3 +496,27 @@ def test_llrmixin_set_null_options():
     assert_allclose(res._cache["llnull"], res.llf - 5)
     assert_allclose(res.llr, -2 * (res.llnull - res.llf))
     assert_allclose(res.pseudo_rsquared(), 1 - res.llf / res.llnull)
+
+
+@pytest.mark.parametrize("use_subset", [True, False])
+def test_from_formula_subset_precision_formula(use_subset):
+    # The precision formula is evaluated on the same rows as the formula
+    rng = np.random.default_rng(20261126)
+    data = pd.DataFrame(
+        {
+            "y": rng.uniform(0.1, 0.9, 30),
+            "x": rng.standard_normal(30),
+            "z": rng.standard_normal(30),
+        },
+        index=np.arange(100, 130),
+    )
+    rows = data.index[:20] if use_subset else data.index
+    subset = rows if use_subset else None
+    mod = BetaModel.from_formula(
+        "y ~ x", data, exog_precision_formula="1 + z", subset=subset
+    )
+    ones = np.ones(len(rows))
+    assert_allclose(mod.exog, np.column_stack([ones, data.loc[rows, "x"]]))
+    assert_allclose(
+        mod.exog_precision, np.column_stack([ones, data.loc[rows, "z"]])
+    )

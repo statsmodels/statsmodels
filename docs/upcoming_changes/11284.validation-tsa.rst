@@ -1,0 +1,4 @@
+- ``LocalProjections`` raises a TypeError that says what ``shock_idx``
+  must be for a str, bytes or a scalar that is not an integer, such as
+  1.5 or None. The error said that the value is not iterable, and
+  ``b"1"`` was the column 49. :pr:`11284`

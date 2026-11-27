@@ -1,0 +1,5 @@
+- ``cohens_kappa`` divides linear and quadratic score differences by the
+  range of the scores, so the weights in the results lie in [0, 1] for
+  scores that are not increasing, and scores such as [0, 1, 0] give a
+  weighted kappa instead of a ValueError. Kappa and its variances do not
+  change. Weights that are not finite raise a ValueError. :pr:`11285`

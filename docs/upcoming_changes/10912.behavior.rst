@@ -1,0 +1,7 @@
+- With ``missing="drop"``, :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing`
+  removed missing values only from the data used for the fitted
+  values. Optimized fits minimized a NaN objective, the initial
+  values and the Box-Cox parameter could be NaN, models with a
+  multiplicative component raised, and ``simulate`` raised. The
+  model now uses the data without the missing values throughout, so
+  results for data with missing values change. :pr:`10912`

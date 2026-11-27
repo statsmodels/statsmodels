@@ -34,7 +34,7 @@ import warnings
 import numpy as np
 from scipy import signal
 
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 from statsmodels.tsa.tsatools import lagmat
 
 
@@ -101,12 +101,10 @@ def varfilter(x, a):
     TODO: initial conditions
 
     """
-    x = np.asarray(x)
+    x = array_like(x, "x", dtype=None, mindim=0, maxdim=2)
     a = np.asarray(a)
     if x.ndim == 1:
         x = x[:, None]
-    if x.ndim > 2:
-        raise ValueError("x array has to be 1d or 2d")
     nobs, nvar = x.shape
     nlags = a.shape[0]
     # for x is 2d with ncols >1

@@ -1,0 +1,2 @@
+- The docstring of ``FormulaManager.intercept_idx`` says that it
+  has one element per term, not per column. :pr:`11228`

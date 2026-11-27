@@ -1,0 +1,4 @@
+- ``x13_arima_analysis`` with ``rawspec`` read a backslash in the name of ``endog`` as a
+  regular expression escape, so the name and title changed silently
+  (for example ``\t`` became a tab) or an error was raised. The name
+  is copied as it is. :pr:`11022`

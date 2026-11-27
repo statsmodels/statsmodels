@@ -1,0 +1,4 @@
+- 1-d ``weights`` of ``cohens_kappa`` must have one value per category of
+  ``table``. Weights of length 1 returned ``nan`` (or a kappa of zero up to
+  rounding with ``wt="toeplitz"``), and other lengths failed with a NumPy
+  broadcast error. :pr:`11245`

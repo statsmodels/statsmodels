@@ -1,0 +1,7 @@
+- With the formulaic engine, ``FormulaManager.get_linear_constraints``
+  (used for formula-string hypotheses in ``t_test``, ``f_test`` and
+  ``wald_test``) returns float constraint matrices and values, as
+  with patsy; integer input gave integer arrays, which made
+  ``RecursiveLS`` with string constraints raise a pandas
+  DeprecationWarning with pandas 1.5. The values are unchanged.
+  :pr:`11218`

@@ -464,9 +464,16 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.data.endog = np.require(cls.data.endog, requirements="W")
         cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
-        cls.res1 = GLM(
-            cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
-        ).fit(method="newton")
+        with warnings.catch_warnings():
+            # With the badly conditioned Longley design, rounding error can
+            # change the intercept (about -3.5e6) by 1e-7 in every Newton
+            # step, more than the absolute tolerance of 1e-8, after the
+            # parameters agree with OLS to 1e-11: newton can stop at maxiter
+            # and warn
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            cls.res1 = GLM(
+                cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
+            ).fit(method="newton")
         from .results.results_glm import Longley
 
         cls.res2 = Longley()
@@ -2659,6 +2666,137 @@ def test_tweedie_EQL_upper_limit():
         assert_allclose(result1.params, np.r_[4, 1, 1], atol=1e-3, rtol=1e-1)
 
 
+def _gen_tweedie_zeros(p, phi=2.0, n=400, seed=8136):
+    # Compound Poisson-gamma data with exact zeros (9% to 43% for p in
+    # 1.2 to 1.8 with the defaults)
+    rng = np.random.default_rng(seed)
+    x = np.column_stack([np.ones(n), rng.normal(size=n)])
+    mu = np.exp(x @ np.r_[0.3, 0.5])
+    lam = mu ** (2 - p) / (phi * (2 - p))
+    alp = (2 - p) / (p - 1)
+    gscale = phi * (p - 1) * mu ** (p - 1)
+    counts = rng.poisson(lam)
+    y = np.zeros(n)
+    for i in range(n):
+        y[i] = rng.gamma(alp, gscale[i], counts[i]).sum()
+    return y, x
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8])
+def test_tweedie_EQL_zeros_finite(p):
+    # GH 8136: the EQL log-likelihood was +inf when endog has zeros
+    y, x = _gen_tweedie_zeros(p)
+    assert (y == 0).sum() >= 30
+
+    res_eql = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True)).fit()
+    res_ll = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=False)).fit()
+
+    assert np.isfinite(res_eql.llf)
+    assert np.isfinite(res_eql.aic)
+    assert np.isfinite(res_eql.bic_llf)
+    assert_allclose(res_eql.params, res_ll.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8])
+@pytest.mark.parametrize("var_weights", [1.0, np.array([0.5, 1.0, 2.0])])
+def test_tweedie_EQL_zeros_exact(p, var_weights):
+    # At y = 0 the EQL equals the exact log probability of a zero,
+    # log P(Y = 0) = -var_weights * mu**(2 - p) / (scale * (2 - p)),
+    # which is also what the full Tweedie likelihood (eql=False) returns.
+    mu = np.array([0.5, 1.0, 3.0])
+    scale = 1.7
+    endog = np.zeros(3)
+    fam_eql = sm.families.Tweedie(var_power=p, eql=True)
+    fam_ll = sm.families.Tweedie(var_power=p, eql=False)
+
+    expected = -var_weights * mu ** (2 - p) / (scale * (2 - p))
+    ll_eql = fam_eql.loglike_obs(endog, mu, var_weights=var_weights, scale=scale)
+    ll_ll = fam_ll.loglike_obs(endog, mu, var_weights=var_weights, scale=scale)
+    assert_allclose(ll_eql, expected, rtol=1e-12)
+    assert_allclose(ll_ll, expected, rtol=1e-12)
+
+
+# Reference values of the log of the saddlepoint density without the shift, which
+# is the EQL, from R 4.6.2 with the tweedie package 3.2.2:
+#   library(tweedie)
+#   y <- c(0, 0.3, 0, 1.2, 4.0, 0)
+#   mu <- c(0.5, 1, 3, 0.8, 2.5, 1.5)
+#   phi <- 1.7
+#   w <- c(1, 0.5, 2, 1, 3, 0.25)
+#   log(dtweedie_saddle(y, power = p, mu = mu, phi = phi, eps = 0))
+#   log(dtweedie_saddle(y, power = p, mu = mu, phi = phi / w, eps = 0))
+# For y = 0, dtweedie_saddle uses the exact probability exp(-lambda), and
+# log(dtweedie(0, power = p, mu = mu, phi = phi)) gives the same values.
+_EQL_R_SADDLE = {
+    1.2: (
+        [-0.422315571690086, -0.676288494662926, -1.770753445059333,
+         -1.345429762294018, -2.196226828224363, -1.017030784722494],
+        [-0.422315571690086, -0.915652325681534, -3.541506890118665,
+         -1.345429762294018, -2.007315789523649, -0.254257696180623],
+    ),
+    1.5: (
+        [-0.831890330807703, -0.521925861361504, -2.037706832433973,
+         -1.374144117483136, -2.354515733362609, -1.440876319284222],
+        [-0.831890330807703, -0.748173048706377, -4.075413664867947,
+         -1.374144117483136, -2.066294196602421, -0.360219079821056],
+    ),
+    1.8: (
+        [-2.560442833223895, -0.372724614266597, -3.663914528280934,
+         -1.402939340851760, -2.526592051708030, -3.189622856463820],
+        [-2.560442833223895, -0.583274464834479, -7.327829056561868,
+         -1.402939340851760, -2.166634843302716, -0.797405714115955],
+    ),
+}
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8], ids=lambda p: f"p={p}")
+def test_tweedie_EQL_zeros_R(p):
+    # Zeros and positive observations together against the R values above.
+    # rtol=1e-12: the R values are printed with 15 significant digits.
+    y = np.array([0, 0.3, 0, 1.2, 4.0, 0])
+    mu = np.array([0.5, 1, 3, 0.8, 2.5, 1.5])
+    phi = 1.7
+    w = np.array([1, 0.5, 2, 1, 3, 0.25])
+    fam = sm.families.Tweedie(var_power=p, eql=True)
+    expected, expected_w = _EQL_R_SADDLE[p]
+
+    ll = fam.loglike_obs(y, mu, scale=phi)
+    assert_allclose(ll, expected, rtol=1e-12)
+    ll_w = fam.loglike_obs(y, mu, var_weights=w, scale=phi)
+    assert_allclose(ll_w, expected_w, rtol=1e-12)
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8], ids=lambda p: f"p={p}")
+def test_tweedie_EQL_zeros_pseudo_rsquared(p):
+    # GH 8136: pseudo_rsquared was NaN with a RuntimeWarning (warnings are
+    # errors in the test configuration)
+    y, x = _gen_tweedie_zeros(p)
+    assert (y == 0).sum() >= 30
+    res = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True)).fit()
+    assert np.isfinite(res.llnull)
+    for kind in ("cs", "mcf"):
+        value = res.pseudo_rsquared(kind=kind)
+        assert np.isfinite(value)
+        assert 0 < value < 1
+
+
+def test_tweedie_EQL_positive_unchanged():
+    # positive observations keep the EQL value with V(y) = y**p
+    p = 1.5
+    y, x = _gen_tweedie_zeros(p)
+    mod = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True))
+    res = mod.fit()
+    mu = res.fittedvalues
+    pos = y > 0
+    ll_pos = mod.family.loglike_obs(y[pos], mu[pos], scale=res.scale)
+    expected = -0.5 * np.log(2 * np.pi * res.scale * y[pos] ** p) - (
+        mod.family.resid_dev(y[pos], mu[pos]) ** 2 / (2 * res.scale)
+    )
+    assert_allclose(ll_pos, expected, rtol=1e-10)
+    ll_all = mod.family.loglike_obs(y, mu, scale=res.scale)
+    assert_allclose(ll_all[pos], ll_pos, rtol=1e-12)
+
+
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.
     #
@@ -4529,7 +4667,7 @@ def test_glm_formula_two_column_numeric_endog():
     counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
     x = np.arange(6.0)
     family = sm.families.Binomial()
-    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    res = GLM.from_formula("counts ~ x", pd.DataFrame({"x": x}), family=family).fit()
     expected = GLM(counts, add_constant(x), family=family).fit()
     assert_allclose(res.params.values, expected.params, rtol=1e-10)
 
@@ -4644,3 +4782,127 @@ def test_glm_formula_categorical_endog_coded_levels():
     res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
     assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
     assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "endog, params",
+    [([2.0, 5.0], [np.log(2.0), np.log(2.5)]), ([1.0, 1.0], [0.0, 0.0])],
+    ids=["divide", "exact"],
+)
+def test_glm_saturated_no_runtime_warning(endog, params):
+    # The scale of the WLS step of IRLS divides by the residual degrees of
+    # freedom, which are 0 in a saturated model; it warned "divide by zero"
+    # (or "invalid value" when the residuals are exactly 0) in every
+    # iteration. GLM only warns that the fit is perfect.
+    exog = add_constant(np.array([0.0, 1.0]))
+    with pytest.warns(PerfectSeparationWarning) as record:
+        res = GLM(np.array(endog), exog, family=sm.families.Poisson()).fit()
+    assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
+    # The fitted means are the observations; atol for the zero parameters
+    assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)
+
+
+# GH 9058, endog outside of the support of the family
+_x_domain = np.column_stack((np.ones(8), np.arange(8.0)))
+_endog_outside = [
+    (sm.families.Binomial(), [0, 1, 2, 0, 1, 1, 0, 3], 2, "in the interval"),
+    (sm.families.Binomial(), [0, 1, -0.5, 0, 1, 1, 0, 1], 1, "in the interval"),
+    (sm.families.Poisson(), [0, 1, -2, 3, 1, 0, 2, 4], 1, "nonnegative"),
+    (
+        sm.families.NegativeBinomial(alpha=1.0),
+        [0, 1, 2, -3, 1, -1, 2, 4],
+        2,
+        "nonnegative",
+    ),
+    (sm.families.Gamma(sm.families.links.Log()), [1, 2, 0, 3, 1, 2, 2, 4], 1, "positive"),
+    (
+        sm.families.InverseGaussian(sm.families.links.Log()),
+        [1, 2, -1, 3, 0, 2, 2, 4],
+        2,
+        "positive",
+    ),
+]
+
+
+@pytest.mark.parametrize("family, endog, n_outside, support", _endog_outside)
+def test_endog_outside_support(family, endog, n_outside, support):
+    msg = f"endog has {n_outside} values outside of the support of the"
+    with pytest.warns(DomainWarning, match=msg) as record:
+        GLM(np.asarray(endog, dtype=float), _x_domain, family=family)
+    messages = [str(w.message) for w in record if w.category is DomainWarning]
+    assert len(messages) == 1
+    assert support in messages[0]
+
+
+_endog_inside = [
+    (sm.families.Binomial(), [0, 1, 1, 0, 1, 0, 0, 1]),
+    (sm.families.Binomial(), [0, 0.25, 0.5, 1, 0.75, 0, 1, 0.1]),
+    (
+        sm.families.Binomial(),
+        [[0, 3], [1, 2], [3, 0], [2, 1], [1, 1], [0, 2], [2, 0], [1, 3]],
+    ),
+    (sm.families.Poisson(), [0, 1, 0, 3, 1, 0, 2, 4]),
+    (sm.families.Poisson(), [0, 0.5, 0.2, 3, 1, 0, 2, 4.5]),
+    (sm.families.NegativeBinomial(alpha=1.0), [0, 1, 0, 3, 1, 0, 2, 4]),
+    (sm.families.Gamma(sm.families.links.Log()), [0.1, 2, 1e-8, 3, 1, 2, 2, 4]),
+    (sm.families.InverseGaussian(sm.families.links.Log()), [1, 2, 0.5, 3, 1, 2, 2, 4]),
+    (sm.families.Gaussian(), [-1, 2, 0, 3, -5, 2, 2, 4]),
+    (sm.families.Tweedie(var_power=1.5), [0, 2, 0, 3, 1, 2, 2, 4]),
+    (sm.families.Poisson(), [0, 1, np.nan, 3, 1, 0, 2, 4]),
+]
+
+
+@pytest.mark.parametrize("family, endog", _endog_inside)
+def test_endog_inside_support(family, endog):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        GLM(np.asarray(endog, dtype=float), _x_domain, family=family)
+
+
+def test_endog_outside_support_binomial_counts():
+    # the example of GH 9058, counts instead of proportions without n_trials
+    endog = np.array([4.0, 10, 3, 2, 4, 3, 18, 7, 9, 12, 36])
+    exog = add_constant(np.arange(11.0))
+    with pytest.warns(DomainWarning, match="endog has 11 values outside"):
+        GLM(endog, exog, family=sm.families.Binomial())
+    # the same counts as successes and failures are valid
+    endog2 = np.column_stack((endog, 40 - endog))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        GLM(endog2, exog, family=sm.families.Binomial())
+
+
+@pytest.mark.parametrize(
+    "scale",
+    [2, np.int64(2), np.float32(2.0), np.array(2.0)],
+    ids=["int", "int64", "float32", "0-d array"],
+)
+def test_glm_fixed_scale_numeric_types(scale):
+    # Any real number is a fixed scale
+    rng = np.random.default_rng(20261126)
+    exog = add_constant(rng.standard_normal((80, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(80)
+    expected = GLM(endog, exog).fit(scale=2.0)
+    res = GLM(endog, exog).fit(scale=scale)
+    assert res.scale == 2.0
+    assert_allclose(res.bse, expected.bse, rtol=1e-12)
+    # the fixed scale multiplies the unscaled covariance
+    assert_allclose(res.cov_params(), 2.0 * res.normalized_cov_params, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "scale", [True, np.True_, 2 + 1j, np.array([2.0])],
+    ids=["bool", "np.bool_", "complex", "1 element array"],
+)
+def test_glm_fixed_scale_not_a_number(scale):
+    # float(scale) accepted a bool as the scale 1.0
+    rng = np.random.default_rng(20261127)
+    exog = add_constant(rng.standard_normal((30, 1)))
+    endog = exog @ [1.0, 0.5] + rng.standard_normal(30)
+    if isinstance(scale, np.ndarray):
+        with pytest.warns(FutureWarning, match="Passing scale of type ndarray"):
+            res = GLM(endog, exog).fit(scale=scale)
+        assert res.scale == 2.0
+        return
+    with pytest.raises(TypeError, match="scale must be float_like"):
+        GLM(endog, exog).fit(scale=scale)

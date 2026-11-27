@@ -1015,6 +1015,19 @@ def test_fc():
                 )
 
 
+def test_granger_causality_numpy_integer():
+    # NumPy integers are accepted as variable indices, like Python ints
+    ds = datasets[0]
+    dt = ds.dt_s_list[0]
+    res = results_sm[ds][dt]
+    result = res.test_granger_causality(np.int64(0), np.int64(1))
+    expected = res.test_granger_causality(0, 1)
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+    result = res.test_granger_causality([np.int32(0)], [np.int64(1)])
+    expected = res.test_granger_causality([0], [1])
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
 def test_granger_causality():
     for ds in datasets:
         for dt in ds.dt_s_list:
@@ -1567,7 +1580,7 @@ def test_exceptions():
     # ##### exog_coint_fc is too short:
     exog_coint_fc = np.ones(STEPS)
     with pytest.raises(
-        ValueError, match=r".*exog_coint_fc must have at least steps elements.*"
+        ValueError, match=r".*exog_coint_fc must have at least steps - 1 elements.*"
     ):
         vecm_res.predict(
             5,
@@ -2377,3 +2390,370 @@ def test_llf_real(deterministic, k_ar_diff, coint_rank, seasons, expected):
     log_det = np.linalg.slogdet(res.resid.T @ res.resid / nobs)[1]
     gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
     assert_allclose(res.llf, gauss, rtol=1e-9)
+
+
+@pytest.mark.parametrize("coint_rank", [5, 7])
+def test_vecm_coint_rank_above_neqs(coint_rank):
+    # A coint_rank above neqs was accepted silently: the model is the one
+    # with rank neqs, the VAR in levels estimated by OLS, but the given rank
+    # is kept and used in the degrees of freedom of test_whiteness. This is
+    # deprecated.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.var_model import VAR
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    neqs = y.shape[1]
+    with pytest.warns(FutureWarning, match="coint_rank must be between 0 and neqs"):
+        model = VECM(y, k_ar_diff=1, coint_rank=coint_rank)
+    res = model.fit()
+    var = VAR(y).fit(2, trend="n")
+    assert_allclose(res.var_rep, var.coefs, rtol=1e-8)
+    assert_allclose(res.llf, var.llf, rtol=1e-10)
+    assert res.coint_rank == coint_rank
+    nlags = 6
+    assert res.test_whiteness(nlags).df == neqs**2 * (nlags - 1) - neqs * coint_rank
+
+
+@pytest.mark.parametrize("coint_rank", [0, 4])
+def test_vecm_coint_rank_bounds(coint_rank):
+    # 0 and neqs are valid ranks
+    import warnings
+
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = VECM(y, k_ar_diff=1, coint_rank=coint_rank).fit()
+    assert res.alpha.shape == (4, coint_rank)
+
+
+@pytest.mark.parametrize("coint_rank", [-1, -4])
+def test_vecm_coint_rank_negative(coint_rank):
+    # A negative coint_rank raised "negative dimensions are not allowed" in fit
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with pytest.raises(ValueError, match="coint_rank must be between 0 and neqs"):
+        VECM(y, k_ar_diff=1, coint_rank=coint_rank)
+
+
+@pytest.mark.parametrize(
+    "deterministic, equivalent",
+    [("cico", "co"), ("xyz", "n"), ("c", "n"), ("ct", "n"), ("lilo", "lo")],
+)
+def test_select_order_deterministic_deprecated(deterministic, equivalent):
+    # select_order did not check deterministic: a value that VECM does not
+    # accept used the terms whose names it contains. This is deprecated, and
+    # the orders are unchanged.
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with pytest.warns(FutureWarning, match="deterministic must be one of"):
+        res = select_order(y, 3, deterministic=deterministic)
+    expected = select_order(y, 3, deterministic=equivalent)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "deterministic, equivalent",
+    [("nc", "n"), ("", "n"), ("CO", "co"), ("CiLi", "cili"), ("colo", "colo")],
+)
+def test_select_order_deterministic_valid(deterministic, equivalent):
+    # the values of VECM, its aliases of "n" and any case do not warn
+    import warnings
+
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = select_order(y, 3, deterministic=deterministic)
+        expected = select_order(y, 3, deterministic=equivalent)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "caused, causing",
+    [
+        (np.int64(0), np.int32(2)),
+        (np.array([0, 1], dtype=np.int32), np.int64(3)),
+        ([np.intp(3)], [np.int16(0), np.uint8(1), np.intc(2)]),
+        (np.array(1), np.array(3)),
+        ([np.array(0)], [np.array(2), 3]),
+    ],
+)
+def test_causality_numpy_integer_indices(caused, causing):
+    # numpy integers are indices of the variables as int is: a scalar raised
+    # "object is not iterable" and an element of a sequence raised "has to be
+    # of type string or int"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+
+    def names(value):
+        return [data.columns[int(v)] for v in np.atleast_1d(value)]
+
+    granger = res.test_granger_causality(caused, causing)
+    expected = res.test_granger_causality(names(caused), names(causing))
+    assert granger.caused == expected.caused == names(caused)
+    assert granger.causing == expected.causing == names(causing)
+    assert_allclose(granger.test_statistic, expected.test_statistic, rtol=1e-12)
+    assert granger.df == expected.df
+    inst = res.test_inst_causality(causing)
+    expected = res.test_inst_causality(names(causing))
+    assert inst.causing == expected.causing == names(causing)
+    assert_allclose(inst.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
+def test_causality_float_index():
+    # A float is not an index: a scalar raised "object is not iterable"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality(0.5)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_granger_causality(0, 1.0)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality(0.5)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality([0, 1.0])
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_vecm_list_endog_exog_coint(form):
+    # endog is array_like, but VECM read endog.shape to check the number of
+    # rows of exog_coint, so a list with exog_coint raised an AttributeError
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    endog = y.tolist() if form == "list" else tuple(map(tuple, y))
+    # the trend 1, 2, ... in the relation is deterministic="li"
+    trend = np.arange(1.0, len(y) + 1)
+    res = VECM(endog, exog_coint=trend, k_ar_diff=1, coint_rank=1).fit()
+    expected = VECM(y, k_ar_diff=1, coint_rank=1, deterministic="li").fit()
+    assert_allclose(res.alpha, expected.alpha, rtol=1e-8)
+    assert_allclose(res.beta, expected.beta, rtol=1e-8)
+    assert_allclose(res.exog_coint_coefs, expected.lin_trend_coint, rtol=1e-8)
+    assert_allclose(res.gamma, expected.gamma, rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+    with pytest.raises(ValueError, match="exog_coint must have as many rows as endog"):
+        VECM(endog, exog_coint=trend[1:])
+
+
+@pytest.mark.parametrize(
+    "deterministic, k_ar_diff, seasons, first_season, exog, exog_coint",
+    [
+        ("n", 1, 0, 0, False, False),
+        ("ci", 0, 0, 0, False, False),
+        ("colo", 2, 4, 1, False, False),
+        ("cili", 1, 4, 3, True, True),
+        ("co", 1, 0, 0, True, False),
+        ("n", 2, 0, 0, False, True),
+    ],
+)
+def test_vecm_results_without_auxiliary_arrays(
+    deterministic, k_ar_diff, seasons, first_season, exog, exog_coint
+):
+    # VECMResults computes delta_y_1_T, y_lag1 and delta_x when they are not
+    # given. This raised "deterministic must be a string" because the
+    # arguments were passed in the wrong positions.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.vecm import VECMResults
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    nobs_tot = endog.shape[0]
+    t = np.arange(1.0, nobs_tot + 1)
+    res = VECM(
+        endog,
+        exog=np.sqrt(t)[:, None] if exog else None,
+        exog_coint=np.log(t)[:, None] if exog_coint else None,
+        k_ar_diff=k_ar_diff,
+        coint_rank=1,
+        deterministic=deterministic,
+        seasons=seasons,
+        first_season=first_season,
+    ).fit()
+    rebuilt = VECMResults(
+        res.y_all,
+        res.exog,
+        res.exog_coint,
+        res.k_ar,
+        res.coint_rank,
+        res.alpha,
+        np.vstack((res.beta, res.det_coef_coint)),
+        np.hstack((res.gamma, res.det_coef)),
+        res.sigma_u,
+        deterministic=deterministic,
+        seasons=seasons,
+        first_season=first_season,
+    )
+    assert rebuilt.nobs == res.nobs == nobs_tot - k_ar_diff - 1
+    # the fitted values plus the residuals are the data without the presample
+    assert_allclose(
+        rebuilt.fittedvalues + rebuilt.resid, endog[k_ar_diff + 1 :], rtol=1e-12
+    )
+    assert_allclose(rebuilt.fittedvalues, res.fittedvalues, rtol=1e-10)
+    # the residual covariance of the estimates is sigma_u, and llf is the
+    # Gaussian log-likelihood at the estimates
+    nobs, neqs = rebuilt.resid.shape
+    assert_allclose(rebuilt.resid.T @ rebuilt.resid / nobs, res.sigma_u, rtol=1e-8)
+    log_det = np.linalg.slogdet(res.sigma_u)[1]
+    gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
+    assert_allclose(rebuilt.llf, gauss, rtol=1e-9)
+    assert_allclose(rebuilt.stderr_params, res.stderr_params, rtol=1e-10)
+    whiteness = rebuilt.test_whiteness(6)
+    expected = res.test_whiteness(6).test_statistic
+    assert_allclose(whiteness.test_statistic, expected, rtol=1e-10)
+
+
+def test_vecm_results_without_auxiliary_arrays_co_and_ci():
+    # The check of _endog_matrices for "co" and "ci" together is reached when
+    # VECMResults computes the auxiliary arrays (VECM does not accept "coci")
+    from statsmodels.tsa.vector_ar.vecm import VECMResults
+
+    rng = np.random.default_rng(20261122)
+    endog = np.cumsum(rng.standard_normal((40, 2)), axis=0).T
+    with pytest.raises(ValueError, match="Both 'co' and 'ci'"):
+        VECMResults(
+            endog,
+            None,
+            None,
+            2,
+            1,
+            np.zeros((2, 1)),
+            np.ones((3, 1)),
+            np.zeros((2, 3)),
+            np.eye(2),
+            deterministic="coci",
+        )
+
+
+def test_hypothesis_test_results_str():
+    # __str__ had a stray ">" after the critical value
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    for result in (res.test_normality(), res.test_whiteness(6)):
+        expected = (
+            f"<statsmodels.tsa.vector_ar.hypothesis_test_results."
+            f"{type(result).__name__} object. {result.h0}: {result.conclusion} "
+            f"at 5% significance level. Test statistic: "
+            f"{result.test_statistic:.3f}, critical value: "
+            f"{result.crit_value:.3f}, p-value: {result.pvalue:.3f}>"
+        )
+        assert str(result) == expected
+
+
+def test_predict_exog_coint_fc_rows():
+    # exog_coint enters lagged once, so steps - 1 future rows are needed;
+    # the message said "at least steps"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    nobs_tot = len(data)
+    trend = np.arange(1.0, nobs_tot + 1)
+    res = VECM(data, exog_coint=trend, k_ar_diff=1, coint_rank=1).fit()
+    steps = 5
+    future = np.arange(nobs_tot + 1.0, nobs_tot + steps)
+    with pytest.raises(ValueError, match="at least steps - 1 elements"):
+        res.predict(steps, exog_coint_fc=future[:-1])
+    # the trend 1, 2, ... as exog_coint is deterministic="li"
+    li = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="li").fit()
+    assert_allclose(res.predict(steps, exog_coint_fc=future), li.predict(steps), rtol=1e-8)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+def test_causality_bool_index(value):
+    # A bool is not an index: True was the variable with index 1
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality(value)
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality([0, value])
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_granger_causality(0, value)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality(value)
+
+
+@pytest.mark.parametrize(
+    "det_order",
+    [2, np.int64(2), np.int32(5), np.array(2), 2.0],
+    ids=["int", "int64", "int32", "0d-array", "float"],
+)
+def test_select_coint_rank_det_order_greater_than_one(det_order):
+    # An integer greater than 1, also a NumPy integer or an integral float,
+    # gets the message for orders greater than 1
+    y = np.random.default_rng(20261126).standard_normal((60, 2)).cumsum(0)
+    with pytest.raises(ValueError, match="greather than 1 is not supported"):
+        select_coint_rank(y, det_order, 1)
+
+
+@pytest.mark.parametrize(
+    "deterministic, k_ar_diff",
+    [("co", 1), ("n", 2), ("co", 0), ("colo", 1)],
+)
+def test_summary_coint_rank_zero(deterministic, k_ar_diff):
+    # With coint_rank 0 the VECM is a VAR in differences estimated by OLS, so
+    # the summary has the tables of the lagged differences and of the
+    # deterministic terms outside the relation, and no tables of alpha or
+    # beta. summary raised an IndexError (or an UnboundLocalError).
+    from statsmodels.datasets import danish_data
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(
+        endog, k_ar_diff=k_ar_diff, coint_rank=0, deterministic=deterministic
+    ).fit()
+    y = endog.to_numpy()
+    nobs_tot, neqs = y.shape
+    p = k_ar_diff + 1
+    dy = np.diff(y, axis=0)
+    z0 = dy[p - 1 :]
+    trend = np.arange(p + 1, nobs_tot + 1, dtype=float)
+    det = [np.ones(nobs_tot - p)] * ("co" in deterministic)
+    det += [trend] * ("lo" in deterministic)
+    x = np.column_stack([*det, *(dy[p - 1 - i : -i] for i in range(1, p))])
+    coef = np.linalg.lstsq(x, z0, rcond=None)[0].T
+    resid = z0 - x @ coef.T
+    sigma_u = resid.T @ resid / resid.shape[0]
+    stderr = np.sqrt(np.outer(np.diag(sigma_u), np.diag(np.linalg.inv(x.T @ x))))
+    params = np.hstack((res.det_coef, res.gamma))
+    assert_allclose(params, coef, rtol=1e-8)
+    assert_allclose(np.hstack((res.stderr_det_coef, res.stderr_gamma)), stderr, rtol=1e-8)
+
+    tables = res.summary().tables
+    assert len(tables) == neqs
+    names = ["const"] * ("co" in deterministic) + ["lin_trend"] * ("lo" in deterministic)
+    names += [f"L{i}.{n}" for i in range(1, p) for n in endog.columns]
+    for i, table in enumerate(tables):
+        assert table.title.endswith(f"parameters for equation {endog.columns[i]}")
+        rows = table.data[1:]
+        assert [row[0].strip() for row in rows] == names
+        # coefficients printed with four decimals, standard errors with three
+        assert_allclose([float(row[1]) for row in rows], coef[i], atol=5e-5)
+        assert_allclose([float(row[2]) for row in rows], stderr[i], atol=5e-4)
+
+
+@pytest.mark.parametrize("deterministic", ["n", "ci", "li"])
+def test_summary_no_parameters(deterministic):
+    # Delta y_t = u_t: without cointegration, lagged differences and terms
+    # outside the relation there is nothing to show
+    from statsmodels.datasets import danish_data
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(endog, k_ar_diff=0, coint_rank=0, deterministic=deterministic).fit()
+    assert res.det_coef.size == res.gamma.size == res.alpha.size == 0
+    with pytest.raises(ValueError, match="no estimated parameters"):
+        res.summary()

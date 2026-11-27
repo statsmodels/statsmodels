@@ -1,0 +1,6 @@
+- With ``init_t0=True`` and ``standardize=True``,
+  ``DynamicFactorMQ`` standardized ndarray data with means and
+  standard deviations that included the prepended missing period,
+  so every value was NaN and the loglikelihood was 0. The data are
+  standardized with their own statistics, so these models change.
+  :pr:`11095`

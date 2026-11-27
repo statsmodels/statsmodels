@@ -1,0 +1,4 @@
+- ``LocalProjections`` raises a TypeError when a value of a sequence
+  ``shock_idx`` is not an integer: ``[1.5]``, ``[True]`` and ``["1"]`` were
+  silently column 1. Integral floats such as ``[1.0]`` or a float array,
+  accepted before, now raise. :pr:`11268`

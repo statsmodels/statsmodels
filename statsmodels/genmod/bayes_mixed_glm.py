@@ -56,6 +56,7 @@ from scipy.optimize import minimize
 
 import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.formula.formulatools import advance_eval_env, get_matrices_eval_env
 from statsmodels.genmod import families
 from statsmodels.iolib import summary2
 from statsmodels.tools.rng_qrng import check_random_state
@@ -245,10 +246,9 @@ class _BayesMixedGLM(base.Model):
             msg = "'exog_vc' must have one or two columns"
             raise ValueError(msg)
 
-        ident = np.asarray(ident)
-        if ident.ndim != 1:
-            msg = "ident must be a one-dimensional array"
-            raise ValueError(msg)
+        if ident is None:
+            raise ValueError("ident must be a one-dimensional array")
+        ident = array_like(ident, "ident", dtype=None, mindim=0, shape=(None,))
 
         if len(ident) != exog_vc.shape[1]:
             msg = "len(ident) should match the number of columns of exog_vc"
@@ -427,7 +427,9 @@ class _BayesMixedGLM(base.Model):
         return start
 
     @classmethod
-    def from_formula(cls, formula, vc_formulas, data, family=None, vcp_p=1, fe_p=2):
+    def from_formula(
+        cls, formula, vc_formulas, data, family=None, vcp_p=1, fe_p=2, eval_env=None
+    ):
         """
         Fit a BayesMixedGLM using a formula.
 
@@ -451,15 +453,24 @@ class _BayesMixedGLM(base.Model):
             deviations of the random effects.
         fe_p : float, optional
             The prior standard deviation for the fixed effects parameters.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formulas that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
         """
 
         ident = []
         exog_vc = []
         vcp_names = []
         j = 0
+        vc_eval_env = get_matrices_eval_env(eval_env)
         for na, fml in vc_formulas.items():
             mgr = FormulaManager()
-            mat = mgr.get_matrices(fml, data, pandas=True)
+            mat = mgr.get_matrices(fml, data, eval_env=vc_eval_env, pandas=True)
             exog_vc.append(mat)
             vcp_names.append(na)
             ident.append(j * np.ones(mat.shape[1], dtype=np.int_))
@@ -469,6 +480,8 @@ class _BayesMixedGLM(base.Model):
 
         ident = np.concatenate(ident)
 
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         model = super().from_formula(
             formula,
             data=data,
@@ -480,6 +493,7 @@ class _BayesMixedGLM(base.Model):
             vcp_names=vcp_names,
             fe_p=fe_p,
             vcp_p=vcp_p,
+            **kwargs,
         )
 
         return model
@@ -1191,7 +1205,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             raise ValueError(msg)
 
     @classmethod
-    def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):
+    def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2, eval_env=None):
         """
         Fit a BinomialBayesMixedGLM using a formula.
 
@@ -1213,6 +1227,14 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             deviations of the random effects.
         fe_p : float, optional
             The prior standard deviation for the fixed effects parameters.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formulas that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
@@ -1220,8 +1242,10 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         """
 
         fam = families.Binomial()
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         x = _BayesMixedGLM.from_formula(
-            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p
+            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p, **kwargs
         )
 
         # Copy over to the intended class structure
@@ -1345,7 +1369,15 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     @classmethod
     def from_formula(
-        cls, formula, vc_formulas, data, vcp_p=1, fe_p=2, vcp_names=None, vc_names=None
+        cls,
+        formula,
+        vc_formulas,
+        data,
+        vcp_p=1,
+        fe_p=2,
+        vcp_names=None,
+        vc_names=None,
+        eval_env=None,
     ):
         """
         Fit a PoissonBayesMixedGLM using a formula.
@@ -1372,6 +1404,14 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             The names of the variance component parameters.
         vc_names : list of str, optional
             The names of the random effect realizations.
+        eval_env : int or dict, optional
+            The namespace in which variables of the formulas that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, an integer k the namespace k stack
+            frames above it, -1 an empty namespace, and a dict maps names to
+            values.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
@@ -1379,8 +1419,10 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         """
 
         fam = families.Poisson()
+        kwargs = {"eval_env": eval_env}
+        advance_eval_env(kwargs)
         x = _BayesMixedGLM.from_formula(
-            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p
+            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p, **kwargs
         )
 
         # Copy over to the intended class structure

@@ -2766,3 +2766,811 @@ def test_param_index_invalid(austourists_model, method, param_index):
     call = param_index_call(austourists_model, method)
     with pytest.raises(ValueError, match="param_index"):
         call(param_index=param_index)
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        "2016-01-01",
+        pd.Timestamp("2016-01-01"),
+        pd.Timestamp("2016-01-01").to_pydatetime(),
+        3,
+        np.int64(3),
+        np.array(3),
+    ],
+    ids=["str", "Timestamp", "datetime", "int", "int64", "0-d array"],
+)
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_forecast_date(oildata, steps, use_pandas):
+    # forecast with a date raised "TypeError: 'str' object cannot be
+    # interpreted as an integer"; a date forecasts until and including it
+    endog = oildata if use_pandas else oildata.to_numpy()
+    kwargs = {} if use_pandas else {"dates": oildata.index}
+    res = ETSModel(endog, **kwargs).smooth([0.3, 110.0], param_index="integer")
+    # the forecasts of simple exponential smoothing are the last level
+    level = 110.0
+    for value in oildata:
+        level = 0.3 * value + 0.7 * level
+    fcast = res.forecast(steps)
+    assert_allclose(np.asarray(fcast), np.full(3, level), rtol=1e-12)
+    if use_pandas:
+        expected_index = pd.date_range("2014-01-01", periods=3, freq="YS")
+        assert_array_equal(fcast.index, expected_index)
+    else:
+        assert isinstance(fcast, np.ndarray)
+
+
+@pytest.mark.parametrize(
+    "end, dynamic",
+    [
+        (20, 11),
+        (20, 12),
+        (20, 15),
+        (20, "2005-06-30"),
+        (75, 58),
+        (75, 59),
+        (75, 65),
+        (75, 70),
+        (75, "2016-06-30"),
+    ],
+)
+def test_predict_dynamic_after_end_or_sample(austourists, end, dynamic):
+    # Dynamic prediction begins at start + dynamic, and the forecasts after
+    # the sample are dynamic anyway, so a dynamic after the end of the
+    # prediction or after the sample has no effect. Both raised a ValueError
+    # (a broadcast error, or "Cannot anchor simulation outside of the
+    # sample"); start + dynamic = end + 1 (here 21) or nobs (68) worked. The
+    # date keys are the periods 25 and 69. The predictions are the one-step
+    # predictions in the sample followed by the forecasts from its end, with
+    # the variances of the exact method: mse in the sample, and mse times
+    # the relative variances of R's forecast package after it.
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n, start = res.nobs, 10
+    nforecast = max(end - n + 1, 0)
+    expected = res.fittedvalues.to_numpy()[start : end + 1]
+    variance = np.full(expected.shape[0], res.mse)
+    if nforecast:
+        expected = np.r_[expected, res.forecast(nforecast).to_numpy()]
+        relative = R_RELATIVE_FORECAST_VARIANCE["ANN"][:nforecast]
+        variance = np.r_[variance, res.mse * np.asarray(relative)]
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
+
+    pred = res.predict(start=start, end=end, dynamic=dynamic)
+    assert pred.index.equals(index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    frame = pred.summary_frame()
+    assert frame.index.equals(index)
+    assert_allclose(frame["mean"], expected, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, variance, rtol=1e-12)
+
+    # the simulated intervals are those of the prediction without dynamic
+    kwargs = dict(start=start, end=end, method="simulated", simulate_repetitions=5)
+    pred = res.get_prediction(dynamic=dynamic, rng=np.random.default_rng(0), **kwargs)
+    expected = res.get_prediction(rng=np.random.default_rng(0), **kwargs)
+    assert_allclose(
+        pred.summary_frame(), expected.summary_frame(), rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize("dynamic", [True, 0, 1, 3, "date", "later date"])
+@pytest.mark.parametrize("start", [68, 70])
+def test_predict_dynamic_start_after_sample(austourists, start, dynamic):
+    # With a start after the end of the sample (nobs = 68), the predictions
+    # are the forecasts from the end of the sample whatever dynamic is. A
+    # dynamic at start (True, 0, or the date of start) began the forecasts
+    # at start, and a later one after it, so these raised "Cannot anchor
+    # simulation outside of the sample", except for start = nobs with
+    # dynamic at start. The exact variances are mse times the relative
+    # variances of R's forecast package.
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n, end = res.nobs, 75
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)
+    if dynamic in ("date", "later date"):
+        dynamic = str(index[start + 2 * (dynamic == "later date")].date())
+    index = index[start:]
+    expected = res.forecast(end - n + 1).to_numpy()[start - n :]
+    relative = R_RELATIVE_FORECAST_VARIANCE["ANN"][start - n : end - n + 1]
+
+    pred = res.predict(start=start, end=end, dynamic=dynamic)
+    assert pred.index.equals(index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    frame = pred.summary_frame()
+    assert frame.index.equals(index)
+    assert_allclose(frame["mean"], expected, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, res.mse * np.asarray(relative), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "data, seasonal, lags",
+    [("oildata", None, 9), ("austourists", None, 10), ("austourists", "add", 8)],
+)
+def test_serial_correlation_default_lags(oildata, austourists, data, seasonal, lags):
+    # Non-seasonal models store seasonal_periods = 1, so the default number
+    # of lags was min(2, nobs // 5) instead of min(10, nobs // 5). The
+    # cases are min(10, 49 // 5), min(10, 68 // 5) and min(2 * 4, 68 // 5).
+    from statsmodels.stats.diagnostic import acorr_ljungbox
+
+    endog = oildata if data == "oildata" else austourists
+    seasonal_periods = 4 if seasonal else None
+    model = ETSModel(
+        endog, trend="add", seasonal=seasonal, seasonal_periods=seasonal_periods
+    )
+    res = model.smooth(model.start_params, param_index="integer")
+    resid = np.asarray(res.resid)
+    std_resid = (resid - resid.mean()) / resid.std(ddof=1)
+    expected = acorr_ljungbox(std_resid, lags=lags)
+
+    actual = res.test_serial_correlation("ljungbox")
+    assert actual.shape == (1, 2, lags)
+    assert_allclose(actual[0, 0], expected["lb_stat"], rtol=1e-10)
+    assert_allclose(actual[0, 1], expected["lb_pvalue"], rtol=1e-10)
+    # the summary shows the statistic at the largest lag, with two decimals
+    row = res.summary().tables[2][0]
+    assert str(row[0]) == "Ljung-Box (Q):"
+    assert_allclose(float(str(row[1])), expected["lb_stat"].iloc[-1], atol=0.005)
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(10 + rng.standard_normal(500).cumsum(), index=index)
+    res = ETSModel(y).smooth([0.5, 10.0], param_index="integer")
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.index, index[10:])
+
+
+@pytest.mark.parametrize(
+    "reps", [1, 0, np.int64(1), 1.0], ids=["one", "zero", "int64", "float"]
+)
+@pytest.mark.parametrize("method", ["simulated", None])
+def test_get_prediction_simulate_repetitions_at_least_two(austourists, method, reps):
+    # A single simulated path has no variance and gives no prediction
+    # interval. simulate returns it as a Series, so get_prediction raised
+    # "axis 1 is out of bounds for array of dimension 1" (and a TypeError
+    # for 0). None is the simulated method for a model with multiplicative
+    # errors.
+    error = "add" if method == "simulated" else "mul"
+    model = ETSModel(austourists, error=error)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n = res.nobs
+    with pytest.raises(ValueError, match="simulate_repetitions must be at least 2"):
+        res.get_prediction(
+            start=n - 3, end=n + 2, method=method, simulate_repetitions=reps
+        )
+
+
+def test_get_prediction_simulate_repetitions(austourists):
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n = res.nobs
+    # the exact intervals do not use simulate_repetitions
+    expected = res.get_prediction(start=n - 3, end=n + 2).summary_frame()
+    pred = res.get_prediction(start=n - 3, end=n + 2, simulate_repetitions=1)
+    assert_allclose(pred.summary_frame(), expected, rtol=1e-12)
+
+    # two paths are enough, and an integral float is their number; the
+    # forecasts are simulate from the end of the sample with the same
+    # generator
+    sims = res.simulate(3, anchor="end", repetitions=2, rng=np.random.default_rng(0))
+    sims = np.asarray(sims)
+    for reps in [2, 2.0]:
+        pred = res.get_prediction(
+            start=n,
+            end=n + 2,
+            method="simulated",
+            simulate_repetitions=reps,
+            rng=np.random.default_rng(0),
+        )
+        frame = pred.summary_frame(alpha=0.5)
+        # rtol: pandas and numpy may sum in another order
+        assert_allclose(frame["mean_numerical"], sims.mean(1), rtol=1e-10)
+        assert_allclose(pred.var_pred_mean, sims.var(1, ddof=1), rtol=1e-10)
+        lower_upper = np.quantile(sims, [0.25, 0.75], axis=1).T
+        assert_allclose(frame[["pi_lower", "pi_upper"]], lower_upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize("use_pandas", [True, False], ids=["pandas", "ndarray"])
+def test_t_test_wald_test_constraints(use_pandas):
+    # t_test, wald_test and f_test raised a TypeError for any constraint,
+    # because the model data have no parameter names. The constraints refer
+    # to model.param_names.
+    rng = np.random.default_rng(20261123)
+    trend = 0.5 + np.cumsum(0.1 * rng.standard_normal(80))
+    level = 100 + np.cumsum(trend + rng.standard_normal(80))
+    index = pd.date_range("2000-01-01", periods=80, freq="MS")
+    data = pd.Series(level + 2 * rng.standard_normal(80), index=index)
+    if not use_pandas:
+        data = data.to_numpy()
+    model = ETSModel(data, error="add", trend="add", damped_trend=True)
+    assert model.param_names[0] == "smoothing_level"
+    assert model.param_names[2] == "damping_trend"
+    # Close to the MLE, so that the covariance is positive definite
+    res = model.smooth([0.23, 0.09, 0.98, 99.29, 0.92], param_index="integer")
+    cov_before = res.cov_params()
+    params = np.asarray(res.params)
+    cov = np.asarray(cov_before)
+    r_matrix = np.eye(5)[[0, 2]]
+    q = np.array([0.25, 0.95])
+    effect = r_matrix @ params
+    sd = np.sqrt(np.diag(r_matrix @ cov @ r_matrix.T))
+    diff = effect - q
+    wald = diff @ np.linalg.solve(r_matrix @ cov @ r_matrix.T, diff)
+
+    for constraint in [
+        "smoothing_level = 0.25, damping_trend = 0.95",
+        (r_matrix, q),
+    ]:
+        t_test = res.t_test(constraint)
+        assert_allclose(t_test.effect, effect, rtol=1e-12)
+        assert_allclose(t_test.sd, sd, rtol=1e-12)
+        assert_allclose(t_test.statistic, diff / sd, rtol=1e-12)
+        assert_allclose(
+            t_test.pvalue, 2 * scipy.stats.norm.sf(np.abs(diff / sd)), rtol=1e-10
+        )
+        wald_test = res.wald_test(constraint, scalar=True)
+        assert_allclose(wald_test.statistic, wald, rtol=1e-10)
+        assert_allclose(wald_test.pvalue, scipy.stats.chi2.sf(wald, 2), rtol=1e-10)
+        f_test = res.f_test(constraint)
+        assert_allclose(f_test.fvalue, wald / 2, rtol=1e-10)
+
+    # An array without q tests that the parameters are zero
+    t_test = res.t_test(r_matrix)
+    assert_allclose(t_test.statistic, effect / sd, rtol=1e-12)
+    # The other arguments are passed on
+    constraint = (r_matrix, q)
+    t_test = res.t_test(constraint, cov_p=4 * cov, use_t=True)
+    assert_allclose(t_test.statistic, diff / (2 * sd), rtol=1e-12)
+    expected = 2 * scipy.stats.t.sf(np.abs(diff / (2 * sd)), res.df_resid)
+    assert_allclose(t_test.pvalue, expected, rtol=1e-10)
+    wald_test = res.wald_test(
+        constraint, cov_p=4 * cov, use_f=True, df_constraints=4, scalar=False
+    )
+    assert np.shape(wald_test.fvalue) == (1, 1)
+    assert_allclose(wald_test.fvalue, wald / 16, rtol=1e-10)
+    wald_test = res.wald_test(constraint, invcov=np.eye(2))
+    # A scalar statistic by default
+    assert np.ndim(wald_test.statistic) == 0
+    assert_allclose(wald_test.statistic, diff @ diff, rtol=1e-12)
+    # The names are only used for the tests: the results keep their labels
+    cov_after = res.cov_params()
+    if use_pandas:
+        pd.testing.assert_frame_equal(cov_after, cov_before)
+    assert res.model.data.cov_names is None
+
+
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+@pytest.mark.parametrize("dates", [False, True])
+def test_get_prediction_numpy(oildata, method, dates):
+    # get_prediction raised AttributeError for numpy data (it read the index
+    # of the predicted mean). The numpy path must give the pandas values;
+    # the variance of the simulations uses ddof=1, the default of pandas.
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    kwargs = {"dates": oildata.index} if dates else {}
+    res_np = ETSModel(oildata.to_numpy(), **kwargs).smooth(
+        [0.3, 110.0], param_index="integer"
+    )
+    pred_kwargs = dict(start=46, end=51, method=method, simulate_repetitions=20)
+    pred = res.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
+    pred_np = res_np.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
+
+    assert isinstance(pred_np.predicted_mean, np.ndarray)
+    assert_allclose(
+        pred_np.predicted_mean, pred.predicted_mean.to_numpy(), rtol=1e-12
+    )
+    assert_allclose(pred_np.var_pred_mean, np.asarray(pred.var_pred_mean), rtol=1e-12)
+    pred_int = pred_np.pred_int()
+    assert isinstance(pred_int, np.ndarray)
+    assert_allclose(pred_int, pred.pred_int().to_numpy(), rtol=1e-12)
+    frame_np = pred_np.summary_frame()
+    frame = pred.summary_frame()
+    assert list(frame_np.columns) == list(frame.columns)
+    assert_allclose(frame_np.to_numpy(), frame.to_numpy(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("data", ["pandas", "numpy"])
+@pytest.mark.parametrize("error", ["add", "mul"])
+def test_get_prediction_simulated_start_after_sample(austourists, error, data):
+    # With a start after the end of the sample, the predictions are the
+    # forecasts from the end of the sample without those before start. The
+    # simulations kept those, so pred_int and summary_frame raised "Shape of
+    # passed values is (6, 2), indices imply (4, 2)" (summary_frame "All
+    # arrays must be of the same length" for numpy data) and var_pred_mean
+    # had a value for each of them. The simulations are those of simulate from
+    # the end of the sample, drawn from the same generator, from start on.
+    n = austourists.shape[0]
+    endog = austourists if data == "pandas" else austourists.to_numpy()
+    model = ETSModel(endog, error=error)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    reps, start, end = 20, n + 2, n + 5
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(0),
+    )
+    steps = end - n + 1
+    sims = res.simulate(
+        steps, anchor="end", repetitions=reps, rng=np.random.default_rng(0)
+    )
+    sims = np.asarray(sims)[start - n :]
+    forecast = np.asarray(res.forecast(steps))[start - n :]
+
+    frame = pred.summary_frame(alpha=0.1)
+    assert_allclose(frame["mean"], forecast, rtol=1e-12)
+    # rtol: pandas and numpy may sum in another order
+    assert_allclose(frame["mean_numerical"], sims.mean(1), rtol=1e-10)
+    assert_allclose(frame["pi_lower"], np.quantile(sims, 0.05, axis=1), rtol=1e-12)
+    assert_allclose(frame["pi_upper"], np.quantile(sims, 0.95, axis=1), rtol=1e-12)
+    pred_int = pred.pred_int(alpha=0.1)
+    assert_allclose(pred_int, frame[["pi_lower", "pi_upper"]], rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, sims.var(1, ddof=1), rtol=1e-10)
+    if data == "pandas":
+        index = extended_index(austourists.index, steps)[start - n :]
+        assert frame.index.equals(index)
+        assert pred_int.index.equals(index)
+        assert pred.var_pred_mean.index.equals(index)
+
+
+@pytest.mark.parametrize("start", [66, 70])
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+def test_get_prediction_endog_start_after_sample(austourists, method, start):
+    # endog of the prediction results has one value per prediction, the
+    # observation or NaN after the sample (nobs = 68). With a start after
+    # the sample it also had one for each forecast before start, so reading
+    # it raised "Length of values (8) does not match length of index (6)".
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n, end = res.nobs, 75
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method=method,
+        simulate_repetitions=5,
+        rng=np.random.default_rng(0),
+    )
+    expected = np.r_[austourists.to_numpy(), np.full(end + 1 - n, np.nan)]
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
+    assert pred.endog.index.equals(index)
+    assert_allclose(pred.endog, expected[start:], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "start, end, dynamic",
+    [
+        (10, 14, True),
+        (10, 14, 0),
+        (10, 14, 2),
+        (38, 42, True),
+        (38, 42, 0),
+        (38, 42, 1),
+        (39, 42, True),
+        (45, 50, False),
+    ],
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_get_prediction_endog_dynamic(use_pandas, start, end, dynamic):
+    # With all predictions dynamic (True or 0), endog was NaN also in the
+    # sample. It holds the observed values of the in-sample periods
+    rng = np.random.default_rng(20261124)
+    y = 10 + 0.3 * rng.standard_normal(40).cumsum()
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    data = pd.Series(y, index=index) if use_pandas else y
+    res = ETSModel(data).smooth([0.4, 10.0], param_index="integer")
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    expected = np.full(end - start + 1, np.nan)
+    nobs_in = max(min(end, 39) - start + 1, 0)
+    expected[:nobs_in] = y[start : start + nobs_in]
+    assert_allclose(np.asarray(pred.endog), expected, rtol=1e-15)
+    if use_pandas:
+        pd.testing.assert_index_equal(
+            pred.endog.index, pred.predicted_mean.index, exact=False
+        )
+
+
+@pytest.mark.parametrize("start", [49, 47])
+def test_prediction_simulation_results(oildata, start):
+    # The wrapper of PredictionResults labelled simulation_results with the
+    # name of endog as the only column, which raised a TypeError for a
+    # DataFrame of more than one simulation
+    reps = 20
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    end = 51
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(0),
+    )
+    sims = pred.simulation_results
+    assert isinstance(sims, pd.DataFrame)
+    assert_array_equal(sims.index, pred.predicted_mean.index)
+    assert list(sims.columns) == [f"simulation.{i}" for i in range(reps)]
+    # the in-sample periods are simulated one step ahead, then the forecasts
+    # from the end of the sample, from the same generator
+    rng = np.random.default_rng(0)
+    expected = [
+        res.simulate(1, anchor=t - 1, repetitions=reps, rng=rng)
+        for t in range(start, res.nobs)
+    ]
+    expected.append(res.simulate(end - res.nobs + 1, anchor="end", repetitions=reps, rng=rng))
+    expected = pd.concat(expected)
+    assert_allclose(sims.to_numpy(), expected.to_numpy(), rtol=1e-12)
+    assert_allclose(
+        pred.summary_frame()["mean_numerical"], expected.mean(axis=1), rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(3), np.array(3), 3.0],
+    ids=["int64", "0d-array", "float"],
+)
+def test_forecast_int_like_steps(oildata, steps):
+    # An integral float is a number of steps, as an int is. It was the
+    # location of the last forecast, which raised a KeyError.
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    fcast = res.forecast(steps)
+    # The forecasts of simple exponential smoothing are the last level
+    level = 110.0
+    for value in oildata:
+        level = 0.3 * value + 0.7 * level
+    assert_allclose(np.asarray(fcast), np.full(3, level), rtol=1e-12)
+    assert fcast.index.equals(res.forecast(3).index)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_forecast_bool_steps(oildata, steps):
+    # A bool is not a number of steps: True was one step. It is the location
+    # of the last forecast, which raises for the date index of oildata.
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    with pytest.raises(TypeError):
+        res.forecast(steps)
+
+
+@pytest.mark.parametrize(
+    "dynamic, expected",
+    [(np.True_, True), (np.False_, False), (np.array(False), False)],
+    ids=["np.True_", "np.False_", "0-d False"],
+)
+def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
+    # np.False_ equals 0, so it was taken as "dynamic from the start"
+    rng = np.random.default_rng(20261126)
+    y = pd.Series(10 + np.cumsum(rng.standard_normal(80)))
+    res = ETSModel(y, error="add", trend="add").fit(disp=False)
+    pred = res.predict(start=20, end=60, dynamic=dynamic)
+    assert_allclose(pred, res.predict(start=20, end=60, dynamic=expected), rtol=1e-12)
+    other = res.predict(start=20, end=60, dynamic=not expected)
+    assert np.max(np.abs(pred - other)) > 1e-3
+
+
+def _dynamic_results(use_pandas):
+    rng = np.random.default_rng(20261124)
+    y = 10 + 0.3 * rng.standard_normal(40).cumsum()
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=40, freq="MS"))
+    return ETSModel(y).smooth([0.4, 10.0], param_index="integer")
+
+
+@pytest.mark.parametrize("end", [20, 45])
+@pytest.mark.parametrize("dynamic", [-1, -3, -10, -11])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_dynamic_before_start(use_pandas, dynamic, end):
+    # A dynamic before start gave more predictions than the periods from
+    # start to end with numpy data, and pandas data raised a ValueError
+    # about their number
+    res = _dynamic_results(use_pandas)
+    match = "Dynamic prediction cannot begin before start"
+    with pytest.raises(ValueError, match=match):
+        res.predict(start=10, end=end, dynamic=dynamic)
+    with pytest.raises(ValueError, match=match):
+        res.get_prediction(start=10, end=end, dynamic=dynamic)
+
+
+def test_dynamic_date_before_start():
+    res = _dynamic_results(True)
+    with pytest.raises(ValueError, match="Dynamic prediction cannot begin"):
+        res.predict(start=10, end=20, dynamic="2000-08-01")
+    # Controls: the date of start is dynamic=True, and dynamic=False with a
+    # start after the sample gives the forecasts from start on
+    assert_allclose(
+        res.predict(start=10, end=20, dynamic="2000-11-01"),
+        res.predict(start=10, end=20, dynamic=True),
+        rtol=1e-13,
+    )
+    forecast = res.forecast(11)
+    predict = res.predict(start=45, end=50, dynamic=False)
+    assert_allclose(predict, forecast.iloc[5:], rtol=1e-13)
+    pd.testing.assert_index_equal(predict.index, forecast.index[5:])
+
+
+@pytest.mark.parametrize("how", ["fix_params", "fit_constrained"])
+@pytest.mark.parametrize("user_bounds", [False, True])
+def test_fit_after_fit_with_fixed_params(oildata, how, user_bounds):
+    # A fit with fixed parameters added their values to the model's bounds,
+    # so a later fit kept them fixed although fixed_params was empty, and
+    # the dictionary passed as bounds was changed
+    level_bounds = (0.1, 0.9)
+    bounds = {"smoothing_level": level_bounds} if user_bounds else None
+    model = ETSModel(oildata, trend="add", bounds=bounds)
+    if how == "fix_params":
+        with model.fix_params({"smoothing_trend": 0.05}):
+            res_fixed = model.fit(disp=False, param_index="integer")
+    else:
+        res_fixed = model.fit_constrained(
+            {"smoothing_trend": 0.05}, disp=False, param_index="integer"
+        )
+    assert res_fixed.fixed_params == ["smoothing_trend"]
+    assert_allclose(res_fixed.params.iloc[1], 0.05, rtol=1e-12)
+
+    fresh_bounds = {"smoothing_level": (0.1, 0.9)} if user_bounds else None
+    fresh = ETSModel(oildata, trend="add", bounds=fresh_bounds)
+    assert list(model.bounds) == list(fresh.bounds)
+    for key in fresh.bounds:
+        assert_allclose(model.bounds[key], fresh.bounds[key], rtol=1e-12)
+    if user_bounds:
+        # the dictionary passed by the user is not changed
+        assert list(bounds) == ["smoothing_level"]
+        assert bounds["smoothing_level"] is level_bounds
+
+    res = model.fit(disp=False, param_index="integer")
+    expected = fresh.fit(disp=False, param_index="integer")
+    assert res.fixed_params == []
+    # The same optimization from the same start; the tolerance only allows
+    # for rounding. The bug kept smoothing_trend at 0.05 instead of 1e-4.
+    assert_allclose(res.params, expected.params, rtol=1e-6)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+
+def test_fit_after_initialization_method_change(austourists):
+    # The initial states of a heuristic fit were added to the bounds, so an
+    # estimated fit after set_initialization_method("estimated") kept them
+    # at their heuristic values
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(austourists, initialization_method="heuristic", **kwargs)
+    model.fit(disp=False, param_index="integer")
+    assert model.bounds == {}
+    model.set_initialization_method("estimated")
+    res = model.fit(disp=False, param_index="integer")
+    expected = ETSModel(austourists, **kwargs).fit(disp=False, param_index="integer")
+    # the same optimization from the same start, see above
+    assert_allclose(res.params, expected.params, rtol=1e-6)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+
+@pytest.mark.parametrize("method", ["foo", "Simulated", "EXACT", 1])
+def test_get_prediction_unknown_method(oildata, method):
+    # An unknown method was accepted silently and treated as "exact"; it
+    # still is, with a FutureWarning
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    expected = res.get_prediction(start=46, end=51, method="exact")
+    with pytest.warns(FutureWarning, match='method must be "exact"') as record:
+        pred = res.get_prediction(start=46, end=51, method=method)
+    assert record[0].filename == __file__
+    assert pred.method == method
+    assert_allclose(
+        pred.summary_frame().to_numpy(),
+        expected.summary_frame().to_numpy(),
+        rtol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("method", [None, "exact", "simulated"])
+def test_get_prediction_known_method_no_warning(oildata, method, recwarn):
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    pred = res.get_prediction(
+        start=46, end=51, method=method, rng=np.random.default_rng(0)
+    )
+    assert len(recwarn) == 0
+    assert pred.method == ("exact" if method is None else method)
+
+
+@pytest.mark.parametrize("form", ["frame", "column", "int column"])
+def test_endog_single_column(austourists, form):
+    # A single column raised "endog must be 1-dimensional"; it is used as
+    # the series, so the results equal those of the 1-d data
+    if form == "frame":
+        series = austourists
+        endog = austourists.to_frame()
+    elif form == "column":
+        series = austourists.to_numpy()
+        endog = series[:, None]
+    else:
+        series = np.round(austourists.to_numpy()).astype(np.int64)
+        endog = series[:, None]
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(endog, **kwargs)
+    expected_model = ETSModel(series, **kwargs)
+    assert model.endog.shape == (len(series),)
+    params = expected_model.start_params
+    assert_allclose(model.start_params, params, rtol=1e-12)
+    res = model.smooth(params, param_index="integer")
+    expected = expected_model.smooth(params, param_index="integer")
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
+    assert_allclose(res.forecast(4), expected.forecast(4), rtol=1e-12)
+    if form == "frame":
+        assert_array_equal(res.forecast(4).index, expected.forecast(4).index)
+        assert_allclose(
+            res.get_prediction(start=60, end=71).summary_frame(),
+            expected.get_prediction(start=60, end=71).summary_frame(),
+            rtol=1e-12,
+        )
+
+
+@pytest.mark.parametrize("shape", [(68, 2), (1, 68)])
+def test_endog_not_single_column(austourists, shape):
+    endog = np.resize(austourists.to_numpy(), shape)
+    with pytest.raises(ValueError, match="endog must be 1-dimensional"):
+        ETSModel(endog)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("index", ["numpy", "range", "irregular dates"])
+def test_seasonal_periods_required(austourists, seasonal, index):
+    # Without seasonal_periods and without a date frequency to infer it
+    # from, a seasonal model raised a bare AssertionError
+    from statsmodels.tools.sm_exceptions import ValueWarning
+
+    if index == "numpy":
+        endog = austourists.to_numpy()
+    elif index == "range":
+        endog = austourists.reset_index(drop=True)
+    else:
+        dates = austourists.index.to_numpy().copy()
+        dates[-1] = dates[-1] + np.timedelta64(1, "D")
+        endog = pd.Series(austourists.to_numpy(), index=pd.DatetimeIndex(dates))
+    with pytest.raises(ValueError, match="seasonal_periods must be given"):
+        if index == "irregular dates":
+            with pytest.warns(ValueWarning, match="no associated frequency"):
+                ETSModel(endog, seasonal=seasonal)
+        else:
+            ETSModel(endog, seasonal=seasonal)
+
+
+@pytest.mark.parametrize(
+    "initial_seasonal",
+    [[5.0], 5.0, np.float64(5.0), np.array([[5.0]])],
+    ids=["list", "float", "float64", "(1, 1) array"],
+)
+def test_initial_seasonal_single_value(austourists, initial_seasonal):
+    # A single value was broadcast silently to all seasonal states; it still
+    # is, with a FutureWarning
+    kwargs = dict(
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        initial_level=40.0,
+    )
+    expected = ETSModel(austourists, initial_seasonal=[5.0] * 4, **kwargs)
+    expected = expected.smooth([0.3, 0.1], param_index="integer")
+    with pytest.warns(FutureWarning, match="initial_seasonal has a single") as rec:
+        model = ETSModel(austourists, initial_seasonal=initial_seasonal, **kwargs)
+    assert rec[0].filename == __file__
+    res = model.smooth([0.3, 0.1], param_index="integer")
+    assert_allclose(res.initial_seasonal, np.full(4, 5.0), rtol=1e-12)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "initial_seasonal",
+    [[1.0, 2.0], [1.0, 2.0, 3.0, 4.0, 5.0], np.ones((2, 2)), np.array(5.0)],
+    ids=["2", "5", "(2, 2)", "0-d"],
+)
+def test_initial_seasonal_wrong_length(austourists, initial_seasonal):
+    # Other lengths raised a numpy error when the model was used
+    with pytest.raises(ValueError, match="initial_seasonal must have length"):
+        ETSModel(
+            austourists,
+            seasonal="add",
+            seasonal_periods=4,
+            initialization_method="known",
+            initial_level=40.0,
+            initial_seasonal=initial_seasonal,
+        )
+
+
+@pytest.mark.parametrize(
+    "form", [list, tuple, np.asarray, pd.Series], ids=["list", "tuple", "array", "Series"]
+)
+def test_initial_seasonal_forms(austourists, form, recwarn):
+    seasonal = [3.0, -1.0, -4.0, 2.0]
+    model = ETSModel(
+        austourists,
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        initial_level=40.0,
+        initial_seasonal=form(seasonal),
+    )
+    res = model.smooth([0.3, 0.1], param_index="integer")
+    assert len(recwarn) == 0
+    assert_allclose(res.initial_seasonal, seasonal, rtol=1e-12)
+    # the first prediction is the initial level plus the seasonal of the
+    # first observation, the first value of initial_seasonal
+    assert_allclose(res.fittedvalues.iloc[0], 40.0 + 3.0, rtol=1e-12)
+
+
+@pytest.mark.parametrize("shape", [(1, 4), (4, 1)], ids=["row", "column"])
+def test_initial_seasonal_row_or_column(austourists, shape, recwarn):
+    # A single row was used in reverse order and a column raised when the
+    # model was used. Both are used as the 1-d array.
+    seasonal = [3.0, -1.0, -4.0, 2.0]
+    kwargs = dict(
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        initial_level=40.0,
+    )
+    model = ETSModel(
+        austourists, initial_seasonal=np.reshape(seasonal, shape), **kwargs
+    )
+    expected = ETSModel(austourists, initial_seasonal=seasonal, **kwargs)
+    res = model.smooth([0.3, 0.1], param_index="integer")
+    assert len(recwarn) == 0
+    assert_allclose(res.initial_seasonal, seasonal, rtol=1e-12)
+    assert_allclose(res.fittedvalues.iloc[0], 40.0 + 3.0, rtol=1e-12)
+    assert_allclose(res.llf, expected.smooth([0.3, 0.1]).llf, rtol=1e-12)
+
+
+@pytest.mark.parametrize("start, end", [(49, 51), (46, 50), (10, 12)])
+def test_predict_index(oildata, start, end):
+    # predict checked the length of `index` and then ignored it
+    from statsmodels.tools.sm_exceptions import ValueWarning
+
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    index = pd.RangeIndex(100, 100 + end - start + 1)
+    expected = res.predict(start=start, end=end)
+    actual = res.predict(start=start, end=end, index=index)
+    assert isinstance(actual, pd.Series)
+    assert_array_equal(actual.index, index)
+    assert_allclose(actual.to_numpy(), expected.to_numpy(), rtol=1e-12)
+    # numpy data: the index can only be used internally, as before
+    res_np = ETSModel(oildata.to_numpy()).smooth([0.3, 110.0], param_index="integer")
+    with pytest.warns(ValueWarning, match="only be used internally"):
+        actual_np = res_np.predict(start=start, end=end, index=index)
+    assert isinstance(actual_np, np.ndarray)
+    assert_allclose(actual_np, expected.to_numpy(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+def test_get_prediction_index(oildata, method):
+    # get_prediction checked the length of `index` and then ignored it
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    start, end = 46, 51
+    index = pd.Index([f"p{i}" for i in range(end - start + 1)])
+    kwargs = dict(start=start, end=end, method=method, simulate_repetitions=20)
+    expected = res.get_prediction(rng=np.random.default_rng(0), **kwargs)
+    actual = res.get_prediction(index=index, rng=np.random.default_rng(0), **kwargs)
+    assert_array_equal(actual.predicted_mean.index, index)
+    assert_allclose(
+        actual.predicted_mean.to_numpy(),
+        expected.predicted_mean.to_numpy(),
+        rtol=1e-12,
+    )
+    assert_array_equal(actual.pred_int().index, index)
+    frame = actual.summary_frame()
+    expected_frame = expected.summary_frame()
+    assert_array_equal(frame.index, index)
+    assert list(frame.columns) == list(expected_frame.columns)
+    # the same values, none of them NaN
+    assert np.isfinite(expected_frame.to_numpy()).all()
+    assert_allclose(frame.to_numpy(), expected_frame.to_numpy(), rtol=1e-12)

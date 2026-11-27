@@ -1338,3 +1338,34 @@ def test_unintegrate_round_trip(d):
     # unintegrate recurses once per difference, but warns only once
     assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
     assert_allclose(undiffed, x, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "to_col", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_add_lag_int_like_col(to_col, use_pandas):
+    # A NumPy integer or a 0-d integer array is a column index, as an int
+    # is. A 0-d array raised a TypeError or was looked up as a label.
+    x = np.random.default_rng(20261126).standard_normal((10, 3))
+    data = pd.DataFrame(x, columns=["a", "b", "c"]) if use_pandas else x
+    lagged = tools.add_lag(data, to_col(1), 2)
+    # The columns a, b, b.L1, b.L2 and c, trimmed by two observations
+    expected = np.column_stack([x[2:, :2], x[1:-1, 1], x[:-2, 1], x[2:, 2]])
+    assert_allclose(lagged, expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "col", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_add_lag_bool_float_col(col, use_pandas):
+    # A bool or a float is not a column index (col is strict), so it is a
+    # label. True raised a ValueError after adding an axis.
+    x = np.random.default_rng(20261126).standard_normal((10, 3))
+    if use_pandas:
+        with pytest.raises(KeyError):
+            tools.add_lag(pd.DataFrame(x, columns=["a", "b", "c"]), col, 2)
+    else:
+        with pytest.raises(TypeError, match="col can only be a label"):
+            tools.add_lag(x, col, 2)

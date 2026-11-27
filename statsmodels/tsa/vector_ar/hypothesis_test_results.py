@@ -127,7 +127,7 @@ class HypothesisTestResults:
                    + " object. " + self.h0 + ": " + self.conclusion \
                    + self.signif_str \
                    + f". Test statistic: {self.test_statistic:.3f}" \
-                   + f", critical value: {self.crit_value:.3f}>" \
+                   + f", critical value: {self.crit_value:.3f}" \
                    + f", p-value: {self.pvalue:.3f}>"
 
     def __eq__(self, other):

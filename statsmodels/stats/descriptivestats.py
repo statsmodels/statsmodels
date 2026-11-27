@@ -38,6 +38,26 @@ PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
 QUANTILES = np.array(PERCENTILES) / 100.0
 
 
+def _rounded_labels_are_valid(percentiles, decimals):
+    labels = [f"{val:.{decimals}f}" for val in percentiles]
+    distinct = len(set(labels)) == len(labels)
+    inside_bounds = all(0 < float(label) < 100 for label in labels)
+    return distinct and inside_bounds
+
+
+def _percentile_labels(percentiles):
+    if np.all(np.floor(percentiles) == percentiles):
+        return [f"{int(val)}%" for val in percentiles]
+    for decimals in range(1, 5):
+        if np.all(np.round(percentiles, decimals) == percentiles):
+            break
+    else:
+        decimals = 1
+        while not _rounded_labels_are_valid(percentiles, decimals):
+            decimals += 1
+    return [f"{val:.{decimals}f}%" for val in percentiles]
+
+
 def pd_ptp(df):
     return df.max() - df.min()
 
@@ -251,6 +271,12 @@ class Description:
     percentiles : Sequence[float], optional
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
+
+        .. versionchanged:: 0.15.1
+
+           Non-integer percentiles are labeled with rounded values that show
+           enough decimals to be distinct and to lie strictly between 0% and
+           100%, instead of truncated values.
     ntop : int, default 5
         The number of top categorical labels to report. Default is 5.
 
@@ -376,7 +402,7 @@ class Description:
         self._percentiles = np.sort(self._percentiles)
         if np.unique(self._percentiles).shape[0] != self._percentiles.shape[0]:
             raise ValueError("percentiles must be distinct")
-        if np.any(self._percentiles >= 100) or np.any(self._percentiles <= 0):
+        if not np.all((self._percentiles > 0) & (self._percentiles < 100)):
             raise ValueError("percentiles must be strictly between 0 and 100")
         self._alpha = float_like(alpha, "alpha")
         if not 0 < self._alpha < 1:
@@ -532,21 +558,7 @@ class Description:
             perc = _df.quantile(self._percentiles / 100).astype(float)
         else:
             perc = pd.DataFrame(index=self._percentiles / 100, dtype=float)
-        if np.all(np.floor(100 * perc.index) == (100 * perc.index)):
-            perc.index = [f"{int(100 * idx)}%" for idx in perc.index]
-        else:
-            dupe = True
-            scale = 100
-            index = perc.index
-            while dupe:
-                scale *= 10
-                idx = np.floor(scale * perc.index)
-                if np.all(np.diff(idx) > 0):
-                    dupe = False
-            index = np.floor(scale * index) / (scale / 100)
-            fmt = f"0.{len(str(scale//100))-1}f"
-            output = f"{{0:{fmt}}}%"
-            perc.index = [output.format(val) for val in index]
+        perc.index = _percentile_labels(self._percentiles)
 
         # Add in the names of the percentiles to the output
         self._stats = self._stats + perc.index.tolist()

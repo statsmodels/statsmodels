@@ -41,6 +41,34 @@ class TestDistributions:
         f2 = StepFunction(x, y, side="right")
         npt.assert_almost_equal(f2([1, 2, 3, 4, 5]), [7, 10, 13, 14, 15])
 
+    @pytest.mark.parametrize(
+        "side, expected",
+        [
+            ("left", [3, 3, 3, 10, 10, 20, 20]),
+            ("right", [3, 3, 10, 10, 20, 20, 20]),
+        ],
+    )
+    def test_stepfunction_infinite_boundaries(self, side, expected):
+        f = StepFunction([1, 2], [10, 20], ival=3, side=side)
+        time = np.array([-np.inf, 0, 1, 1.5, 2, 3, np.inf])
+        npt.assert_array_equal(f(time), expected)
+
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_stepfunction_negative_infinity_scalar(self, side):
+        f = StepFunction([1, 2], [10, 20], ival=3, side=side)
+        assert f(-np.inf) == 3
+
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_ecdf_negative_infinity(self, side):
+        ecdf = ECDF([1, 2], side=side)
+        assert ecdf(-np.inf) == 0
+
+    def test_stepfunction_repeated_negative_infinity(self):
+        x = [-np.inf] * 253 + [1, 2, 3]
+        y = np.arange(len(x))
+        f = StepFunction(x[::-1], y[::-1], ival=3)
+        assert f(-np.inf) == 3
+
     def test_monotone_fn_inverter(self):
         x = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
@@ -75,3 +103,38 @@ class TestDistributions:
 
         ECDF(testdata["values"])
         pd.testing.assert_frame_equal(orig_testadata, testdata)
+
+
+@pytest.mark.parametrize("convert", [list, pd.Series, np.asarray])
+def test_step_function_array_like(convert):
+    x = np.array([1.0, 2.0, 4.0])
+    y = np.array([10.0, 20.0, 40.0])
+    f = StepFunction(convert(x), convert(y))
+    # left-continuous steps: the value of the last x strictly below t
+    npt.assert_allclose(f([0.5, 1.5, 2.0, 3.0, 5.0]), [0, 10, 10, 20, 40])
+
+
+@pytest.mark.parametrize(
+    "x, y, name",
+    [
+        (np.arange(3.0)[:, None], np.arange(3.0)[:, None], "x"),
+        (np.arange(3.0)[None, :], np.arange(3.0)[None, :], "x"),
+        (np.zeros((2, 2)), np.zeros((2, 2)), "x"),
+        (1.0, 2.0, "x"),
+        (np.arange(3.0), np.arange(3.0)[:, None], "y"),
+    ],
+    ids=["column", "row", "2x2", "scalar", "y-column"],
+)
+def test_step_function_rejects_non_1d(x, y, name):
+    with pytest.raises(ValueError, match=f"{name} must have"):
+        StepFunction(x, y)
+
+
+def test_step_function_keeps_complex_values():
+    f = StepFunction([1.0, 2.0, 3.0], [1j, 2j, 3j])
+    npt.assert_allclose(f([0.5, 2.5, 3.5]), [0, 2j, 3j])
+
+
+def test_ecdf_rejects_2d():
+    with pytest.raises(ValueError, match="x must have"):
+        ECDF(np.ones((3, 2)))

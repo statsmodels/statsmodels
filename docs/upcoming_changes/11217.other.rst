@@ -1,0 +1,4 @@
+- ``handle_formula_data`` raises a clear ``ValueError`` when ``X``
+  is not None (it raised a ``TypeError`` about ``attach_spec``) and
+  returns the model specification for data with a single row (it
+  returned None). :pr:`11217`

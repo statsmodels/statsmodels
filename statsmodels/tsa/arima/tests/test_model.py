@@ -18,15 +18,18 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
+from scipy.linalg import toeplitz
 
 from statsmodels.datasets import macrodata
 from statsmodels.iolib.summary import Summary
+from statsmodels.regression.linear_model import GLS
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
 from statsmodels.tsa.arima.estimators.statespace import statespace
 from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima_process import arma_acovf, arma_generate_sample
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
@@ -149,6 +152,139 @@ def test_innovations():
     mod = ARIMA(endog, order=(0, 0, 2), trend="n")
     res = mod.fit(method="innovations")
     assert_allclose(res.params, desired_p[-1].params)
+
+
+def test_innovations_arma():
+    # Test for basic use of innovations estimation with AR terms
+    endog = dta["infl"].diff().iloc[1:101]
+
+    # ARMA(1, 1), no trend (since trend would imply GLS estimation)
+    desired_p = innovations(endog, ar_order=1, ma_order=1, demean=False).parameters
+    mod = ARIMA(endog, order=(1, 0, 1), trend="n")
+    res = mod.fit(method="innovations")
+    assert_allclose(res.params, desired_p[-1].params)
+
+    # The recursion level is passed through method_kwargs
+    desired_p = innovations(
+        endog, ar_order=1, ma_order=1, demean=False, m=10
+    ).parameters
+    res = mod.fit(method="innovations", method_kwargs={"m": 10})
+    assert_allclose(res.params, desired_p[-1].params)
+
+    # Estimates that imply a non-stationary, non-invertible process are only
+    # accepted without enforce_stationarity and enforce_invertibility
+    endog = dta["infl"].iloc[:50]
+    mod = ARIMA(endog, order=(1, 0, 1), trend="n")
+    with pytest.raises(ValueError, match="Non-stationary autoregressive"):
+        mod.fit(method="innovations")
+    desired_p = innovations(endog, ar_order=1, ma_order=1, demean=False).parameters
+    mod = ARIMA(
+        endog,
+        order=(1, 0, 1),
+        trend="n",
+        enforce_stationarity=False,
+        enforce_invertibility=False,
+    )
+    res = mod.fit(method="innovations")
+    assert_allclose(res.params, desired_p[-1].params)
+
+
+# (order, number of exog columns, trend, seed, m). The seeds are such that the
+# preliminary estimates are stationary and invertible, so that the default
+# enforce_stationarity and enforce_invertibility of ARIMA.fit accept them. A
+# value of m is passed through method_kwargs, None leaves the default.
+INNOVATIONS_ARMA_PATHS = {
+    "trend_c": ((1, 0, 1), 0, None, 0, None),
+    "trend_c_exog_ar2": ((2, 0, 1), 1, None, 0, None),
+    "exog_trend_n_m30": ((1, 0, 1), 2, "n", 0, 30),
+    "d1": ((1, 1, 1), 0, None, 0, None),
+    "d1_m30": ((1, 1, 1), 0, None, 0, 30),
+    "d1_exog": ((1, 1, 1), 2, None, 0, None),
+}
+
+
+@pytest.mark.parametrize(
+    "order, k_exog, trend, seed, m",
+    INNOVATIONS_ARMA_PATHS.values(),
+    ids=INNOVATIONS_ARMA_PATHS.keys(),
+)
+def test_innovations_arma_trend_diff_exog(order, k_exog, trend, seed, m):
+    # ARIMA.fit(method="innovations") with AR terms for the default constant,
+    # for integration and for exog. The ARMA estimates are those of
+    # innovations() on the data that the model hands to it, and the regression
+    # coefficients are the GLS estimates for the ARMA covariance matrix of the
+    # estimated parameters.
+    p, d, q = order
+    nobs = 200
+    ar = [0.6] if p == 1 else [0.7, -0.3]
+    ma = [0.3]
+    rng = np.random.default_rng(seed)
+    e = arma_generate_sample(
+        np.r_[1, -np.array(ar)], np.r_[1, ma], nobs, distrvs=rng.standard_normal
+    )
+    z = rng.standard_normal((nobs, k_exog))
+    w = z @ np.array([1.5, -0.7])[:k_exog] + e
+    # dep and reg are the data of the ARMA model with regression: what the
+    # model hands to the estimator after the differencing
+    if d == 0:
+        endog, exog = 2.0 + w, z
+        has_const = trend != "n"
+        dep = endog
+        reg = np.c_[np.ones(nobs), z] if has_const else z
+        names = ["const"] if has_const else []
+    else:
+        endog, exog = np.cumsum(w), np.cumsum(z, axis=0)
+        dep, reg = w[1:], z[1:]
+        names = []
+    names += [f"x{i + 1}" for i in range(k_exog)]
+    k_reg = len(names)
+    names += [f"ar.L{i + 1}" for i in range(p)] + ["ma.L1", "sigma2"]
+
+    mod = ARIMA(endog, order=order, exog=exog if k_exog else None, trend=trend)
+    assert mod.param_names == names
+    method_kwargs = None if m is None else {"m": m}
+    if d > 0:
+        with pytest.warns(UserWarning, match="differenced"):
+            res = mod.fit(method="innovations", method_kwargs=method_kwargs)
+    else:
+        res = mod.fit(method="innovations", method_kwargs=method_kwargs)
+    assert res.params.shape == (len(names),)
+    arma_params = res.params[k_reg:]
+    # The order of the parameters, independent of innovations(): the estimates
+    # are preliminary but within 0.13 of the true values for these seeds, while
+    # the AR and MA values differ by at least 0.3, so atol=0.2 separates them
+    assert_allclose(arma_params[:-1], ar + ma, atol=0.2)
+
+    if k_reg == 0:
+        # Differenced by the model, no regression part
+        desired = innovations(
+            np.diff(endog), ar_order=p, ma_order=q, demean=False, m=m
+        ).parameters[-1]
+        assert_allclose(arma_params, desired.params, rtol=1e-12)
+        return
+
+    # The last iteration of feasible GLS applies innovations() to the residuals
+    # of the regression of the previous iteration, so the match is exact up to
+    # rounding
+    previous = res.fit_details.params[-2].exog_params
+    desired = innovations(
+        dep - reg @ previous, ar_order=p, ma_order=q, demean=False, m=m
+    ).parameters[-1]
+    assert_allclose(arma_params, desired.params, rtol=1e-10)
+    # The iterations stop when the regression coefficients change by less than
+    # 1e-8, which bounds the difference to the estimates from the final residuals
+    desired = innovations(
+        dep - reg @ res.params[:k_reg], ar_order=p, ma_order=q, demean=False, m=m
+    ).parameters[-1]
+    assert_allclose(arma_params, desired.params, rtol=1e-6)
+
+    # GLS with the covariance matrix of the ARMA process, which does not depend
+    # on the scale. rtol allows for the conditioning of the Toeplitz matrix.
+    acov = arma_acovf(
+        np.r_[1, -arma_params[:p]], np.r_[1, arma_params[p:-1]], len(dep), sigma2=1
+    )
+    desired = GLS(dep, reg, sigma=toeplitz(acov)).fit()
+    assert_allclose(res.params[:k_reg], desired.params, rtol=1e-8)
 
 
 def test_innovations_mle():
@@ -954,3 +1090,79 @@ def test_fit_start_params_right_length(fixed, includes_fixed, start_params):
         warnings.simplefilter("error", FutureWarning)
         res = mod.fit(start_params=start_params, includes_fixed=includes_fixed)
     assert res.params.shape == (3,)
+
+
+def _arma11_data(nobs, integrated=False):
+    rng = np.random.default_rng(20261121)
+    eps = rng.standard_normal(nobs)
+    exog = rng.standard_normal(nobs)
+    endog = np.zeros(nobs)
+    for t in range(1, nobs):
+        endog[t] = 0.6 * endog[t - 1] + eps[t] + 0.3 * eps[t - 1]
+    if integrated:
+        endog = np.cumsum(endog)
+    return endog, exog
+
+
+@pytest.mark.parametrize("copy_initialization", [False, True])
+@pytest.mark.parametrize("use_exog", [False, True])
+def test_append_copy_initialization(copy_initialization, use_exog):
+    # append(copy_initialization=True) raised a TypeError since ARIMA does
+    # not accept the initialization keyword argument that append passes to
+    # clone. ARIMA without a trend is SARIMAX with the same order and exog,
+    # so SARIMAX's append with the same option is the reference. The
+    # original models have a known initialization that differs from the
+    # default, so copying it changes the results.
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+    endog, exog = _arma11_data(120)
+    exog_kwargs = {"exog": exog[:100]} if use_exog else {}
+    mod = ARIMA(endog[:100], order=(1, 0, 1), trend="n", **exog_kwargs)
+    ref_mod = SARIMAX(endog[:100], order=(1, 0, 1), **exog_kwargs)
+    initial_state = np.array([2.0, -1.0])
+    initial_state_cov = np.diag([0.5, 0.1])
+    for model in (mod, ref_mod):
+        model.ssm.initialize_known(initial_state, initial_state_cov)
+    params = [0.6, 0.3, 1.0]
+    if use_exog:
+        params = [0.5] + params
+    res = mod.smooth(params)
+    ref = ref_mod.smooth(params)
+
+    exog_kwargs = {"exog": exog[100:]} if use_exog else {}
+    res = res.append(
+        endog[100:], copy_initialization=copy_initialization, **exog_kwargs
+    )
+    ref = ref.append(
+        endog[100:], copy_initialization=copy_initialization, **exog_kwargs
+    )
+    assert_allclose(res.llf, ref.llf, rtol=1e-10)
+    assert_allclose(res.smoothed_state, ref.smoothed_state, rtol=1e-10)
+    if copy_initialization:
+        assert_allclose(res.filter_results.initial_state, initial_state)
+        assert_allclose(res.filter_results.initial_state_cov, initial_state_cov)
+    else:
+        # The default initialization is the stationary one
+        assert res.model.ssm.initialization.initialization_type == "stationary"
+
+
+def test_append_copy_initialization_integrated():
+    # With integration, the default initialization is approximate diffuse,
+    # and the loglikelihood excludes the first observation. The new model
+    # keeps the copied initialization and this burn-in, as apply does.
+    # SARIMAX's append drops the burn-in when it copies the initialization,
+    # so it is given explicitly to the reference.
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+    endog, _ = _arma11_data(120, integrated=True)
+    params = [0.6, 0.3, 1.0]
+    res = ARIMA(endog[:100], order=(1, 1, 1)).smooth(params)
+    ref = SARIMAX(endog[:100], order=(1, 1, 1)).smooth(params)
+    assert res.loglikelihood_burn == 1
+    res = res.append(endog[100:], copy_initialization=True)
+    expected = ref.apply(endog, copy_initialization=True)
+    assert res.loglikelihood_burn == 1
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+    assert_allclose(res.smoothed_state, expected.smoothed_state, rtol=1e-10)
+    expected = ref.append(endog[100:], copy_initialization=True, loglikelihood_burn=1)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)

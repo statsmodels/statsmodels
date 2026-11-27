@@ -1,0 +1,4 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` with ``print_stdout=True`` printed ``b''``. They print the
+  output of X-13ARIMA-SEATS, close the pipe to the process (it gave a
+  ``ResourceWarning``) and read the output without the risk of a
+  deadlock. :pr:`11015`

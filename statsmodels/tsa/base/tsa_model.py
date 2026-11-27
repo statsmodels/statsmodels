@@ -32,6 +32,7 @@ from statsmodels.base.data import PandasData
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import is_int_like
 
 _tsa_doc = """
     %(model)s
@@ -93,10 +94,18 @@ def get_index_loc(key, index):
         .. versionchanged:: 0.15.1
 
            A quarter string such as "2001Q2" matches all dates of the
-           quarter in a DatetimeIndex, and all periods of the quarter in a
-           PeriodIndex with a finer frequency, as pandas' partial-string
-           indexing does for e.g. "2001-03". Previously it was taken as the
-           last day of the quarter, or did not match periods.
+           quarter in a DatetimeIndex (in its time zone if it is tz-aware),
+           and all periods of the quarter in a PeriodIndex with a finer
+           frequency, as pandas' partial-string indexing does for e.g.
+           "2001-03". Previously it was taken as the last day of the quarter,
+           or did not match periods.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d integer array is a location, as an int is, so that it can
+           be the `start` or `end` of prediction with a date index, where it
+           raised a TypeError. A bool or a ``np.timedelta64`` is not a
+           location; a ``np.timedelta64`` was one.
     index : pd.Index
         The index to search.
 
@@ -135,9 +144,12 @@ def get_index_loc(key, index):
     range_index = isinstance(base_index, RangeIndex)
     index_class = type(base_index)
     nobs = len(index)
+    # strict: a float can be the label of an index with a float dtype
+    if is_int_like(key, strict=True):
+        key = int(key)
 
     # Special handling for RangeIndex
-    if range_index and isinstance(key, (int, np.integer)):
+    if range_index and is_int_like(key, strict=True):
         # Negative indices (that lie in the Index)
         if key < 0 and -key <= nobs:
             key = nobs + key
@@ -153,7 +165,7 @@ def get_index_loc(key, index):
         not range_index
         and int_index
         and not date_index
-        and isinstance(key, (int, np.integer))
+        and is_int_like(key, strict=True)
     ):
         # Negative indices (that lie in the Index)
         if key < 0 and -key <= nobs:
@@ -175,7 +187,7 @@ def get_index_loc(key, index):
         else:
             index_fn = period_range
         # Integer key (i.e., already given a location)
-        if isinstance(key, (int, np.integer)):
+        if is_int_like(key, strict=True):
             # Negative indices (that lie in the Index)
             if key < 0 and -key < nobs:
                 key = index[nobs + key]
@@ -225,6 +237,10 @@ def get_index_loc(key, index):
 
             # Out-of-sample
             if date_key > base_index[-1]:
+                # date_range needs a tz-aware key in the time zone of the
+                # index, so convert a key with another time zone or offset
+                if index_class is DatetimeIndex and date_key.tz is not None:
+                    date_key = date_key.tz_convert(base_index.tz)
                 # First create an index that may not always include `key`
                 index = index_fn(
                     start=base_index[0], end=date_key, freq=base_index.freq
@@ -252,9 +268,13 @@ def get_index_loc(key, index):
         ):
             # pandas deprecates parsing quarter strings as dates, so select
             # the dates in the quarter as its partial-string indexing does,
-            # e.g. for "2001-03" on a daily index
+            # e.g. for "2001-03" on a daily index (in local time if the index
+            # is tz-aware)
             period = Period(key)
-            loc = index.slice_indexer(period.start_time, period.end_time)
+            loc = index.slice_indexer(
+                period.start_time.tz_localize(index.tz),
+                period.end_time.tz_localize(index.tz),
+            )
             if loc.start == loc.stop:
                 raise KeyError(key)
             if loc.stop - loc.start == 1:
@@ -323,6 +343,15 @@ def get_index_label_loc(key, index, row_labels):
            up in `row_labels` with pandas' quarter parsing, which could
            match a date of another quarter, such as 2000-07-01 for
            semiannual dates starting on 2000-01-01.
+
+        .. deprecated:: 0.15.1
+
+           A partial date string that matches no row label but lies between
+           two of them, such as "2000-02" for dates without a frequency on
+           2000-01-24 and 2000-03-06, gives an empty slice, so that
+           prediction starts at the next date or ends at the previous one.
+           This is deprecated and will raise a KeyError after statsmodels
+           0.17 is released.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -371,7 +400,7 @@ def get_index_label_loc(key, index, row_labels):
             if not in_quarter.any():
                 raise
         # Without row labels (e.g. numpy data) there is nothing else to search
-        if not isinstance(key, (int, np.integer)) and row_labels is not None:
+        if not is_int_like(key, strict=True) and row_labels is not None:
             loc = row_labels.get_loc(key)
         else:
             raise
@@ -381,6 +410,16 @@ def get_index_label_loc(key, index, row_labels):
         # as get_index_loc does, so that a key such as "2000-01" covers all
         # of its dates as the end of prediction.
         if isinstance(loc, slice):
+            if loc.start == loc.stop:
+                # pandas gives an empty slice for a partial date string that
+                # lies between two dates of the row labels
+                warnings.warn(
+                    f"No date of the index matches the key {key!r}. Keys that "
+                    "match no date are deprecated and will raise a KeyError "
+                    "after statsmodels 0.17 is released.",
+                    FutureWarning,
+                    stacklevel=_stacklevel_outside_statsmodels(),
+                )
             return loc, row_labels[: loc.stop], False
         if isinstance(loc, np.ndarray):
             # Pandas may return a mask (boolean array), for e.g.:

@@ -108,3 +108,22 @@ def test_brentq_expanding_int_start_no_root(start_upp):
 
     with pytest.raises(ValueError, match="different signs"):
         brentq_expanding(func_no_root, low=1e-8, start_upp=start_upp)
+
+
+@pytest.mark.parametrize(
+    "start_upp",
+    [1, np.int64(1), np.int32(1), 1.0, True],
+    ids=["int", "int64", "int32", "float", "True"],
+)
+def test_brentq_expanding_start_upp_types(start_upp):
+    # An integer start bound becomes a float before the expansion. A bool is
+    # not an integer and is kept as given, which finds the same root.
+    root, info = brentq_expanding(
+        func, args=(5,), start_upp=start_upp, full_output=True
+    )
+    assert info.converged
+    # The same bounds give the same root as the float start bound
+    expected = brentq_expanding(func, args=(5,), start_upp=1.0)
+    assert_allclose(root, expected, rtol=1e-12)
+    # 5 is a triple root, which brentq finds to about 1e-6
+    assert_allclose(root, 5, rtol=1e-5)

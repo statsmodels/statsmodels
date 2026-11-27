@@ -125,6 +125,33 @@ def test_bsplines(x, df, degree):
     bspline.transform(x)
 
 
+@pytest.mark.parametrize(
+    "df, degree",
+    [(6, 3), (np.int64(6), np.int64(3)), (np.int32(6), np.int16(3)), (6.0, 3.0)],
+    ids=["int", "int64", "int32-int16", "float"],
+)
+def test_bsplines_int_like_df_degree(df, degree):
+    # NumPy integers and integral floats are integers. The sequence form,
+    # which takes the other branch, is the reference.
+    x = np.linspace(0, 1, 100)
+    expected = BSplines(x, [6], [3])
+    bspline = BSplines(x, df, degree)
+    assert_equal(bspline.dfs, [6])
+    assert_equal(bspline.degrees, [3])
+    assert_allclose(bspline.basis, expected.basis, rtol=1e-12)
+    x_new = np.linspace(0.1, 0.9, 7)
+    assert_allclose(bspline.transform(x_new), expected.transform(x_new), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", ["df", "degree"])
+def test_bsplines_bool_df_degree(name):
+    # A bool is not an integer: True was taken as 1
+    x = np.linspace(0, 1, 100)
+    kwargs = {"df": 6, "degree": 3, name: True}
+    with pytest.raises(TypeError):
+        BSplines(x, **kwargs)
+
+
 def test_cubic_splines_transform_not_shadowed():
     # GH: CubicSplines.__init__ stored its `transform` constructor argument
     # (a string like "domain") as `self.transform`, shadowing the inherited
@@ -135,3 +162,19 @@ def test_cubic_splines_transform_not_shadowed():
     cs = CubicSplines(x, df=[5], transform="domain")
     assert cs.transform_arg == "domain"
     assert callable(cs.transform)
+
+
+@pytest.mark.parametrize(
+    "include_intercept, expected",
+    [(np.True_, True), (np.False_, False), (np.array(True), True)],
+    ids=["np.True_", "np.False_", "0-d True"],
+)
+def test_bsplines_include_intercept_numpy_bool(include_intercept, expected):
+    # A NumPy bool was not recognised as a bool and was used as the list of
+    # per-variable flags, which failed
+    rng = np.random.default_rng(20261126)
+    x = rng.uniform(size=(50, 2))
+    bs = BSplines(x, df=[5, 6], degree=[3, 3], include_intercept=include_intercept)
+    ref = BSplines(x, df=[5, 6], degree=[3, 3], include_intercept=expected)
+    assert bs.include_intercept == [expected, expected]
+    assert_allclose(bs.basis, ref.basis, rtol=1e-12)

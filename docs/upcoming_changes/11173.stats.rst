@@ -1,0 +1,7 @@
+- ``test_proportions_2indep`` warned "divide by zero" or "invalid
+  value" if a count was 0 or equal to its number of observations,
+  for every ``compare`` and ``method`` (the ``ratio`` and
+  ``odds_ratio`` estimates are inf or nan there), and
+  ``confint_proportions_2indep`` with ``compare="ratio"`` and
+  ``method="score"`` warned "divide by zero" if ``count2`` was 0
+  (the upper limit is inf). Results are unchanged. :pr:`11173`

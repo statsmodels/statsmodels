@@ -1,0 +1,5 @@
+- Without univariate filtering, ``set_smooth_method(smooth_univariate=True)``
+  of state space models (and the constructor argument) is ignored, as
+  before, with a ``FutureWarning``. After statsmodels 0.17 is released
+  it will set the flag, and smoothing will raise a ``ValueError``, as it
+  does when the ``smooth_univariate`` attribute is set. :pr:`11052`
