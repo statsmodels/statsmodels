@@ -1,5 +1,6 @@
 """Tests for linear mixed effects models."""
 from statsmodels.compat.platform import PLATFORM_OSX
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import csv
 from pathlib import Path
@@ -1141,6 +1142,60 @@ def test_bse_re_nlme(case, reml):
     assert_allclose(result.bse_re, _bse_re_nlme[case, reml][:-1], rtol=1e-3)
     std_err = result.summary().tables[1]["Std.Err."].iloc[model.k_fe :]
     assert std_err.tolist() == [f"{x:.3f}" for x in result.bse_re]
+
+
+def _bse_re_units_data():
+    rng = np.random.default_rng(8)
+    n_groups, m = 40, 8
+    group = np.repeat(np.arange(n_groups), m)
+    sub = np.tile(np.arange(m) % 4, n_groups)
+    sub2 = rng.integers(0, 3, size=n_groups * m)
+    x = rng.normal(size=n_groups * m)
+    y = (
+        1
+        + 0.5 * x
+        + np.repeat(rng.normal(size=n_groups), m)
+        + 0.7 * rng.normal(size=4)[sub]
+        + 0.5 * rng.normal(size=3)[sub2]
+        + rng.normal(size=n_groups * m)
+    )
+    return pd.DataFrame({"y": y, "x": x, "g": group, "sub": sub, "sub2": sub2})
+
+
+@pytest.mark.parametrize("case", ["intercept_vc", "vc_only", "two_vc"])
+def test_bse_re_units(case):
+    # the standard errors of the variances are in the units of y squared and
+    # the ones of the fixed effects in the units of y, also for variance
+    # components without a random intercept and for two of them
+    data = _bse_re_units_data()
+    kwds = {"re_formula": "1", "vc_formula": {"sub": "0 + C(sub)"}}
+    if case == "vc_only":
+        kwds["re_formula"] = "0"
+    elif case == "two_vc":
+        kwds["vc_formula"] = {"sub": "0 + C(sub)", "sub2": "0 + C(sub2)"}
+
+    out = []
+    for unit in (1, 10):
+        df = data.assign(y=unit * data["y"])
+        model = MixedLM.from_formula("y ~ x", df, groups="g", **kwds)
+        result = model.fit(reml=True)
+        assert np.all(np.isfinite(result.bse_re))
+        out.append((result.bse_re.to_numpy(), result.bse_fe.to_numpy()))
+    assert_allclose(out[1][0], 100 * out[0][0], rtol=1e-3)
+    assert_allclose(out[1][1], 10 * out[0][1], rtol=1e-3)
+
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM, reason="np.sqrt does not warn for a negative value on WASM"
+)
+def test_bse_re_negative_variance_warns():
+    # a variance that is not positive gives a nan, with the warning of sqrt
+    data = _bse_re_units_data()
+    result = MixedLM.from_formula("y ~ x", data, groups="g").fit()
+    result._results._cov_vparams = -np.eye(1)
+    with pytest.warns(RuntimeWarning, match="invalid value"):
+        bse_re = result.bse_re
+    assert np.all(np.isnan(bse_re))
 
 
 def test_random_effects():

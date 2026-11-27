@@ -236,6 +236,35 @@ class ARIMA(sarimax.SARIMAX):
     def _res_classes(self):
         return {"fit": (ARIMAResults, ARIMAResultsWrapper)}
 
+    def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone the model with new data and optionally a new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : array_like, optional
+            Array of exogenous regressors, without the trend terms.
+        **kwargs
+            Keyword arguments to pass to the new model to change the model
+            specification. An ``initialization`` is set on the state space
+            representation of the new model.
+
+        Returns
+        -------
+        ARIMA
+            The new model.
+        """
+        # ARIMA does not accept the state space keyword arguments of SARIMAX,
+        # so an initialization, which append passes when
+        # copy_initialization=True, is set on the new model instead
+        initialization = kwargs.pop("initialization", None)
+        mod = super().clone(endog, exog=exog, **kwargs)
+        if initialization is not None:
+            mod.ssm.initialization = initialization
+        return mod
+
     def fit(self, start_params=None, transformed=True, includes_fixed=False,
             method=None, method_kwargs=None, gls=None, gls_kwargs=None,
             cov_type=None, cov_kwds=None, return_params=False,
@@ -492,12 +521,13 @@ class ARIMA(sarimax.SARIMAX):
                     )
             elif method == "innovations":
                 p, fit_details = innovations(
-                    endog, ma_order=order[2], demean=False, **method_kwargs
+                    endog, ar_order=order[0], ma_order=order[2], demean=False,
+                    **method_kwargs
                     )
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
-            elif method == "innovations_mle":
+            else:  # innovations_mle, validated above
                 p, fit_details = innovations_mle(
                     endog,
                     order=order,

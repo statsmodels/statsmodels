@@ -1,0 +1,1 @@
+- ``summary`` of ``VECMResults`` raised for ``coint_rank=0``. :pr:`10956`

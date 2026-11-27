@@ -1,0 +1,5 @@
+- ``FormulaManager.get_matrices(..., prediction=True)`` evaluates
+  only the right-hand side of a formula, as documented, and
+  returns only its design matrix. With patsy, the left-hand side
+  was evaluated and both matrices were returned; with formulaic,
+  a left-hand side missing from the data raised. :pr:`11224`

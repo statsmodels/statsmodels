@@ -1,0 +1,5 @@
+- Unknown values of ``method`` in ``get_prediction`` of ``ETSResults``,
+  which were treated as ``"exact"``, and a single value as the
+  known ``initial_seasonal`` of :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel`, which was used for every
+  season, are deprecated and will raise a ``ValueError`` after
+  statsmodels 0.17 is released. :pr:`10937`

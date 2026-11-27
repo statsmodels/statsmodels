@@ -1096,6 +1096,27 @@ def test_invalid_y_grid():
     assert "y_grid" in str(e.value)
 
 
+@pytest.mark.parametrize("convert", [list, np.asarray, pd.Series])
+@pytest.mark.parametrize("compare", ["ratio", "diff"])
+def test_y_grid_array_like(convert, compare):
+    # for small counts the default grid is 0, 1, ..., 100
+    expected = etest_poisson_2indep(10, 20, 15, 25, compare=compare)
+    res = etest_poisson_2indep(
+        10, 20, 15, 25, compare=compare, y_grid=convert(range(101))
+    )
+    assert_allclose(res, expected, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "y_grid",
+    [arange(5)[:, None], arange(5)[None, :], np.array(3)],
+    ids=["column", "row", "0d"],
+)
+def test_y_grid_rejects_non_1d(y_grid):
+    with pytest.raises(ValueError, match="y_grid must have"):
+        etest_poisson_2indep(1, 1, 1, 1, y_grid=y_grid)
+
+
 def test_poisson_power_2ratio():
     # power compared to PASS documentation
 

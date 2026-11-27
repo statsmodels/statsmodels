@@ -2062,7 +2062,11 @@ def _fit_gls_for_summary():
 def test_summary_after_remove_data(fit_func):
     # summary() must still work after remove_data() has been called
     res = fit_func()
-    assert isinstance(res.summary(), Summary)
+    with warnings.catch_warnings():
+        # scipy < 1.16 warns that kurtosistest needs 20 observations (16 here)
+        msg = "kurtosistest only valid for n>=20"
+        warnings.filterwarnings("ignore", message=msg, category=UserWarning)
+        assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
 
@@ -2222,6 +2226,46 @@ def test_hessian_factor_glsar_raises(order):
     res = mod.iterative_fit(maxiter=3)
     assert np.isfinite(res.params).all()
 
+
+@pytest.mark.parametrize(
+    "rho, order, coefs",
+    [
+        (2, 2, [0.0, 0.0]),
+        (np.int64(2), 2, [0.0, 0.0]),
+        (np.int32(2), 2, [0.0, 0.0]),
+        (np.array(2), 2, [0.0, 0.0]),
+        (2.0, 1, [2.0]),
+    ],
+    ids=["int", "int64", "int32", "0d-array", "float"],
+)
+def test_glsar_rho_order_or_coefficient(rho, order, coefs):
+    # An integer, including a 0-d integer array, is the AR order with zero
+    # coefficients. A float is a coefficient (rho is strict).
+    rng = np.random.default_rng(20261126)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    endog = exog @ np.array([1.0, 0.5]) + rng.standard_normal(n)
+    mod = GLSAR(endog, exog, rho=rho)
+    assert mod.order == order
+    assert_allclose(np.asarray(mod.rho, dtype=float), coefs, rtol=1e-12)
+    # Closed form of the whitening: e_t = y_t - sum_i rho_i y_{t-i-1}
+    expected = endog[order:].copy()
+    for i, coef in enumerate(coefs):
+        expected -= coef * endog[order - i - 1 : n - i - 1]
+    assert_allclose(mod.wendog, expected, rtol=1e-12)
+
+
+
+@pytest.mark.parametrize(
+    "rho",
+    [True, np.True_, np.array(False), [True, False]],
+    ids=["True", "np.True_", "0d-bool", "bool-list"],
+)
+def test_glsar_rho_bool_raises(rho):
+    # a bool is neither an AR order nor a coefficient: True was an order of 1
+    exog = np.column_stack([np.ones(10), np.arange(10.0)])
+    with pytest.raises(TypeError, match="rho must be an int"):
+        GLSAR(np.arange(10.0), exog, rho=rho)
 
 def test_conf_int_el_matches_own_critical_value_and_shrinks():
     # OLSResults.conf_int_el had no test coverage in the standard (non-slow)

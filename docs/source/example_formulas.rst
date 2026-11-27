@@ -145,7 +145,7 @@ Define a custom function:
 Namespaces
 ----------
 
-Notice that all of the above examples use the calling namespace to look for the functions to apply. The namespace used can be controlled via the ``eval_env`` keyword. For example, you may want to give a custom namespace using the :class:`patsy:patsy.EvalEnvironment` or you may want to use a "clean" namespace, which we provide by passing ``eval_func=-1``. The default is to use the caller's namespace. This can have (un)expected consequences, if, for example, someone has a variable names ``C`` in the user namespace or in their data structure passed to ``patsy``, and ``C`` is used in the formula to handle a categorical variable. See the `Patsy API Reference <https://patsy.readthedocs.io/en/latest/API-reference.html>`_ for more information.
+Notice that all of the above examples use the calling namespace to look for the functions to apply. The namespace used can be controlled via the ``eval_env`` keyword of ``from_formula``, which means the same in every model: ``None`` (the default) or ``1`` uses the namespace that calls ``from_formula``, an integer ``k`` the namespace ``k`` stack frames above ``from_formula``, a dict the variables it holds, and ``eval_env=-1`` a "clean" namespace with no variables. Variables in the data are found first. The default can have (un)expected consequences, if, for example, someone has a variable names ``C`` in the user namespace or in their data structure passed to ``patsy``, and ``C`` is used in the formula to handle a categorical variable. See the `Patsy API Reference <https://patsy.readthedocs.io/en/latest/API-reference.html>`_ for more information.
 
 Using formulas with models that do not (yet) support them
 ---------------------------------------------------------

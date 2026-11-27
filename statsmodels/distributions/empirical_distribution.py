@@ -4,6 +4,8 @@ Empirical CDF Functions
 import numpy as np
 from scipy.interpolate import interp1d
 
+from statsmodels.tools.validation import array_like
+
 
 def _conf_set(F, alpha=.05):
     r"""
@@ -58,6 +60,12 @@ class StepFunction:
         Default is 'left'. Defines the shape of the intervals constituting the
         steps. 'right' correspond to [a, b) intervals and 'left' to (a, b].
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+       Left-continuous step functions now return ``ival`` at negative infinity
+       even when the support contains repeated negative infinity values.
+
     Examples
     --------
     >>> import numpy as np
@@ -88,21 +96,18 @@ class StepFunction:
             raise ValueError(msg)
         self.side = side
 
-        _x = np.asarray(x)
-        _y = np.asarray(y)
+        _x = array_like(x, "x", dtype=None, mindim=0, shape=(None,))
+        _y = array_like(y, "y", dtype=None, mindim=0, shape=(None,))
 
         if _x.shape != _y.shape:
             msg = "x and y do not have the same shape"
-            raise ValueError(msg)
-        if len(_x.shape) != 1:
-            msg = "x and y must be 1-dimensional"
             raise ValueError(msg)
 
         self.x = np.r_[-np.inf, _x]
         self.y = np.r_[ival, _y]
 
         if not sorted:
-            asort = np.argsort(self.x)
+            asort = np.argsort(self.x, kind="stable")
             self.x = np.take(self.x, asort, 0)
             self.y = np.take(self.y, asort, 0)
         self.n = self.x.shape[0]
@@ -110,6 +115,7 @@ class StepFunction:
     def __call__(self, time):
 
         tind = np.searchsorted(self.x, time, self.side) - 1
+        tind = np.maximum(tind, 0)
         return self.y[tind]
 
 

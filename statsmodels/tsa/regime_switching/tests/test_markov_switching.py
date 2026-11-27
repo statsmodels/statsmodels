@@ -239,6 +239,70 @@ def test_initial_probabilities():
         mod.initialize_steady_state()
 
 
+@pytest.mark.parametrize("convert", [list, tuple, pd.Series, np.asarray])
+def test_initialize_known_array_like(convert):
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=3)
+    mod.initialize_known(convert([0.2, 0.3, 0.5]))
+    # Known initial probabilities do not depend on the parameters
+    params = np.full(6, 0.3)
+    assert_allclose(mod.initial_probabilities(params), [0.2, 0.3, 0.5], rtol=1e-15)
+
+
+def test_initialize_known_copies_probabilities():
+    # Changing the array afterwards does not change the model
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    probabilities = np.array([0.2, 0.8])
+    mod.initialize_known(probabilities)
+    probabilities[:] = [0.9, 0.1]
+    params = np.r_[0.5, 0.5]
+    assert_allclose(mod.initial_probabilities(params), [0.2, 0.8], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "probabilities, ndim",
+    [([[0.2], [0.8]], 2), ([[0.2, 0.8]], 2), ([[[0.2, 0.8]]], 3)],
+    ids=["column", "row", "3d"],
+)
+def test_initialize_known_not_1d_raises(probabilities, ndim):
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    match = f"probabilities must have 1 dimension, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        mod.initialize_known(probabilities)
+
+
+@pytest.mark.parametrize(
+    "probabilities", [1.0, [0.2, 0.2, 0.6]], ids=["scalar", "too-long"]
+)
+def test_initialize_known_wrong_length_raises(probabilities):
+    # A scalar is a vector with one element, which is too short
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    with pytest.raises(ValueError, match=r"a vector of shape \(k_regimes,\)"):
+        mod.initialize_known(probabilities)
+
+
+@pytest.mark.parametrize(
+    "probabilities",
+    [[0.2, 0.2], [0.2, 0.2, 0.6], [[0.2, 0.8]]],
+    ids=["not-summing-to-one", "too-long", "2d"],
+)
+@pytest.mark.parametrize("previous", ["steady-state", "known"])
+def test_initialize_known_failure_keeps_initialization(probabilities, previous):
+    # The initialization was set to known before the checks, so that after
+    # the ValueError initial_probabilities raised a TypeError (None >= 0)
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    params = np.r_[0.9, 0.2]
+    if previous == "known":
+        mod.initialize_known([0.3, 0.7])
+        expected = [0.3, 0.7]
+    else:
+        # The steady state of p[0->0] = 0.9 and p[1->0] = 0.2 solves
+        # 0.1 * pi_0 = 0.2 * pi_1
+        expected = [2 / 3, 1 / 3]
+    with pytest.raises(ValueError):
+        mod.initialize_known(probabilities)
+    assert_allclose(mod.initial_probabilities(params), expected, rtol=1e-12)
+
+
 def test_logistic():
     logistic = markov_switching._logistic
 
@@ -526,3 +590,257 @@ def test_predict_with_probabilities_array(kind, as_list):
     predict = mod.predict(params, probabilities=probabilities)
     assert_allclose(predict, (means * joint).sum(axis=(0, 1)), rtol=1e-12)
     assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)
+
+
+def test_parameters_getitem_numpy_integer():
+    # NumPy integers are accepted as regime indices in the parameters object
+    endog = np.random.default_rng(0).standard_normal(100)
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, trend="c", switching_variance=True
+    )
+    params = mod.parameters
+    for key in [np.int64(0), np.int32(1)]:
+        assert_equal(params[key], params[int(key)])
+        assert_equal(
+            params[key, "regime_transition"], params[int(key), "regime_transition"]
+        )
+        assert_equal(
+            params["regime_transition", key], params["regime_transition", int(key)]
+        )
+
+
+@pytest.mark.parametrize(
+    "flag, expected", [(np.True_, True), (np.False_, False), (1, True), (0, False)]
+)
+@pytest.mark.parametrize("name", ["switching_trend", "switching_exog", "switching_ar"])
+def test_scalar_switching_flags(flag, expected, name):
+    # A numpy bool or a 0/1 integer is the same as the Python bool
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40)
+    exog = rng.standard_normal((40, 2))
+    if name == "switching_ar":
+        model = markov_autoregression.MarkovAutoregression
+        kwargs = {"order": 2}
+    else:
+        model = markov_regression.MarkovRegression
+        kwargs = {"exog": exog}
+    mod = model(endog, k_regimes=2, **{name: flag}, **kwargs)
+    mod_bool = model(endog, k_regimes=2, **{name: expected}, **kwargs)
+    assert getattr(mod, name) == getattr(mod_bool, name)
+    # The flags are stored as Python bools, as for the bool argument
+    assert all(value is expected for value in getattr(mod, name))
+    assert mod.param_names == mod_bool.param_names
+    params = mod_bool.start_params
+    assert_allclose(mod.loglikeobs(params), mod_bool.loglikeobs(params), rtol=1e-13)
+
+
+@pytest.mark.parametrize("order", [0, 1])
+def test_results_predict_conditional_with_pandas_data(order):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+    if order == 0:
+        model, kwargs = markov_regression.MarkovRegression, {}
+        params = np.r_[0.9, 0.2, mu, 1.0]
+        # Conditional on S_t = i, the prediction is mu_i
+        conditional = True
+        expected = np.repeat(mu[:, None], 40, axis=1)
+    else:
+        model, kwargs = markov_autoregression.MarkovAutoregression, {"order": 1}
+        params = np.r_[0.9, 0.2, mu, 1.0, phi]
+        # Conditional on (S_t, S_{t-1}) = (i, j): mu_i + phi_i (y_{t-1} - mu_j)
+        conditional = 2
+        expected = mu[:, None, None] + phi[:, None, None] * (
+            endog[:-1] - mu[None, :, None]
+        )
+    res = model(pd.Series(endog, index=index), k_regimes=2, **kwargs).smooth(
+        params, cov_type="none"
+    )
+
+    # Conditional predictions are an ndarray, as for an ndarray endog
+    predict = res.predict(conditional=conditional)
+    assert type(predict) is np.ndarray
+    assert_allclose(predict, expected, rtol=1e-13)
+
+    # Unconditional predictions are a Series indexed by the dates, with the
+    # values for an ndarray endog
+    res_array = model(endog, k_regimes=2, **kwargs).smooth(params, cov_type="none")
+    predict = res.predict()
+    assert isinstance(predict, pd.Series)
+    pd.testing.assert_index_equal(predict.index, index[order:])
+    assert_allclose(predict, res_array.predict(), rtol=1e-13)
+
+
+def transform_params_models():
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40)
+    exog_tvtp = np.column_stack([np.ones(40), rng.standard_normal(40)])
+    return {
+        "base": markov_switching.MarkovSwitching(endog, k_regimes=2),
+        "base-3": markov_switching.MarkovSwitching(endog, k_regimes=3),
+        "base-tvtp": markov_switching.MarkovSwitching(
+            endog, k_regimes=2, exog_tvtp=exog_tvtp
+        ),
+        "regression": markov_regression.MarkovRegression(
+            endog, k_regimes=2, switching_variance=True
+        ),
+        "autoregression": markov_autoregression.MarkovAutoregression(
+            endog, k_regimes=2, order=1
+        ),
+    }
+
+
+def transform_params_reference(name, unconstrained):
+    # Closed forms of the transformations: the multinomial logistic for the
+    # transition probabilities (unless they are time-varying), the identity
+    # for regression coefficients, squares for variances and -u / sqrt(1 + u^2)
+    # for an AR(1) coefficient (constrain_stationary_univariate)
+    u = np.asarray(unconstrained, dtype=float)
+    if name == "base-tvtp":
+        return u.copy()
+    if name == "base-3":
+        # p[j->0], p[j->1] of regime j are u[j] and u[3 + j]
+        out = u.copy()
+        for j in range(3):
+            idx = [j, 3 + j]
+            out[idx] = np.exp(u[idx]) / (1 + np.exp(u[idx]).sum())
+        return out
+    out = u.copy()
+    out[:2] = np.exp(u[:2]) / (1 + np.exp(u[:2]))
+    if name == "regression":
+        # p[0->0], p[1->0], const[0], const[1], sigma2[0], sigma2[1]
+        out[4:6] = u[4:6] ** 2
+    elif name == "autoregression":
+        # p[0->0], p[1->0], const[0], const[1], sigma2, ar.L1[0], ar.L1[1]
+        out[4] = u[4] ** 2
+        out[5:7] = -u[5:7] / np.sqrt(1 + u[5:7] ** 2)
+    return out
+
+
+@pytest.mark.parametrize(
+    "name", ["base", "base-3", "base-tvtp", "regression", "autoregression"]
+)
+@pytest.mark.parametrize("form", [list, tuple, pd.Series, np.asarray])
+def test_transform_params_array_like(name, form):
+    mod = transform_params_models()[name]
+    unconstrained = np.linspace(-1.2, 0.9, mod.k_params)
+    expected = transform_params_reference(name, unconstrained)
+    constrained = mod.transform_params(form(unconstrained.tolist()))
+    assert type(constrained) is np.ndarray
+    assert_allclose(constrained, expected, rtol=1e-13)
+    # untransform_params is the inverse; the root finder used with three
+    # regimes is accurate to its own tolerance
+    rtol = 1e-6 if name == "base-3" else 1e-12
+    restored = mod.untransform_params(form(constrained.tolist()))
+    assert type(restored) is np.ndarray
+    assert_allclose(restored, unconstrained, rtol=rtol)
+class ParamsFreeLoglikelihoods(markov_switching.MarkovSwitching):
+    # Conditional log-likelihoods that do not depend on the parameters, so
+    # they stay real when complex-step differentiation makes the parameters,
+    # and so the transition probabilities, complex
+    def __init__(self, conditional_loglikelihoods):
+        self._given = conditional_loglikelihoods
+        nobs = conditional_loglikelihoods.shape[-1]
+        super().__init__(np.zeros(nobs), k_regimes=2)
+
+    def _conditional_loglikelihoods(self, params):
+        return self._given
+
+
+@pytest.mark.parametrize("lagged", [False, True])
+def test_complex_transition_with_real_loglikelihoods(lagged):
+    from statsmodels.tools.numdiff import approx_fprime, approx_hess3
+
+    # Log-likelihoods that depend on the current regime only, shaped
+    # (k_regimes, nobs), or also on the previous one, (k_regimes,) * 2 + (nobs,)
+    rng = np.random.default_rng(20261122)
+    shape = (2, 2, 30) if lagged else (2, 30)
+    mod = ParamsFreeLoglikelihoods(np.log(rng.uniform(0.1, 1.0, shape)))
+    params = np.r_[0.9, 0.2]
+
+    # Complex-step derivatives against central differences of the real
+    # log-likelihood, to the accuracy of the central differences
+    score_obs = approx_fprime(params, mod.loglikeobs, centered=True)
+    assert_allclose(mod.score_obs(params), score_obs, rtol=1e-6)
+    assert_allclose(mod.score(params), score_obs.sum(0), rtol=1e-6)
+    hessian = approx_hess3(params, mod.loglike)
+    assert_allclose(mod.hessian(params), hessian, rtol=1e-4)
+
+    # The default covariance matrix of smooth, the outer product of gradients
+    res = mod.smooth(params)
+    assert_allclose(
+        res.cov_params(), np.linalg.inv(score_obs.T @ score_obs), rtol=1e-5
+    )
+    assert np.isrealobj(res.filtered_marginal_probabilities)
+
+    # Complex log-likelihoods with real transition probabilities give the
+    # same values, with a zero imaginary part
+    complex_mod = ParamsFreeLoglikelihoods(mod._given.astype(complex))
+    llf_obs = complex_mod.loglikeobs(params)
+    assert np.iscomplexobj(llf_obs)
+    assert_allclose(llf_obs, mod.loglikeobs(params), rtol=1e-13)
+
+
+def _int_like_params():
+    # Two switching transition parameters, then a non-switching and a
+    # switching exog parameter
+    params = markov_switching.MarkovSwitchingParams(k_regimes=2)
+    params["regime_transition"] = [1, 1]
+    params["exog"] = [0, 1]
+    return params
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_params_int_like_regime(to_key):
+    # A NumPy integer or a 0-d integer array is a regime number, as an int
+    # is. A 0-d array raised an IndexError.
+    params = _int_like_params()
+    assert_equal(params[to_key(0)], [0, 2, 4, 5])
+    assert_equal(params[to_key(1)], [1, 3, 4, 6])
+    assert_equal(params[to_key(0), "exog"], [4, 5])
+    assert_equal(params["exog", to_key(1)], [4, 6])
+    assert_equal(params[to_key(1), "regime_transition"], [1, 3])
+
+
+@pytest.mark.parametrize(
+    "key", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+def test_params_bool_float_regime(key):
+    # A bool or a float is not a regime number: True was regime 1 in a tuple
+    params = _int_like_params()
+    with pytest.raises(IndexError, match="Invalid index"):
+        params[key]
+    with pytest.raises(IndexError, match="Invalid index"):
+        params[key, "exog"]
+    with pytest.raises(IndexError, match="Invalid index"):
+        params["exog", key]
+
+
+@pytest.mark.parametrize("k_regimes", [2, np.int64(2)], ids=["int", "int64"])
+def test_params_counts_are_python_ints(k_regimes):
+    # np.sum made k_parameters, k_params and the slice bounds NumPy integers,
+    # which print as np.int64(4) with NumPy 2
+    params = markov_switching.MarkovSwitchingParams(k_regimes=k_regimes)
+    params["regime_transition"] = [1, 1]
+    params["exog"] = [0, 1]
+    assert params.k_parameters == {"regime_transition": 4, "exog": 3}
+    assert params.k_params == 7
+    assert params["exog"] == slice(4, 7)
+    values = [*params.k_parameters.values(), params.k_params]
+    for block in (params["regime_transition"], params["exog"]):
+        values += [block.start, block.stop]
+    assert all(type(value) is int for value in values)
+    assert repr(params["exog"]) == "slice(4, 7, None)"
+    assert repr(params.k_parameters["exog"]) == "3"
+
+
+def test_model_k_params_is_python_int():
+    endog = np.random.default_rng(0).standard_normal(50)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    # 2 transition probabilities, 2 switching constants and 1 variance
+    assert mod.k_params == 5
+    assert type(mod.k_params) is int

@@ -437,7 +437,6 @@ def test_hampel_inf_constants(a, b, c):
         [],
         # arrays do not work in the methods of the norm, a scalar is required
         np.array([2.0]),
-        np.array(2.0),
         [2.0, 2.0, 2.0, 2.0],
         np.ones(4),
     ],
@@ -447,6 +446,18 @@ def test_hampel_scalar_required(pos, value):
     constants[pos] = value
     with pytest.raises(TypeError, match=f"{pos} must be float_like"):
         norms.Hampel(**constants)
+
+
+@pytest.mark.parametrize("pos", ["a", "b", "c"])
+def test_hampel_zero_dim_constant(pos):
+    # a 0-d array is the scalar it holds, as in float_like
+    constants = dict(a=2.0, b=4.0, c=8.0)
+    ref = norms.Hampel(**constants)
+    constants[pos] = np.array(constants[pos])
+    norm = norms.Hampel(**constants)
+    z = np.linspace(-10, 10, 41)
+    for method in ("rho", "psi", "weights", "psi_deriv"):
+        assert_allclose(getattr(norm, method)(z), getattr(ref, method)(z), rtol=1e-15)
 
 
 @pytest.mark.parametrize("inplace", [False, True])

@@ -1,0 +1,2 @@
+- :meth:`~statsmodels.tsa.arima.model.ARIMAResults.append` raised a
+  ``TypeError`` with ``copy_initialization=True``. :pr:`10915`

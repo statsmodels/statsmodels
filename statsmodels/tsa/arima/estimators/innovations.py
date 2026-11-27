@@ -1,5 +1,5 @@
 """
-Innovations algorithm for MA(q) and SARIMA(p,d,q)x(P,D,Q,s) model parameters.
+Innovations algorithm for ARMA(p,q) and SARIMA(p,d,q)x(P,D,Q,s) model parameters.
 
 Author: Chad Fulton
 License: BSD-3
@@ -8,10 +8,12 @@ License: BSD-3
 import warnings
 
 import numpy as np
+from scipy.linalg import toeplitz
 from scipy.optimize import minimize
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import int_like
 from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.hannan_rissanen import (
     _validate_fixed_params,
@@ -24,9 +26,9 @@ from statsmodels.tsa.statespace.tools import diff
 from statsmodels.tsa.stattools import acovf, innovations_algo
 
 
-def innovations(endog, ma_order=0, demean=True):
-    """
-    Estimate MA parameters using innovations algorithm
+def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
+    r"""
+    Estimate ARMA parameters using innovations algorithm
 
     Parameters
     ----------
@@ -36,7 +38,22 @@ def innovations(endog, ma_order=0, demean=True):
         Maximum moving average order. Default is 0.
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
-        fitting the moving average coefficients. Default is True.
+        fitting the ARMA coefficients. Default is True.
+    ar_order : int or list of int, optional
+        Autoregressive order. Default is 0. As for `ma_order`, a list gives
+        the included lags, which must be the consecutive lags 1, ..., p.
+
+        .. versionadded:: 0.15.1
+    m : int, optional
+        Recursion level of the innovations algorithm, the order of the long
+        moving average model whose coefficients give the estimates. Must
+        satisfy ``ar_order + ma_order <= m < nobs``. If None (the default),
+        then if `ar_order` is 0 the estimate at each `ma_order` ``j`` uses
+        ``m = j``, as in previous versions, and otherwise
+        ``m = max(17, ar_order + ma_order)``, reduced to ``nobs - 1`` for
+        short series. See Notes.
+
+        .. versionadded:: 0.15.1
 
     Returns
     -------
@@ -44,26 +61,87 @@ def innovations(endog, ma_order=0, demean=True):
         A result object with fields:
 
         parameters : list of SARIMAXParams objects
-            List elements correspond to estimates at different `ma_order`.
-            For example, parameters[0] is an `SARIMAXParams` instance
-            corresponding to `ma_order=0`.
+            List elements correspond to estimates at different `ma_order`,
+            all with the given `ar_order`. For example, parameters[0] is an
+            `SARIMAXParams` instance corresponding to `ma_order=0`.
         other_results : Bunch
             Includes one component, `spec`, containing the
             `SARIMAXSpecification` instance corresponding to the input
             arguments.
 
+    Raises
+    ------
+    ValueError
+        If `ar_order` or `ma_order` is negative, or is a list of lags that
+        are not consecutive (1, ..., p and 1, ..., q). If `ar_order` is
+        positive or `m` is given, also if ``ar_order + ma_order <= m < nobs``
+        does not hold; with the default `m` this happens when `nobs` is not
+        larger than ``ar_order + ma_order``.
+    TypeError
+        If `m` is not an integer.
+
     Notes
     -----
     The primary reference is [1]_, section 5.1.3.
 
-    This procedure assumes that the series is stationary.
+    The innovations algorithm, applied to the sample autocovariances, gives
+    the coefficients :math:`\hat \theta_{m,1}, \dots, \hat \theta_{m,m}` and
+    the one-step prediction error variance :math:`\hat v_m` of a fitted
+    MA(m) model. For an ARMA(p, q) model, the AR coefficients solve
+
+    .. math::
+
+        \hat \theta_{m,j} = \sum_{i=1}^{p} \phi_i \hat \theta_{m,j-i},
+        \quad j = q+1, \dots, q+p,
+
+    with :math:`\hat \theta_{m,0} = 1` and :math:`\hat \theta_{m,j} = 0` for
+    :math:`j < 0`, and the MA coefficients are
+
+    .. math::
+
+        \theta_j = \hat \theta_{m,j} - \sum_{i=1}^{\min(j, p)} \phi_i
+        \hat \theta_{m,j-i}, \quad j = 1, \dots, q.
+
+    For a pure MA(q) model this gives :math:`\theta_j = \hat \theta_{m,j}`.
+
+    The estimate of the variance is :math:`\hat \sigma^2 = \hat v_m`, the
+    one-step prediction error variance of the MA(m) model. It is also defined
+    when the estimated ARMA coefficients imply a non-stationary process. The
+    R package itsmr instead reports the mean squared standardized one-step
+    prediction error of the fitted ARMA model,
+
+    .. math::
+
+        \tilde \sigma^2 = \frac{1}{n} \sum_{t=1}^{n}
+        \frac{(X_t - \hat X_t)^2}{r_{t-1}},
+
+    where :math:`X_t` is the (demeaned) series, :math:`\hat X_t` is the
+    one-step prediction of :math:`X_t` from the fitted ARMA model with
+    innovations variance 1, and :math:`r_{t-1}` is the mean squared error of
+    that prediction. With the demeaned series `x` and the estimates `p`, it
+    is ``np.mean(u ** 2 / v)`` for ``u, v = arma_innovations(x,
+    p.ar_params, p.ma_params, sigma2=1)``, using
+    :func:`~statsmodels.tsa.innovations.arma_innovations.arma_innovations`,
+    which requires a stationary process. For an ARMA(1, 1) model of the Lake
+    Huron series with the default `m`, :math:`\hat v_m` is 0.4532 and
+    :math:`\tilde \sigma^2` is 0.4757.
+
+    The default recursion level ``m = 17`` for models with AR terms is the
+    default of the ITSM2000 program that accompanies [1]_, which [1]_ uses
+    for the preliminary ARMA(1, 1) estimates of the Lake Huron series. It is
+    also the default of ``ia`` in the R package itsmr.
+
+    This procedure assumes that the series is stationary. The estimates may
+    imply a non-stationary or non-invertible process.
 
     References
     ----------
     .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
        Introduction to Time Series and Forecasting. Springer.
     """
-    spec = max_spec = SARIMAXSpecification(endog, ma_order=ma_order)
+    spec = max_spec = SARIMAXSpecification(
+        endog, ar_order=ar_order, ma_order=ma_order
+    )
     endog = max_spec.endog
 
     if demean:
@@ -74,8 +152,23 @@ def innovations(endog, ma_order=0, demean=True):
             "Innovations estimation unavailable for models with"
             " seasonal or otherwise non-consecutive MA orders."
         )
+    if not max_spec.is_ar_consecutive:
+        raise ValueError(
+            "Innovations estimation unavailable for models with"
+            " seasonal or otherwise non-consecutive AR orders."
+        )
 
-    sample_acovf = acovf(endog, fft=True)
+    sample_acovf = acovf(endog, fft=True, demean=demean)
+
+    # With AR terms or a given recursion level, all of the estimates use the
+    # coefficients of the same MA(m) model
+    if max_spec.ar_order > 0 or m is not None:
+        out = _innovations_arma(
+            sample_acovf, max_spec.ar_order, max_spec.ma_order, m=m
+        )
+        other_results = Bunch({"spec": out[-1].spec})
+        return ARMAEstimationResult(out, other_results)
+
     theta, v = innovations_algo(sample_acovf, nobs=max_spec.ma_order + 1)
     ma_params = [theta[i, :i] for i in range(1, max_spec.ma_order + 1)]
     sigma2 = v
@@ -98,6 +191,86 @@ def innovations(endog, ma_order=0, demean=True):
     )
 
     return ARMAEstimationResult(out, other_results)
+
+
+def _innovations_arma(acov, ar_order, ma_order, m=None):
+    r"""
+    ARMA estimates from the innovations algorithm at recursion level m
+
+    Parameters
+    ----------
+    acov : ndarray
+        Autocovariances at lags 0, 1, ..., nobs - 1.
+    ar_order : int
+        Autoregressive order.
+    ma_order : int
+        Maximum moving average order.
+    m : int, optional
+        Recursion level. See :func:`innovations` for the default.
+
+    Returns
+    -------
+    list of SARIMAXParams
+        Element ``j`` holds the ARMA(`ar_order`, ``j``) estimates, for
+        ``j = 0, ..., ma_order``.
+
+    Notes
+    -----
+    The coefficients :math:`\theta_{m,j}` estimate the coefficients
+    :math:`\psi_j` of the MA(:math:`\infty`) representation of the process,
+    which satisfy :math:`\psi_j = \theta_j + \sum_{i=1}^{\min(j, p)} \phi_i
+    \psi_{j-i}` with :math:`\psi_0 = 1` and :math:`\theta_j = 0` for
+    :math:`j > q`; see [1]_, section 5.1.3. The equations for
+    :math:`j = q+1, \dots, q+p` give the AR coefficients and those for
+    :math:`j = 1, \dots, q` then give the MA coefficients.
+
+    References
+    ----------
+    .. [1] Brockwell, Peter J., and Richard A. Davis. 2016.
+       Introduction to Time Series and Forecasting. Springer.
+    """
+    p = ar_order
+    nobs = len(acov)
+    if m is None:
+        m = min(max(17, p + ma_order), nobs - 1)
+    m = int_like(m, "m")
+    if not p + ma_order <= m < nobs:
+        raise ValueError(
+            "m must satisfy ar_order + ma_order <= m < nobs, that is"
+            f" {p + ma_order} <= m < {nobs}; got {m}."
+        )
+
+    theta, v = innovations_algo(acov, nobs=m + 1)
+    # psi[j] is theta_{m,j}, with psi[0] = 1. innovations_algo only returns
+    # the columns up to the last nonzero autocovariance; theta_{m,j} is zero
+    # beyond it.
+    psi = np.zeros(p + ma_order + 1)
+    psi[0] = 1
+    k = min(p + ma_order, theta.shape[1])
+    psi[1 : k + 1] = theta[m, :k]
+    sigma2 = v[m]
+
+    out = []
+    for q in range(ma_order + 1):
+        ar_params = np.zeros(0)
+        if p > 0:
+            # Equations j = q + 1, ..., q + p. Row r and column i (0-based)
+            # of the system hold psi_{q+r-i}, which is zero for a negative
+            # index.
+            column = psi[q : q + p]
+            row = np.r_[psi[q::-1], np.zeros(p)][:p]
+            ar_params = np.linalg.solve(
+                toeplitz(column, row), psi[q + 1 : q + p + 1]
+            )
+        # theta_j = psi_j - sum_{i=1}^{min(j, p)} phi_i psi_{j-i}, j = 1, ..., q
+        ma_params = np.convolve(np.r_[1, -ar_params], psi)[1 : q + 1]
+
+        spec = SARIMAXSpecification(ar_order=p, ma_order=q)
+        par = SARIMAXParams(spec=spec)
+        par.params = np.r_[ar_params, ma_params, sigma2]
+        out.append(par)
+
+    return out
 
 
 def innovations_mle(

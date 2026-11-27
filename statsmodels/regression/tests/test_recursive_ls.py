@@ -302,6 +302,10 @@ def test_plots(close_figures):
 
     # All variables
     res.plot_recursive_coefficient(variables=[0, "m1", "pop"])
+
+    # NumPy integers select variables like Python integers
+    res.plot_recursive_coefficient(variables=np.int64(1))
+    res.plot_recursive_coefficient(variables=[np.int64(0), "m1"])
     plt.close("all")
     # Basic plot
     res.plot_cusum()
@@ -330,6 +334,66 @@ def test_plots(close_figures):
 
     # Basic plot
     res.plot_cusum_squares()
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "make_variables, names",
+    [
+        (lambda: ["m1"], ["m1"]),
+        (lambda: ("m1",), ["m1"]),
+        (lambda: (0, "pop"), ["const", "pop"]),
+        (lambda: iter(["pop", "m1"]), ["pop", "m1"]),
+    ],
+    ids=["list", "tuple", "tuple-mixed", "iterator"],
+)
+def test_plot_recursive_coefficient_variables(make_variables, names, close_figures):
+    # Names in a list were replaced by their positions, so the caller's list
+    # changed, and a tuple holding a name or an iterator raised a TypeError
+    exog = add_constant(dta[["m1", "pop"]])
+    res = RecursiveLS(endog, exog).fit()
+    variables = make_variables()
+    original = list(variables) if isinstance(variables, list) else None
+    fig = res.plot_recursive_coefficient(variables=variables)
+    if original is not None:
+        assert variables == original
+    assert len(fig.axes) == len(names)
+    for ax, name in zip(fig.axes, names, strict=True):
+        line = ax.get_lines()[0]
+        assert line.get_label() == f"Recursive estimates: {name}"
+        coef = res.recursive_coefficients.filtered[exog.columns.get_loc(name)]
+        ydata = line.get_ydata()
+        assert_allclose(ydata, coef[-len(ydata) :], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "variables",
+    [1, np.int64(1), np.array(1), "x1", [np.int64(1)]],
+    ids=["int", "int64", "0d-array", "name", "list"],
+)
+def test_plot_recursive_coefficient_int_like(variables, close_figures):
+    # A 0-d integer array selects a variable, as the integer it holds does
+    res = RecursiveLS(endog.values, exog.values).fit()
+    fig = res.plot_recursive_coefficient(variables=variables, alpha=None)
+    assert len(fig.axes) == 1
+    line = fig.axes[0].get_lines()[0]
+    assert line.get_label() == "Recursive estimates: x1"
+    d = max(res.nobs_diffuse, res.loglikelihood_burn)
+    expected = res.recursive_coefficients.filtered[1, d:]
+    assert_allclose(line.get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("variables", [True, np.True_], ids=["True", "np.True_"])
+def test_plot_recursive_coefficient_bool(variables, close_figures):
+    # A bool does not select a variable
+    res = RecursiveLS(endog.values, exog.values).fit()
+    with pytest.raises(TypeError):
+        res.plot_recursive_coefficient(variables=variables)
 
 
 def test_from_formula():
@@ -742,3 +806,149 @@ def test_forecast_exog_formula():
     )
     with pytest.raises(ValueError, match="not of the appropriate shape"):
         res.forecast(3, exog=new[["x1", "x2"]])
+
+
+def test_get_prediction_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    x = rng.standard_normal(500)
+    y = pd.Series(1.0 + 0.5 * x + rng.standard_normal(500), index=index)
+    res = RecursiveLS(y, add_constant(x)).fit()
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    # start is the first observation, so the location is also the offset
+    pred = res.get_prediction(dynamic="2001-04")
+    expected = res.get_prediction(dynamic=loc)
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index)
+    # A key of a single date gives its location
+    pred = res.get_prediction(dynamic="2001-04-01")
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+
+
+@pytest.mark.parametrize("start", [10, "2000-01-11"])
+@pytest.mark.parametrize(
+    "dynamic",
+    [
+        "2000-03-01",
+        "2000-03",
+        pd.Timestamp("2000-03-01"),
+        pd.Timestamp("2000-03-01").to_pydatetime(),
+    ],
+    ids=["str", "str-month", "timestamp", "datetime"],
+)
+def test_get_prediction_dynamic_date_with_start(start, dynamic):
+    # A dynamic date is the absolute date at which dynamic prediction begins,
+    # also when start is not the first observation. A date string was used as
+    # an offset relative to start, and a Timestamp or datetime raised.
+    rng = np.random.default_rng(20261123)
+    index = pd.date_range("2000-01-01", periods=100, freq="D")
+    exog = add_constant(rng.standard_normal(100))
+    endog = pd.Series(exog @ [1.0, 0.5] + rng.standard_normal(100), index=index)
+    res = RecursiveLS(endog, exog).fit()
+    loc = 31 + 29
+    assert index[loc] == pd.Timestamp("2000-03-01")
+    pred = res.get_prediction(start=start, dynamic=dynamic)
+    # Static predictions use the coefficients estimated through the previous
+    # period, dynamic ones those estimated through the period before loc
+    beta = res.filter_results.filtered_state
+    expected = np.r_[
+        np.sum(exog[10:loc] * beta[:, 9 : loc - 1].T, axis=1),
+        exog[loc:] @ beta[:, loc - 1],
+    ]
+    assert_allclose(pred.predicted_mean, expected, rtol=1e-10)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+    # The same as the integer offset relative to start
+    offset = res.get_prediction(start=10, dynamic=loc - 10)
+    assert_allclose(pred.predicted_mean, offset.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, offset.var_pred_mean, rtol=1e-12)
+
+
+def _constrained_prediction_data():
+    rng = np.random.default_rng(20261124)
+    nobs = 50
+    x = np.column_stack([np.ones(nobs), rng.standard_normal((nobs, 2))])
+    y = x @ [1.0, 0.5, 0.5] + rng.standard_normal(nobs)
+    return y, x
+
+
+@pytest.mark.parametrize("signal_only", [False, True])
+@pytest.mark.parametrize("information_set", ["predicted", "filtered", "smoothed"])
+def test_get_prediction_constrained(information_set, signal_only):
+    # The predictions held the constraint endog as a second column. With
+    # b1 = b2, the model is the regression on const and x1 + x2, so the
+    # predictions after the diffuse periods are those of that regression
+    y, x = _constrained_prediction_data()
+    res = RecursiveLS(y, x, constraints="x1 = x2").fit()
+    z = np.column_stack([x[:, 0], x[:, 1] + x[:, 2]])
+    ref = RecursiveLS(y, z).fit()
+    kwargs = dict(start=10, information_set=information_set, signal_only=signal_only)
+    pred = res.get_prediction(**kwargs)
+    expected = ref.get_prediction(**kwargs)
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-10)
+    assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-10)
+    assert_allclose(pred.conf_int(), expected.conf_int(), rtol=1e-10)
+    if information_set == "predicted" and not signal_only:
+        # The one-step prediction of y_t uses the restricted least squares
+        # estimate from the observations before t
+        for t in [10, 25, 49]:
+            params = OLS(y[:t], z[:t]).fit().params
+            assert_allclose(pred.predicted_mean[t - 10], z[t] @ params, rtol=1e-10)
+        # The prediction results hold the regression endog only
+        names = ["endog", "forecasts", "forecasts_error", "forecasts_error_cov"]
+        names += ["obs_intercept", "obs_cov"]
+        for name in names:
+            # atol: the intercept is zero and forecast errors can be near zero
+            assert_allclose(
+                getattr(pred.prediction_results, name),
+                getattr(expected.prediction_results, name),
+                rtol=1e-10,
+                atol=1e-12,
+            )
+        assert_allclose(pred.prediction_results.design, x[10:].T[None], rtol=1e-15)
+
+
+def test_get_prediction_constrained_pandas():
+    # The predictions raised TypeError for pandas data
+    y, x = _constrained_prediction_data()
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=["const", "x1", "x2"])
+    res = RecursiveLS(endog, exog, constraints="x1 = x2").fit()
+    expected = RecursiveLS(y, x, constraints="x1 = x2").fit()
+    pred = res.get_prediction(start=10)
+    assert_allclose(
+        pred.predicted_mean,
+        expected.get_prediction(start=10).predicted_mean,
+        rtol=1e-12,
+    )
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+    pd.testing.assert_index_equal(pred.summary_frame().index, index[10:])
+    predict = res.predict(start=10)
+    assert_allclose(predict, pred.predicted_mean, rtol=1e-12)
+    pd.testing.assert_index_equal(predict.index, index[10:])
+
+
+def test_get_prediction_docstring_parameters():
+    # The docstring documented extend_model and extend_kwargs, which
+    # get_prediction does not take
+    import inspect
+
+    from statsmodels.regression.recursive_ls import RecursiveLSResults
+    from statsmodels.tools.docstring import NumpyDocString
+
+    func = RecursiveLSResults.get_prediction
+    if func.__doc__ is None:
+        pytest.skip("No docstrings (python -OO)")
+    documented = [param.name for param in NumpyDocString(func.__doc__)["Parameters"]]
+    expected = []
+    for name, param in inspect.signature(func).parameters.items():
+        if param.kind == param.VAR_KEYWORD:
+            expected.append("**" + name)
+        elif name != "self":
+            expected.append(name)
+    assert documented == expected

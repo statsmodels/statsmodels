@@ -27,6 +27,8 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_bool_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.arima_process import arma2ma
@@ -114,6 +116,11 @@ class AutoReg(tsa_model.TimeSeriesModel):
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behaves identically to 0.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d array that holds an integer is a number of lags, as an int
+           is. It raised a TypeError.
     trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
@@ -296,7 +303,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if lags is None:
             _lags: list[int] = []
             self._maxlag = 0
-        elif isinstance(lags, Iterable):
+        # A 0-d array is iterable, but holds a single number of lags
+        elif isinstance(lags, Iterable) and getattr(lags, "ndim", 1) > 0:
             _lags = []
             for lag in lags:
                 val = int_like(lag, "lags")
@@ -793,6 +801,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def _parse_dynamic(self, dynamic, start):
         if isinstance(dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)):
             dynamic_loc, _, _ = self._get_index_loc(dynamic)
+            # A key that covers several dates, e.g. "2001-04" for daily data,
+            # gives a slice; dynamic prediction begins at its first date
+            if isinstance(dynamic_loc, slice):
+                dynamic_loc = dynamic_loc.start
             # Adjust since relative to start
             dynamic_loc -= start
         elif dynamic is True:
@@ -912,6 +924,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 )
                 raise ValueError(msg.format(num_oos, exog_oos.shape[0]))
 
+        if is_bool_like(dynamic, strict=True):
+            dynamic = bool(dynamic)
         if (isinstance(dynamic, bool) and not dynamic) or self._maxlag == 0:
             # If model has no lags, static and dynamic are identical
             return self._static_predict(params, start, end, num_oos, exog, exog_oos)
@@ -1260,16 +1274,32 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             The maximum number of lags to use in the test. Jointly tests that
             all autocorrelations up to and including lag j are zero for
             j = 1, 2, ..., lags. If None, uses min(10, nobs // 5).
-        model_df : int, optional
-            The model degree of freedom to use when adjusting computing the
-            test statistic to account for parameter estimation. If None, uses
-            the number of AR lags included in the model.
+        model_df : int or {"ar", "regressors"}, optional
+            The model degrees of freedom subtracted from the degrees of
+            freedom of the test to account for parameter estimation. "ar"
+            uses the number of autoregressive lags, the usual correction of
+            the Ljung-Box test. "regressors" uses ``df_model``, the number
+            of estimated parameters, which includes the deterministic terms
+            and any exogenous regressors. If None, uses "regressors" and
+            warns that the default will change to "ar" after statsmodels
+            0.17 is released.
+
+            .. versionchanged:: 0.15.1
+
+               "ar" and "regressors" are accepted. The default will change
+               from "regressors" to "ar"; leaving `model_df` unset issues a
+               FutureWarning. Pass "ar" to use the future default now.
 
         Returns
         -------
         output : DataFrame
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
+
+            .. versionchanged:: 0.15.1
+
+                The test statistics, p-values and degrees of freedom are
+                returned. Since statsmodels 0.14.0 every value was NaN.
 
         See Also
         --------
@@ -1287,8 +1317,27 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         from statsmodels.stats.diagnostic import acorr_ljungbox
 
         lags = int_like(lags, "lags", optional=True)
-        model_df = int_like(model_df, "df_model", optional=True)
-        model_df = self.df_model if model_df is None else model_df
+        if model_df is None:
+            warnings.warn(
+                'The default model_df will change from "regressors" (df_model, '
+                "the number of estimated parameters) to \"ar\" (the number of "
+                "autoregressive lags) after statsmodels 0.17 is released. Pass "
+                'model_df="ar" to use the future default now, or '
+                'model_df="regressors" to keep the current one and silence '
+                "this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            model_df = "regressors"
+        if isinstance(model_df, str):
+            model_df = string_like(
+                model_df, "model_df", options=("ar", "regressors"), lower=False
+            )
+            if model_df == "ar":
+                model_df = len(self._ar_lags) if self._ar_lags else 0
+            else:
+                model_df = self.df_model
+        model_df = int_like(model_df, "model_df")
         nobs_effective = self.resid.shape[0]
         if lags is None:
             lags = min(nobs_effective // 5, 10)
@@ -1305,8 +1354,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf)
             df = df.astype(int)
         test_stats["df"] = df
-        index = pd.RangeIndex(1, lags + 1, name="Lag")
-        return pd.DataFrame(test_stats, columns=cols, index=index)
+        test_stats.columns = cols
+        test_stats.index = pd.RangeIndex(1, lags + 1, name="Lag")
+        return test_stats
 
     def test_normality(self):
         """
@@ -1380,6 +1430,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             A summary instance with panels for serial correlation tests,
             normality tests and heteroskedasticity tests.
 
+            .. versionchanged:: 0.15.1
+
+                The serial correlation panel is shown for the lags with a
+                positive test degree of freedom. Since statsmodels 0.14.0 it
+                was always missing.
+
         See Also
         --------
         test_serial_correlation
@@ -1393,9 +1449,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         spacer = SimpleTable([""])
         smry = Summary()
-        sc = self.test_serial_correlation()
+        # The current default of test_serial_correlation, without its
+        # FutureWarning; use "ar" when that default changes
+        sc = self.test_serial_correlation(model_df="regressors")
         sc = sc.loc[sc.DF > 0]
-        values = [[i + 1] + row for i, row in enumerate(sc.values.tolist())]
+        values = sc.reset_index().values.tolist()
         data_fmts = ("%10d", "%10.3f", "%10.3f", "%10d")
         if sc.shape[0]:
             tab = SimpleTable(
@@ -1526,6 +1584,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
             steps must be an integer. The default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, and a 0-d integer
+               array are a number of steps, as an int is. Before, they were
+               used as the index of the last forecast, which raised or gave
+               the wrong number of forecasts. A bool is not a number of
+               steps: True was one step.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows
@@ -1544,8 +1610,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             In- and out-of-sample predictions and confidence intervals
         """
         start = self.model.data.orig_endog.shape[0]
-        if isinstance(steps, (int, np.integer)):
-            end = start + steps - 1
+        if is_int_like(steps):
+            end = start + int(steps) - 1
         else:
             end = steps
         return self.predict(start=start, end=end, dynamic=False, exog_oos=exog)

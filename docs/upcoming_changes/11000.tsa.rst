@@ -1,0 +1,2 @@
+- ``transform_params`` and ``untransform_params`` of Markov switching models raised for
+  a list or tuple. :pr:`11000`

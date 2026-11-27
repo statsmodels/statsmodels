@@ -1,0 +1,2 @@
+- ``get_prediction`` of ``ETSResults`` raised an ``AttributeError`` for numpy
+  data. :pr:`10931`

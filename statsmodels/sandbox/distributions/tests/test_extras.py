@@ -16,17 +16,21 @@ from statsmodels.sandbox.distributions.extras import (
     ExpTransf_gen,
     LogTransf_gen,
     NormExpan_gen,
+    absnormalg,
     get_u_argskwargs,
     invdnormalg,
     loggammaexpg,
     lognormalg,
     mvnormcdf,
     mvstdnormcdf,
+    negsquarenormalg,
     pdf_moments,
     pdf_moments_st,
     pdf_mvsk,
     skewnorm,
     skewnorm2,
+    squarenormalg,
+    squaretg,
 )
 from statsmodels.stats.moment_helpers import mvsk2mc
 
@@ -93,8 +97,11 @@ def test_skewt():
         ]
     )
     pdf_st = skewt.pdf(x, 1000000, 10)
-    np.allclose(pdf_st, pdf_r, rtol=0, atol=1e-6)
-    np.allclose(pdf_st, pdf_r, rtol=1e-1, atol=0)
+    # R's values are for df = inf: with df = 1e6 the relative difference
+    # reaches 4% at -2
+    assert_allclose(pdf_st, pdf_r, rtol=1e-1)
+    # atol: the absolute difference too, as for the cdf below
+    assert_allclose(pdf_st, pdf_r, rtol=0, atol=1e-6)
 
     # noquote(sprintf("%.15e,", pst(c(-2,-1, -0.5,0,1,2), shape=10)))
     cdf_r = np.array(
@@ -107,10 +114,15 @@ def test_skewt():
             9.544997361036416e-01,
         ]
     )
-    cdf_st = skewt.cdf(x, 1000000, 10)
-    np.allclose(cdf_st, cdf_r, rtol=0, atol=1e-6)
-    np.allclose(cdf_st, cdf_r, rtol=1e-1, atol=0)
-    # assert_(np.allclose(cdf_st, cdf_r, rtol=1e-13, atol=1e-15))
+    with np.errstate(over="ignore"):
+        # The t pdf of scipy 1.8 overflows to a pdf of 0 for large |x| in the
+        # integration when df is large
+        cdf_st = skewt.cdf(x, 1000000, 10)
+    # atol: R gives 0 at -2 and -1, where the skew normal cdf is 1.5e-92 and
+    # 3.6e-26
+    assert_allclose(cdf_st, cdf_r, rtol=0, atol=1e-6)
+    # Relative to scipy's skew normal, which has these tail values
+    assert_allclose(cdf_st, stats.skewnorm.cdf(x, 10), rtol=1e-1)
 
     # noquote(sprintf("%.15e,", dst(c(-2,-1, -0.5,0,1,2), shape=10, df=5)))
     pdf_r = np.array(
@@ -387,3 +399,58 @@ class TestMvstdnormcdf:
         corr = np.array([[1.0, 0.3], [0.3, 1.0]])
         result_std = mvstdnormcdf([-np.inf, -np.inf], [1.0, 1.0], corr, abseps=1e-6)
         assert_allclose(result, result_std, atol=1e-6)
+
+
+@pytest.mark.parametrize("name", ["lognormalg", "invdnormalg"])
+def test_transf_gen_rvs(name):
+    # _rvs read a size attribute that scipy does not set (AttributeError with
+    # every supported scipy) and applied funcinv instead of func
+    nobs = 2000
+    dist = {"lognormalg": lognormalg, "invdnormalg": invdnormalg}[name]
+    draws = dist.rvs(size=nobs, random_state=np.random.default_rng(0))
+    x = stats.norm.rvs(size=nobs, random_state=np.random.default_rng(0))
+    if name == "lognormalg":
+        # y = exp(x) for x standard normal: scipy's lognorm with s=1
+        expected = np.exp(x)
+        cdf = stats.lognorm(1).cdf
+    else:
+        # y = 1 / (1 + mux + x * stdx) with mux = 9 and stdx = 1 is
+        # decreasing in x, so that P(y <= c) = P(x >= 1 / c - 10) for c > 0
+        expected = 1 / (10 + x)
+
+        def cdf(c):
+            return stats.norm.sf(1 / c - 10)
+
+    assert_allclose(draws, expected, rtol=1e-13)
+    assert stats.kstest(draws, cdf).pvalue > 0.01
+
+
+@pytest.mark.parametrize(
+    "name", ["squarenormalg", "squaretg", "absnormalg", "negsquarenormalg"]
+)
+def test_transftwo_gen_rvs(name):
+    # _rvs did not take the size and random_state keywords: rvs raised
+    # TypeError with scipy >= 1.9
+    nobs = 2000
+    rng = np.random.default_rng(0)
+    if name == "squaretg":
+        draws = squaretg.rvs(10, size=nobs, random_state=rng)
+        x = stats.t.rvs(10, size=nobs, random_state=np.random.default_rng(0))
+    else:
+        dist = {
+            "squarenormalg": squarenormalg,
+            "absnormalg": absnormalg,
+            "negsquarenormalg": negsquarenormalg,
+        }[name]
+        draws = dist.rvs(size=nobs, random_state=rng)
+        x = stats.norm.rvs(size=nobs, random_state=np.random.default_rng(0))
+    # The square of a standard normal is chi2(1), the square of a t(10) is
+    # F(1, 10), the absolute value of a standard normal is half-normal
+    expected, cdf = {
+        "squarenormalg": (x**2, stats.chi2(1).cdf),
+        "squaretg": (x**2, stats.f(1, 10).cdf),
+        "absnormalg": (np.abs(x), stats.halfnorm.cdf),
+        "negsquarenormalg": (-(x**2), lambda c: stats.chi2(1).sf(-c)),
+    }[name]
+    assert_allclose(draws, expected, rtol=1e-13)
+    assert stats.kstest(draws, cdf).pvalue > 0.01

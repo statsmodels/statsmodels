@@ -17,6 +17,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     int_like,
+    is_int_like,
     string_like,
 )
 
@@ -193,6 +194,13 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         `col` can be an int of the zero-based column index, or the label of
         a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
         1d array `col` can be None.
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d integer array is a column index, as an int is. It raised a
+           TypeError or was looked up as a label. A bool is a label, so it
+           raises a TypeError, or a KeyError for a DataFrame without such a
+           column. True raised a ValueError after adding an axis.
     lags : int, optional
         The number of lags desired.
     drop : bool, optional
@@ -221,7 +229,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
     lags = int_like(lags, "lags")
     drop = bool_like(drop, "drop")
-    if col is not None and not isinstance(col, (int, np.integer)):
+    if col is not None and not is_int_like(col, strict=True):
         # Resolve a pandas column label to its position before the
         # conversion below drops the labels; the docstring example passes a
         # column name.
@@ -230,12 +238,14 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
                 "col can only be a label when x is a pandas DataFrame"
             )
         loc = x.columns.get_loc(col)
-        if not isinstance(loc, (int, np.integer)):
+        if not is_int_like(loc, strict=True):
             raise ValueError(f"col={col!r} does not uniquely identify a column")
         col = int(loc)
     x = array_like(x, "x", ndim=2)
     if col is None:
         col = 0
+    else:
+        col = int(col)
 
     # handle negative index
     if col < 0:

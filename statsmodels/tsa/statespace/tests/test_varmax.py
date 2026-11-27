@@ -15,7 +15,9 @@ import pytest
 
 import statsmodels.iolib.summary
 from statsmodels.iolib.summary import forg
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tsa.statespace import sarimax, varmax
+from statsmodels.tsa.statespace.kalman_filter import FilterResults
 
 from .results import results_varmax
 
@@ -1428,3 +1430,243 @@ def test_integer_endog(trend, k_exog):
     mod_int = varmax.VARMAX(endog, order=(1, 0), trend=trend, exog=exog)
     mod_float = varmax.VARMAX(endog.astype(float), order=(1, 0), trend=trend, exog=exog)
     assert_allclose(mod_int.start_params, mod_float.start_params)
+
+
+@pytest.mark.parametrize("k_exog", [0, 1])
+def test_simulate_anchor_covers_several_dates(k_exog):
+    # A date key that covers several dates ("2000-02" on daily data) anchors
+    # the simulation at its first date, as the integer location of that date
+    # does; with exog, the simulation runs one period past the sample
+    rng = np.random.default_rng(20261123)
+    index = pd.date_range("2000-01-01", periods=60, freq="D")
+    endog = pd.DataFrame(rng.standard_normal((60, 2)), index=index)
+    exog = pd.Series(rng.standard_normal(60), index=index) if k_exog else None
+    mod = varmax.VARMAX(endog, exog=exog, order=(1, 0), trend="c")
+    params = np.r_[0.1, -0.1, 0.5, 0.1, 0.0, 0.3, [0.2, -0.2] * k_exog]
+    res = mod.smooth(np.r_[params, 1.0, 0.1, 1.0])
+    loc = index.get_loc(pd.Timestamp("2000-02-01"))
+    nsimulations = 60 - loc + 1
+    kwargs = dict(
+        measurement_shocks=rng.standard_normal((nsimulations, 2)),
+        state_shocks=rng.standard_normal((nsimulations, 2)),
+        initial_state=rng.standard_normal(2),
+        exog=rng.standard_normal((1, 1)) if k_exog else None,
+    )
+    expected = res.simulate(nsimulations, anchor=loc, **kwargs)
+    actual = res.simulate(nsimulations, anchor="2000-02", **kwargs)
+    assert_allclose(actual, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("k_exog", [0, 1])
+@pytest.mark.parametrize("trend_offset", [None, 101])
+def test_prediction_extend_kwargs(k_exog, trend_offset):
+    # extend_kwargs raised "got multiple values for keyword argument
+    # 'extend_kwargs'" in get_prediction, get_forecast, forecast and predict.
+    # It is passed to the constructor of the model of the forecast periods: a
+    # trend_offset there is the trend value of the first of them (the default
+    # is the period after the sample).
+    rng = np.random.default_rng(20261124)
+    nobs = 30
+    endog = rng.standard_normal((nobs, 2))
+    exog = rng.standard_normal((nobs + 3, 1))
+    if not k_exog:
+        exog[:] = 0
+    c = np.array([0.5, -0.3])
+    d = np.array([0.02, 0.01])
+    ar = np.array([[0.5, 0.1], [-0.2, 0.3]])
+    b = np.array([0.4, -0.6])
+    reg = b if k_exog else []
+    params = np.r_[c[0], d[0], c[1], d[1], ar.ravel(), reg, 1.0, 2.0]
+    mod = varmax.VARMAX(
+        endog,
+        order=(1, 0),
+        trend="ct",
+        exog=exog[:nobs] if k_exog else None,
+        error_cov_type="diagonal",
+    )
+    res = mod.smooth(params)
+
+    # y_t = c + d * tau_t + ar @ y_{t-1} + b * x_t with tau_t = t + 1 in the
+    # sample (trend_offset is 1); the forecasts after the first one use the
+    # trend values of the extended model, trend_offset + 1, trend_offset + 2
+    offset = nobs + 1 if trend_offset is None else trend_offset
+    taus = [nobs + 1, offset + 1, offset + 2]
+    expected = np.empty((3, 2))
+    prev = endog[-1]
+    for h in range(3):
+        prev = c + d * taus[h] + ar @ prev + b * exog[nobs + h, 0]
+        expected[h] = prev
+
+    def kwargs():
+        extend_kwargs = {}
+        if trend_offset is not None:
+            extend_kwargs["trend_offset"] = trend_offset
+        out = {"extend_kwargs": extend_kwargs}
+        if k_exog:
+            out["exog"] = exog[nobs:]
+        return out
+
+    fcast = res.get_forecast(3, **kwargs())
+    assert_allclose(fcast.predicted_mean, expected, rtol=1e-12)
+    assert_allclose(res.forecast(3, **kwargs()), expected, rtol=1e-12)
+    pred = res.predict(start=nobs, end=nobs + 2, **kwargs())
+    assert_allclose(pred, expected, rtol=1e-12)
+    pred = res.get_prediction(start=nobs - 1, end=nobs + 2, **kwargs())
+    assert_allclose(pred.predicted_mean[1:], expected, rtol=1e-12)
+
+
+# - Options and results of VARMAX ---------------------------------------------
+
+
+def var1_ols(endog):
+    # OLS VAR(1) without trend, as fitted by VAR: the residuals and their
+    # covariance with nobs - 1 - k_endog degrees of freedom
+    coef = np.linalg.lstsq(endog[:-1], endog[1:], rcond=None)[0]
+    resid = endog[1:] - endog[:-1] @ coef
+    return resid, resid.T @ resid / (resid.shape[0] - endog.shape[1])
+
+
+def test_start_params_nonstationary_ar():
+    # Both series grow by 10% each period, so the VAR(1) estimate is not
+    # stationary and the autoregressive starting parameters are zero
+    rng = np.random.default_rng(20261123)
+    endog = np.zeros((40, 2))
+    endog[0] = [1.0, -1.0]
+    for t in range(1, 40):
+        endog[t] = 1.1 * endog[t - 1] + 0.1 * rng.standard_normal(2)
+    mod = varmax.VARMAX(endog, order=(1, 0), trend="n")
+    with pytest.warns(EstimationWarning, match="Non-stationary starting autoregr"):
+        start_params = mod.start_params
+    # atol: the parameters are set to exactly zero, which rtol cannot compare
+    assert_allclose(start_params[mod._params_ar], 0.0, atol=1e-15)
+
+
+def test_start_params_noninvertible_ma():
+    # With six observations, the VAR(1) fitted to the residuals of the VAR(1)
+    # of the data is explosive (largest eigenvalue modulus 2.6), so the moving
+    # average starting parameters are zero
+    endog = np.random.default_rng(17).standard_normal((6, 2))
+    mod = varmax.VARMAX(endog, order=(0, 1), trend="n")
+    with pytest.warns(EstimationWarning, match="moving-average parameters"):
+        start_params = mod.start_params
+    # atol: the parameters are set to exactly zero, which rtol cannot compare
+    assert_allclose(start_params[mod._params_ma], 0.0, atol=1e-15)
+
+
+@pytest.mark.parametrize("order", [(1, 0), (0, 1)], ids=["var", "vma"])
+def test_start_params_measurement_error(order):
+    # The starting measurement variances are the residual variances of the
+    # VAR(1) of the data or, with MA terms, of the VAR(1) of its residuals
+    rng = np.random.default_rng(20261124)
+    endog = rng.standard_normal((50, 2))
+    endog[:, 1] += 0.5 * endog[:, 0]
+    mod = varmax.VARMAX(endog, order=order, trend="n", measurement_error=True)
+    resid, cov = var1_ols(endog)
+    if order[1] > 0:
+        _, cov = var1_ols(resid)
+    assert_allclose(mod.start_params[-2:], np.diag(cov), rtol=1e-10)
+
+
+def test_fix_params_ma():
+    # With enforce_invertibility, the MA parameters are fixed all or none;
+    # fixing all of them gives the likelihood at the full parameter vector,
+    # and the summary marks them
+    rng = np.random.default_rng(20261125)
+    endog = rng.standard_normal((50, 2))
+    mod = varmax.VARMAX(endog, order=(0, 1), trend="n")
+    params = np.r_[0.2, 0.1, -0.1, 0.3, 1.0, 0.1, 1.0]
+    ma_names = mod.param_names[:4]
+    assert_equal(ma_names[0], "L1.e(y1).y1")
+    with pytest.raises(ValueError, match="Cannot fix individual moving average"):
+        with mod.fix_params({ma_names[0]: 0.2}):
+            pass
+    with mod.fix_params(dict(zip(ma_names, params[:4], strict=True))):
+        res_fixed = mod.smooth(params[4:])
+    res = mod.smooth(params)
+    assert_allclose(res_fixed.llf, res.llf, rtol=1e-12)
+    tables = {table.title: str(table) for table in res_fixed.summary().tables[2:]}
+    assert "L1.e(y1) (fixed)" in tables["Results for equation y1"]
+    assert "L1.e(y2) (fixed)" in tables["Results for equation y2"]
+    assert "(fixed)" not in tables["Error covariance matrix"]
+
+
+def test_model_simulate_exog_wrong_shape():
+    rng = np.random.default_rng(20261126)
+    endog = rng.standard_normal((30, 2))
+    exog = rng.standard_normal((30, 2))
+    mod = varmax.VARMAX(endog, exog=exog, order=(1, 0), trend="n")
+    params = np.r_[0.5, 0.0, 0.0, 0.3, 0.1, 0.2, 0.3, 0.4, 1.0, 0.0, 1.0]
+    with pytest.raises(ValueError, match=r"Required 2, got \(1, 3\)"):
+        mod.simulate(params, 3, exog=np.ones((3, 3)))
+
+
+def test_extend_filter_results():
+    # Results of a model whose state space representation gives plain
+    # FilterResults (no smoother) are extended by filtering, which continues
+    # the filter of the full sample, including the time trend
+    rng = np.random.default_rng(20261127)
+    endog = rng.standard_normal((50, 2))
+    params = np.r_[0.1, 0.01, -0.1, 0.02, 0.5, 0.1, 0.0, 0.3, 1.0, 0.1, 1.0]
+    kwargs = dict(order=(1, 0), trend="ct", results_class=FilterResults)
+    res_full = varmax.VARMAX(endog, **kwargs).filter(params)
+    res = varmax.VARMAX(endog[:40], **kwargs).filter(params)
+    assert res.smoother_results is None
+    res_ext = res.extend(endog[40:])
+    assert res_ext.smoother_results is None
+    assert_allclose(res_ext.llf_obs, res_full.llf_obs[40:], rtol=1e-10)
+    assert_allclose(
+        res_ext.filtered_state, res_full.filtered_state[:, 40:], rtol=1e-10
+    )
+
+
+def test_simulate_anchor():
+    # Without shocks, a simulation from the predicted state at an anchor is
+    # the dynamic prediction from there (with exog after the sample); a
+    # negative anchor counts from the end of the sample
+    rng = np.random.default_rng(20261128)
+    endog = rng.standard_normal((60, 2))
+    exog = rng.standard_normal((60, 1))
+    mod = varmax.VARMAX(endog, exog=exog, order=(1, 0), trend="c")
+    params = np.r_[0.1, -0.1, 0.5, 0.1, 0.0, 0.3, 0.2, -0.2, 1.0, 0.1, 1.0]
+    res = mod.smooth(params)
+    exog_oos = rng.standard_normal((2, 1))
+    kwargs = dict(
+        exog=exog_oos,
+        state_shocks=np.zeros((4, 2)),
+        measurement_shocks=np.zeros((4, 2)),
+        initial_state=res.predicted_state[:, 58],
+    )
+    expected = res.predict(start=58, end=61, dynamic=True, exog=exog_oos)
+    assert_allclose(res.simulate(4, anchor=58, **kwargs), expected, rtol=1e-10)
+    assert_allclose(res.simulate(4, anchor=-2, **kwargs), expected, rtol=1e-10)
+    with pytest.raises(ValueError, match="after the estimated sample"):
+        res.simulate(4, anchor=61, **kwargs)
+
+
+def test_summary_combined_params():
+    # separate_params=False shows a single table of all parameters
+    rng = np.random.default_rng(20261129)
+    mod = varmax.VARMAX(rng.standard_normal((30, 2)), order=(1, 0), trend="c")
+    res = mod.smooth(np.r_[0.1, -0.1, 0.5, 0.1, 0.0, 0.3, 1.0, 0.1, 1.0])
+    summary = res.summary(separate_params=False)
+    titles = [str(table.title) for table in summary.tables]
+    assert not any(title.startswith("Results for equation") for title in titles)
+    params_table = str(summary.tables[1])
+    for name in mod.param_names:
+        assert f"{name} " in params_table
+
+
+def test_univariate():
+    # A univariate VAR(1) with a constant is the SARIMAX AR(1) with a constant
+    # (the VARMAX parameter is the standard deviation of the error)
+    rng = np.random.default_rng(20261130)
+    endog = pd.DataFrame({"inv": rng.standard_normal(40)})
+    mod = varmax.VARMAX(endog, order=(1, 0), trend="c")
+    assert_equal(mod.param_names, ["intercept.inv", "L1.inv.inv", "sqrt.var.inv"])
+    res = mod.smooth([0.2, 0.5, 1.5])
+    res_sarimax = sarimax.SARIMAX(endog, order=(1, 0, 0), trend="c").smooth(
+        [0.2, 0.5, 2.25]
+    )
+    assert_allclose(res.llf, res_sarimax.llf, rtol=1e-12)
+    titles = [table.title for table in res.summary().tables]
+    assert "Results for equation inv" in titles

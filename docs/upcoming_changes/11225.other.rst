@@ -1,0 +1,7 @@
+- ``BetaModel.from_formula`` with ``exog_precision_formula`` and
+  ``subset`` no longer raises an ``AttributeError`` about
+  ``DataFrame.ix``. :pr:`11225`
+- The ``exog_precision_formula`` of ``BetaModel``, all formulas of
+  ``ProcessMLE`` and a ``dep_data`` formula of ``GEE`` look up
+  variables that are not in the data with ``eval_env``, like the
+  model's formula; they were not found. :pr:`11225`

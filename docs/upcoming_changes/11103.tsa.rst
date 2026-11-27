@@ -1,0 +1,5 @@
+- :meth:`~statsmodels.tsa.statespace.varmax.VARMAXResults.simulate`
+  raised a ``TypeError`` for an ``anchor`` that covers several dates of
+  the index, such as ``anchor="2001-04"`` for daily data. The
+  simulation is anchored at the first of these dates, as for the other
+  state space models. :pr:`11103`

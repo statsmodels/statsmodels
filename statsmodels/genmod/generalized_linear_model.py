@@ -49,7 +49,7 @@ from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     PerfectSeparationWarning,
 )
-from statsmodels.tools.validation import float_like, string_like
+from statsmodels.tools.validation import float_like, is_float_like, string_like
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
@@ -276,6 +276,18 @@ class GLM(base.LikelihoodModel):
     | Working       | ``n_trials``                     |
     +---------------+----------------------------------+
 
+    A ``DomainWarning`` is issued if ``endog`` is outside of the support of the
+    distribution of the family: ``Binomial`` requires proportions in [0, 1]
+    (or successes and failures that give such proportions), ``Poisson`` and
+    ``NegativeBinomial`` require a nonnegative and ``Gamma`` and
+    ``InverseGaussian`` a positive ``endog``. The log-likelihood, the deviance
+    and the results based on them are not valid outside of the support.
+
+    .. versionchanged:: 0.15.1
+
+       The ``DomainWarning`` for ``endog`` outside of the support was added.
+       Before, such data were fit without a warning.
+
     WARNING: Log-likelihood and deviance are not valid in models where
     scale is equal to 1 (i.e., ``Binomial``, ``NegativeBinomial``, and
     ``Poisson``). If variance weights are specified, then results such as
@@ -404,6 +416,7 @@ class GLM(base.LikelihoodModel):
         self._init_keys.append("family")
 
         self._setup_binomial()
+        self._check_endog_domain()
         # internal usage for recreating a model
         if "n_trials" in kwargs:
             self.n_trials = kwargs["n_trials"]
@@ -1151,8 +1164,8 @@ class GLM(base.LikelihoodModel):
             else:
                 return self._estimate_x2_scale(mu)
 
-        if isinstance(self.scaletype, float):
-            return np.array(self.scaletype)
+        if is_float_like(self.scaletype):
+            return np.array(float(self.scaletype))
 
         if isinstance(self.scaletype, str):
             scaletype = string_like(self.scaletype, "scaletype", options=("x2", "dev"))
@@ -1362,6 +1375,33 @@ class GLM(base.LikelihoodModel):
         distr = self.family.get_distribution(mu, scale, var_weights=var_weights, **kwds)
         return distr
 
+    def _check_endog_domain(self):
+        # warn if endog is outside of the support of the distribution of the
+        # family, the loglikelihood and the deviance are then not valid
+        family = self.family
+        if isinstance(family, families.Binomial):
+            # endog is the proportion of successes after _setup_binomial
+            outside = (self.endog < 0) | (self.endog > 1)
+            support = "in the interval [0, 1]"
+        elif isinstance(family, (families.Poisson, families.NegativeBinomial)):
+            outside = self.endog < 0
+            support = "nonnegative"
+        elif isinstance(family, (families.Gamma, families.InverseGaussian)):
+            outside = self.endog <= 0
+            support = "positive"
+        else:
+            return
+        n_outside = int(np.count_nonzero(outside))
+        if n_outside > 0:
+            warnings.warn(
+                f"endog has {n_outside} values outside of the support of the "
+                f"{type(family).__name__} family, which requires endog to be "
+                f"{support}. The log-likelihood, the deviance and the "
+                "results based on them are not valid.",
+                DomainWarning,
+                stacklevel=3,
+            )
+
     def _setup_binomial(self):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
@@ -1506,12 +1546,7 @@ class GLM(base.LikelihoodModel):
             scale = string_like(scale, "scale", options=("x2", "dev"))
         elif scale is not None:
             # GH-6627
-            try:
-                scale = float(scale)
-            except Exception as exc:
-                raise type(exc)(
-                    "scale must be a float if given and not a string."
-                ) from exc
+            scale = float_like(scale, "scale")
             if not scale > 0:
                 raise ValueError(f"scale must be positive, got {scale}")
         self.scaletype = scale

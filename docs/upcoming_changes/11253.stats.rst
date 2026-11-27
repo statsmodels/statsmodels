@@ -1,0 +1,2 @@
+- ``linear_reset`` accepts a float ``power`` with an integral value, such as
+  3.0. :pr:`11253`

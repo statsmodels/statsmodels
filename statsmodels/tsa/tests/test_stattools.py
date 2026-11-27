@@ -3,7 +3,9 @@ from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
+import inspect
 from pathlib import Path
+import re
 import warnings
 
 import numpy as np
@@ -5167,6 +5169,66 @@ class TestLeybourneMcCabe:
         with pytest.raises(ValueError):
             leybourne(fail_mdl, arlags="error")
 
+    def test_numpy_integer_arlags(self):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(mdl, regression="ct", arlags=3)
+        res_np = leybourne(mdl, regression="ct", arlags=np.int64(3))
+        assert_allclose(res_np[0:3], res[0:3])
+
+    @pytest.mark.parametrize(
+        "given, message",
+        [
+            (
+                {},
+                (
+                    "The defaults of leybourne.run will change from arlags=1 and "
+                    "method='mle' to arlags=None and method='ols', the defaults "
+                    "of leybourne(x),"
+                ),
+            ),
+            (
+                {"method": "ols"},
+                (
+                    "The default of leybourne.run will change from arlags=1 to "
+                    "arlags=None, the default of leybourne(x),"
+                ),
+            ),
+            (
+                {"arlags": 0},
+                (
+                    "The default of leybourne.run will change from method='mle' "
+                    "to method='ols', the default of leybourne(x),"
+                ),
+            ),
+        ],
+    )
+    def test_run_changing_defaults(self, given, message):
+        # run warns for each default that will change to the __call__ one,
+        # and uses the current default
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with pytest.warns(FutureWarning, match=re.escape(message)) as record:
+            res = leybourne.run(mdl, **given)
+        assert len(record) == 1
+        assert record[0].filename == __file__
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            expected = leybourne.run(mdl, **({"arlags": 1, "method": "mle"} | given))
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+
+    def test_run_future_defaults(self):
+        # leybourne(x) is run with the future defaults, without a warning
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("DSP500.csv")))
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = leybourne(mdl)
+            expected = leybourne.run(mdl, arlags=None, method="ols")
+        assert res[2] == expected[2]
+        assert_allclose(res[0:2], expected[0:2], rtol=1e-10)
+        signature = str(inspect.signature(leybourne.run))
+        assert "arlags=1," in signature
+        assert "method='mle'," in signature
+
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13
     def test_baa_results(self):
@@ -5239,6 +5301,39 @@ class TestLeybourneMcCabe:
         y = rg.standard_normal(250)
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
+
+    @pytest.mark.parametrize(
+        "convert",
+        [
+            lambda x: x[:, 0],
+            lambda x: x[:, 0].tolist(),
+            lambda x: pd.Series(x[:, 0]),
+            pd.DataFrame,
+        ],
+        ids=["1d", "list", "series", "dataframe"],
+    )
+    def test_array_like_inputs(self, convert):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(convert(mdl), regression="ct")
+        # verified against Matlab 9.13, as in test_baa_results
+        assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
+        res_col = leybourne(mdl, regression="ct")
+        assert_allclose(res[0], res_col[0], rtol=1e-10)
+        assert res[2] == res_col[2]
+
+    @pytest.mark.parametrize(
+        "shape, match",
+        [
+            ((60, 2), r"x is required to have shape \(\*, 1\)"),
+            ((1, 60), r"x is required to have shape \(\*, 1\)"),
+            ((60, 1, 1), "x must have ndim <= 2"),
+        ],
+        ids=["two-columns", "row", "3d"],
+    )
+    def test_not_one_column_raises(self, shape, match):
+        x = np.random.default_rng(0).standard_normal(shape)
+        with pytest.raises(ValueError, match=match):
+            leybourne(x)
 
 
 def test_acovf_all_missing():
@@ -5596,3 +5691,28 @@ def test_grangercausalitytests_maxlag_forms(gc_data, maxlag, lags):
         assert_allclose(
             res[lag][0]["ssr_ftest"], expected[lag][0]["ssr_ftest"], rtol=1e-12
         )
+
+
+@pytest.mark.parametrize(
+    "arlags",
+    [np.int64(2), np.int32(2), np.array(2), 2.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+def test_leybourne_int_like_arlags(arlags):
+    # A 0-d integer array or an integral float is a number of AR terms, as an
+    # int is. They raised a ValueError. The int result is the reference.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    expected = leybourne(x, arlags=2)
+    res = leybourne(x, arlags=arlags)
+    assert_allclose(res[:2], expected[:2], rtol=1e-12)
+    assert res[2] == 2
+    assert type(res[2]) is int
+
+
+@pytest.mark.parametrize("arlags", [True, np.True_], ids=["True", "np.True_"])
+def test_leybourne_bool_arlags(arlags):
+    # A bool is not a number of AR terms. True raised a TypeError from a
+    # later step.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    with pytest.raises(ValueError, match="arlags must be an integer"):
+        leybourne(x, arlags=arlags)

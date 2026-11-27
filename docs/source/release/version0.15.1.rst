@@ -777,13 +777,12 @@ Generalized linear models and discrete models
   last element of ``params`` as ``log(alpha)`` instead of ``alpha`` in a model
   instance that was not fit, and in the model of results that were pickled
   and unpickled. For example, ``NegativeBinomial(endog, exog).loglike(params)``
-  differed from ``llf`` of the results with these ``params``, -260.73 instead
-  of -249.90 for 150 simulated counts, and ``score`` was not zero at the
-  maximum likelihood estimate. Results that were pickled before ``llf`` was
-  first used computed it from the unpickled model, so ``llf``, ``aic``,
-  ``bic``, ``llr``, ``prsquared`` and ``summary`` were incorrect after
-  unpickling; in the example, ``llr`` was -9.99 instead of 11.65. ``fit``
-  and the results computed by ``fit`` are not changed.
+  differed from ``llf`` of the results with these ``params``, and ``score`` was
+  not zero at the maximum likelihood estimate. Results that were pickled
+  before ``llf`` was first used computed it from the unpickled model, so
+  ``llf``, ``aic``, ``bic``, ``llr``, ``prsquared`` and ``summary`` were
+  incorrect after unpickling. ``fit`` and the results computed by ``fit`` are
+  not changed. :pr:`10947`
 - ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
   a ``ValueError`` (array broadcasting) if ``at`` is ``"overall"`` or
   ``"all"``, and whenever the number of regressors differs from the number of

@@ -1,0 +1,6 @@
+- ``ProcessMLE.from_formula`` has every documented parameter in its
+  signature, as keyword-only parameters after ``drop_cols``, and passes
+  ``cov`` and other keywords to the model. They were ignored, so a model
+  created with the formula API always used the default
+  ``GaussianCovariance``. A missing required argument raises a TypeError
+  instead of a ValueError. :pr:`11227`

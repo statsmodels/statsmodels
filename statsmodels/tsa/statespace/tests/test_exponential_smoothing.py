@@ -927,7 +927,8 @@ def test_invalid():
         TypeError,
         match=(
             "seasonal must be integer_like"
-            r" \(int or np.integer, but not bool or timedelta64\) or None"
+            r" \(an int, a NumPy integer or a float with an integral value,"
+            r" but not a bool\) or None"
         ),
     ):
         ExponentialSmoothing(aust, seasonal=True)
@@ -1016,3 +1017,36 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+# - Known initial states in the results ---------------------------------------
+
+
+def known_initial_state_results(endog):
+    mod = ExponentialSmoothing(
+        endog,
+        trend=True,
+        initialization_method="known",
+        initial_level=1.5,
+        initial_trend=0.25,
+    )
+    return mod.filter([0.5, 0.1])
+
+
+def test_initial_state_pandas_without_dates():
+    # With pandas data without dates, the initial state is a DataFrame with
+    # the default index (with dates it is labelled by the preceding date)
+    res = known_initial_state_results(pd.Series(np.arange(1.0, 21.0)))
+    expected = pd.DataFrame([[1.5, 0.25]], columns=["level", "trend"])
+    pd.testing.assert_frame_equal(res.initial_state, expected)
+
+
+def test_summary_initial_state_numpy():
+    # With numpy data the initial state is an array, shown in the summary
+    res = known_initial_state_results(np.arange(1.0, 21.0))
+    assert_allclose(res.initial_state, [1.5, 0.25], rtol=1e-12)
+    table = str(res.summary().tables[-2])
+    assert "initialization method: known" in table
+    rows = [line.split() for line in table.splitlines()]
+    assert ["level", "1.5000"] in rows
+    assert ["trend", "0.2500"] in rows

@@ -1,0 +1,5 @@
+- A fit of :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` with fixed parameters (``fix_params``,
+  ``fit_constrained``) or before ``set_initialization_method`` left
+  the fixed values in the model's bounds, so later fits kept them
+  fixed, and ``fit`` changed the ``bounds`` dict the user passed. Later
+  fits equal those of a new model. :pr:`10935`

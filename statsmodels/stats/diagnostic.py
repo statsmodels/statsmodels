@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+from statsmodels.regression.linear_model import GLS, OLS, WLS, RegressionResultsWrapper
 from statsmodels.stats._adnorm import anderson_statistic, normal_ad
 from statsmodels.stats._lilliefors import (
     kstest_exponential,
@@ -50,6 +50,7 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.tsatools import lagmat
@@ -1665,6 +1666,19 @@ def het_goldfeldquandt(
     in the second sample is larger than in the first, or decreasing or
     two-sided.
 
+    The F statistic is the ratio of the residual variance of the second
+    subsample to that of the first. Under the null hypothesis it has an F
+    distribution with the residual degrees of freedom of the second and of the
+    first subsample as numerator and denominator degrees of freedom, in this
+    order.
+
+    .. versionchanged:: 0.15.1
+
+       The p-values for ``alternative="increasing"`` and ``"decreasing"`` use
+       the degrees of freedom in this order. Before, the order was reversed,
+       and the p-values were wrong if the two subsamples had different
+       residual degrees of freedom.
+
     Results are identical to R, but the drop option is defined differently.
     (sorting by idx not tested yet)
     """
@@ -1735,10 +1749,10 @@ def het_goldfeldquandt(
     fval = resols2.mse_resid / resols1.mse_resid
     # if fval>1:
     if alternative == "increasing":
-        fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
+        fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = "increasing"
     elif alternative == "decreasing":
-        fpval = stats.f.sf(1.0 / fval, resols2.df_resid, resols1.df_resid)
+        fpval = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
         ordering = "decreasing"
     elif alternative == "two-sided":
         fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
@@ -1794,6 +1808,11 @@ def linear_reset(
         The maximum power to include in the model, if an integer. Includes
         powers 2, 3, ..., power. If an list of integers, includes all powers
         in the list.
+
+        .. versionchanged:: 0.15.1
+
+           A float with an integral value, such as 3.0, is the maximum power,
+           as an int is.
     test_type : str, default "fitted"
         The type of augmentation to use:
 
@@ -1837,6 +1856,18 @@ def linear_reset(
       the principal component. In either case, the principal component
       is extracted from the correlation matrix of remaining columns.
 
+    .. versionchanged:: 0.15.1
+
+        The auxiliary regression of a ``WLS`` result now uses the weights of
+        the model and that of a ``GLS`` result uses its ``sigma``. It was an
+        unweighted regression before, so the statistic and the p-value change
+        for results of ``WLS`` and ``GLS`` but not for those of ``OLS``.
+
+    A ``GLSAR`` result has no ``sigma``, and the AR coefficients of the model
+    are not used. Its auxiliary regression is a ``GLSAR`` model of order 1 with
+    a zero AR coefficient, which is OLS without the first observation. The
+    exog and the fitted values still come from the supplied result.
+
     The test is a Wald test of the null :math:`H_0:\gamma=0`. If use_f
     is True, then the quadratic-form test statistic is divided by the
     number of restrictions and the F distribution is used to compute
@@ -1855,7 +1886,8 @@ def linear_reset(
     )
     cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
-    if isinstance(power, int):
+    if is_int_like(power):
+        power = int(power)
         if power < 2:
             raise ValueError("power must be >= 2")
         power = np.arange(2, power + 1, dtype=int)
@@ -1895,7 +1927,12 @@ def linear_reset(
         aug = pca.factors[:, :1]
     aug_exog = np.hstack([exog] + [aug**p for p in power])
     mod_class = res.model.__class__
-    mod = mod_class(res.model.data.endog, aug_exog)
+    mod_kwds = {}
+    if isinstance(res.model, WLS) and not isinstance(res.model, OLS):
+        mod_kwds["weights"] = res.model.weights
+    if isinstance(res.model, GLS):
+        mod_kwds["sigma"] = res.model.sigma
+    mod = mod_class(res.model.data.endog, aug_exog, **mod_kwds)
     cov_kwds = {} if cov_kwds is None else cov_kwds
     res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]

@@ -2141,11 +2141,34 @@ def test_confint_proportions_paired_default_method(method):
     )
 
 
+@pytest.mark.parametrize("convert", [list, np.asarray, pd.DataFrame])
+def test_confint_proportions_paired_array_like(convert):
+    # the docstring example, verified against R (ratesci::moverpairci)
+    table = convert([[10, 5], [2, 20]])
+    assert_allclose(
+        smprop.confint_proportions_paired(table),
+        (-0.0643926050711, 0.2211160178958),
+        rtol=1e-11,
+    )
+
+
+@pytest.mark.parametrize(
+    "table, match",
+    [
+        ([1, 2, 3, 4], "table must have"),
+        (np.ones((2, 2, 1)), "table must have"),
+        (5, "table must have"),
+        ([[1, 2, 3], [4, 5, 6], [7, 8, 9]], "required to have shape"),
+        ([[1, 2, 3], [4, 5, 6]], "required to have shape"),
+    ],
+    ids=["1d", "2x2x1", "scalar", "3x3", "2x3"],
+)
+def test_confint_proportions_paired_rejects_non_2x2(table, match):
+    with pytest.raises(ValueError, match=match):
+        smprop.confint_proportions_paired(table)
+
+
 def test_confint_proportions_paired_invalid_inputs_raises():
-    with pytest.raises(ValueError, match="2x2 contingency table"):
-        smprop.confint_proportions_paired([1, 2, 3, 4])
-    with pytest.raises(ValueError, match="2x2 contingency table"):
-        smprop.confint_proportions_paired([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     with pytest.raises(ValueError, match="non-negative"):
         smprop.confint_proportions_paired([[1, -2], [3, 4]])
     with pytest.raises(ValueError, match="at least one observation"):
@@ -2405,3 +2428,40 @@ def test_samplesize_confint_proportion_broadcast():
         for j, hj in enumerate(h):
             expected = smprop.samplesize_confint_proportion(qi, hj)
             assert_allclose(res[i, j], expected, rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "counts, ratio, odds_ratio",
+    [
+        ((10, 10, 0, 10), np.inf, np.inf),
+        ((10, 10, 7, 10), 10 / 7, np.inf),
+        ((0, 10, 0, 10), np.nan, np.nan),
+        ((10, 10, 10, 10), 1.0, np.nan),
+    ],
+)
+def test_proportions_2indep_estimates_no_runtime_warning(counts, ratio, odds_ratio):
+    # The ratio and odds ratio estimates are inf or nan if a count is 0 or
+    # equal to nobs. They are computed for every compare and method, and
+    # warned "divide by zero" or "invalid value".
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        res = smprop.test_proportions_2indep(*counts)
+    assert_allclose(res.ratio, ratio, rtol=1e-12)
+    assert_allclose(res.odds_ratio, odds_ratio, rtol=1e-12)
+
+
+def test_confint_2indep_ratio_score_count2_zero_no_runtime_warning():
+    # If count2 is 0, Koopman's closed form has a root at 0, which gives the
+    # upper limit inf and warned "divide by zero"
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        low, upp = smprop.confint_proportions_2indep(
+            3, 6, 0, 9, compare="ratio", method="score"
+        )
+    assert upp == np.inf
+    # The value before the change; the p-value of the score test is alpha there
+    assert_allclose(low, 1.3390549695047, rtol=1e-10)
+    pvalue = smprop.score_test_proportions_2indep(
+        3, 6, 0, 9, value=low, compare="ratio", return_results=False
+    )[1]
+    assert_allclose(pvalue, 0.05, rtol=1e-6)

@@ -1,0 +1,4 @@
+- With ``trend="n"``, ``SVARResults`` used the first lag coefficients as the
+  intercept, so ``intercept``, ``mean``, ``intercept_longrun``,
+  ``simulate_var`` and ``sirf_errband_mc`` were wrong. The intercept is
+  zero. :pr:`10984`

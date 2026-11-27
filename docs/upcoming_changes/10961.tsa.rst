@@ -1,0 +1,4 @@
+- The printed results of the VAR and VECM hypothesis tests showed a
+  stray ``>`` after the critical value, and the ``predict`` error of
+  ``VECMResults`` gave the wrong number of required rows of ``exog_coint_fc``.
+  :pr:`10961`

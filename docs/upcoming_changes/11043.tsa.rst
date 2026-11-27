@@ -1,0 +1,7 @@
+- ``loglike``, ``score`` and ``hessian`` of state space models raised a
+  ``ValueError`` ("zip() argument 2 is shorter than argument 1") when
+  some but not all of their flags were given positionally, as in
+  ``mod.loglike(params, False)``. This was a regression in 0.15.0. Any
+  number of leading flags can be given positionally, the remaining flags
+  can be given by keyword, and too many positional flags raise a
+  ``TypeError``. :pr:`11043`

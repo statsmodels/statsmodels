@@ -1,0 +1,6 @@
+- ``DynamicFactorMQ`` raised an ``AttributeError`` for ``endog``
+  given as a 2-D list or tuple, and so did
+  ``DynamicFactorMQ.construct_endog`` for a list;
+  ``transform_params`` and ``untransform_params`` raised for a list,
+  a tuple or a ``Series``. These array_like inputs are accepted, as
+  documented. :pr:`11097`

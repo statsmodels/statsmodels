@@ -1,0 +1,3 @@
+- ``eval_env=-1`` in ``from_formula`` no longer raises a
+  ``FutureWarning`` about ``EvalEnvironment`` with the patsy
+  engine. :pr:`11220`

@@ -1,0 +1,2 @@
+- ``linear_reset`` uses a NumPy integer ``power`` like a Python integer instead
+  of rejecting it with the error for a list of powers. :issue:`11200`, :pr:`11201`
