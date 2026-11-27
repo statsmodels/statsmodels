@@ -402,8 +402,8 @@ class LocalProjections:
         self.trend = trend
         self.nw_lags = nw_lags
 
+        # exog is already a 2-d float array from array_like
         if exog is not None:
-            exog = np.asarray(exog, dtype=float)
             if exog.shape[0] != t:
                 raise ValueError(
                     "exog must have the same number of rows as endog."
