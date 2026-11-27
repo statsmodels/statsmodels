@@ -3860,7 +3860,11 @@ def test_standardize_ndarray_like_dataframe(missing):
     mod_df = dynamic_factor_mq.DynamicFactorMQ(endog["y1"])
     mod = dynamic_factor_mq.DynamicFactorMQ(values[:, 0])
     params = mod_df.start_params
-    assert_allclose(mod.start_params, params, rtol=1e-10)
+    # With one variable the factor reproduces it, so the idiosyncratic AR
+    # start (L1.eps_M.y1) is fitted to residuals that are zero up to rounding
+    # and is itself zero up to rounding (about 1e-35), with a sign that
+    # depends on the BLAS (macOS Accelerate): atol for it, rtol for the others
+    assert_allclose(mod.start_params, params, rtol=1e-10, atol=1e-12)
     kwargs = {
         "measurement_shocks": rng.standard_normal((4, 1)),
         "state_shocks": rng.standard_normal((4, mod.ssm.k_posdef)),
