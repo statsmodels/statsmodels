@@ -91,7 +91,9 @@ float
 
 with_sig = """
 func(x)
+
 func(x, y)
+
 func(x, y, z=1)
 """ + good
 
@@ -486,7 +488,11 @@ x : int
 
 
 def test_multiple_sig():
-    Docstring(with_sig)
+    # Of several signatures, each in its own paragraph, the last one is kept
+    # and the rest of the docstring is parsed as without them
+    nds = NumpyDocString(with_sig)
+    assert nds["Signature"] == "func(x, y, z=1)"
+    assert str(nds) == "func(x, y, z=1)\n" + str(NumpyDocString(good))
 
 
 @pytest.mark.parametrize(
