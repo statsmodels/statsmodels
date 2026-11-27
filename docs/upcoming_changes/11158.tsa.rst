@@ -1,0 +1,6 @@
+- ``summary_details`` and ``summary`` of the news of state space
+  models (``NewsResults``) raised a ``KeyError`` for a selected impact
+  date, impacted variable, update date or updated variable when the
+  details table had no rows at all (no new observations, for example
+  with ``comparison_type="updated"``, or no revisions). The table has
+  only its header. :pr:`11158`

@@ -516,7 +516,7 @@ class NewsResults:
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
 
-        if key is not None:
+        if key is not None and len(df) > 0:
             df = df.loc[key, :]
 
         mask = np.abs(df["impact"]) > self.tolerance
@@ -629,7 +629,7 @@ class NewsResults:
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
 
-        if key is not None:
+        if key is not None and len(df) > 0:
             df = df.loc[key, :]
 
         mask = np.abs(df["impact"]) > self.tolerance
