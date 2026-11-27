@@ -655,15 +655,108 @@ def test_cohens_kappa_rejects_1d_weights_of_wrong_length(weights, wt):
             cohens_kappa(table, weights=weights, wt=wt)
 
 
-@pytest.mark.parametrize("weights", [[5, 5, 5], [0, 1, 0]])
+@pytest.mark.parametrize("weights", [[5, 5, 5], [-1.5, -1.5, -1.5]])
 @pytest.mark.parametrize("wt", [None, "linear", "ca", "quadratic", "fc"])
-def test_cohens_kappa_rejects_equal_first_and_last_scores(weights, wt):
-    # the score differences are divided by weights[-1] - weights[0], which
-    # gave nan with a RuntimeWarning
+def test_cohens_kappa_rejects_equal_scores(weights, wt):
+    # the score differences are divided by the range of the scores, which is
+    # 0, and gave nan with a RuntimeWarning
     table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        with pytest.raises(ValueError, match="first and last 1-d weights must"):
+        with pytest.raises(ValueError, match="1-d weights must not all be equal"):
+            cohens_kappa(table, weights=weights, wt=wt)
+
+
+@pytest.mark.parametrize(
+    "scores",
+    [[0, 1, 0], [0, 3, 1], [3, 2, 0], [2.0, -1.0, 0.5]],
+    ids=["equal-ends", "not-monotone", "decreasing", "mixed-sign"],
+)
+@pytest.mark.parametrize("wt", ["linear", "ca", None, "quadratic", "fc"])
+def test_cohens_kappa_scores_scaled_by_range(scores, wt):
+    # The score differences were divided by the last minus the first score:
+    # nan (then a ValueError) for [0, 1, 0], weights up to 3 for [0, 3, 1],
+    # and negative linear weights for [3, 2, 0]. The reference is the 2-d
+    # weight matrix built from the scores and divided by their range.
+    table = np.array([[10, 2, 1], [3, 12, 2], [1, 2, 9]])
+    s = np.asarray(scores, float)
+    diff = np.abs(s[:, None] - s) / (s.max() - s.min())
+    expected_w = diff**2 if wt in ("quadratic", "fc") else diff
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, weights=scores, wt=wt)
+    ref = cohens_kappa(table, weights=expected_w)
+    assert_allclose(res.weights, expected_w, rtol=1e-14, atol=1e-15)
+    assert res.weights.min() == 0
+    assert_allclose(res.weights.max(), 1.0, rtol=1e-14)
+    for name in ["kappa", "var_kappa", "var_kappa0"]:
+        assert_allclose(res[name], ref[name], rtol=1e-12, err_msg=name)
+
+
+@pytest.mark.parametrize("wt", ["linear", "quadratic"])
+def test_cohens_kappa_decreasing_scores_match_increasing(wt):
+    # Reversing the order of increasing scores keeps every score difference,
+    # so the weights and all results are the same. Linear weights had the
+    # opposite sign.
+    table = np.array([[10, 2, 1, 0], [3, 12, 2, 1], [1, 2, 9, 3], [0, 1, 2, 8]])
+    res_inc = cohens_kappa(table, weights=[0, 1, 2, 3], wt=wt)
+    res_dec = cohens_kappa(table, weights=[3, 2, 1, 0], wt=wt)
+    assert_allclose(res_dec.weights, res_inc.weights, rtol=1e-14)
+    for name in ["kappa", "var_kappa", "var_kappa0", "z_value"]:
+        assert_allclose(res_dec[name], res_inc[name], rtol=1e-12, err_msg=name)
+
+
+@pytest.mark.parametrize("wt", ["linear", "quadratic"])
+def test_cohens_kappa_equal_end_scores(wt):
+    # The scores [0, 1, 0] put the first and last categories at distance 0
+    # and the middle one at distance 1 from both, so with linear or
+    # quadratic weights they are the toeplitz weights [0, 1, 0]. Weighted
+    # kappa is 1 - sum(w * observed) / sum(w * expected). The first and last
+    # scores were subtracted to scale the weights, which gave nan with a
+    # RuntimeWarning and then raised a ValueError.
+    table = np.array([[10, 2, 1], [3, 12, 2], [1, 2, 9]])
+    w = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    observed = table / table.sum()
+    expected = np.outer(observed.sum(1), observed.sum(0))
+    kappa = 1 - (w * observed).sum() / (w * expected).sum()
+    res = cohens_kappa(table, weights=[0, 1, 0], wt=wt)
+    ref = cohens_kappa(table, weights=[0, 1, 0], wt="toeplitz")
+    assert_allclose(res.kappa, kappa, rtol=1e-13)
+    assert_allclose(res.weights, w, rtol=1e-14)
+    for name in ["var_kappa", "var_kappa0"]:
+        assert_allclose(res[name], ref[name], rtol=1e-12, err_msg=name)
+
+
+@pytest.mark.parametrize("scale", [0.1, 3.0, -1.0])
+def test_cohens_kappa_invariant_to_weight_scale(scale):
+    # The docstring said that the variance assumes weights of at most 1.
+    # Kappa and its variances do not depend on the scale of the weights.
+    table = np.array([[10, 2, 1], [3, 12, 2], [1, 2, 9]])
+    w = np.abs(np.subtract.outer(np.arange(3), np.arange(3))) / 2
+    res = cohens_kappa(table, weights=w)
+    res_scaled = cohens_kappa(table, weights=scale * w)
+    for name in ["kappa", "var_kappa", "var_kappa0"]:
+        assert_allclose(res_scaled[name], res[name], rtol=1e-12, err_msg=name)
+
+
+@pytest.mark.parametrize(
+    "weights, wt",
+    [
+        ([0, np.nan, 2], None),
+        ([0, 1, np.inf], "linear"),
+        ([0, np.nan, 2], "quadratic"),
+        ([0, 1, np.nan], "toeplitz"),
+        ([[0, 1, np.nan], [1, 0, 1], [1, 1, 0]], None),
+        ([[0, 1, 1], [1, 0, -np.inf], [1, 1, 0]], None),
+    ],
+    ids=["1d-nan", "1d-inf", "quadratic-nan", "toeplitz-nan", "2d-nan", "2d-inf"],
+)
+def test_cohens_kappa_rejects_non_finite_weights(weights, wt):
+    # Weights that are not finite gave a kappa of nan
+    table = [[10, 2, 1], [3, 12, 2], [1, 2, 9]]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="weights must be finite"):
             cohens_kappa(table, weights=weights, wt=wt)
 
 
@@ -817,7 +910,7 @@ def test_cohens_kappa_one_category_proportions(wt):
 )
 def test_cohens_kappa_single_cell_table(kwds):
     # a 1 x 1 table is the same single category for both raters. Linear and
-    # quadratic weights divided by weights[-1] - weights[0] = 0 and warned
+    # quadratic weights divided by the score range, 0, and warned
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         res = cohens_kappa([[5]], **kwds)
