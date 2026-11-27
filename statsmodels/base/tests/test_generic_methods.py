@@ -1007,3 +1007,81 @@ def test_invalid_missing_option_raises():
         sm.GLM(y, X, missing="bogus")
     res = sm.OLS(y, X, missing="none").fit()
     assert np.isfinite(res.params).all()
+
+
+@pytest.mark.parametrize(
+    "trend, has_exog, params",
+    [
+        ("c", True, [0.2, 0.5, 0.3, 1.2]),
+        ("n", True, [0.5, 0.3, 1.2]),
+        ("c", False, [0.2, 0.3, 1.2]),
+    ],
+    ids=["exog-not-first", "exog-first", "no-exog"],
+)
+def test_wald_test_terms_model_param_names(trend, has_exog, params):
+    # Without a formula, the terms of a model with param_names are its
+    # parameters. Before, the exog names labelled the first parameters (with
+    # trend="c", the test of the intercept was labelled "x1"), and a model
+    # without exog raised TypeError.
+    rng = np.random.default_rng(37192)
+    nobs = 100
+    x = rng.standard_normal(nobs)
+    y = 0.5 * x + rng.standard_normal(nobs)
+    mod = sm.tsa.SARIMAX(
+        y, exog=x if has_exog else None, order=(1, 0, 0), trend=trend
+    )
+    # At fixed parameters, so that nothing depends on where an optimizer stops
+    res = mod.smooth(params)
+    wa = res.wald_test_terms(scalar=True)
+
+    assert list(wa.table.index) == mod.param_names
+    eye = np.eye(len(params))
+    for i in range(len(params)):
+        wt = res.wald_test(eye[i], scalar=True)
+        assert_allclose(wa.table["statistic"].iloc[i], wt.statistic, rtol=1e-12)
+    # A single restriction: the Wald statistic is the squared z statistic
+    assert_allclose(wa.table["statistic"], res.tvalues**2, rtol=1e-10)
+    assert_allclose(wa.table["pvalue"], res.pvalues, rtol=1e-8)
+    assert_equal(wa.table["df_constraint"].to_numpy(), np.ones(len(params)))
+
+
+def test_wald_test_terms_model_param_names_combined():
+    # The coefficient of exog is the last parameter of UnobservedComponents,
+    # and combine_terms matches the names of the parameters
+    rng = np.random.default_rng(83021)
+    nobs = 100
+    x = rng.standard_normal(nobs)
+    y = np.cumsum(0.3 * rng.standard_normal(nobs)) + 0.5 * x
+    y += rng.standard_normal(nobs)
+    mod = sm.tsa.UnobservedComponents(y, "llevel", exog=x)
+    res = mod.smooth([1.1, 0.2, 0.6])
+    wa = res.wald_test_terms(combine_terms=["sigma2"], scalar=True)
+
+    assert list(wa.table.index) == mod.param_names + ["sigma2"]
+    eye = np.eye(3)
+    constraints = [eye[0], eye[1], eye[2], eye[:2]]
+    for i, constraint in enumerate(constraints):
+        wt = res.wald_test(constraint, scalar=True)
+        assert_allclose(wa.table["statistic"].iloc[i], wt.statistic, rtol=1e-12)
+        assert_allclose(wa.table["pvalue"].iloc[i], wt.pvalue, rtol=1e-12)
+    assert_equal(wa.table["df_constraint"].to_numpy(), [1, 1, 1, 2])
+    assert_allclose(wa.table["statistic"].iloc[:3], res.tvalues**2, rtol=1e-10)
+
+
+def test_wald_test_terms_mixedlm_fixed_effects():
+    # MixedLM has no param_names: without a formula, the terms are still the
+    # fixed effects (the columns of exog), not the variance parameters
+    rng = np.random.default_rng(56103)
+    nobs = 120
+    exog = sm.add_constant(rng.standard_normal((nobs, 2)))
+    groups = np.repeat(np.arange(12), 10)
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(12)[groups]
+    endog += rng.standard_normal(nobs)
+    res = sm.MixedLM(endog, exog, groups).fit()
+    wa = res.wald_test_terms(scalar=True)
+
+    assert list(wa.table.index) == ["const", "x1", "x2"]
+    eye = np.eye(len(res.params))
+    for i in range(3):
+        wt = res.wald_test(eye[i], scalar=True)
+        assert_allclose(wa.table["statistic"].iloc[i], wt.statistic, rtol=1e-12)

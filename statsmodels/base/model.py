@@ -2214,7 +2214,18 @@ class LikelihoodModelResults(Results):
 
         This computes joined Wald tests for the hypothesis that all
         coefficients corresponding to a `term` are zero.
-        `Terms` are defined by the underlying formula or by string matching.
+        `Terms` are defined by the underlying formula. Without a formula,
+        every parameter is a term of its own, named by the model's
+        ``param_names`` if the model has them (for example, state space
+        models) and otherwise by the names of the exog columns.
+
+        .. versionchanged:: 0.15.1
+
+           Without a formula, the terms of models that have ``param_names``
+           are their parameters. Before, the names of the exog columns were
+           used as the names of the first parameters, which mislabelled the
+           tests if the coefficients of exog were not the first parameters,
+           and models without exog raised.
 
         Parameters
         ----------
@@ -2222,7 +2233,7 @@ class LikelihoodModelResults(Results):
             If true, then terms that consist only of a single column and,
             therefore, refers only to a single parameter is skipped.
             If false, then all terms are included.
-        extra_constraints : list[tuple], optional
+        extra_constraints : list of tuple, optional
             Additional constraints to test, given as a list of (name,
             constraint_matrix) tuples in the same form as the automatically
             generated term constraints. Note that this input has not been
@@ -2276,9 +2287,6 @@ class LikelihoodModelResults(Results):
             combine_terms = []
         model_spec = getattr(result.model.data, "model_spec", None)
 
-        if model_spec is None and extra_constraints is None:
-            raise ValueError("no constraints, nothing to do")
-
         identity = np.eye(len(result.params))
         constraints = []
         combined = defaultdict(list)
@@ -2304,8 +2312,13 @@ class LikelihoodModelResults(Results):
             for cname in combine_terms:
                 combined_constraints.append((cname, np.vstack(combined[cname])))
         else:
-            # check by exog/params names if there is no formula info
-            for col, name in enumerate(result.model.exog_names):
+            # Without formula info, every parameter is a term. Models whose
+            # parameters are not only the coefficients of exog (state space
+            # models, for example) name them in param_names.
+            param_names = getattr(result.model, "param_names", None)
+            if param_names is None:
+                param_names = result.model.exog_names
+            for col, name in enumerate(param_names):
                 constraint_matrix = np.atleast_2d(identity[col])
 
                 # check if in combined
