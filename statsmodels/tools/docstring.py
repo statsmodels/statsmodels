@@ -651,7 +651,7 @@ class Docstring:
                     loc = i + 1
                     break
             if loc < 0:
-                raise ValueError
+                raise ValueError(f"{after} was not found in the docstring")
             params = self._ds["Parameters"][:loc] + parameters
             params += self._ds["Parameters"][loc:]
             self._ds["Parameters"] = params

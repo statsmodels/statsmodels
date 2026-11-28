@@ -209,8 +209,10 @@ def test_insert_parameters():
     assert "---\nw : ndarray" in str(ds)
 
     ds = Docstring(good)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^unknown was not found in the docstring$"):
         ds.insert_parameters("unknown", new)
+    # The docstring is unchanged
+    assert str(ds) == str(Docstring(good))
 
 
 @pytest.mark.parametrize("desc", [[], [""]], ids=["empty", "blank"])
