@@ -1250,3 +1250,115 @@ def test_fevd_vars(case):
     fevd = fixed.fevd(5)
     # atol: the shares are in [0, 1], and vars has 1e-32 for some exact zeros
     assert_allclose(fevd.decomp, fevd_r, rtol=1e-7, atol=1e-12)
+
+
+def _structural_resim(res, repl, steps, seed, burn):
+    # The structural responses of SVARs with the restrictions, lags and trend
+    # of res, fitted from its estimate to samples simulated from the
+    # estimated VAR
+    from statsmodels.tsa.vector_ar import util
+
+    rng = np.random.default_rng(seed)
+    out = []
+    for _ in range(repl):
+        sim = util.varsim(
+            res.coefs, res.intercept, res.sigma_u, rng=rng, steps=res.nobs + burn
+        )
+        mod = SVAR(sim[burn:], "AB", A=res.model.A_original, B=res.model.B_original)
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            sres = mod.fit(
+                maxlags=res.k_ar,
+                trend=res.trend,
+                A_guess=res.A[res.A_mask],
+                B_guess=res.B[res.B_mask],
+            )
+        irfs = sres.svar_ma_rep(steps)
+        # The impact responses are A^-1 B of the fit to the simulated sample;
+        # atol for its zeros, which solve gives with rounding errors
+        atol = 1e-13 * np.max(np.abs(irfs[0]))
+        expected = np.linalg.solve(sres.A, sres.B)
+        assert_allclose(irfs[0], expected, rtol=1e-10, atol=atol)
+        out.append(irfs)
+    return np.array(out)
+
+
+def _eig_cov(values):
+    # The eigenvalues and eigenvectors (columns) of the covariance of the
+    # simulated values, and the index of the largest eigenvalue
+    from scipy import linalg
+
+    eigvals, eigvecs = linalg.eig(np.cov(values, rowvar=False), left=True, right=False)
+    return eigvals.real, eigvecs.real, int(np.argmax(eigvals.real))
+
+
+@pytest.mark.parametrize("trend", ["n", "c"])
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2", "err_band_sz3"])
+def test_err_band_sz_svar_structural(method, trend):
+    # The Sims-Zha bands of the structural responses of SVAR results raised
+    # AttributeError: 'exog' (or used the simulated responses of reduced-form
+    # VARs). They are computed, as described in the err_band_sz* methods, from
+    # simulated structural responses.
+    _, res, _ = _svar_and_var(trend)
+    periods, repl, signif = 3, 20, 0.2
+    irf = res.irf(periods)
+    sims = _structural_resim(res, repl, periods, 1, 10)
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        band = getattr(irf, method)(
+            svar=True, repl=repl, signif=signif, rng=np.random.default_rng(1), burn=10
+        )
+    # The round(signif / 2 * repl)-th and round((1 - signif / 2) * repl)-th
+    # smallest values: the 2nd and the 18th
+    lo, hi = 1, 17
+    lower = irf.svar_irfs.copy()
+    upper = irf.svar_irfs.copy()
+    for j in range(3):
+        if method == "err_band_sz3":
+            stacked = np.concatenate([sims[:, 1:, i, j] for i in range(3)], 1)
+            _, w_stack, k_stack = _eig_cov(stacked)
+        for i in range(3):
+            c = sims[:, 1:, i, j]
+            lam, w, k = _eig_cov(c)
+            if method == "err_band_sz1":
+                dev = stats.norm.ppf(1 - signif / 2) * np.sqrt(lam[k]) * w[:, k]
+                lower[1:, i, j] += dev
+                upper[1:, i, j] -= dev
+                continue
+            if method == "err_band_sz2":
+                row = w[k]
+            else:
+                row = w_stack[k_stack, i * periods : (i + 1) * periods]
+            g = np.sort(row * c, axis=0)
+            lower[1:, i, j] += g[lo]
+            upper[1:, i, j] += g[hi]
+    assert_allclose(band.lower, lower, rtol=1e-10)
+    assert_allclose(band.upper, upper, rtol=1e-10)
+
+
+def test_err_band_sz_svar_one_convergence_warning(monkeypatch):
+    # The fits of the replications that do not converge are reported in one
+    # warning, which points at the caller
+    _, res, _ = _svar_and_var("c")
+    irf = res.irf(2)
+    fit = SVAR.fit
+
+    def fit_one_iteration(self, **kwds):
+        return fit(self, maxiter=1, **kwds)
+
+    monkeypatch.setattr(SVAR, "fit", fit_one_iteration)
+    with pytest.warns(ConvergenceWarning, match="3 of 3 Monte Carlo") as record:
+        irf.err_band_sz1(svar=True, repl=3, rng=np.random.default_rng(0), burn=10)
+    assert len(record) == 1
+    assert record[0].filename == __file__
+
+
+def test_err_band_sz_svar_int_seed():
+    # An int seed creates one generator for all the replications (deprecated)
+    _, res, _ = _svar_and_var("c")
+    irf = res.irf(2)
+    with (
+        pytest.warns(FutureWarning),
+        warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+    ):
+        band = irf.err_band_sz2(svar=True, repl=10, signif=0.2, rng=0, burn=10)
+    # identical replications would give lower == upper
+    assert not np.allclose(band.lower[1:], band.upper[1:])
