@@ -1,0 +1,4 @@
+- Extending a state space exponential smoothing fit now continues from the
+  last filtered level, trend and seasonal states. Fitted values and
+  forecasts for the new observations could previously restart from the
+  training initialization. :pr:`11291`

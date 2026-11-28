@@ -1022,6 +1022,78 @@ def test_summary_after_remove_data():
 # - Known initial states in the results ---------------------------------------
 
 
+@pytest.mark.parametrize("method", ["estimated", "simple", "heuristic",
+                                    "concentrated", "known"])
+@pytest.mark.parametrize("concentrate_scale", [False, True])
+def test_extend_continuation(method, concentrate_scale):
+    rng = np.random.default_rng(321)
+    y = pd.Series(rng.normal(10, 2, size=40))
+    options = dict(trend=True, seasonal=4, damped_trend=True,
+                   initialization_method=method, concentrate_scale=concentrate_scale)
+    known = dict(initial_level=10, initial_trend=0.5, initial_seasonal=[1, -2, 3])
+    params = [0.4, 0.1, 0.2, 0.9]
+    if not concentrate_scale:
+        params.append(2.5)
+    if method == "estimated":
+        params += [10, 0.5, 1, -2, 3]
+    if method == "known":
+        options.update(known)
+    fit = ExponentialSmoothing(y.iloc[:-3], **options).filter(params)
+    # The original initializer runs on the training sample only. The Holt-
+    # Winters innovations equations then give the forecasts for both blocks.
+    level, slope, *season = fit.initial_state.iloc[0]
+    season.reverse()
+    expected = []
+    for t, obs in enumerate(y):
+        j = t % 4
+        prediction = level + 0.9 * slope + season[j]
+        expected.append(prediction)
+        error = obs - prediction
+        level += 0.9 * slope + 0.4 * error
+        slope = 0.9 * slope + 0.1 * error
+        season[j] += 0.2 * error
+    expected.append(level + 0.9 * slope + season[len(y) % 4])
+
+    # Supply the constructor arguments needed to clone a known initialization.
+    kwargs = known if method == "known" else {}
+    first = fit.extend(y.iloc[-3:-1], **kwargs)
+    last = first.extend(y.iloc[-1:], **kwargs)
+    assert_allclose(first.fittedvalues, expected[-4:-2], rtol=1e-11)
+    assert_allclose(last.forecasts[0], expected[-2:-1], rtol=1e-11)
+    assert_allclose(last.forecast(), expected[-1:], rtol=1e-11)
+    assert_allclose(first.initial_state.iloc[0], fit.filtered_state[1:, -1])
+    assert_allclose(last.params, fit.params)
+
+
+@pytest.mark.parametrize("concentrate_scale", [False, True])
+def test_extend_continuation_missing_boundary(concentrate_scale):
+    # A gap at the split leaves uncertainty in the level. Filtering the
+    # whole series at the same parameters carries that uncertainty forward.
+    y = [4, 9, 5, 7, 10, 8, 6, np.nan, 9, 8, 11]
+    params = [0.45, 5] if concentrate_scale else [0.45, 2.5, 5]
+    mod = ExponentialSmoothing(y[:8], concentrate_scale=concentrate_scale)
+    fit = mod.smooth(params)
+    full = mod.clone(y).smooth(params)
+    ext = fit.extend(y[8:])
+    assert_allclose(ext.fittedvalues, full.fittedvalues[8:], rtol=1e-11)
+    assert_allclose(ext.forecast(3), full.forecast(3), rtol=1e-11)
+    assert_allclose(ext.predicted_state_cov / ext.scale,
+                    full.predicted_state_cov[..., 8:] / full.scale, rtol=1e-11)
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+def test_extend_continuation_zero_scale(legacy):
+    # No innovations in the training sample, then two nonzero innovations.
+    # Concentrating a zero variance gives an undefined likelihood.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        res = ExponentialSmoothing([5., 5., 5.]).filter([0.4, 5.], cov_type="none")
+    assert res.scale == 0
+    if legacy and hasattr(res._results, "_unscaled_end_cov"):
+        del res._results._unscaled_end_cov
+    ext = res.extend([10., 7.])
+    assert_allclose(ext.fittedvalues, [5, 7], rtol=1e-12)
+
+
 def known_initial_state_results(endog):
     mod = ExponentialSmoothing(
         endog,
