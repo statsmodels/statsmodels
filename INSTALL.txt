@@ -5,15 +5,15 @@ python >= 3.10
 
     www.python.org
 
-numpy >= 1.23.5
+numpy >= 2.0.0
 
     www.numpy.org
 
-scipy >= 1.8
+scipy >= 1.13
 
     www.scipy.org
 
-pandas >= 1.4
+pandas >= 2.2.2
 
     pandas.pydata.org
 
