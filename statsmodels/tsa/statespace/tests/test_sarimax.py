@@ -23,6 +23,7 @@ from statsmodels.tools import add_constant
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     EstimationWarning,
+    SpecificationWarning,
     ValueWarning,
 )
 from statsmodels.tools.testing import warns_or_none
@@ -2371,6 +2372,9 @@ def check_concentrated_scale(filter_univariate=False):
         simple_differencings,
     ):
         kwargs = dict(zip(names, element, strict=True))
+        if kwargs["time_varying_regression"] and kwargs["exog"] is None:
+            # Without exog, time_varying_regression has no effect (and warns)
+            continue
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
 
@@ -2700,6 +2704,9 @@ def test_recreate_model():
         simple_differencings,
     ):
         kwargs = dict(zip(names, element, strict=True))
+        if kwargs["time_varying_regression"] and kwargs["exog"] is None:
+            # Without exog, time_varying_regression has no effect (and warns)
+            continue
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
         exog = kwargs.pop("exog", None)
@@ -3503,3 +3510,48 @@ def test_predict_dynamic_key_covers_several_dates():
     assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
     assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
     pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(order=(0, 1, 0)),
+        dict(order=(0, 0, 0), seasonal_order=(0, 1, 0, 4)),
+        dict(order=(0, 1, 0), measurement_error=True),
+        dict(order=(0, 0, 0)),
+        dict(order=(1, 0, 0)),
+    ],
+    ids=["random-walk", "seasonal-random-walk", "measurement-error", "white-noise", "ar"],
+)
+def test_time_varying_regression_without_exog(kwargs):
+    # Without exog there are no coefficients to vary, so the model is the one
+    # without time_varying_regression, with a warning. Without AR or MA terms
+    # the model had no error term (no parameters and a log-likelihood of 0
+    # for the random walk, or only the measurement error), or it raised.
+    rng = np.random.default_rng(20261204)
+    endog = rng.standard_normal(40)
+    # Without the flag there is no warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod = sarimax.SARIMAX(endog, **kwargs)
+    with pytest.warns(SpecificationWarning, match="has no effect without exog") as w:
+        mod_tvr = sarimax.SARIMAX(
+            endog, time_varying_regression=True, mle_regression=False, **kwargs
+        )
+    # The warning points at the line that creates the model
+    assert_equal(Path(w[0].filename).name, Path(__file__).name)
+    assert mod_tvr.time_varying_regression is False
+    assert_equal(mod_tvr.param_names, mod.param_names)
+    assert_allclose(mod_tvr.start_params, mod.start_params, rtol=1e-12)
+    params = np.r_[np.full(len(mod.param_names) - 1, 0.5), 2.0]
+    res_tvr = mod_tvr.smooth(params)
+    res = mod.smooth(params)
+    assert_allclose(res_tvr.llf, res.llf, rtol=1e-12)
+    assert_allclose(res_tvr.forecast(4), res.forecast(4), rtol=1e-12)
+    if kwargs == dict(order=(0, 1, 0)):
+        # The random walk: the differences are N(0, 2) (the first observation
+        # is the burn-in of the diffuse state; rtol: the approximate diffuse
+        # variance 1e6 leaves a rounding error of about 1e-10 in the variance
+        # of the second observation)
+        expected = norm.logpdf(np.diff(endog), scale=np.sqrt(2.0)).sum()
+        assert_allclose(res_tvr.llf, expected, rtol=1e-10)

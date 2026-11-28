@@ -1,0 +1,7 @@
+- ``SARIMAX`` with ``time_varying_regression=True`` and no ``exog`` lost
+  its error term when it had no autoregressive or moving average terms:
+  ``order=(0, 1, 0)`` had no parameters and a log-likelihood of 0, and
+  other such specifications raised an error. Without ``exog``,
+  ``time_varying_regression`` has no effect: it is set to False with a
+  ``SpecificationWarning``, so these models are those without the
+  option. :pr:`11088`
