@@ -1024,6 +1024,15 @@ class CompareMeans:
         -------
         smry : SimpleTable
             Summary table of the hypothesis test results.
+
+        Notes
+        -----
+        The reported coefficient and confidence interval use the restriction
+        ``mean1 - mean2 - value``, which is zero under the null hypothesis.
+
+        .. versionchanged:: 0.15.1
+           The confidence interval now uses the same null-centered scale as
+           the reported coefficient.
         """
 
         d1 = self.d1
@@ -1046,7 +1055,7 @@ class CompareMeans:
         pvalue = np.atleast_1d(pvalue)
         lower = np.atleast_1d(lower)
         upper = np.atleast_1d(upper)
-        conf_int = np.column_stack((lower, upper))
+        conf_int = np.column_stack((lower, upper)) - value
         params = np.atleast_1d(d1.mean - d2.mean - value)
 
         title = "Test for equality of means"
