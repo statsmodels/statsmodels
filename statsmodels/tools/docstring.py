@@ -584,11 +584,19 @@ class Docstring:
     docstring : str or None
         The docstring to modify. None (docstrings are None under
         ``python -OO``) or a blank string gives an empty instance whose
-        methods do nothing.
+        methods do nothing. ``str()`` of an empty instance returns the
+        blank string, or "" for None.
+
+        .. versionchanged:: 0.15.1
+
+           ``str()`` of an empty instance returns the blank string, or ""
+           for None. It returned "None".
     """
 
     def __init__(self, docstring):
         self._ds = None
+        # Returned by str() if there is nothing to parse
+        self._unparsed = docstring or ""
         self._docstring = docstring
         if docstring is None or not docstring.strip():
             self._docstring = None
@@ -714,6 +722,8 @@ class Docstring:
         return out
 
     def __str__(self):
+        if self._ds is None:
+            return self._unparsed
         return str(self._ds)
 
 
@@ -731,7 +741,12 @@ def remove_parameters(docstring, parameters):
     Returns
     -------
     str or None
-        The modified docstring, or None if `docstring` is None.
+        The modified docstring, or None if `docstring` is None. A blank
+        `docstring` is returned unchanged.
+
+        .. versionchanged:: 0.15.1
+
+           A blank `docstring` is returned unchanged. "None" was returned.
     """
     if docstring is None:
         return None

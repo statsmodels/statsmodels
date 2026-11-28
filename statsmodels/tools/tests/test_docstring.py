@@ -426,13 +426,15 @@ def test_empty_ds():
     new = Parameter("w", "ndarray", ["An array input."])
     ds.insert_parameters("y", new)
     assert ds.extract_parameters("x") is None
-    assert str(ds) == "None"
+    # The string is empty, not "None"
+    assert str(ds) == ""
 
 
 @pytest.mark.parametrize("docstring", ["", "   ", "\n"])
 def test_empty_string_ds(docstring):
     # GH#9765: Nuitka sets __doc__ to "" instead of None.
-    # Empty or whitespace-only docstrings should behave like None.
+    # Empty or whitespace-only docstrings should behave like None, except
+    # that they are returned unchanged as the string
     ds = Docstring(docstring)
     assert ds._docstring is None
     ds.replace_block("summary", ["New summary."])
@@ -440,7 +442,8 @@ def test_empty_string_ds(docstring):
     new = Parameter("w", "ndarray", ["An array input."])
     ds.insert_parameters("y", new)
     assert ds.extract_parameters("x") is None
-    assert str(ds) == "None"
+    assert str(ds) == docstring
+    assert remove_parameters(docstring, "x") == docstring
 
 
 @pytest.mark.parametrize(
