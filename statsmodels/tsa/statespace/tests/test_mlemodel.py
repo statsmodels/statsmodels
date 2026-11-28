@@ -3368,3 +3368,30 @@ def test_positional_flag_also_by_keyword_raises(func):
         match = f"^got multiple values for keyword argument '{name}'$"
     with pytest.raises(TypeError, match=match):
         getattr(mod, func)([0.5, 4.0], value, **{name: value})
+
+
+@pytest.mark.parametrize("signal_only", [False, True])
+@pytest.mark.parametrize("low_memory", [True, False])
+def test_get_prediction_smoothed_without_smoother_raises(low_memory, signal_only):
+    # Smoothed predictions need the output of the Kalman smoother, which the
+    # results of filter (with or without low_memory) do not have. This raised
+    # "AttributeError: 'NoneType' object has no attribute 'shape'".
+    endog = np.random.default_rng(1357).standard_normal(11)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    res = mod.filter([0.5, 1.0], low_memory=low_memory)
+    with pytest.raises(ValueError, match="output of the Kalman smoother"):
+        res.get_prediction(information_set="smoothed", signal_only=signal_only)
+
+
+@pytest.mark.parametrize("signal_only", [False, True])
+def test_get_prediction_smoothed_and_predicted(signal_only):
+    # The smoothed predictions of a zero-mean AR(1) are its smoothed state,
+    # and the predicted ones of the results of filter are phi y_{t-1}
+    endog = np.random.default_rng(1357).standard_normal(11)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    res = mod.smooth([0.5, 1.0])
+    actual = res.get_prediction(information_set="smoothed", signal_only=signal_only)
+    assert_allclose(actual.predicted_mean, res.smoothed_state[0], rtol=1e-12)
+    res = mod.filter([0.5, 1.0])
+    actual = res.get_prediction(signal_only=signal_only)
+    assert_allclose(actual.predicted_mean[1:], 0.5 * endog[:-1], rtol=1e-12)

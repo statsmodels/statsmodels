@@ -1,0 +1,5 @@
+- ``get_prediction`` and ``predict`` of state space results with
+  ``information_set="smoothed"`` raised an ``AttributeError`` for results
+  without the output of the Kalman smoother (from ``filter``, or from
+  ``fit`` with ``low_memory=True``). They raise a ``ValueError`` that says
+  so. :pr:`11060`
