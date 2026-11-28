@@ -743,7 +743,7 @@ class Grouping:
         is the index where each observation is in the first (sorted)
         group.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The index of a group with a single member is a slice of length
            one. It was an int, so that `transform_slices` passed the group's
@@ -941,7 +941,7 @@ class Grouping:
         array : array_like
             1d or 2d data to transform, with `self.nobs` rows.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An array with another number of dimensions or rows raises a
                ValueError. It raised an UnboundLocalError, an IndexError or

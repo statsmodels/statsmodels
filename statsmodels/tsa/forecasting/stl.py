@@ -460,7 +460,7 @@ class STLForecastResults:
             However, if the dates index does not have a fixed frequency, steps
             must be an integer. Default is 1.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A float with an integral value, such as 3.0, and a 0-d integer
                array are a number of steps, as an int is. They are passed to

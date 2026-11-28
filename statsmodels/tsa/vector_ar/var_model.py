@@ -114,7 +114,7 @@ def is_stable(coefs, verbose=False):
         True if all eigenvalues of the VAR(1) representation are inside the
         unit circle.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An eigenvalue on the unit circle (a unit root) makes the process
            not stable. It counted as stable.
@@ -378,7 +378,7 @@ def var_loglike(resid, omega, nobs):
     resid : ndarray (T x K)
         Not used.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            ``resid`` has no effect and will be removed after statsmodels
            0.17 is released. Passing any value other than None issues a
@@ -730,7 +730,7 @@ class VAR(TimeSeriesModel):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        With ``missing="drop"``, the number of observations is that after
        dropping. It was the number before, so ``nobs`` was too large and a
@@ -786,7 +786,7 @@ class VAR(TimeSeriesModel):
         available for a model with exog, since predict has no future values
         of exog; use ``VARResults.forecast`` instead.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Out-of-sample forecasts work with every trend and with a start
            after the sample, and in-sample predictions work with exog;
@@ -878,7 +878,7 @@ class VAR(TimeSeriesModel):
         method : {'ols'}, optional
             Estimation method to use
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                Other values were ignored and the model was estimated by OLS.
                They issue a FutureWarning and will raise a ValueError after
@@ -917,7 +917,7 @@ class VAR(TimeSeriesModel):
         -----
         See Lütkepohl pp. 146-153 for implementation details.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Fitting a model with exog more than once gives the names of the
            first fit. Each fit added the regressor names again, which made
@@ -1100,7 +1100,7 @@ class VAR(TimeSeriesModel):
             if None, defaults to 12 * (nobs/100.)**(1./4). Must be at least
             1 with trend "n" and no exog, otherwise a ValueError is raised.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                maxlags=0 with trend "n" and no exog raises a ValueError. It
                raised a KeyError.
@@ -1532,7 +1532,7 @@ class VARProcess:
         trend or exog in the forecast period. Its only deterministic term
         can be the intercept, and `exog_future` must be None.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Forecasts of a VARProcess with at most an intercept work. They
            raised an AttributeError.
@@ -1636,7 +1636,7 @@ steps ({steps}) observations.
             the last k_ar values of the original endogenous variables are
             used. A VARProcess that is not estimation results needs y.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                None uses the last k_ar observations. It raised an
                AttributeError.
@@ -2129,14 +2129,14 @@ class VARResults(VARProcess):
             is currently only supported if there is no exogenous data and the
             trend is one of "n" or "c".
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                "auto" adds the parameter uncertainty for trend "n". It
                returned the MSE. With trend "n" and one exog variable that
                is not constant, "auto" raises a ValueError. It treated the
                variable as a constant.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                "auto" with another trend or with exog returns the MSE and
                issues a FutureWarning. It will raise a ValueError after
@@ -2467,7 +2467,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Results with any trend and with exog can be reordered. With
            ``trend="n"`` and one exog variable the coefficients of the
@@ -2505,7 +2505,7 @@ class VARResults(VARProcess):
             variables are Granger-caused by the variable(s) specified
             by `causing`.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array is an index, as an int is, in `caused`
                and `causing`. It raised a TypeError. A bool is not an index
@@ -2519,7 +2519,7 @@ class VARResults(VARProcess):
             `caused`.
             If None, `causing` is assumed to be the complement of `caused`.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With None, the results name the complement of `caused` as
                `causing`; they named `caused`. Unless `caused` held half of
@@ -2652,7 +2652,7 @@ class VARResults(VARProcess):
             If sequence of int or str, test whether the corresponding
             variables are causing the remaining variables of the system.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array is an index, as an int is. It raised a
                TypeError. A bool is not an index and raises a TypeError:
@@ -2985,7 +2985,7 @@ class FEVD:
     periods : int, optional
         Number of periods to compute the FEVD for. The default is 10.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            None gives the default. It raised a TypeError.
 
@@ -3067,7 +3067,7 @@ class FEVD:
             Defaults to number originally specified. Can be at most that number.
             The first periods horizons are plotted.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A smaller number plots the first periods horizons. It raised
                a ValueError. 0 raises a ValueError. It plotted all horizons.

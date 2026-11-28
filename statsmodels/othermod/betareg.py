@@ -169,7 +169,7 @@ class BetaModel(GenericLikelihoodModel):
             `exog_precision` parameter of `BetaModel`). It is evaluated with
             the same data and ``eval_env`` as ``formula``.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Variables that are not in ``data`` are looked up in the
                namespace that ``eval_env`` selects. Before, they were not

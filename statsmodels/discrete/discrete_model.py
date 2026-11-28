@@ -3370,7 +3370,7 @@ class MNLogit(MultinomialModel):
         (column 0) is the reference (base) category. The labels are always
         strings, even when `endog` is numeric.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
     wendog : ndarray
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
@@ -3935,7 +3935,7 @@ class NegativeBinomial(CountModel):
         where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
         For the geometric, :math:`\alpha=0` as well.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Outside of `fit`, the last element of `params` is :math:`\alpha` for
            ``loglike_method`` nb1 and nb2. It was read as :math:`\ln\alpha` in
@@ -4664,7 +4664,7 @@ class NegativeBinomialP(CountModel):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The cross derivatives of the regression parameters and ``alpha``
            were incorrect if ``p`` is not 1 or 2, so that the Hessian, and
@@ -4774,7 +4774,7 @@ class NegativeBinomialP(CountModel):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The factor ``hfba`` was incorrect if ``p`` is not 1 or 2, so that
            the cross block of the Hessian changed for these values of ``p``.
@@ -5456,7 +5456,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             the stored offset and exposure are not used unless they are
             passed explicitly.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Without exog, the stored offset and exposure are now used.
         transform : bool, optional
@@ -5516,7 +5516,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         is False, if ``average`` is True and if ``which`` is not "mean" or
         "linear".
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The t distribution uses ``df_resid_inference`` instead of
            ``df_resid`` if the results have it.
@@ -6373,7 +6373,7 @@ class MultinomialResults(DiscreteResults):
         so the labels of the columns of the predicted probabilities of
         ``nnet::multinom``, are always strings.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The columns of the returned DataFrame are the categories of
            ``endog``. In previous versions they were 0, 1, ..., J - 1.

@@ -430,7 +430,7 @@ def get_index(lst, name):
         The variable name to look up. If `name` is already an int, it is
         returned as an int, interpreted as a position in `lst`.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer or a 0-d integer array is a position, as an int
            is. It raised a ValueError. A bool is not a position and raises
@@ -514,7 +514,7 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
         Number of seasons (e.g., 12 for monthly data and 4 for quarterly
         data). Must be non-negative.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A negative value raises a ValueError. It returned None.
     len_endog : int

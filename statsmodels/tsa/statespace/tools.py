@@ -124,7 +124,7 @@ def set_mode(compatibility=None):
     """
     Set the compatibility mode
 
-    .. deprecated:: 0.15.1
+    .. deprecated:: 0.16.0
         ``set_mode`` has had no effect since compatibility mode was removed
         in statsmodels 0.10, and nothing in statsmodels calls it. It will be
         removed after statsmodels 0.17 is released.
@@ -174,7 +174,7 @@ def companion_matrix(polynomial):
         of the companion matrix creation). A three-dimensional array holds the
         coefficient matrices along its first axis.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A float with an integral value, such as 3.0, or a 0-d integer
            array is a size, as an int is. They raised a TypeError. A bool
@@ -890,7 +890,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         `transform_variance` is True (otherwise this is the same as the
         input `error_variance`).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            If `transform_variance` is False, the input `error_variance` is
            returned. Before, an internal scaled variance was returned.
@@ -1003,7 +1003,7 @@ def constrain_stationary_multivariate(unconstrained, variance,
         `transform_variance` is True (otherwise this is the same as the
         input `variance`).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            If `transform_variance` is False, the input `variance` is
            returned. Before, an internal scaled variance was returned.
@@ -2381,7 +2381,7 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
     performance boost if they are sure that the attributes have not changed;
     see the `resmooth` argument.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The weights of copied (pickled or deep-copied) results are right
        without ``resmooth=True``. The copied Kalman smoother held the smoothed

@@ -111,7 +111,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         it: an int, the number of high-frequency observations that sum to
         one low-frequency observation. Other keyword arguments are ignored.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            Keyword arguments other than `k` are ignored. Passing them is
            deprecated, and they will raise a TypeError after statsmodels 0.17

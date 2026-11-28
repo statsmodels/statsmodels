@@ -670,7 +670,7 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
     A possible application is the number of replications in bootstrap
     samples.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Values of ``alpha``, ``half_length`` and ``proportion`` that are out of
        range or nan raise a ``ValueError``. Previously the function returned
@@ -957,7 +957,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
     ``'smaller'`` and ``0`` for ``'larger'``, broadcast to the shape of the
     result.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         ``value``, ``nobs`` and ``alpha`` can be array_like. Invalid
         arguments raise a ``ValueError``.
@@ -1102,7 +1102,7 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     empty, for example if the equivalence region is narrow relative to the
     sample size. In this case the power is zero.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         The power is zero if the rejection region is empty. Previously a
         negative value was returned.

@@ -61,7 +61,7 @@ class MSTL:
         then default values determined using 7 + 4 * np.arange(1, n + 1, 1)
         where n is number of seasonal components.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A float with an integral value, such as 7.0, or a 0-d integer
            array is a single period or window, as an int is, for both
@@ -82,7 +82,7 @@ class MSTL:
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Without ``periods``, a pandas endog with a PeriodIndex has the period
        of the frequency of its index, for example 12 for monthly periods,

@@ -203,7 +203,7 @@ class Model:
             stack frames above ``from_formula``. -1 is an empty namespace,
             and a dict maps names to values.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``eval_env`` means the same in every model. Before, an
                integer referred to one stack frame lower in models whose
@@ -598,7 +598,7 @@ class LikelihoodModel(Model):
                     documentation of `scipy.optimize.minimize`.
                     If no method is specified, then BFGS is used.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Added the option ``step_halving`` of ``method="newton"``. Before,
            a Newton step that gave a log-likelihood that is not finite
@@ -2219,7 +2219,7 @@ class LikelihoodModelResults(Results):
         ``param_names`` if the model has them (for example, state space
         models) and otherwise by the names of the exog columns.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without a formula, the terms of models that have ``param_names``
            are their parameters. Before, the names of the exog columns were
@@ -3101,7 +3101,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             the stored offset and exposure are not used unless they are
             passed explicitly.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Without exog, the stored offset and exposure are now used.
         which : str, optional
@@ -3151,7 +3151,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         is False, if ``average`` is True and if ``which`` is not "mean" or
         "linear".
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The t distribution uses ``df_resid_inference`` instead of
            ``df_resid`` if the results have it.

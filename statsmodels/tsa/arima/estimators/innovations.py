@@ -41,14 +41,14 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
         fitting the ARMA coefficients. Default is True. If False, the sample
         autocovariances of `endog` as given are used.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            ``demean=False`` was ignored before: the autocovariances of the
            demeaned series were always used.
     ar_order : int or list of int, optional
         Autoregressive order. Default is 0. As for `ma_order`, a list gives
         the included lags, which must be the consecutive lags 1, ..., p.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
     m : int, optional
         Recursion level of the innovations algorithm, the order of the long
         moving average model whose coefficients give the estimates. Must
@@ -58,7 +58,7 @@ def innovations(endog, ma_order=0, demean=True, *, ar_order=0, m=None):
         ``m = max(17, ar_order + ma_order)``, reduced to ``nobs - 1`` for
         short series. See Notes.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Returns
     -------

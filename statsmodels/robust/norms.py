@@ -421,7 +421,7 @@ class HuberT(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constant is validated. Zero, negative and nan values raise
        a ``ValueError`` instead of creating a degenerate norm.
@@ -621,7 +621,7 @@ class RamsayE(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constant is validated. Zero, negative and nan values raise
        a ``ValueError`` instead of creating a degenerate norm.
@@ -790,7 +790,7 @@ class AndrewWave(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constant is validated. Zero, negative and nan values raise
        a ``ValueError`` instead of creating a degenerate norm.
@@ -997,7 +997,7 @@ class TrimmedMean(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constant is validated. Zero, negative and nan values raise
        a ``ValueError`` instead of creating a degenerate norm.
@@ -1192,7 +1192,7 @@ class Hampel(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constants are validated. Constants that are not positive
        or not ordered, and nan values, raise a ``ValueError`` instead of
@@ -1465,7 +1465,7 @@ class TukeyBiweight(RobustNorm):
     -----
     Tukey's biweight is sometimes called bisquare.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constant is validated. Zero, negative and nan values raise
        a ``ValueError`` instead of creating a degenerate norm.
@@ -1701,7 +1701,7 @@ class TukeyQuartic(RobustNorm):
     The default value of `c` is only valid for ``k = 4``, it needs to be
     changed for other powers.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The tuning constant `c` and the power `k` are validated. Invalid
        values raise a ``TypeError`` or ``ValueError`` instead of creating a
@@ -1920,7 +1920,7 @@ class StudentT(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The constants `c` and `df` are validated. Zero, negative and nan
        values raise a ``ValueError`` instead of creating a degenerate norm.
@@ -2093,7 +2093,7 @@ class MQuantileNorm(RobustNorm):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The M-quantile `q` is validated.
 

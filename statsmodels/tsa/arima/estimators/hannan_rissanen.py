@@ -51,7 +51,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         the estimated coefficients from the previous step imply a stationary
         and invertible process and False otherwise.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The bias correction step filters the second-step residuals with
            the inverse of the MA polynomial, as in [1]_, which changes the

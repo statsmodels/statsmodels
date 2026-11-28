@@ -187,7 +187,7 @@ def run_spec(x12path, specpath, outname=None, meta=None, datameta=None):
         Whether ``specpath`` is a metafile, passed to X-12/X-13 as
         ``"-m " + specpath``.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
            ``meta`` is deprecated and will be removed after statsmodels
            0.17 is released. X-13ARIMA-SEATS does not accept the option and
            the file name as a single argument.
@@ -195,7 +195,7 @@ def run_spec(x12path, specpath, outname=None, meta=None, datameta=None):
         Whether ``specpath`` is a data metafile, passed to X-12/X-13 as
         ``"-d " + specpath``.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
            ``datameta`` is deprecated and will be removed after statsmodels
            0.17 is released. X-13ARIMA-SEATS does not accept the option and
            the file name as a single argument.
@@ -551,7 +551,7 @@ def x13_arima_analysis(
         None. The variables are named by the Series name or the DataFrame
         columns; names that are not str are replaced by x1, x2, ...
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The columns of a DataFrame that has a column called "name" are
            used as the names of the variables. They used to be replaced by
@@ -575,7 +575,7 @@ def x13_arima_analysis(
         Whether to create the specification file and then return it without
         performing the analysis. Can be useful for debugging.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The X12/X13 binary is not needed. It was looked up first, and
            X13NotFoundError was raised if it was not found.
@@ -601,7 +601,7 @@ def x13_arima_analysis(
         not its ``data``, ``file`` or ``format`` arguments. See
         ``statsmodels/tsa/tests/test_x13.py`` for examples.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A backslash in the name of ``endog`` is copied into the series
            spec as it is. It used to be read as a regular expression escape,
@@ -617,7 +617,7 @@ def x13_arima_analysis(
         depending on the value of prefer_x13, or on the PATH if neither
         environment variable is set.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A binary named by ``x12path`` is used. The binaries in its
            directory were tried in the order x13as, x12a, x13as_ascii,
@@ -630,7 +630,7 @@ def x13_arima_analysis(
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``prefer_x13`` is used. It was ignored, so that X13PATH was
            searched before X12PATH, and x13as before x12a, also if
@@ -922,7 +922,7 @@ def x13_arima_select_order(
         None. The variables are named by the Series name or the DataFrame
         columns; names that are not str are replaced by x1, x2, ...
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The columns of a DataFrame that has a column called "name" are
            used as the names of the variables. They used to be replaced by
@@ -955,7 +955,7 @@ def x13_arima_select_order(
         depending on the value of prefer_x13, or on the PATH if neither
         environment variable is set.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A binary named by ``x12path`` is used. The binaries in its
            directory were tried in the order x13as, x12a, x13as_ascii,
@@ -968,7 +968,7 @@ def x13_arima_select_order(
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``prefer_x13`` is used. It was ignored, so that X13PATH was
            searched before X12PATH, and x13as before x12a, also if

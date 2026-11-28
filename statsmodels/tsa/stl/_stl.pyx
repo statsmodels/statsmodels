@@ -116,7 +116,7 @@ cdef class STL(object):
         DataFrame, attempts to determine from endog. If endog is a ndarray,
         period must be provided.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without ``period``, a pandas endog with a PeriodIndex has the
            period of the frequency of its index, for example 12 for monthly
@@ -171,14 +171,14 @@ cdef class STL(object):
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A list or tuple ``endog`` is stored as an ndarray, so the ``observed``
        data of the results is an ndarray, as for ndarray input. It was the
        list or tuple, and ``nobs`` and ``plot`` of the results raised an
        AttributeError.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A float with an integral value, such as 7.0, or a 0-d integer array
        is accepted for ``period``, ``seasonal``, ``trend``, ``low_pass``,

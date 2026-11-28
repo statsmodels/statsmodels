@@ -71,7 +71,7 @@ class DynamicFactor(MLEModel):
         residual covariance matrix ("cholesky"; the scaled identity if the
         factorization fails). Has no effect otherwise. Keyword only.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -105,7 +105,7 @@ class DynamicFactor(MLEModel):
         The starting parameters of an unstructured error covariance with VAR
         errors.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Notes
     -----

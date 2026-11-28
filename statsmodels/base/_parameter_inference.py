@@ -357,7 +357,7 @@ def score_test(
     information to the statistic but is not redundant here, so it is counted
     in the degrees of freedom.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         With `exog_extra` and ``hypothesis="joint"``, the number of
         constraints is the rank of `exog_extra` after projecting out `exog`

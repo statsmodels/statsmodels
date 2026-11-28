@@ -31,13 +31,13 @@ class PredictionResults:
     A predicted mean with a single column, such as a one-column DataFrame,
     is treated as 1-d, and so is a variance with shape (nobs, 1, 1).
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A single column was kept as 2-d, which gave a confidence interval
        with 2 * nobs columns for an (nobs, 1) array and raised for a
        one-column DataFrame.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        ``predicted_mean`` and ``se_mean`` of a DataFrame predicted mean with
        several columns keep its column names. They had the columns 0, ...,
@@ -207,7 +207,7 @@ class PredictionResults:
             labelled "upper <name>", where <name> is the column name of the
             predicted mean, or its position if it has none.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The interval of a predicted mean with several columns is
                labelled in a DataFrame instead of raising.
@@ -251,7 +251,7 @@ class PredictionResults:
             predicted mean, or its position if it has none. All "mean"
             columns come first, then all "mean_se" columns and so on.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A predicted mean with several columns is supported instead
                of raising.

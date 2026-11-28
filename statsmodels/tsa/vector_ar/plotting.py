@@ -370,7 +370,7 @@ def irf_grid_plot(
         ``Line2D`` property raises an ``AttributeError``. Does not affect
         error bands or horizontal reference lines.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``plot_params`` was ignored before.
     figsize : tuple of float, optional

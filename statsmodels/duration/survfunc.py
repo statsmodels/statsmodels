@@ -517,7 +517,7 @@ class SurvfuncRight:
         if all observations after the last time at which the curve is above
         1 - `p` are censored.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Survival probabilities that equal 1 - `p` up to rounding error
            are treated as equal.  Previously the result could depend on the
@@ -701,7 +701,7 @@ class SurvfuncRight:
         includes subjects that enter after the early event times, and not
         the number at risk at any time.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The band uses the total sample size ``n`` instead of the number
            at risk at each time, and the Greenwood variance also when

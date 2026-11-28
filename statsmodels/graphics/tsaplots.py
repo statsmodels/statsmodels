@@ -512,7 +512,7 @@ def plot_ccf(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
        With ``negative_lags=True`` and ``lags`` given as a list or an array,
        the cross-correlations of other lags were plotted. They are now those
        of the lags on the horizontal axis.
@@ -1114,7 +1114,7 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
         periods with those indices will be selected for the subplots. By
         default, `subplots=period`.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer or a float with an integral value is a number of
            subplots, and an ndarray or a list of NumPy integers selects

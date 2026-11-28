@@ -767,7 +767,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         - values : integer describing the factor multiplicity for the factors
           in the given block
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A float with an integral value, such as 2.0, or a 0-d integer
            array is an integer, as an int is, for `factors`, `factor_orders`
@@ -788,7 +788,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         should contain the mean values and the second element should contain
         the standard deviations. Default is True.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With an ndarray, the data are standardized with the mean and the
            standard deviation (with ddof=1) of the observed values of each
@@ -806,7 +806,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         the "Notes" section for more details. This option is rarely used except
         for testing. Default is False.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The data are standardized with the statistics of the data, without
            the prepended period, and a DatetimeIndex with a frequency or an
@@ -2085,7 +2085,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Array of unconstrained parameters used by the optimizer, to be
             transformed.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Integer values are converted to float. The transformed values
                of an integer array were truncated to integers.
@@ -2144,7 +2144,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Array of constrained parameters used in likelihood evaluation, to
             be transformed.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Integer values are converted to float. The transformed values
                of an integer array were truncated to integers.
@@ -3278,7 +3278,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             not be available (including in-sample prediction), although
             out-of-sample forecasting is possible. Default is False.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The option is used. It was ignored, so the results always
                kept the full output of the Kalman filter.

@@ -1169,7 +1169,7 @@ class ZeroInflatedResults(CountResults):
             the stored offset and exposure are not used unless they are
             passed explicitly.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Without exog, the stored offset and exposure are now used.
         exog_infl : array_like, optional

@@ -123,7 +123,7 @@ class PredictionResultsBase:
         used if ``use_t`` is False and for results based on the delta method
         (for example with ``average=True``).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The t distribution uses ``df_resid_inference`` instead of
            ``df_resid`` if the results have it.
@@ -239,7 +239,7 @@ class PredictionResultsMonotonic(PredictionResultsBase):
         for example) and ``df_resid`` otherwise. The normal distribution is
         used if ``use_t`` is False.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The t distribution uses ``df_resid_inference`` instead of
            ``df_resid`` if the results have it.
@@ -360,7 +360,7 @@ class PredictionResultsMean(PredictionResultsBase):
         for example) and ``df_resid`` otherwise. The normal distribution is
         used if ``use_t`` is False.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The t distribution uses ``df_resid_inference`` instead of
            ``df_resid`` if the results have it.
@@ -517,7 +517,7 @@ def get_prediction_glm(
         the stored offset and exposure are not used unless they are
         passed explicitly.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without exog, the stored offset and exposure are now used.
     transform : bool, optional
@@ -611,7 +611,7 @@ def get_prediction_linear(
         the stored offset and exposure are not used unless they are
         passed explicitly.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without exog, the stored offset and exposure are now used.
     transform : bool, optional
@@ -698,7 +698,7 @@ def get_prediction_monotonic(
         the stored offset and exposure are not used unless they are
         passed explicitly.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without exog, the stored offset and exposure are now used.
     transform : bool, optional
@@ -799,7 +799,7 @@ def get_prediction_delta(
         the stored offset and exposure are not used unless they are
         passed explicitly.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without exog, the stored offset and exposure are now used.
     which : str, optional
@@ -887,7 +887,7 @@ def get_prediction(
         the stored offset and exposure are not used unless they are
         passed explicitly.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without exog, the stored offset and exposure are now used.
     transform : bool, optional
@@ -936,7 +936,7 @@ def get_prediction(
     ``df_resid`` otherwise. They use the normal distribution if ``use_t`` is
     False, if ``average`` is True and if ``which`` is not "mean" or "linear".
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The t distribution uses ``df_resid_inference`` instead of ``df_resid``
        if the results have it.

@@ -337,7 +337,7 @@ class VARMAX(MLEModel):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Cloning preserves `trend_offset` unless overridden. Previously it
            defaulted to 1, which could change predictions after appending or

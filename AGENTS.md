@@ -64,7 +64,7 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
   3. Noted in a release-note fragment in `docs/upcoming_changes/` (see
      "Release notes and version directives" below). The fragments are
      collected into the unreleased release notes file under
-     `docs/source/release/` (currently `version0.15.1.rst`) at release time.
+     `docs/source/release/` (currently `version0.16.0.rst`) at release time.
 - If it's a substantial new feature, an example notebook is strongly encouraged.
   (see the "Add an example" step in `CONTRIBUTING.md`).
 

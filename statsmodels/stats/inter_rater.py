@@ -157,7 +157,7 @@ def to_table(data, bins=None):
         by ``numpy.histogramdd``. This is useful if we want to merge
         categories.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            A sequence with one array_like of bin edges per rater raised an
            error before.
 
@@ -302,7 +302,7 @@ def krippendorff_alpha(data, level="nominal"):
     Agreement among any number of raters, for nominal, ordinal, interval or
     ratio data, with any number of missing ratings.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Parameters
     ----------
@@ -489,7 +489,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         length is the number of rows and columns of table. Two dimensional
         weights have the shape of table.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            One dimensional weights of another length raise a ValueError.
            Weights of length 1 were broadcast and gave nan, or a kappa of
@@ -564,7 +564,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     table with a single row and column, then kappa and all other statistics
     are nan.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The results if a rater uses a single category are set explicitly.
        Before, they depended on rounding errors, and NumPy emitted a

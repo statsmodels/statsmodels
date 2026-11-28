@@ -514,7 +514,7 @@ class FormulaManager:
             right-hand side is evaluated using data, and only its design
             matrix is returned.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The left-hand side of a formula is no longer evaluated, so it
                need not be in data. Previously, patsy evaluated it and
@@ -706,7 +706,7 @@ class FormulaManager:
             values are a float array with one row and one column per
             constraint.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With formulaic, the matrix and the values are always float
                arrays, as with patsy. They were integer arrays when the
@@ -761,7 +761,7 @@ class FormulaManager:
             An empty dict, which ``get_matrices`` uses as an evaluation
             environment that holds no variables.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Also a dict with patsy. It was a patsy ``EvalEnvironment``,
                which is deprecated as an evaluation environment, so using it

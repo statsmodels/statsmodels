@@ -265,7 +265,7 @@ class GLMGamResults(GLMResults):
             different transform that produces the same names, for example
             its own ``center(x1)``, is accepted silently.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A design matrix created from the fitted model's design info is
                no longer passed through the formula a second time.
@@ -352,7 +352,7 @@ class GLMGamResults(GLMResults):
             transform that produces the same names, for example its own
             ``center(x1)``, is accepted silently.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Without exog, the stored offset and exposure are now used.
                A design matrix created from the fitted model's design info is

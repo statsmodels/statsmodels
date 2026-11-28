@@ -373,7 +373,7 @@ class ThetaModelResults:
         estimated from an ARIMA(0,1,1) with drift fit to the deseasonalized
         data.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The ARIMA(0,1,1) is fit to the deseasonalized data, which the
            forecasts and the MLE estimates use. It used to be fit to the
@@ -625,7 +625,7 @@ class ThetaModelResults:
         :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
         assumes that innovations are normally distributed.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
            be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
@@ -694,7 +694,7 @@ class ThetaModelResults:
         :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
         assumes that innovations are normally distributed.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
            be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger

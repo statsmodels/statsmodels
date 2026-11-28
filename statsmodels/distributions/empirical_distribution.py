@@ -62,7 +62,7 @@ class StepFunction:
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
        With ``side="left"``, evaluating the function at negative infinity
        returns ``ival``; it returned the last value of ``y`` before. Repeated
        values of an unsorted ``x`` are sorted stably, so the last of the tied

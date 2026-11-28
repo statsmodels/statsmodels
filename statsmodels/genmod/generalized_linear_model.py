@@ -283,7 +283,7 @@ class GLM(base.LikelihoodModel):
     ``InverseGaussian`` a positive ``endog``. The log-likelihood, the deviance
     and the results based on them are not valid outside of the support.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The ``DomainWarning`` for ``endog`` outside of the support was added.
        Before, such data were fit without a warning.
@@ -956,7 +956,7 @@ class GLM(base.LikelihoodModel):
         information to the statistic but is not redundant here, so it is
         counted in the degrees of freedom.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             With `exog_extra`, the number of constraints is the rank of
             `exog_extra` after projecting out `exog` instead of its number
@@ -1515,7 +1515,7 @@ class GLM(base.LikelihoodModel):
             predictor is negative. False takes the full step. See Notes of
             `LikelihoodModel.fit`.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Notes
         -----
@@ -1535,7 +1535,7 @@ class GLM(base.LikelihoodModel):
         ``ValueError`` is raised if the mean or the weights at start_params
         are not finite.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Steps of IRLS and of Newton's method are halved. Before, a step
            that was not finite gave nan parameters with ``converged`` True for
@@ -1917,7 +1917,7 @@ class GLM(base.LikelihoodModel):
         ``loglike``, so that multiplying ``var_weights`` by a constant changes
         the estimates. The log-likelihood is computed with a scale of 1.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``n`` is the sum of ``freq_weights``. Before, it was the number of
            rows, so that the estimates of fits with ``freq_weights`` differed
@@ -1929,12 +1929,12 @@ class GLM(base.LikelihoodModel):
            The estimates of the ridge fit (``L1_wt=0``) of a family with an
            estimated scale (all families except ``Binomial``, ``Poisson`` and
            ``NegativeBinomial``) are different from those of versions before
-           0.15.1, and the difference is large if the estimated scale is far
+           0.16.0, and the difference is large if the estimated scale is far
            from 1. The estimates of the other fits (``L1_wt`` greater than 0
            and ``method="l1_slsqp"``) and of the ridge fit of ``Binomial``,
            ``Poisson`` and ``NegativeBinomial`` are not affected.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The ridge fit uses a scale of 1 in the log-likelihood, as the other
            fits do, and so minimizes the function above. Before, it used the
@@ -2033,7 +2033,7 @@ class GLM(base.LikelihoodModel):
         >>> alpha = 1.0
         >>> res = mod.fit_regularized(alpha=alpha, L1_wt=0)
 
-        The penalty of versions before 0.15.1 is ``alpha`` multiplied by the
+        The penalty of versions before 0.16.0 is ``alpha`` multiplied by the
         scale estimated at the estimates. Iterate until the scale does not
         change:
 
@@ -2045,7 +2045,7 @@ class GLM(base.LikelihoodModel):
         ...         break
         ...     scale = new_scale
 
-        ``res_old.params`` are the estimates that versions before 0.15.1
+        ``res_old.params`` are the estimates that versions before 0.16.0
         returned for this model, to better than 1e-5. The scale estimated at
         them is about 5.6, so that the penalty weight of the earlier fit was
         about 5.6 times ``alpha`` and its coefficients are shrunk more than
@@ -2602,7 +2602,7 @@ class GLMResults(base.LikelihoodModelResults):
         repeated according to its frequency weight. ``var_weights`` do not
         change ``nobs``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``nobs`` is the sum of the ``freq_weights`` instead of the number
            of rows.
@@ -2749,7 +2749,7 @@ class GLMResults(base.LikelihoodModelResults):
             the stored offset and exposure are not used unless they are
             passed explicitly.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Without exog, the stored offset and exposure are now used.
         exposure : array_like, optional
@@ -2827,7 +2827,7 @@ class GLMResults(base.LikelihoodModelResults):
         is False and, if ``which`` is not None, if ``average`` is True or
         ``which`` is not "mean" or "linear".
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The t distribution uses ``df_resid_inference`` instead of
            ``df_resid`` if the results have it.

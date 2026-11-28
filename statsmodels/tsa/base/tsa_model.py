@@ -70,7 +70,7 @@ def get_index_loc(key, index):
     """
     Get the location of a specific key in an index
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A key within one period of a PeriodIndex, such as a day of quarterly
        periods, is the location of that period in the sample, as it already
@@ -83,7 +83,7 @@ def get_index_loc(key, index):
         a DateIndex or a location if the underlying index is a RangeIndex
         or an Index with an integer dtype.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A partial date string that matches no date of the index but lies
            between two of its dates, such as "2000-02" for quarterly dates
@@ -92,7 +92,7 @@ def get_index_loc(key, index):
            deprecated and will raise a KeyError after statsmodels 0.17 is
            released.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A quarter string such as "2001Q2" matches all dates of the
            quarter in a DatetimeIndex (in its time zone if it is tz-aware),
@@ -101,7 +101,7 @@ def get_index_loc(key, index):
            "2001-03". Previously it was taken as the last day of the quarter,
            or did not match periods.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 0-d integer array is a location, as an int is, so that it can
            be the `start` or `end` of prediction with a date index, where it
@@ -110,7 +110,7 @@ def get_index_loc(key, index):
     index : pd.Index
         The index to search.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An Index with dtype uint64 is extended with uint64 labels
            instead of float labels.
@@ -337,7 +337,7 @@ def get_index_label_loc(key, index, row_labels):
         a DateIndex or is only being used as row labels, or a location if
         the underlying index is a RangeIndex or a NumericIndex.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A quarter string such as "2001Q2" for which a DatetimeIndex
            `index` has no date raises a KeyError. Previously it was looked
@@ -345,7 +345,7 @@ def get_index_label_loc(key, index, row_labels):
            match a date of another quarter, such as 2000-07-01 for
            semiannual dates starting on 2000-01-01.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A partial date string that matches no row label but lies between
            two of them, such as "2000-02" for dates without a frequency on
@@ -358,7 +358,7 @@ def get_index_label_loc(key, index, row_labels):
     row_labels : pd.Index
         Row labels to search if key not found in index
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A key that matches several consecutive row labels, such as
            "2000-01" for dates without a frequency, gives the slice of all of
@@ -478,7 +478,7 @@ def get_prediction_index(
         period is after the sample, at the last date of the period in the
         frequency of the index.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A date string whose period is after the sample, such as "2002Q2"
            for monthly data that end in 2001, ends prediction at the last
@@ -486,7 +486,7 @@ def get_prediction_index(
            Previously prediction ended at the first date of the period
            (2002-04).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A date string with a UTC offset after the end of a tz-aware
            index is taken at its time in the time zone of the index, as a
@@ -549,7 +549,7 @@ def get_prediction_index(
     or to index locations in an ambiguous way (while for `NumericIndex`,
     since we have required them to be full indexes, there is no ambiguity).
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A quarter string such as "2001Q2" as `start` or `end` covers the
        whole quarter of a date index, so that prediction starts at its first

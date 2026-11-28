@@ -6,17 +6,20 @@
    tools/releasing/collect_release_notes.py.
 
 ==============
-Release 0.15.1
+Release 0.16.0
 ==============
 
 Release summary
 ===============
 
-Release 0.15.1 is a maintenance release of statsmodels 0.15. It collects the
-bug fixes, stricter checks of function arguments and smaller enhancements that
-were merged into ``main`` after the ``v0.15.0`` tag (2026-08-27). Most changes
-correct results or error messages that were wrong or unhelpful in 0.15.0. Two
-arguments are deprecated and continue to work with a ``FutureWarning``.
+Release 0.16.0 collects the bug fixes, stricter checks of function arguments,
+deprecations and enhancements that were merged into ``main`` after the
+``v0.15.0`` tag (2026-08-27). Most changes correct results or error messages
+that were wrong or unhelpful in 0.15.0.
+
+statsmodels 0.16.0 requires NumPy 2.0, SciPy 1.13 and pandas 2.2.2 or later,
+the first releases of each that support NumPy 2. See
+`Minimum dependency versions raised`_ below.
 
 statsmodels is using github to store the updated documentation. Two versions
 are available:
@@ -32,6 +35,16 @@ Release Statistics
 
 Breaking Changes and Deprecations
 =================================
+
+Minimum dependency versions raised
+----------------------------------
+
+- NumPy: 1.23.5 -> 2.0.0
+- SciPy: 1.8 -> 1.13
+- pandas: 1.4 -> 2.2.2
+
+These are the first releases of SciPy and pandas that support NumPy 2.
+:pr:`11316`
 
 Deprecations
 ------------

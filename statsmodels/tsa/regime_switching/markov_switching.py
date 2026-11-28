@@ -423,7 +423,7 @@ class MarkovSwitchingParams:
     >>> parameters.k_parameters['exog']
     3
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A 0-d integer array is a regime number, as an int is. It raised an
        IndexError. A bool is not a regime number, so that a tuple key such
@@ -531,7 +531,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Raises ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf.
            The ``missing`` option does not apply to ``exog_tvtp``.
@@ -651,7 +651,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A call that raises a ValueError keeps the previous initialization.
            It set the initialization to known without probabilities, so that
@@ -824,7 +824,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An ndarray of joint probabilities, shaped like the
                ``smoothed_joint_probabilities`` of the results, is accepted.
@@ -2233,7 +2233,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An ndarray of joint probabilities, shaped like the
                ``smoothed_joint_probabilities`` of the results, is accepted.
@@ -2301,7 +2301,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             Whether or not to display tables of estimated parameters. Default
             is True. Usually only used internally.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``display_params=False`` leaves out the parameter tables.
                Before, it was ignored.

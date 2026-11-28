@@ -255,7 +255,7 @@ class LocalProjections:
         Column index/indices within *endog* whose contemporaneous value
         enters as the shock.  Defaults to ``0`` (the first variable).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 0-d integer array is a column index, as an int is. It raised a
            TypeError. A bool raises a TypeError: True was the column index

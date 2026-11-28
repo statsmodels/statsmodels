@@ -71,7 +71,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         'trend' and 'trend_squared'.  A Series is only returned when
         ``trend='n'`` and x is a Series, since no columns are added.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With ``trend='n'``, a list or a tuple is returned as an ndarray,
            as with the other trends. A list was returned as a list, and a
@@ -195,7 +195,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
         1d array `col` can be None.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 0-d integer array is a column index, as an int is. It raised a
            TypeError or was looked up as a label. A bool is a label, so it
@@ -821,7 +821,7 @@ def unintegrate_levels(x, d):
     """
     Returns the successive differences needed to unintegrate the series
 
-    .. deprecated:: 0.15.1
+    .. deprecated:: 0.16.0
         ``unintegrate_levels`` has no callers in statsmodels. It will be
         removed after statsmodels 0.17 is released.
 
@@ -860,7 +860,7 @@ def unintegrate(x, levels):
     """
     After taking n-differences of a series, return the original series
 
-    .. deprecated:: 0.15.1
+    .. deprecated:: 0.16.0
         ``unintegrate`` has no callers in statsmodels. It will be removed
         after statsmodels 0.17 is released.
 

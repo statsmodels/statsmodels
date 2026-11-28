@@ -40,7 +40,7 @@ associated with that specific optimizer:
         ``ConvergenceWarning`` is issued. The iteration stops if the full
         Newton step is at most ``tol``; a step that was shortened does not end
         it. ``GLM`` uses ``"finite"`` for the links that are not the canonical
-        link of the family. *Added in 0.15.1.*
+        link of the family. *Added in 0.16.0.*
 
 - ``nm`` - scipy's ``fmin_nm``
 

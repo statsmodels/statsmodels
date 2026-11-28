@@ -1035,7 +1035,7 @@ class MixedLM(base.LikelihoodModel):
             stack frames above ``from_formula``. -1 is an empty namespace,
             and a dict maps names to values.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An integer counts stack frames as in other models. Before, it
                referred to one frame lower for ``formula`` (2 was the
@@ -1946,7 +1946,7 @@ class MixedLM(base.LikelihoodModel):
         the returned score is not the derivative at a Cholesky factor of
         `cov_re`.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            If `use_sqrt` is True, the score is the derivative at the packed
            vector with the signs of its entries. The signs of the diagonal
@@ -2956,7 +2956,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         standard errors may not give meaningful confidence intervals
         or p-values if used in the usual way.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The standard errors were off by about a factor of the square
            root of `scale` and did not include the uncertainty of `scale`.

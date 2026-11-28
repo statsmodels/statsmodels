@@ -108,7 +108,7 @@ class DeterministicTerm(ABC):
             An index-like object. If not an index, it is converted to an
             index.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An integer index with a constant step is extended like the
                ``RangeIndex`` with the same values. Before, only a step of 1
@@ -120,7 +120,7 @@ class DeterministicTerm(ABC):
             provided must have steps elements. If not provided, index is
             extended.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A ``DatetimeIndex`` without a ``freq`` is extended with the
                inferred freq, as in ``DeterministicProcess``. Before, the
@@ -283,7 +283,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A negative order raises a ``ValueError``. Before, an error was
            raised when the terms were computed.
@@ -724,7 +724,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         "BYS-m"), which is mapped to the end-anchored frequency with the same
         periods (see ``map_start_anchored``).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A frequency that pandas does not support for periods raises a
            ``ValueError``. Before, an error, usually an ``AttributeError``, was
@@ -749,7 +749,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
         m, so that, for example, "QS-FEB" has the quarters of "QE-DEC".
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     See Also
     --------
@@ -1027,7 +1027,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         "BYS-m"), which is mapped to the end-anchored frequency with the same
         periods (see ``map_start_anchored``).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A frequency that pandas does not support for periods raises a
            ``ValueError``. Before, an error, usually an ``AttributeError``, was
@@ -1038,7 +1038,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A negative order raises a ``ValueError``. Before, an error was
            raised when the terms were computed.
@@ -1065,7 +1065,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         m, so that, for example, "QS-FEB" has the quarters of "QE-DEC", and
         which cannot use a base_period with them.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     See Also
     --------
@@ -1079,7 +1079,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     The time stamp, :math:`\tau_t`, is the number of periods that have elapsed
     since the base_period. :math:`\tau_t` may be fractional.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The terms have the index that is passed in. Before, a
        ``DatetimeIndex`` was converted to a ``PeriodIndex``, so the terms did
@@ -1173,7 +1173,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             periods of the end-anchored freq with the same periods. The
             default is True. See ``CalendarTimeTrend``.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------
@@ -1275,7 +1275,7 @@ class DeterministicProcess:
         The order of the time trend to include. For example, 2 will include
         both linear and quadratic terms. 0 excludes time trend terms.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A negative order raises a ``ValueError``. Before, an error was
            raised when the terms were computed.
@@ -1515,7 +1515,7 @@ you can pass additional components using the additional_terms input.""")
             provided must have steps elements. If not provided, the index of
             the process is extended.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A ``DatetimeIndex`` without a ``freq`` is extended with the
                inferred freq, as in ``range``. Before, the forecasts had
@@ -1527,7 +1527,7 @@ you can pass additional components using the additional_terms input.""")
             A DataFrame containing the deterministic terms, with ``steps``
             rows and the columns of ``in_sample``.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Without deterministic terms, the result has ``steps`` rows on
                the forecast index. Before, it had the rows and index of the
@@ -1667,7 +1667,7 @@ you can pass additional components using the additional_terms input.""")
             The final observation. Inclusive to match most prediction
             function in statsmodels.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a date index, a 0-d integer array is the location of an
                observation, as an int is, for `start` and `stop`. It raised
@@ -1679,14 +1679,14 @@ you can pass additional components using the additional_terms input.""")
         DataFrame
             A data frame of deterministic terms
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a ``RangeIndex`` whose step is not 1, the rows are those
                of the labels ``start``, ``start + step``, ... up to ``stop``.
                Before, the step was ignored, so the rows were wrong or a
                ``KeyError`` was raised.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An integer ``Index`` with a constant step is extended like
                the ``RangeIndex`` with the same values. Before, only an

@@ -217,7 +217,7 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
         The coefficients for autoregressive lag polynomial, including zero lag.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -226,7 +226,7 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
         The coefficients for moving-average lag polynomial, including zero lag.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -317,7 +317,7 @@ def arma_acf(ar, ma, lags=10):
         Coefficients for autoregressive lag polynomial, including zero lag.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -326,7 +326,7 @@ def arma_acf(ar, ma, lags=10):
         Coefficients for moving-average lag polynomial, including zero lag.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -360,7 +360,7 @@ def arma_pacf(ar, ma, lags=10):
         The coefficients for autoregressive lag polynomial, including zero lag.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -369,7 +369,7 @@ def arma_pacf(ar, ma, lags=10):
         The coefficients for moving-average lag polynomial, including zero lag.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -378,7 +378,7 @@ def arma_pacf(ar, ma, lags=10):
         The number of terms (lags plus zero lag) to include in returned pacf.
         Must be a positive integer.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``lags=0`` raises a ``ValueError``. It used to raise an
            ``IndexError``. An integral float such as 7.0 is accepted.
@@ -444,7 +444,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
         The autoregressive lag-polynomial with leading 1 and lhs sign.
         Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result, such as a column with shape
            (n, 1), is deprecated and will raise a ValueError after
@@ -453,7 +453,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
     ma : array_like
         The moving average lag-polynomial with leading 1. Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result, such as a column with shape
            (n, 1), is deprecated and will raise a ValueError after
@@ -466,7 +466,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
         Otherwise, compute the response at frequencies given in worN.
         An integer must be positive.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``worN=0`` raises a ``ValueError``. It used to return empty
            arrays. A negative integer raises the same ``ValueError``, as
@@ -483,9 +483,9 @@ def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
         of earlier versions. If not given, "sqrt(2pi)" is used and a
         ``FutureWarning`` is issued.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            The default will change to "2pi" after statsmodels 0.17 is
            released. Set ``normalization="2pi"`` to switch now, or
@@ -553,7 +553,7 @@ def arma_impulse_response(ar, ma, leads=100):
         The number of observations to calculate.
         Must be a positive integer.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``leads=0`` raises a ``ValueError``. It used to raise an
            ``IndexError``. An integral float such as 7.0 is accepted.
@@ -619,7 +619,7 @@ def arma2ma(ar, ma, lags=100):
         The number of coefficients to calculate.
         Must be a positive integer.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``lags=0`` raises a ``ValueError``. It used to raise an
            ``IndexError``. An integral float such as 7.0 is accepted.
@@ -652,7 +652,7 @@ def arma2ar(ar, ma, lags=100):
         The number of coefficients to calculate.
         Must be a positive integer.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``lags=0`` raises a ``ValueError``. It used to raise an
            ``IndexError``. An integral float such as 7.0 is accepted.
@@ -715,7 +715,7 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
     Extension is possible if we want to match autocovariance instead
     of impulse response function.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        ``ar_des`` can be a tuple. It used to raise a TypeError.
     """
@@ -755,7 +755,7 @@ def lpol2index(ar):
     ar : array_like
         coefficients of lag polynomial. Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input is deprecated and will raise a ValueError after
            statsmodels 0.17 is released. It returns the rows with a
@@ -786,7 +786,7 @@ def index2lpol(coeffs, index):
     coeffs : array_like
         non-zero coefficients of lag polynomial. Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result, such as a row with shape
            (1, n), is deprecated and will raise a ValueError after
@@ -795,7 +795,7 @@ def index2lpol(coeffs, index):
     index : array_like of int
         index (lags) of lag polynomial with non-zero elements. Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -808,7 +808,7 @@ def index2lpol(coeffs, index):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        ``index`` can be a tuple. It used to raise an IndexError.
     """
@@ -904,7 +904,7 @@ def deconvolve(num, den, n=None):
     num : array_like
         signal or lag polynomial. Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -912,7 +912,7 @@ def deconvolve(num, den, n=None):
     den : array_like
         coefficients of lag polynomial (linear filter). Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            2-D input that returned a result is deprecated and will raise a
            ValueError after statsmodels 0.17 is released. Other 2-D input
@@ -926,7 +926,7 @@ def deconvolve(num, den, n=None):
         quotient or filtered series. An empty array if ``den`` is longer than
         ``num`` and ``n`` is not given.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The empty quotient is an ndarray with the dtype of the quotient
            of the other cases, float64 or complex128. It used to be an
@@ -935,7 +935,7 @@ def deconvolve(num, den, n=None):
         remainder. A copy of ``num`` if ``den`` is longer than ``num`` and
         ``n`` is not given.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The copy of ``num`` has the dtype of the remainder of the other
            cases, float64 or complex128. It used to be ``num`` with its own
@@ -1022,7 +1022,7 @@ def _arma_lags_method_doc(func, name, description, changes=(), keep=()):
         initial_indent="    ",
         subsequent_indent="    ",
     )
-    desc += ["", ".. versionchanged:: 0.15.1", "", *note]
+    desc += ["", ".. versionchanged:: 0.16.0", "", *note]
     params = [Parameter(name, "int, optional", desc)]
     params += [param for param in ds._ds["Parameters"] if param.name in keep]
     ds.replace_block("Parameters", params)
@@ -1044,7 +1044,7 @@ _generate_sample_doc.insert_parameters(
             "generates dependent data. If not given, the ``nobs`` attribute",
             "of the process is used.",
             "",
-            ".. versionchanged:: 0.15.1",
+            ".. versionchanged:: 0.16.0",
             "",
             "    The default is the ``nobs`` attribute of the process. It used",
             "    to be 100, whatever the value of ``nobs``.",
@@ -1251,7 +1251,7 @@ class ArmaProcess:
         nobs : int, optional
             If None, nobs is taken from the results.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``nobs=0`` is used as given, as in the constructor. It used
                to select the nobs of the results, as omitting the value

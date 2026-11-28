@@ -1204,7 +1204,7 @@ class StratifiedTable:
             upper left cell under the null hypothesis. Otherwise the
             statistic is not corrected.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The correction is no longer applied if ``|sum(a - E(a))|`` is
                smaller than 0.5. Previously ``min(0.5, |sum(a - E(a))|)`` was
@@ -1382,7 +1382,7 @@ class StratifiedTable:
         If a stratum has a row or column total of zero, the statistic and the
         p-value are NaN.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The test can be computed if the pooled odds ratio is exactly 1,
            where it was NaN before. The fitted counts are computed in a way
@@ -1513,7 +1513,7 @@ def mcnemar(table, exact=True, correction=True):
         distribution (if exact is False.) As in R's ``mcnemar.test``, the
         correction is not applied if the two off-diagonal counts are equal.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The correction is no longer applied if the two off-diagonal counts
            are equal. Previously the statistic was ``1 / (n1 + n2)`` for

@@ -235,7 +235,7 @@ class ETSModel(base.StateSpaceMLEModel):
         The observed time-series process :math:`y`. A single column, an
         (nobs, 1) array or a one-column DataFrame, is used as the series.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A single column is accepted. It used to raise a ValueError.
     error : {"add", "additive", "mul", "multiplicative"}, optional
@@ -292,7 +292,7 @@ class ETSModel(base.StateSpaceMLEModel):
         seasonality). A fixed ``initial_level``, for example with
         ``fix_params``, is therefore a restriction of the model: the
         initial seasonals still add up to 0 or ``seasonal_periods``.
-        Versions before 0.15.1 fixed ``initial_seasonal.<m-1>`` to 0 or 1
+        Versions before 0.16.0 fixed ``initial_seasonal.<m-1>`` to 0 or 1
         instead, so a model with a fixed initial level is a different
         restriction there and gives a different fit.
     initial_level : float, optional
@@ -303,13 +303,13 @@ class ETSModel(base.StateSpaceMLEModel):
         The initial seasonal component. An array of length `seasonal_periods`.
         Only used if initialization is 'known'.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A single value, which is used for all initial seasonal states, is
            deprecated and will raise a ValueError after statsmodels 0.17 is
            released. Other lengths raise a ValueError.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A single row or column is used as a 1-d array. A row was used in
            reverse order.
@@ -618,13 +618,13 @@ class ETSModel(base.StateSpaceMLEModel):
             The initial seasonal component. An array of length
             `seasonal_periods`. Only used if initialization is 'known'.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                A single value, which is used for all initial seasonal states,
                is deprecated and will raise a ValueError after statsmodels
                0.17 is released. Other lengths raise a ValueError.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A single row or column is used as a 1-d array. A row was used
                in reverse order.
@@ -1104,7 +1104,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         The fit is performed using the L-BFGS algorithm.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A fit does not change the bounds of the model. Before, it added
            the values of the fixed parameters, for example from
@@ -1171,9 +1171,9 @@ class ETSModel(base.StateSpaceMLEModel):
             after statsmodels 0.17 is released. Not used for ndarray data,
             whose results are ndarrays, or if `return_params` is True.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                The default "integer" index is deprecated and will change to
                "names". Pass "names" to use the future default now.
@@ -1517,9 +1517,9 @@ class ETSModel(base.StateSpaceMLEModel):
             after statsmodels 0.17 is released. Not used for ndarray data,
             whose results are ndarrays, or if `return_raw` is True.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                The default "integer" index is deprecated and will change to
                "names". Pass "names" to use the future default now.
@@ -2008,7 +2008,7 @@ class ETSResults(base.StateSpaceMLEResults):
         nsimulations : int
             The number of simulation steps. Must be at least 1.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``nsimulations=0`` raises a ``ValueError``. It used to write
                outside of an internal array, which could crash the Python
@@ -2309,13 +2309,13 @@ class ETSResults(base.StateSpaceMLEResults):
             However, if the dates index does not have a fixed frequency, steps
             must be an integer. Default is 1. An integer must be at least 1.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``steps=0`` raises a ``ValueError``. It used to write outside
                of an internal array, which could crash the Python process,
                and otherwise returned NaN values.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A float with an integral value, such as 3.0, is a number of
                steps, as an int is. Before, it was used as the index of the
@@ -2450,7 +2450,7 @@ class ETSResults(base.StateSpaceMLEResults):
             the end of prediction, forecasted endogenous values will be used
             instead.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A `dynamic` before `start`, a negative offset or an earlier
                date, raises a ValueError that says so. With numpy data, it
@@ -2461,7 +2461,7 @@ class ETSResults(base.StateSpaceMLEResults):
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The predictions are labelled with `index`. It used to be
                checked for its length and then ignored.
@@ -2541,7 +2541,7 @@ class ETSResults(base.StateSpaceMLEResults):
             the end of prediction, forecasted endogenous values will be used
             instead.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A `dynamic` before `start`, a negative offset or an earlier
                date, raises a ValueError that says so. With numpy data, it
@@ -2552,7 +2552,7 @@ class ETSResults(base.StateSpaceMLEResults):
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The predicted mean, the prediction intervals and the summary
                frame are labelled with `index`. It used to be checked for
@@ -2563,7 +2563,7 @@ class ETSResults(base.StateSpaceMLEResults):
             for the models with additive errors and no multiplicative
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                Other values are treated as "exact". This is deprecated and
                they will raise a ValueError after statsmodels 0.17 is
@@ -2725,7 +2725,7 @@ class PredictionResults:
         the end of prediction, forecasted endogenous values will be used
         instead.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The ``endog`` attribute holds the observed values of the
            in-sample periods also when all predictions are dynamic
@@ -2740,7 +2740,7 @@ class PredictionResults:
         with additive errors and no multiplicative components, "ANN", "AAN",
         "AAdN", "ANA", "AAA" and "AAdA".
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            Other values are treated as "exact". This is deprecated and they
            will raise a ValueError after statsmodels 0.17 is released.

@@ -101,7 +101,7 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         positions. A str is the label of a single column, and an array_like
         that does not hold only integers holds column labels.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer is a column position, as an int is. A bool is
            not: True was the column at position 1. A str selects the column
@@ -115,7 +115,7 @@ def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
         The column index (or indices) of the exogenous variable(s). If
         None, all columns other than `endog_idx` are used.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An int selects a single column, and ``exog`` is a DataFrame with
            that column. It raised an AttributeError.

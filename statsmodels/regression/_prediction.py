@@ -154,7 +154,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         then the stored offset and exposure are not used unless they are
         passed explicitly in ``pred_kwds``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without exog, the stored offset and exposure are now used.
     transform : bool, optional
@@ -189,7 +189,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     results have it (``n_groups - 1`` with ``cov_type="cluster"``, for
     example) and ``df_resid`` otherwise.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The t distribution uses ``df_resid_inference`` instead of ``df_resid``
        if the results have it.

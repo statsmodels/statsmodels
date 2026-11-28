@@ -2,5 +2,5 @@
 
 :doc:`Previous release notes <older>`
 
-.. include:: version0.15.1.rst
+.. include:: version0.16.0.rst
    :start-line: 2

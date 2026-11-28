@@ -511,7 +511,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             non-seasonal time series and min (2*m, nobs//5) for seasonal time
             series.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The default for non-seasonal models is min(10, nobs//5). It
                was min(2, nobs//5), as if they had a season of length 1.

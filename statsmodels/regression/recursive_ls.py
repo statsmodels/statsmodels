@@ -189,7 +189,7 @@ class RecursiveLS(MLEModel):
             frames above it, -1 an empty namespace, and a dict maps names to
             values.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------
@@ -318,7 +318,7 @@ _get_prediction_doc.insert_parameters(
             "the end of prediction, forecasted endogenous values will be used",
             "instead.",
             "",
-            ".. versionchanged:: 0.15.1",
+            ".. versionchanged:: 0.16.0",
             "",
             "    A date string is the date at which dynamic prediction begins.",
             "    Its location was used as an offset relative to `start`, so",
@@ -336,7 +336,7 @@ _get_prediction_doc.replace_block(
             "PredictionResults instance containing in-sample predictions /",
             "out-of-sample forecasts and results including confidence intervals.",
             "",
-            ".. versionchanged:: 0.15.1",
+            ".. versionchanged:: 0.16.0",
             "",
             "    With constraints, the predictions are those of the dependent",
             "    variable only. Before, they also held those of the extra",
@@ -691,14 +691,14 @@ class RecursiveLSResults(MLEResults):
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A list is no longer modified: names in it were replaced by
                their positions. A tuple that holds a name, and an iterable
                without a length such as a generator, work; they raised a
                TypeError.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array selects a variable, as the integer it
                holds does. A bool raises a TypeError.

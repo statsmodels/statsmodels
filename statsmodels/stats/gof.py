@@ -85,7 +85,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     `scipy.stats.power_divergence`. ``DescTools::GTest`` in R counts such a
     cell as 0 in the G statistic.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        For ``lambd=0``, zero observed counts used to return ``(nan, nan)``
        with a ``RuntimeWarning``. They now contribute 0 to the statistic.
@@ -250,7 +250,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     dropped. The last bin can have a very small expected count, which makes
     the chisquare approximation of the p-value unreliable.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The support of the distribution is taken from ``distfn.support(*arg)``
        instead of a fixed window of integers from -1000 to 1000. The bins
@@ -395,7 +395,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     methods assume that the support is integer valued and that loc is an
     integer.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The support of the distribution is taken from ``distfn.support(*arg)``
        instead of a fixed window of integers from -1000 to 1000. The bins

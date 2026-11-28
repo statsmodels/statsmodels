@@ -211,7 +211,7 @@ def hdrboxplot(
         Extra quantile levels to compute, each between 0 and 1. The sequence
         is not modified. Default is None.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            A list is no longer modified and any sequence of float is accepted.
     threshold : float between 0 and 1, optional
         Percentile threshold value for outliers detection. High value means
@@ -918,7 +918,7 @@ def banddepth(data, method="MBD"):
     band, so tied values do not make the depth depend on the order of the
     curves.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        For 'MBD', tied values used to be assigned arbitrary ranks, so the
        depths of data with tied values can differ from those of earlier

@@ -35,7 +35,7 @@ def hpfilter(x, lamb=1600, one_sided=False):
         non-trivial value of the cycle is at t=2. x must not be empty and must
         not contain NaN or inf values.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Returns
     -------

@@ -100,7 +100,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     in1 : array_like
         First input array.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``in1`` and ``in2`` are converted with ``array_like``, keeping
            their dtype, so a list, tuple, Series or DataFrame works where it
@@ -110,7 +110,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     mode : str, optional
         Convolution mode, one of 'full', 'same', or 'valid'.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            Any other mode returns None, which is deprecated and will raise a
            ValueError in statsmodels 0.17.0.
@@ -182,7 +182,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     in1 : array_like
         First input array.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``in1``, ``in2`` and ``in3`` are converted with ``array_like``,
            keeping their dtype, so a list, tuple, Series or DataFrame works
@@ -193,14 +193,14 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         Third input array, used as the inverse filter. At least one of `in2`
         and `in3` must be given.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``in3`` without ``in2`` filters ``in1`` with the inverse of
            ``in3``, where it raised an AttributeError.
     mode : str, optional
         Convolution mode, one of 'full', 'same', or 'valid'.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            Any other mode returns None, which is deprecated and will raise a
            ValueError in statsmodels 0.17.0.
@@ -297,7 +297,7 @@ def recursive_filter(x, ar_coeff, init=None):
         the n observations. An array with shape (1, ..., 1) is a single
         observation.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An (n, 1) column is now filtered along its rows, the same as 1-D
            input. Previously no recursion was applied, so the column was
@@ -306,7 +306,7 @@ def recursive_filter(x, ar_coeff, init=None):
            input with more than one column or more than two dimensions now
            raises a ValueError.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A row, an array with shape (1, n) or (1, ..., 1, n) with n > 1, is
            filtered along its last axis, as a 1-D series of n observations,
@@ -320,7 +320,7 @@ def recursive_filter(x, ar_coeff, init=None):
         Initial values of the time-series prior to the first value of y.
         The default is zero.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``ar_coeff`` and ``init`` can be (n_coeff, 1) columns, which
            raised a ValueError from NumPy or SciPy. Other 2-d input raises a
@@ -422,7 +422,7 @@ def convolution_filter(x, filt, nsides=2):
         same number of dimensions as x though if 1d and ``x`` is 2d will be
         coerced to 2d.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A filt with one row and one column per column of ``x``, shape
            (1, nvars), filters each column of ``x`` with its own coefficient,
@@ -432,7 +432,7 @@ def convolution_filter(x, filt, nsides=2):
            more than one row, and more than one but fewer columns than
            ``x``, raises a ValueError instead of an IndexError.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A filt with more than one column, but not one column per column of
            ``x``, warns and returns the same result as before: the first
@@ -444,7 +444,7 @@ def convolution_filter(x, filt, nsides=2):
         coefficients. If 1, the filter coefficients are for past values only.
         Both methods use scipy.signal.convolve.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            nsides=1 works with a 2d filter, and with 2d x and a filter of
            length one, where it raised a ValueError.
@@ -578,7 +578,7 @@ def miso_lfilter(ar, ma, x, useic=False):
         The input data series, time in rows, variables in columns. A 1-d
         ``x`` is a single variable.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``x``, ``ar`` and ``ma`` are converted with ``array_like``, so a
            list or tuple ``x``, a column ``ar`` and a 1-d ``x`` or ``ma``
@@ -592,7 +592,7 @@ def miso_lfilter(ar, ma, x, useic=False):
         ``y[-1]``), of length ``ar.shape[0] - 1``. Use the default, False,
         for zero initial conditions.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without AR lags, ``ar = [1.0]``, there are no initial conditions,
            and a non-zero ``useic`` is ignored, as values beyond
@@ -601,7 +601,7 @@ def miso_lfilter(ar, ma, x, useic=False):
            further lags, where it raised an IndexError for one AR lag (and
            a ValueError for any number of lags with scipy 1.16 or later).
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            ``useic=True`` is not a set of initial values. With two or more
            AR lags it is used as ``y[-1] = 1``, with zero for the further

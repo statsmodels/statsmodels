@@ -272,7 +272,7 @@ class Description:
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Non-integer percentiles are labeled with rounded values that show
            enough decimals to be distinct and to lie strictly between 0% and

@@ -9,8 +9,8 @@ requests do not conflict there. See ``docs/upcoming_changes/README.rst``.
 Usage::
 
     python tools/releasing/collect_release_notes.py --check
-    python tools/releasing/collect_release_notes.py docs/source/release/version0.15.1.rst
-    python tools/releasing/collect_release_notes.py --remove docs/source/release/version0.15.1.rst
+    python tools/releasing/collect_release_notes.py docs/source/release/version0.16.0.rst
+    python tools/releasing/collect_release_notes.py --remove docs/source/release/version0.16.0.rst
 
 ``--check`` validates the fragments. Given a release notes file, the bullets
 of each fragment are appended to the end of the list of their section, in

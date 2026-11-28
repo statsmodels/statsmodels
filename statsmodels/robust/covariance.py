@@ -2124,7 +2124,7 @@ class CovDetMCD:
     numerically singular, for example in an exact fit where at least ``h``
     observations lie on a hyperplane, then :meth:`fit` raises a ValueError.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Exact-fit data raise a ValueError. Before, the fit returned a result
        with a singular covariance.
@@ -2465,7 +2465,7 @@ class CovDetS:
     """
     S-estimator for mean and covariance with deterministic starts
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The ``breakdown_point`` argument is now used to compute the tuning
        parameter of the S-estimator. Before, the tuning parameter for a
@@ -2715,7 +2715,7 @@ class CovDetMM:
     efficiency. For other cases, the user has to provide the norm instance
     with desired tuning parameter.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The ``breakdown_point`` argument is now used to compute the tuning
        parameter of the first stage S-estimator. Before, the tuning parameter

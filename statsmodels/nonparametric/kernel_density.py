@@ -114,7 +114,7 @@ class KDEMultivariate(GenericKDE):
         values of the variable, and the bandwidth of an ordered variable is
         less than 1.  A user-specified bandwidth is used as given.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             The bandwidths of discrete variables that are selected by one of
             the methods are bounded.  They can have been outside the range
@@ -469,7 +469,7 @@ class KDEMultivariateConditional(GenericKDE):
         values of the variable, and the bandwidth of an ordered variable is
         less than 1.  A user-specified bandwidth is used as given.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             The bandwidths of discrete variables that are selected by one of
             the methods are bounded.  They can have been outside the range

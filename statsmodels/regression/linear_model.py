@@ -501,7 +501,7 @@ class RegressionModel(base.LikelihoodModel):
             matrix to solve the normal equations. See Notes for the
             differences between the methods.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
                The ``"chol"`` method.
         cov_type : str, optional
@@ -823,7 +823,7 @@ class GLS(RegressionModel):
     If sigma is a function of the data making one of the regressors
     a constant, then the current postestimation statistics will not be correct.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A ``MissingDataError`` is raised if ``endog``, ``exog`` or ``sigma`` contain inf or nan after
        missing values are handled. Before, ``-inf`` in exog, and inf or nan in
@@ -1087,7 +1087,7 @@ class WLS(RegressionModel):
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A ``MissingDataError`` is raised if ``endog``, ``exog`` or ``weights`` contain inf or nan after
        missing values are handled. Before, ``-inf`` in exog, and inf or nan in
@@ -1291,7 +1291,7 @@ class OLS(WLS):
     -----
     No constant is added by the model unless you are using formulas.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A ``MissingDataError`` is raised if ``endog`` or ``exog`` contain inf or nan after
        missing values are handled. Before, ``-inf`` in exog, and inf or nan in
@@ -1491,7 +1491,7 @@ class OLS(WLS):
         sum of squared residuals and ``g`` is its gradient with respect to
         ``params``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The Hessian with ``scale=None`` was corrected. The first term
            was previously too small by a factor of 2.
@@ -1708,7 +1708,7 @@ class GLSAR(GLS):
         autoregressive coefficients. The length of the array determines
         the AR order. A float, such as ``1.0``, is a single coefficient.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 0-d integer array, such as ``np.array(2)``, is an order, as the
            integer it holds is. Before, it was a coefficient. A bool (or an
@@ -1721,7 +1721,7 @@ class GLSAR(GLS):
     The linear autoregressive process of order p--AR(p)--is defined as:
     TODO
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A ``MissingDataError`` is raised if ``endog`` or ``exog`` contain inf or nan after
        missing values are handled. Before, ``-inf`` in exog, and inf or nan in
