@@ -2771,3 +2771,120 @@ def test_revisions_details_start_float():
     res_upd = res_prev.apply(y)
     with pytest.raises(ValueError):
         res_upd.news(res_prev, comparison_type="previous", revisions_details_start=36.0)
+
+
+def var_news_state_index(state_index=None, revisions_details_start=True):
+    # VAR(1) with an identity design matrix: the realgdp and unemp values of
+    # 2009Q1 and 2009Q2 are revised from 0 and 2009Q3 is new; the impacts
+    # are computed through 2010Q2 (three periods after the sample)
+    endog = dta[["realgdp", "unemp"]].copy()
+    endog["realgdp"] = np.log(endog["realgdp"]).diff() * 400
+    endog = endog.iloc[1:]
+    previous = endog.loc[:"2009Q2"].copy()
+    previous.loc["2009Q1":"2009Q2"] = 0.0
+    res = varmax.VARMAX(previous, trend="n").smooth(
+        np.r_[0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1])
+    return res.news(endog, start="2008Q4", end="2010Q2",
+                    revisions_details_start=revisions_details_start,
+                    state_index=state_index)
+
+
+@pytest.mark.parametrize("revisions_details_start", [True, False, "2009Q2"])
+def test_state_index_revision_impacts(revisions_details_start):
+    # With state_index, every impact is the impact through those states: in
+    # this VAR(1) with an identity design matrix, the impacts through the
+    # state of each variable are the full impacts on that variable and none
+    # on the other. That includes the impacts of the revisions, also those
+    # that are grouped (all of them, or those of 2009Q1), which were the
+    # impacts through all states.
+    full = var_news_state_index(
+        revisions_details_start=revisions_details_start)
+    attrs = ["revision_impacts", "revision_detailed_impacts",
+             "revision_grouped_impacts", "update_impacts"]
+
+    def get(news, attr):
+        # The detailed impacts are NaN if no revision has details
+        return getattr(news, attr).fillna(0)
+
+    # Each variable has impacts of revisions and news, so that the test
+    # discriminates
+    for attr in ["revision_impacts", "update_impacts"]:
+        assert_(np.all(np.abs(get(full, attr)).max() > 0.1))
+    columns = ["impact of revisions", "impact of news", "total impact"]
+    variables = ["realgdp", "unemp"]
+    for i, variable in enumerate(variables):
+        other = variables[1 - i]
+        news = var_news_state_index(
+            state_index=[i], revisions_details_start=revisions_details_start)
+        # atol for the impacts that are zero up to rounding errors (those on
+        # the dates observed in both datasets, and the detailed impacts of
+        # grouped revisions)
+        for attr in attrs:
+            assert_allclose(get(news, attr)[variable],
+                            get(full, attr)[variable], rtol=1e-10,
+                            atol=1e-13)
+            # The design matrix has an exact zero, so there is no impact
+            assert_allclose(get(news, attr)[other], 0, atol=1e-15)
+        # The impacts table leaves out the rows without impacts, those of the
+        # other variable; the estimates are those of all states
+        impacts = news.impacts
+        assert_equal(impacts.index.get_level_values(1).unique().tolist(),
+                     [variable])
+        desired = full.impacts.xs(variable, level=1, drop_level=False)
+        assert_allclose(impacts[columns], desired[columns], rtol=1e-10,
+                        atol=1e-13)
+        for column in ["estimate (prev)", "estimate (new)"]:
+            assert_allclose(impacts[column], desired[column], rtol=1e-12)
+
+    # Both states give the impacts without state_index
+    news = var_news_state_index(
+        state_index=[1, 0], revisions_details_start=revisions_details_start)
+    assert_allclose(news.impacts, full.impacts, rtol=1e-10, atol=1e-13)
+
+
+def test_state_index_revision_impacts_time_varying_design():
+    # With the regression coefficient as a state, the design matrix [1, x_t]
+    # varies over time. The revisions of two values change both the
+    # smoothed AR state and the smoothed coefficient, and the impacts
+    # through each state add up to the impacts without state_index. The
+    # last value is new, so that the impacts include a period after the
+    # previous sample.
+    rng = np.random.default_rng(5237)
+    nobs = 40
+    exog = rng.standard_normal(nobs)
+    endog = 0.8 * exog + rng.standard_normal(nobs)
+    previous = endog[:-1].copy()
+    previous[30:32] += [1.5, -2.0]
+    params = [0.5, 1.0]
+
+    def smooth(y):
+        mod = sarimax.SARIMAX(y, exog=exog[:len(y)], order=(1, 0, 0),
+                              mle_regression=False)
+        return mod.smooth(params)
+
+    res_prev = smooth(previous)
+    res = smooth(endog)
+
+    def news(state_index, revisions_details_start=False):
+        return res.news(res_prev, comparison_type="previous", start=28,
+                        end=nobs - 1, state_index=state_index,
+                        revisions_details_start=revisions_details_start)
+
+    desired = news(None).revision_impacts.iloc[:, 0].to_numpy()
+    impacts = [news([i]).revision_impacts.iloc[:, 0].to_numpy()
+               for i in range(2)]
+    # Both states have impacts, so that the test discriminates
+    assert_(np.all(np.abs(impacts[0]) > 1e-3))
+    assert_(np.all(np.abs(impacts[1]) > 1e-3))
+    # At the observed dates other than the revised ones, the total impact is
+    # zero, and the impacts through the two states cancel (atol for the
+    # rounding errors of the impacts, which are up to 2 in absolute value)
+    assert_allclose(impacts[0] + impacts[1], desired, rtol=1e-8,
+                    atol=1e-12)
+    # The detailed impacts (computed from the smoothed state weights) agree
+    for i in range(2):
+        detailed = news([i], revisions_details_start=True)
+        assert_allclose(detailed.revision_detailed_impacts.iloc[:, 0],
+                        impacts[i], rtol=1e-8)
+        assert_allclose(detailed.revision_impacts.iloc[:, 0], impacts[i],
+                        rtol=1e-8)
