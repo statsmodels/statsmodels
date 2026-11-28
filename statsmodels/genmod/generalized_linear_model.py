@@ -438,6 +438,29 @@ class GLM(base.LikelihoodModel):
         self._optim_hessian = None
         self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if "_has_offset" in state:
+            return
+        # Models pickled by statsmodels 0.14 deleted offset and exposure when
+        # they were not given, and lack the attributes below, which __init__
+        # has set since 0.15.0
+        self.offset = state.get("offset")
+        self.exposure = state.get("exposure")
+        self._has_offset = self.offset is not None
+        self._has_exposure = self.exposure is not None
+        self._exposure_name = None
+        self._offset_name = None
+        self._freq_weights_name = None
+        self._var_weights_name = None
+        self._optim_hessian = None
+        exog = state.get("exog")
+        # exog is None after remove_data
+        if exog is None:
+            self._tmp_like_exog = None
+        else:
+            self._tmp_like_exog = np.empty_like(exog, dtype=float)
+
     def initialize(self):
         """
         Initialize a generalized linear model.
