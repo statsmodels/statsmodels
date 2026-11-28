@@ -1,0 +1,8 @@
+- The EM steps of :class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression` and :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression` (``em_iter`` and ``search_iter``
+  of ``fit``, which by default starts from 5 EM iterations) divided the
+  smoothed joint probabilities of the transition probabilities by the
+  smoothed probabilities of the current regime instead of the previous
+  one, so the estimated transition probabilities were off by about
+  1/nobs. The parameters after the EM steps, and the estimates that
+  ``fit`` reaches from them, change, mostly slightly; for a short series
+  ``fit`` can stop at another local maximum. :pr:`11066`
