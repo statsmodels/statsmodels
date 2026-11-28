@@ -1,0 +1,3 @@
+- ``statsmodels.tools.docstring.Docstring`` ignores blank lines
+  between a section underline and its first entry; they added an
+  empty parameter or a leading empty line. :pr:`11312`
