@@ -1582,6 +1582,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         k_endog_monthly : int
             The number of monthly variables (which are ordered first) in the
             returned `endog` dataset.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           When monthly and quarterly data are combined, intervening months
+           are included with missing values, so partial quarters do not need to
+           be padded by the caller.
         """
         # Create combined dataset
         if endog_quarterly is not None:
@@ -1639,6 +1647,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             quarterly_resamp.index = quarterly_resamp.index.to_period()
 
             endog = pd.concat([endog_monthly, quarterly_resamp], axis=1)
+            # Include months between the monthly observations and quarter-end
+            # observations, so callers do not need to pad partial quarters.
+            monthly_index = pd.period_range(
+                endog.index.min(), endog.index.max(), freq="M"
+            )
+            endog = endog.reindex(monthly_index)
 
             # Make sure we didn't accidentally get duplicate column names
             column_counts = endog.columns.value_counts()

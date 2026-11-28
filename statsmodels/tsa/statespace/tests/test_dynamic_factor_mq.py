@@ -1978,6 +1978,79 @@ def test_append_extend_apply():
     assert_allclose(res6.filter_results.initial_state_cov, 1.0)
 
 
+@pytest.mark.parametrize("method", ["append", "extend"])
+@pytest.mark.parametrize("use_datetime", [False, True])
+@pytest.mark.parametrize("n_months, n_quarters", [(1, 1), (2, 2)])
+def test_append_extend_incomplete_quarter(method, use_datetime, n_months, n_quarters):
+    rng = np.random.default_rng(20261125)
+    index_m = pd.period_range("2014-02", periods=26, freq="M")
+    index_q = pd.period_range("2014-Q2", periods=8, freq="Q")
+    new_m_index = pd.period_range(index_m[-1] + 1, periods=n_months, freq="M")
+    new_q_index = pd.period_range(index_q[-1] + 1, periods=n_quarters, freq="Q")
+
+    endog_m = pd.DataFrame(rng.standard_normal((26, 2)), index=index_m)
+    endog_q = pd.DataFrame(rng.standard_normal((8, 1)), index=index_q)
+    new_m = pd.DataFrame(rng.standard_normal((n_months, 2)), index=new_m_index)
+    new_q = pd.DataFrame(rng.standard_normal((n_quarters, 1)), index=new_q_index)
+
+    if use_datetime:
+        index_m = pd.date_range(
+            index_m[0].to_timestamp(), periods=len(index_m), freq="MS"
+        )
+        index_q = pd.date_range(
+            index_q[0].to_timestamp(), periods=len(index_q), freq="QS"
+        )
+        new_m_index = pd.date_range(
+            new_m_index[0].to_timestamp(), periods=n_months, freq="MS"
+        )
+        new_q_index = pd.date_range(
+            new_q_index[0].to_timestamp(), periods=n_quarters, freq="QS"
+        )
+        endog_m.index = index_m
+        endog_q.index = index_q
+        new_m.index = new_m_index
+        new_q.index = new_q_index
+
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog_m, endog_quarterly=endog_q)
+    res = mod.smooth(mod.start_params)
+
+    # The explicit workaround from GH#7452 is to pad the monthly update with
+    # missing rows through the last month of the final new quarter.
+    final_month = pd.PeriodIndex(new_q_index, freq="Q")[-1].asfreq("M")
+    first_month = pd.PeriodIndex(new_m.index, freq="M")[0]
+    padded_period_index = pd.period_range(first_month, final_month, freq="M")
+    padded_m = pd.DataFrame(
+        np.nan, index=padded_period_index, columns=endog_m.columns
+    )
+    padded_m.iloc[:n_months] = new_m.values
+    if use_datetime:
+        padded_m.index = pd.date_range(
+            padded_period_index[0].to_timestamp(),
+            periods=len(padded_period_index),
+            freq="MS",
+        )
+
+    actual = getattr(res, method)(new_m, endog_quarterly=new_q)
+    expected = getattr(res, method)(padded_m, endog_quarterly=new_q)
+
+    assert_equal(actual.model.nobs, expected.model.nobs)
+    assert_(
+        actual.model.data.orig_endog.index.equals(
+            expected.model.data.orig_endog.index
+        )
+    )
+    assert_allclose(
+        actual.model.data.orig_endog,
+        expected.model.data.orig_endog,
+        equal_nan=True,
+    )
+    assert_allclose(
+        actual.filter_results.llf_obs,
+        expected.filter_results.llf_obs,
+        equal_nan=True,
+    )
+
+
 def test_news_monthly():
     # Most of `news` is tested in `test_standardized_{monthly,MQ}`, but here
     # we test a couple of minor things
