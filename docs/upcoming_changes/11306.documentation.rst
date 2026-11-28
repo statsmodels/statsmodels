@@ -1,0 +1,5 @@
+- The docstrings of ``statsmodels.tools.docstring``
+  (``Docstring``, ``remove_parameters``, ``insert_parameters``,
+  ``extract_parameters``, ``indent``), ``Appender``,
+  ``Substitution``, ``deprecated_alias`` and ``cache_writable``
+  describe the types they accept and return. :pr:`11306`
