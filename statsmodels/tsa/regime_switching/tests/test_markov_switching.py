@@ -844,3 +844,37 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+@pytest.mark.parametrize(
+    "order, index",
+    [
+        (0, pd.RangeIndex(5, 65)),
+        (1, pd.RangeIndex(60)),
+        (2, pd.RangeIndex(60)),
+        (2, pd.RangeIndex(10, 70)),
+    ],
+)
+def test_predict_default_start_with_range_index(order, index):
+    # A RangeIndex that does not start at zero (or that loses its first
+    # labels to the AR presample) predicts every observation, as the same
+    # model of an ndarray does
+    endog = np.random.default_rng(0).standard_normal(60) * np.repeat([1.0, 3.0], 30)
+    if order == 0:
+        model, kwargs = markov_regression.MarkovRegression, {}
+    else:
+        model, kwargs = markov_autoregression.MarkovAutoregression, {"order": order}
+    mod = model(pd.Series(endog, index=index), k_regimes=2, **kwargs)
+    mod_array = model(endog, k_regimes=2, **kwargs)
+    params = mod_array.start_params
+    res = mod.smooth(params, cov_type="none")
+    res_array = mod_array.smooth(params, cov_type="none")
+    nobs = 60 - order
+
+    expected = res_array.fittedvalues
+    assert expected.shape == (nobs,)
+    assert_allclose(mod.predict(params), expected, rtol=1e-13)
+    assert_allclose(mod.predict(params, start=0, end=nobs - 1), expected, rtol=1e-13)
+    pd.testing.assert_index_equal(res.fittedvalues.index, index[order:])
+    assert_allclose(res.fittedvalues, expected, rtol=1e-13)
+    assert_allclose(res.resid, endog[order:] - expected, rtol=1e-13)
