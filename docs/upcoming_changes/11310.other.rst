@@ -1,0 +1,5 @@
+- Pickled formula results load at the top level of a script, and
+  formula results pickled by statsmodels 0.14 predict with new
+  data again. Loading raises ``ValueError`` when the formula gives
+  other columns than those the model was estimated with, instead
+  of predicting with the wrong columns. :pr:`11310`
