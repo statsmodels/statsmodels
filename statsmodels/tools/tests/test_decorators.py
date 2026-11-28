@@ -12,6 +12,7 @@ from statsmodels.tools._decorators import (
     cache_writable,
     deprecated_alias,
 )
+from statsmodels.tools.sm_exceptions import CacheWriteWarning
 
 
 def test_resettable_cache():
@@ -88,6 +89,59 @@ def test_cache_readonly_class_access():
     assert ex.b == 1
     assert ex._cache == {"b": 1}
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("cachename", [None, "_other_cache"])
+def test_cache_readonly_base_class(cachename):
+    # _cache_readonly()(func) returns a CachedAttribute. Its subclass
+    # cache_writable overrides __call__, so the base class is used directly
+    calls = []
+
+    class Example:
+        @_decorators._cache_readonly(cachename=cachename)
+        def c(self):
+            """The c value."""
+            calls.append(None)
+            return 2
+
+    store = "_cache" if cachename is None else cachename
+    descriptor = vars(Example)["c"]
+    assert type(descriptor) is _decorators.CachedAttribute
+    assert descriptor.cachename == store
+    # The value is computed once and cached under the cache name
+    ex = Example()
+    assert ex.c == 2
+    assert ex.c == 2
+    assert vars(ex) == {store: {"c": 2}}
+    assert len(calls) == 1
+    # On the class, the undecorated method is returned
+    assert Example.c.__doc__ == "The c value."
+
+
+@pytest.mark.parametrize("accessed", [True, False], ids=["cached", "not-cached"])
+def test_cached_attribute_set_warns(accessed):
+    # Assigning to a CachedAttribute warns and changes nothing. Its subclass
+    # CachedWritableAttribute overrides __set__, so the base class is used
+    # directly
+    class Example:
+        @_decorators.CachedAttribute
+        def c(self):
+            return 2
+
+    ex = Example()
+    if accessed:
+        assert ex.c == 2
+    before = vars(ex).copy()
+    match = r"^The attribute 'c' cannot be overwritten$"
+    with pytest.warns(CacheWriteWarning, match=match) as w:
+        ex.c = 5
+    assert len(w) == 1
+    # The warning points at the assignment
+    assert Path(w[0].filename).name == Path(__file__).name
+    # Neither the instance nor its cache holds the assigned value
+    assert vars(ex) == before
+    assert ex.c == 2
+    assert vars(ex) == {"_cache": {"c": 2}}
 
 
 @pytest.mark.parametrize("cachename", [None, "_other_cache"])
