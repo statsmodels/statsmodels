@@ -1,0 +1,4 @@
+- For a time-varying state space model, the error raised by ``news``
+  when ``comparison`` is a dataset given with ``exog`` and the impact
+  dates go beyond the updated data said that the dataset was the
+  previous one, also when it was the updated one. :pr:`11058`

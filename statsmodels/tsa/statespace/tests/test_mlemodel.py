@@ -3368,3 +3368,31 @@ def test_positional_flag_also_by_keyword_raises(func):
         match = f"^got multiple values for keyword argument '{name}'$"
     with pytest.raises(TypeError, match=match):
         getattr(mod, func)([0.5, 4.0], value, **{name: value})
+
+
+@pytest.mark.parametrize("comparison_type", ["updated", "previous"])
+def test_news_time_varying_dataset_beyond_end_message(comparison_type):
+    # With a time-varying model, a dataset with its exog as the comparison,
+    # and an impact date beyond the end of the updated data, the error named
+    # a previous dataset also when the dataset was the updated one
+    rng = np.random.default_rng(4321)
+    exog = rng.standard_normal(23)
+    endog = 0.7 * exog[:21] + rng.standard_normal(21)
+
+    def smooth(nobs):
+        mod = sarimax.SARIMAX(
+            endog[:nobs],
+            exog=exog[:nobs],
+            order=(0, 0, 0),
+            time_varying_regression=True,
+            mle_regression=False,
+        )
+        return mod.smooth([0.5, 1.0])
+
+    if comparison_type == "updated":
+        res, nobs = smooth(20), 21
+    else:
+        res, nobs = smooth(21), 20
+    match = f"providing an {comparison_type} dataset as the `comparison`"
+    with pytest.raises(ValueError, match=match):
+        res.news(endog[:nobs], exog=exog[:nobs], impact_date=22)
