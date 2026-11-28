@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lmap
 
+import sys
+
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
@@ -108,6 +110,12 @@ class ModelData:
                 data = d["orig_endog"].join(d["orig_exog"])
 
             for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
+                try:
+                    sys._getframe(depth)
+                except ValueError:
+                    # The call stack is shorter than depth, for example when
+                    # the pickle is loaded at the top level of a script
+                    continue
                 try:
                     _, design = mgr.get_matrices(
                         d["formula"], data, eval_env=depth, pandas=True
