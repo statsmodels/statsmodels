@@ -2144,6 +2144,34 @@ def test_get_prediction_exact(austourists, name):
     assert_allclose(frame["mean"] - frame["pi_lower"], half_width, rtol=1e-10)
 
 
+@pytest.mark.parametrize("phi", [0.9, 0.999999, 1.0])
+@pytest.mark.parametrize("seasonal", [None, "add"])
+def test_damped_forecast_variance(austourists, seasonal, phi):
+    model = ETSModel(
+        austourists,
+        trend="add",
+        damped_trend=True,
+        seasonal=seasonal,
+        seasonal_periods=4 if seasonal else None,
+    )
+    params = fixed_params(model)
+    params[model.param_names.index("damping_trend")] = phi
+    res = model.smooth(params, param_index="integer")
+
+    # Each column adds a unit innovation at a different forecast period.
+    # Subtract the last (unperturbed) path to get the innovation weights.
+    steps = 10
+    errors = np.eye(steps, steps + 1)
+    paths = res.simulate(
+        steps, anchor="end", repetitions=steps + 1, random_errors=errors
+    )
+    paths = np.asarray(paths)
+    weights = paths[:, :-1] - paths[:, -1:]
+    expected = (weights**2).sum(axis=1)
+    pred = res.get_prediction(start=res.nobs, end=res.nobs + steps - 1)
+    assert_allclose(pred.var_pred_mean / res.mse, expected, rtol=1e-12)
+
+
 def test_forecast_closed_form(setup_model):
     # The point forecasts of Hyndman et al. (2008), Table 2.1, from the last
     # states: l + phi_h b (additive trend) or l b^phi_h (multiplicative), with

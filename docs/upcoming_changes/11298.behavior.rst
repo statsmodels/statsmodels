@@ -1,0 +1,4 @@
+- Exact prediction intervals for ETS models with additive damped trends
+  now use the correct forecast variance when damping is near or equal to 1.
+  Previously the intervals could have incorrect widths or NaN endpoints.
+  :pr:`11298`

@@ -1937,29 +1937,12 @@ class ETSResults(base.StateSpaceMLEResults):
             gamma = self.smoothing_seasonal
             m = self.seasonal_periods
             k = np.asarray((h - 1) / m, dtype=int)
-        if self.damped_trend:
-            phi = self.damping_trend
         model = self.model.short_name
         if model == "ANN":
             return 1 + alpha**2 * (h - 1)
         elif model == "AAN":
             return 1 + (h - 1) * (
                 alpha**2 + alpha * beta * h + beta**2 * h / 6 * (2 * h - 1)
-            )
-        elif model == "AAdN":
-            return (
-                1
-                + alpha**2 * (h - 1)
-                + (
-                    (beta * phi * h)
-                    / ((1 - phi) ** 2)
-                    * (2 * alpha * (1 - phi) + beta * phi)
-                )
-                - (
-                    (beta * phi * (1 - phi**h))
-                    / ((1 - phi) ** 2 * (1 - phi**2))
-                    * (2 * alpha * (1 - phi**2) + beta * phi * (1 + 2 * phi - phi**h))
-                )
             )
         elif model == "ANA":
             return 1 + alpha**2 * (h - 1) + gamma * k * (2 * alpha + gamma)
@@ -1970,25 +1953,15 @@ class ETSResults(base.StateSpaceMLEResults):
                 * (alpha**2 + alpha * beta * h + (beta**2) / 6 * h * (2 * h - 1))
                 + gamma * k * (2 * alpha + gamma + beta * m * (k + 1))
             )
-        elif model == "AAdA":
-            return (
-                1
-                + alpha**2 * (h - 1)
-                + gamma * k * (2 * alpha + gamma)
-                + (beta * phi * h)
-                / ((1 - phi) ** 2)
-                * (2 * alpha * (1 - phi) + beta * phi)
-                - (
-                    (beta * phi * (1 - phi**h))
-                    / ((1 - phi) ** 2 * (1 - phi**2))
-                    * (2 * alpha * (1 - phi**2) + beta * phi * (1 + 2 * phi - phi**h))
-                )
-                + (
-                    (2 * beta * gamma * phi)
-                    / ((1 - phi) * (1 - phi**m))
-                    * (k * (1 - phi**m) - phi**m * (1 - phi ** (m * k)))
-                )
-            )
+        elif model in ("AAdN", "AAdA"):
+            # Sum the squared innovation weights (Hyndman et al., 2008,
+            # Table 6.2) to avoid cancellation as the damping tends to one.
+            h = np.asarray(steps, dtype=np.intp)
+            lags = np.arange(1, h.max(initial=1))
+            weights = alpha + beta * np.cumsum(self.damping_trend ** lags)
+            if model == "AAdA":
+                weights[m - 1 :: m] += gamma
+            return np.cumsum(np.r_[1.0, weights**2])[h - 1]
         else:
             raise NotImplementedError
 
@@ -2562,6 +2535,12 @@ class ETSResults(base.StateSpaceMLEResults):
             (default, if available) or 'simulated'. 'exact' is available
             for the models with additive errors and no multiplicative
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
+
+            .. versionchanged:: 0.15.1
+
+               Exact prediction intervals for additive damped trends use a
+               stable forecast variance when the damping parameter is near or
+               equal to 1.
 
             .. deprecated:: 0.15.1
 
