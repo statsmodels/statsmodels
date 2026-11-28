@@ -1152,6 +1152,16 @@ class HurdleCountModel(CountModel):
         self.result_class_reg = L1HurdleCountResults
         self.result_class_reg_wrapper = L1HurdleCountResultsWrapper
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if "k_exog" not in state:
+            # Models pickled by statsmodels 0.14 lack k_exog. The zero model
+            # keeps the full exog when remove_data has removed this model's.
+            exog = state.get("exog")
+            if exog is None:
+                exog = self.model1.exog
+            self.k_exog = exog.shape[1]
+
     def _initialize(self, dist, zerodist, p, pzero):
         if (dist not in ["poisson", "negbin"] or
                 zerodist not in ["poisson", "negbin"]):

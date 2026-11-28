@@ -14,6 +14,7 @@ from numpy.testing import assert_allclose
 import pytest
 
 from statsmodels.discrete.discrete_model import Logit, Probit
+from statsmodels.discrete.truncated_model import HurdleCountModel
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -149,3 +150,20 @@ def test_binary_014(model, separation):
     assert bool(expected) is separation
     res._results = roundtrip(res._results, ["_separation_etext"])
     assert res.summary().extra_txt == expected
+
+
+@pytest.mark.parametrize("remove_data", [False, True])
+def test_hurdle_014(data, remove_data):
+    endog, exog, _, _, _ = data
+    res = HurdleCountModel(endog, exog).fit(disp=0)
+    llf = res.llf
+    summary = res.summary().tables[1].as_text()
+    if remove_data:
+        res.remove_data()
+    res._results.model = roundtrip(res.model, ["k_exog"])
+    assert res.model.k_exog == exog.shape[1]
+    assert_allclose(res.llf, llf, rtol=1e-13)
+    assert res.summary().tables[1].as_text() == summary
+    if not remove_data:
+        res2 = res.model.fit(disp=0)
+        assert_allclose(res2.params, res.params, rtol=1e-6)
