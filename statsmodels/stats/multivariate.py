@@ -80,7 +80,9 @@ def test_mvmean(data, mean_null=0, return_results=True):
     x = np.asarray(data)
     nobs, k_vars = x.shape
     mean = x.mean(0)
-    cov = np.cov(x, rowvar=False, ddof=1)
+    # np.cov returns a 0-d array when there is a single variable; keep the
+    # covariance 2-d so np.linalg.solve works for k_vars == 1 as well.
+    cov = np.atleast_2d(np.cov(x, rowvar=False, ddof=1))
     diff = mean - mean_null
     t2 = nobs * diff.dot(np.linalg.solve(cov, diff))
     factor = (nobs - 1) * k_vars / (nobs - k_vars)
