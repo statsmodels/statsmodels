@@ -312,7 +312,7 @@ class VARMAX(MLEModel):
         self._final_exog = None
 
         # Update _init_keys attached by super
-        self._init_keys += ["order", "trend", "error_cov_type",
+        self._init_keys += ["order", "trend", "trend_offset", "error_cov_type",
                             "measurement_error", "enforce_stationarity",
                             "enforce_invertibility"] + list(kwargs.keys())
 
@@ -334,6 +334,14 @@ class VARMAX(MLEModel):
         Returns
         -------
         VARMAX
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           Cloning preserves `trend_offset` unless overridden. Previously it
+           defaulted to 1, which could change predictions after appending or
+           applying results with a non-default trend offset.
         """
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 

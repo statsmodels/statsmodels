@@ -1,0 +1,3 @@
+- Cloning a VARMAX model preserves its trend offset. Appending or applying
+  results with a non-default offset could restart the trend at 1 and
+  produce incorrect forecasts. :pr:`11300`

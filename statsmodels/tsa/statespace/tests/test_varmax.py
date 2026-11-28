@@ -1086,6 +1086,22 @@ def test_recreate_model():
         check_equivalent_models(mod, mod2)
 
 
+def test_append_after_extend_trend_offset():
+    endog = np.arange(24.0).reshape(12, 2)
+    mod = varmax.VARMAX(endog[:6], order=(1, 0), trend="t", error_cov_type="diagonal")
+    # With zero AR coefficients, E[y_t | y_{t-1}] = (t, 2t), starting at t=1.
+    res = mod.filter([1, 2, 0, 0, 0, 0, 1, 1])
+    extended = res.extend(endog[6:9])
+    appended = extended.append(endog[9:])
+    assert_allclose(appended.forecast(2), [[13, 26], [14, 28]], rtol=1e-12)
+
+    # Applying to the same six periods also starts the trend at t=7.
+    applied = extended.apply(endog[6:])
+    assert_allclose(applied.forecast(2), [[13, 26], [14, 28]], rtol=1e-12)
+    restarted = extended.apply(endog[6:], trend_offset=1)
+    assert_allclose(restarted.forecast(2), [[7, 14], [8, 16]], rtol=1e-12)
+
+
 def test_append_results():
     endog = np.arange(200).reshape(100, 2)
     exog = np.ones(100)
