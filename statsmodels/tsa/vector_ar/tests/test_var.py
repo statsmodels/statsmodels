@@ -968,6 +968,65 @@ def test_irf_trend():
     assert_allclose(irf_t.stderr()[1:4], irf.stderr()[1:4], rtol=0.03)
 
 
+def test_irf_lr_effect_cov_orth():
+    # The orthogonalized long-run effects are Psi_inf @ P with
+    # Psi_inf = inv(I - A_1 - A_2) and P = chol(sigma_u). Their covariance
+    # (Lütkepohl 2005, Section 3.7) has a term from the estimate of sigma_u
+    # that is divided by nobs, as in cum_effect_cov
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    irf = res.irf(10)
+    cov = irf.lr_effect_cov(orth=True)
+    # The long-run effects are the limit of the cumulative effects; the
+    # largest root modulus is 0.61, so 100 periods are far past convergence
+    cum_cov = res.irf(100).cum_effect_cov(orth=True)[-1]
+    assert_allclose(cov, cum_cov, rtol=1e-8)
+
+    # Delta method with a numerical Jacobian of Psi_inf @ P
+    k, p = res.neqs, res.k_ar
+    sigma = res.sigma_u
+    pairs = [(r, c) for c in range(k) for r in range(c, k)]  # order of vech
+    alpha = np.hstack(res.coefs).ravel(order="F")
+    vech_sigma = np.array([sigma[r, c] for r, c in pairs])
+
+    def lr_orth(a, s):
+        coefs = a.reshape((k, k * p), order="F")
+        a_sum = sum(coefs[:, i * k : (i + 1) * k] for i in range(p))
+        sig = np.zeros((k, k))
+        for value, (r, c) in zip(s, pairs, strict=True):
+            sig[r, c] = sig[c, r] = value
+        lr = np.linalg.inv(np.eye(k) - a_sum) @ np.linalg.cholesky(sig)
+        return lr.ravel(order="F")
+
+    def jacobian(func, x0):
+        step = 1e-6 * np.max(np.abs(x0))
+        cols = []
+        for i in range(x0.shape[0]):
+            up, down = x0.copy(), x0.copy()
+            up[i] += step
+            down[i] -= step
+            cols.append((func(up) - func(down)) / (2 * step))
+        return np.column_stack(cols)
+
+    jac_alpha = jacobian(lambda a: lr_orth(a, vech_sigma), alpha)
+    jac_sigma = jacobian(lambda s: lr_orth(alpha, s), vech_sigma)
+    # covariance of vec([A_1, A_2]), without the constant
+    cov_alpha = np.asarray(res.cov_params())[k:, k:]
+    # asymptotic covariance of sqrt(T) vech(sigma_u) under normality
+    cov_sigma = np.array(
+        [
+            [sigma[i, m] * sigma[j, n] + sigma[i, n] * sigma[j, m] for m, n in pairs]
+            for i, j in pairs
+        ]
+    )
+    expected = jac_alpha @ cov_alpha @ jac_alpha.T
+    expected += jac_sigma @ cov_sigma @ jac_sigma.T / res.nobs
+    # rtol: the numerical Jacobian is accurate to about 1e-8 here
+    assert_allclose(cov, expected, rtol=1e-4)
+    se = np.sqrt(np.diag(expected)).reshape((k, k), order="F")
+    assert_allclose(irf.lr_effect_stderr(orth=True), se, rtol=1e-4)
+
+
 class TestVARExtras:
     @classmethod
     def setup_class(cls):

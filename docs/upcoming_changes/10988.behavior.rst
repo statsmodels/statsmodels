@@ -1,0 +1,5 @@
+- ``lr_effect_cov(orth=True)`` and ``lr_effect_stderr(orth=True)`` of
+  ``IRAnalysis`` did not divide the term from the estimate of ``sigma_u`` by the
+  number of observations, so the orthogonalized long-run standard errors
+  were too large by up to the square root of nobs. They change.
+  :pr:`10988`
