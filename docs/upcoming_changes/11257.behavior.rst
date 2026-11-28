@@ -1,3 +1,5 @@
-- ``StepFunction`` now returns the initial value at negative infinity for
-  left-continuous step functions, including supports with repeated negative
-  infinity values. :pr:`11257`
+- ``StepFunction`` with ``side="left"`` returned the last value of ``y``
+  instead of ``ival`` when evaluated at ``-inf``
+  (``ECDF(x, side="left")(-np.inf)`` was 1.0 and is now 0.0). Repeated values
+  of an unsorted ``x`` are now sorted stably, so the last of the tied ``y`` is
+  used; the result depended on the sort algorithm before. :pr:`11257`

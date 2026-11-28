@@ -1,2 +1,3 @@
-- ``plot_ccf`` now indexes irregular non-negative lags correctly when
-  ``negative_lags=True`` and uses signed lags only for artist labels. :pr:`11258`
+- ``plot_ccf`` with ``negative_lags=True`` and ``lags`` given as a list or an
+  array plotted the cross-correlations of other lags. It now plots those of
+  the lags on the horizontal axis. :pr:`11258`

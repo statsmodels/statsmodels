@@ -207,8 +207,12 @@ def hdrboxplot(
     ncomp : int, optional
         Number of components to use.  If None, returns as many as the
         smaller of the number of rows or columns in data.
-    alpha : list of floats between 0 and 1, optional
-        Extra quantile values to compute. Default is None
+    alpha : sequence of float, optional
+        Extra quantile levels to compute, each between 0 and 1. The sequence
+        is not modified. Default is None.
+
+        .. versionchanged:: 0.15.1
+           A list is no longer modified and any sequence of float is accepted.
     threshold : float between 0 and 1, optional
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.

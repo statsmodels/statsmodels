@@ -513,9 +513,9 @@ def plot_ccf(
     Notes
     -----
     .. versionchanged:: 0.15.1
-       When ``negative_lags`` is True and ``lags`` is irregular, correlations
-       are indexed using non-negative lags and signed lags are used only as
-       artist labels.
+       With ``negative_lags=True`` and ``lags`` given as a list or an array,
+       the cross-correlations of other lags were plotted. They are now those
+       of the lags on the horizontal axis.
 
     Examples
     --------

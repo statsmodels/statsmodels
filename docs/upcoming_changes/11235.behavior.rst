@@ -1,0 +1,7 @@
+- ``innovations`` ignored ``demean=False`` and always used the autocovariances
+  of the demeaned series. ``ARIMA.fit(method="innovations")`` passes
+  ``demean=False``, so a model with ``trend="n"`` returned the moving average
+  estimate of a model with a constant. The estimates now use the series as
+  given, so they change when the series has a nonzero mean (for the Nile data,
+  the MA(1) coefficient of ``ARIMA(..., order=(0, 0, 1), trend="n")`` goes from
+  0.498 to 0.974). :issue:`11234`, :pr:`11235`

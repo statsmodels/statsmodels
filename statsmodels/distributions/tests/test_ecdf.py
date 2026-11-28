@@ -69,6 +69,30 @@ class TestDistributions:
         f = StepFunction(x[::-1], y[::-1], ival=3)
         assert f(-np.inf) == 3
 
+    @pytest.mark.parametrize("side", ["left", "right"])
+    def test_stepfunction_unsorted_ties(self, side):
+        # At a point, the value is the last y, in the order of the input, of
+        # the tied largest x that is not above the point (side="right") or is
+        # below it (side="left"). x includes repeated -inf.
+        rng = np.random.default_rng(11257)
+        nobs = 300
+        x = rng.integers(0, 5, nobs).astype(float)
+        x[::7] = -np.inf
+        y = np.arange(nobs, dtype=float)
+        ival = -1.0
+        time = np.r_[-np.inf, np.arange(-1, 5.5, 0.5), np.inf]
+
+        expected = []
+        for t in time:
+            reached = x <= t if side == "right" else x < t
+            if reached.any():
+                expected.append(y[reached & (x == x[reached].max())][-1])
+            else:
+                expected.append(ival)
+
+        f = StepFunction(x, y, ival=ival, side=side)
+        npt.assert_array_equal(f(time), expected)
+
     def test_monotone_fn_inverter(self):
         x = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 

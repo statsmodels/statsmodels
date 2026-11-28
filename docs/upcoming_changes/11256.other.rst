@@ -1,1 +1,4 @@
-- ``hdrboxplot`` no longer modifies a caller-provided ``alpha`` list. :pr:`11256`
+- ``hdrboxplot`` no longer adds its default levels to a list passed as
+  ``alpha``. A list that was reused kept the levels of the earlier call, for
+  example its ``threshold``, so later calls returned extra quantiles that they
+  did not ask for. ``alpha`` can also be a tuple or an array. :pr:`11256`

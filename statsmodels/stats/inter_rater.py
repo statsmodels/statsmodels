@@ -143,7 +143,7 @@ def to_table(data, bins=None):
     data : array_like, 2-Dim
         Data containing category assignment with subjects in rows and raters
         in columns.
-    bins : None, int or array_like, optional
+    bins : None, int, array_like or sequence of array_like, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
@@ -156,6 +156,10 @@ def to_table(data, bins=None):
         can be used to specify different edges. The bins are directly used
         by ``numpy.histogramdd``. This is useful if we want to merge
         categories.
+
+        .. versionchanged:: 0.15.1
+           A sequence with one array_like of bin edges per rater raised an
+           error before.
 
     Returns
     -------

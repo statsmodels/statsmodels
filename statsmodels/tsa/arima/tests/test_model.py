@@ -154,6 +154,20 @@ def test_innovations():
     assert_allclose(res.params, desired_p[-1].params)
 
 
+def test_innovations_trend_n_not_demeaned():
+    # gh-11234: without a trend the series is used as given, not demeaned. For
+    # an MA(1), the innovations estimates are theta = gamma(1) / gamma(0) and
+    # sigma2 = gamma(0) * (1 - theta**2) with gamma(h) = sum_t x_t x_{t+h} / n
+    x = dta["infl"].to_numpy()
+    gamma0 = x @ x / len(x)
+    gamma1 = x[1:] @ x[:-1] / len(x)
+    theta = gamma1 / gamma0
+
+    res = ARIMA(x, order=(0, 0, 1), trend="n").fit(method="innovations")
+
+    assert_allclose(res.params, [theta, gamma0 * (1 - theta**2)])
+
+
 def test_innovations_arma():
     # Test for basic use of innovations estimation with AR terms
     endog = dta["infl"].diff().iloc[1:101]
