@@ -1,0 +1,4 @@
+- State space exponential smoothing models with known initialization now
+  retain the supplied initial states when cloned. Calling ``append``,
+  ``extend`` or ``apply`` previously required passing the initial values
+  again. :pr:`11290`
