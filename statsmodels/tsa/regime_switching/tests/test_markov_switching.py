@@ -844,3 +844,109 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+def two_regime_mean_data():
+    # Four blocks of ten observations that alternate between two means
+    rng = np.random.default_rng(20261122)
+    return rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+
+
+@pytest.mark.parametrize("start, end", [(0, 39), (0, 9), (1, 39), (10, 20), (7, 7)])
+@pytest.mark.parametrize("conditional", [True, 1])
+def test_predict_conditional_start_end_regression(start, end, conditional):
+    # Conditional on S_t = i, the prediction is the regime mean mu_i
+    mod = markov_regression.MarkovRegression(two_regime_mean_data(), k_regimes=2)
+    mu = np.array([0.2, 2.8])
+    params = np.r_[0.9, 0.2, mu, 1.0]
+    predict = mod.predict(params, start=start, end=end, conditional=conditional)
+    expected = np.repeat(mu[:, None], end - start + 1, axis=1)
+    assert_allclose(predict, expected, rtol=1e-13)
+
+
+def test_predict_conditional_date_keys():
+    # Date keys select the same periods as their integer locations, 10 to 17
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    endog = pd.Series(two_regime_mean_data(), index=index)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    mu = np.array([0.2, 2.8])
+    params = np.r_[0.9, 0.2, mu, 1.0]
+    predict = mod.predict(
+        params, start="2000-11-01", end="2001-06-01", conditional=True
+    )
+    assert_allclose(predict, np.repeat(mu[:, None], 8, axis=1), rtol=1e-13)
+
+
+@pytest.mark.parametrize("start, end", [(0, 38), (0, 9), (1, 38), (10, 20), (7, 7)])
+def test_predict_conditional_start_end_autoregression(start, end):
+    endog = two_regime_mean_data()
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=1)
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+    params = np.r_[0.9, 0.2, mu, 1.0, phi]
+
+    # Conditional on (S_t, S_{t-1}) = (i, j): mu_i + phi_i (y_{t-1} - mu_j).
+    # The first observation is presample, so prediction n is for endog[n + 1]
+    # and its lag is endog[n]
+    lagged = endog[start : end + 1]
+    expected = mu[:, None, None] + phi[:, None, None] * (
+        lagged - mu[None, :, None]
+    )
+    predict = mod.predict(params, start=start, end=end, conditional=2)
+    assert_allclose(predict, expected, rtol=1e-13)
+
+    # With fewer conditioning regimes, the selected periods of the
+    # predictions for the full sample
+    for conditional in [False, 1]:
+        full = mod.predict(params, conditional=conditional)
+        assert full.shape[-1] == mod.nobs
+        predict = mod.predict(params, start=start, end=end, conditional=conditional)
+        assert_allclose(predict, full[..., start : end + 1], rtol=1e-13)
+
+
+@pytest.mark.parametrize("conditional", [False, True, 1, 2])
+def test_predict_one_observation_regression(conditional):
+    # With one observation, Pr[S_1 = i | y_1] is proportional to the ergodic
+    # probability of regime i times the density of y_1 given S_1 = i
+    endog = np.array([1.3])
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    p00, p10 = 0.8, 0.3
+    mu = np.array([0.5, 2.0])
+    params = np.r_[p00, p10, mu, 1.0]
+    ergodic = np.array([p10, 1 - p00]) / (1 - p00 + p10)
+    weights = ergodic * np.exp(-0.5 * (endog[0] - mu) ** 2)
+    weights /= weights.sum()
+    res = mod.smooth(params, cov_type="none")
+    if conditional is False:
+        expected = np.array([weights @ mu])
+        assert_allclose(res.fittedvalues, expected, rtol=1e-12)
+        assert_allclose(res.resid, endog - expected, rtol=1e-12)
+    else:
+        # Conditional on S_1 = i, the prediction is mu_i
+        expected = mu[:, None]
+    assert_allclose(mod.predict(params, conditional=conditional), expected, rtol=1e-12)
+    assert_allclose(res.predict(conditional=conditional), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("conditional", [False, 2, 3])
+def test_predict_one_observation_autoregression(conditional):
+    # endog[0] is the presample lag of the single observation endog[1]
+    endog = np.array([0.4, 2.1])
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=1)
+    p00, p10 = 0.8, 0.3
+    mu = np.array([0.5, 2.0])
+    phi = np.array([0.5, -0.2])
+    params = np.r_[p00, p10, mu, 1.0, phi]
+    # Conditional on (S_1, S_0) = (i, j): mu_i + phi_i (y_0 - mu_j)
+    means = mu[:, None] + phi[:, None] * (endog[0] - mu[None, :])
+    if conditional is False:
+        # Pr[S_1 = i, S_0 = j | y_1] is proportional to
+        # Pr[S_1 = i | S_0 = j] Pr[S_0 = j] times the density of y_1
+        transition = np.array([[p00, p10], [1 - p00, 1 - p10]])
+        ergodic = np.array([p10, 1 - p00]) / (1 - p00 + p10)
+        joint = transition * ergodic * np.exp(-0.5 * (endog[1] - means) ** 2)
+        expected = np.array([(joint * means).sum() / joint.sum()])
+    else:
+        expected = means[..., None]
+    predict = mod.predict(params, conditional=conditional)
+    assert_allclose(predict, expected, rtol=1e-12)

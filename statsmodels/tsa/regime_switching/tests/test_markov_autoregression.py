@@ -1418,3 +1418,124 @@ def test_exog_tvtp_forms(form):
     params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1, 0.4, -0.2]
 
     assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
+
+
+def conditional_means_by_hand(endog, params, order):
+    """
+    E[y_t | S_t, ..., S_{t-order}] for a two-regime model with a switching
+    constant and switching AR coefficients:
+    mu_{S_t} + sum_j phi_{j, S_t} (y_{t-j} - mu_{S_{t-j}}).
+    """
+    mu = params[2:4]
+    # phi[j - 1, i] is the coefficient of lag j in regime i
+    phi = params[5:].reshape(order, 2)
+    nobs = endog.shape[0] - order
+    means = np.empty((2,) * (order + 1) + (nobs,))
+    for regimes in itertools.product(range(2), repeat=order + 1):
+        current = regimes[0]
+        value = np.full(nobs, mu[current])
+        for j in range(1, order + 1):
+            lagged = endog[order - j : endog.shape[0] - j]
+            value = value + phi[j - 1, current] * (lagged - mu[regimes[j]])
+        means[regimes] = value
+    return means
+
+
+def conditional_average_by_hand(means, joint, k):
+    """
+    Average `means` over the regimes after the first `k` with their
+    probabilities conditional on the first `k` regimes:
+    E[y_t | A] = sum_B Pr[A, B] E[y_t | A, B] / Pr[A], NaN where Pr[A] = 0.
+    """
+    k_regimes = joint.shape[0]
+    nobs = joint.shape[-1]
+    out = np.full((k_regimes,) * k + (nobs,), np.nan)
+    for regimes in itertools.product(range(k_regimes), repeat=k):
+        for t in range(nobs):
+            prob = joint[regimes + (Ellipsis, t)]
+            if prob.sum() > 0:
+                value = (prob * means[regimes + (Ellipsis, t)]).sum()
+                out[regimes + (t,)] = value / prob.sum()
+    return out
+
+
+def conditional_predict_data(order):
+    endog = np.random.default_rng(20261122).standard_normal(40) + np.repeat(
+        [0, 3, 0, 3], 10
+    )
+    params = np.r_[0.9, 0.2, 0.2, 2.8, 1.0, 0.5, -0.2, 0.1, 0.3][: 5 + 2 * order]
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=order)
+    return endog, params, mod
+
+
+@pytest.mark.parametrize("probabilities", ["smoothed", "filtered", "predicted"])
+@pytest.mark.parametrize(
+    "order, conditional", [(1, 1), (1, True), (2, 1), (2, True), (2, 2)]
+)
+def test_predict_conditional_fewer_regimes(order, conditional, probabilities):
+    # A prediction conditional on the current regime and fewer than `order`
+    # past regimes is the expected value given those regimes, not the
+    # prediction weighted by their probability
+    endog, params, mod = conditional_predict_data(order)
+    res = mod.smooth(params)
+    joint = getattr(res, f"{probabilities}_joint_probabilities")
+    means = conditional_means_by_hand(endog, params, order)
+    k = int(conditional)
+    expected = conditional_average_by_hand(means, joint, k)
+    assert np.isfinite(expected).all()
+
+    actual = mod.predict(params, probabilities=probabilities, conditional=conditional)
+    assert actual.shape == (2,) * k + (mod.nobs,)
+    assert_allclose(actual, expected, rtol=1e-10)
+    actual = res.predict(probabilities=probabilities, conditional=conditional)
+    assert_allclose(actual, expected, rtol=1e-10)
+
+    # Law of total expectation: averaging over the conditioning regimes with
+    # their probabilities gives the unconditional prediction
+    marginal = joint.sum(axis=tuple(range(k, order + 1)))
+    unconditional = mod.predict(params, probabilities=probabilities)
+    assert_allclose(
+        (marginal * actual).sum(axis=tuple(range(k))), unconditional, rtol=1e-10
+    )
+
+
+@pytest.mark.parametrize("probabilities", ["smoothed", "filtered", "predicted"])
+@pytest.mark.parametrize("order", [1, 2])
+def test_predict_conditional_all_regimes_and_unconditional(order, probabilities):
+    # Controls: conditional on every regime the model distinguishes, the
+    # predictions are the conditional means; unconditional predictions
+    # average them with the joint probabilities
+    endog, params, mod = conditional_predict_data(order)
+    res = mod.smooth(params)
+    joint = getattr(res, f"{probabilities}_joint_probabilities")
+    means = conditional_means_by_hand(endog, params, order)
+
+    actual = mod.predict(params, probabilities=probabilities, conditional=order + 1)
+    assert_allclose(actual, means, rtol=1e-12)
+    actual = mod.predict(params, probabilities=probabilities)
+    expected = (joint * means).sum(axis=tuple(range(order + 1)))
+    assert_allclose(actual, expected, rtol=1e-12)
+
+
+def test_predict_conditional_zero_probability():
+    # Regimes so far apart that the probability of the other regime
+    # underflows to zero: the expected value given a regime with probability
+    # zero is undefined (NaN), without a warning
+    endog = np.random.default_rng(20261122).standard_normal(40) + np.repeat(
+        [0, 40, 0, 40], 10
+    )
+    params = np.r_[0.9, 0.2, 0.0, 40.0, 1.0, 0.5, -0.2]
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=1)
+    joint = mod.smooth(params).smoothed_joint_probabilities
+    marginal = joint.sum(axis=1)
+    assert (marginal == 0).any()
+    assert (marginal > 0).any()
+    means = conditional_means_by_hand(endog, params, 1)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        actual = mod.predict(params, conditional=1)
+        unconditional = mod.predict(params)
+    assert_equal(np.isnan(actual), marginal == 0)
+    assert_allclose(actual, conditional_average_by_hand(means, joint, 1), rtol=1e-10)
+    assert_allclose(unconditional, (joint * means).sum(axis=(0, 1)), rtol=1e-12)

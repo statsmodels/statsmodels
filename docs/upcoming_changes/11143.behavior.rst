@@ -1,0 +1,12 @@
+- :class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression`
+  and
+  :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression`
+  with a single observation (``nobs`` 1) took the last regime axis of the
+  predictions for the time axis, so ``predict`` returned only the
+  predictions for the first regime of that axis, without a time axis:
+  for ``MarkovRegression`` also the unconditional predictions,
+  ``fittedvalues`` and ``resid``, which were the prediction of the first
+  regime instead of the weighted average, and for
+  ``MarkovAutoregression`` the predictions with ``conditional`` at least
+  ``order``. The predictions are computed as with more observations.
+  :pr:`11143`
