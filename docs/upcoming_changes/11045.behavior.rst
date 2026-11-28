@@ -1,0 +1,9 @@
+- ``smooth`` of state space models with ``smoother_output`` (or the
+  ``smoother_output`` option) set to part of the output computed some of
+  it from output that was not computed, which gave wrong values (for
+  example the smoothed state autocovariances without the smoothed state
+  covariances), and the results reported all output, with stale values
+  for the output that was not computed. The output that the requested
+  output depends on is computed as well, output that is not computed is
+  None, and ``smoother_output`` of ``SmootherResults`` reports what was computed (it
+  was always None). Results of such calls change. :pr:`11045`
