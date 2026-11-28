@@ -138,9 +138,9 @@ Dependencies
 The current minimum dependencies are:
 
 * `Python <https://www.python.org>`__ >= 3.10
-* `NumPy <https://numpy.org/>`__ >= 1.23.5
-* `SciPy <https://www.scipy.org/>`__ >= 1.8
-* `Pandas <https://pandas.pydata.org/>`__ >= 1.4
+* `NumPy <https://numpy.org/>`__ >= 2.0
+* `SciPy <https://www.scipy.org/>`__ >= 1.13
+* `Pandas <https://pandas.pydata.org/>`__ >= 2.2.2
 * `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.6
 * `packaging <https://packaging.pypa.io/>`__ >= 21.3
 * `formulaic <https://matthewwardrop.github.io/formulaic/>`__ >= 1.1.0
