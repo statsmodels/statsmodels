@@ -2317,6 +2317,88 @@ def test_ql_diff(family):
     assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)
 
 
+@pytest.mark.parametrize(
+    "family", [families.Gaussian, families.Binomial, families.Poisson]
+)
+def test_qic_weights(family):
+    # With case weights, the quasi-likelihood and the QIC values must
+    # be the same as for the data with each observation repeated
+    # according to its weight.  The unweighted calculation ignored the
+    # weights in both the quasi-likelihood integral and in omega, the
+    # model-based covariance under independence.
+    fam = family()
+
+    y, x1, _, g = simple_qic_data(family)
+    y = np.asarray(y, dtype=float)
+    x1 = np.asarray(x1, dtype=float)
+    # The weights are chosen so that the observations with x1 == 1 do
+    # not all have weight 1: with the original weights the derivative
+    # matrix is zero wherever x1 is zero, so omega is the same whether
+    # or not the weights are applied, and the test below cannot catch
+    # a regression in omega.
+    weights = np.r_[1, 2, 1, 3, 1, 2, 3, 1, 2, 1, 3, 1, 2, 3, 1].astype(float)
+    index = np.repeat(np.arange(len(y)), weights.astype(int))
+
+    model_w = gee.GEE(
+        y,
+        x1,
+        family=fam,
+        groups=g,
+        weights=weights,
+        cov_struct=cov_struct.Independence(),
+    )
+    result_w = model_w.fit(ddof_scale=0)
+
+    model_e = gee.GEE(
+        y[index],
+        x1[index],
+        family=family(),
+        groups=g[index],
+        cov_struct=cov_struct.Independence(),
+    )
+    result_e = model_e.fit(ddof_scale=0)
+
+    assert_allclose(result_w.params, result_e.params, rtol=1e-6)
+    assert_allclose(result_w.scale, result_e.scale, rtol=1e-6)
+
+    ql_w, qic_w, qicu_w = model_w.qic(
+        result_w.params, result_w.scale, result_w.cov_params()
+    )
+    ql_e, qic_e, qicu_e = model_e.qic(
+        result_e.params, result_e.scale, result_e.cov_params()
+    )
+    assert_allclose(ql_w, ql_e, rtol=1e-5, atol=1e-5)
+    assert_allclose(qic_w, qic_e, rtol=1e-5, atol=1e-5)
+    assert_allclose(qicu_w, qicu_e, rtol=1e-5, atol=1e-5)
+
+    # The penalty term 2 * trace(omega @ cov_params) must also see the
+    # weights.  With the robust covariance the trace is close to the
+    # number of parameters whether or not omega uses the weights, so
+    # the comparison above cannot catch a regression in omega.  With
+    # cov_params set to the identity the penalty is 2 * trace(omega),
+    # which isolates omega.
+    nparam = result_w.params.shape[0]
+    _, qic_w_eye, _ = model_w.qic(
+        result_w.params, result_w.scale, np.eye(nparam)
+    )
+    _, qic_e_eye, _ = model_e.qic(
+        result_e.params, result_e.scale, np.eye(nparam)
+    )
+    assert_allclose(qic_w_eye, qic_e_eye, rtol=1e-5, atol=1e-5)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        qic_res_w = result_w.qic()
+        qic_res_e = result_e.qic()
+    assert_allclose(qic_res_w, qic_res_e, rtol=1e-5, atol=1e-5)
+
+    if family is families.Gaussian:
+        # Closed form: the Gaussian quasi-likelihood at the fitted
+        # values with scale 1 is minus one half of the number of
+        # observations, which is the sum of the weights here.
+        assert_allclose(ql_w, -weights.sum() / 2.0, rtol=1e-4)
+
+
 def test_qic_warnings():
     fam = families.Gaussian()
     y, x1, _, g = simple_qic_data(fam)

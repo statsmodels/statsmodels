@@ -1,0 +1,4 @@
+- ``GEE.qic`` ignored the case ``weights`` when accumulating the
+  quasi-likelihood and ``omega``, so the QIC of a weighted fit differed
+  from the QIC of the same data with each observation repeated according
+  to its weight. Both now multiply by the weights. :pr:`10949`

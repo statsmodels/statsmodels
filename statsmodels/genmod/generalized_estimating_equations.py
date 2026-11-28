@@ -2093,6 +2093,12 @@ class GEE(GLM):
         When using the QIC for models with unknown scale parameter, use a
         common estimate of the scale parameter for all models being compared.
 
+        If the model was fit with case ``weights``, each observation's
+        contribution to the quasi-likelihood and to the model-based
+        covariance under independence is multiplied by its weight, so
+        the values are the same as for the data with each observation
+        repeated according to its weight.
+
         References
         ----------
         .. [Pan2001] W. Pan (2001).  Akaike's information criterion in generalized
@@ -2100,6 +2106,13 @@ class GEE(GLM):
         """
 
         varfunc = self.family.variance
+
+        # Case weights multiply each observation's contribution, as they
+        # do in the estimating equations and in the scale estimate, so
+        # that the quasi-likelihood and the model-based covariance under
+        # independence are the same as for the data with each observation
+        # repeated according to its weight.
+        weights_li = getattr(self, "weights_li", None)
 
         means = []
         omega = 0.0
@@ -2109,20 +2122,31 @@ class GEE(GLM):
             expval, lpr = self.cached_means[i]
             means.append(expval)
             dmat = self.mean_deriv(self.exog_li[i], lpr)
-            omega += np.dot(dmat.T, dmat) / scale
+            if weights_li is not None:
+                dmat_w = dmat * weights_li[i][:, None]
+                omega += np.dot(dmat_w.T, dmat) / scale
+            else:
+                omega += np.dot(dmat.T, dmat) / scale
 
         means = np.concatenate(means)
 
         # The quasi-likelihood, use change of variables so the integration is
         # from -1 to 1.
         endog_li = np.concatenate(self.endog_li)
+        if weights_li is not None:
+            weights = np.concatenate(weights_li)
+        else:
+            weights = None
         du = means - endog_li
         qv = np.empty(n_step)
         xv = np.linspace(-0.99999, 1, n_step)
         for i, g in enumerate(xv):
             u = endog_li + (g + 1) * du / 2.0
             vu = varfunc(u)
-            qv[i] = -np.sum(du**2 * (g + 1) / vu)
+            if weights is not None:
+                qv[i] = -np.sum(weights * du**2 * (g + 1) / vu)
+            else:
+                qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= 4 * scale
 
         from scipy.integrate import trapezoid
