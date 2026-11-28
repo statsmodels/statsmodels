@@ -101,6 +101,16 @@ def _check_index(desired_index, dta, title="data"):
             )
 
 
+def _pinv_rank(matrix):
+    # The pseudo-inverse of a matrix and its rank. The matrix of the free
+    # parameters is empty if every parameter is fixed (pinv_extended raises
+    # for it): its pseudo-inverse is empty and its rank 0.
+    if matrix.size == 0:
+        return np.zeros_like(matrix), 0
+    pinv, singular_values = pinv_extended(matrix)
+    return pinv, np.linalg.matrix_rank(np.diag(singular_values))
+
+
 class MLEModel(tsbase.TimeSeriesModel):
     r"""
     State space model for maximum likelihood estimation
@@ -1239,38 +1249,21 @@ class MLEModel(tsbase.TimeSeriesModel):
         params,
         transformed=True,
         includes_fixed=False,
-        approx_complex_step=None,
+        approx_complex_step=False,
         approx_centered=False,
-        res=None,
+        *,
+        res,
         **kwargs,
     ):
+        # `res` is the output of the filter at `params`. The callers check
+        # that complex-step differentiation is only used with transformed
+        # parameters.
         params = np.array(params, ndmin=1)
-
-        # We cannot use complex-step differentiation with non-transformed
-        # parameters
-        if approx_complex_step is None:
-            approx_complex_step = transformed
-        if not transformed and approx_complex_step:
-            raise ValueError(
-                "Cannot use complex-step approximations to"
-                " calculate the observed_information_matrix"
-                " with untransformed parameters."
-            )
 
         # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
         if approx_complex_step:
             kwargs["inversion_method"] = INVERT_UNIVARIATE | SOLVE_LU
-
-        # Get values at the params themselves
-        if res is None:
-            self.update(
-                params,
-                transformed=transformed,
-                includes_fixed=includes_fixed,
-                complex_step=approx_complex_step,
-            )
-            res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
 
         # Setup
         n = len(params)
@@ -2639,8 +2632,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             if isinstance(iloc, slice):
                 iloc = iloc.start
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 
@@ -2879,8 +2870,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             if isinstance(iloc, slice):
                 iloc = iloc.start
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc >= self.nobs:
             raise ValueError(
                 "Cannot anchor impulse responses outside of the sample."
@@ -3297,12 +3286,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res = self
         else:
             raise NotImplementedError
-            res = self.__class__(
-                self.model,
-                self.params,
-                normalized_cov_params=self.normalized_cov_params,
-                scale=self.scale,
-            )
 
         # Set the new covariance type
         res.cov_type = cov_type
@@ -3400,15 +3383,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            (tmp, rank) = _pinv_rank(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            (neg_cov, rank) = _pinv_rank(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+            self._rank = rank
         return -neg_cov
 
     @cache_readonly
@@ -3433,15 +3416,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            (tmp, rank) = _pinv_rank(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            (neg_cov, rank) = _pinv_rank(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+            self._rank = rank
         return -neg_cov
 
     @cache_readonly
@@ -3505,6 +3488,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.cov_params_robust_oim
 
     def _cov_params_robust_oim(self, approx_complex_step=True, approx_centered=False):
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self._cov_params_opg(
             approx_complex_step=approx_complex_step, approx_centered=approx_centered
         )
@@ -3525,19 +3511,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             cov_opg = cov_opg[mask]
             evaluated_hessian = evaluated_hessian[mask]
 
-            tmp, singular_values = pinv_extended(
+            tmp, rank = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
             cov_params[mask] = tmp
         else:
-            (cov_params, singular_values) = pinv_extended(
+            (cov_params, rank) = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        if set_rank:
+            self._rank = rank
         return cov_params
 
     @cache_readonly
@@ -3545,6 +3531,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         method from Harvey (1989) as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust"`` or ``"robust_oim"``, the
+           rank of this matrix decides whether ``summary`` warns that the
+           covariance matrix is singular. The rank of the outer product of
+           gradients matrix was used.
         """
         return self._cov_params_robust_oim(
             self._cov_approx_complex_step, self._cov_approx_centered
@@ -3553,6 +3546,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _cov_params_robust_approx(
         self, approx_complex_step=True, approx_centered=False
     ):
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self._cov_params_opg(
             approx_complex_step=approx_complex_step, approx_centered=approx_centered
         )
@@ -3574,19 +3570,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             cov_opg = cov_opg[mask]
             evaluated_hessian = evaluated_hessian[mask]
 
-            tmp, singular_values = pinv_extended(
+            tmp, rank = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
             cov_params[mask] = tmp
         else:
-            (cov_params, singular_values) = pinv_extended(
+            (cov_params, rank) = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        if set_rank:
+            self._rank = rank
         return cov_params
 
     @cache_readonly
@@ -3594,6 +3590,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         numerical Hessian as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust_approx"``, the rank of this
+           matrix decides whether ``summary`` warns that the covariance matrix
+           is singular. The rank of the outer product of gradients matrix was
+           used.
         """
         return self._cov_params_robust_approx(
             self._cov_approx_complex_step, self._cov_approx_centered
@@ -4528,8 +4531,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             if isinstance(iloc, slice):
                 iloc = iloc.start
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 

@@ -1,0 +1,6 @@
+- The summary of state space results with ``cov_type="robust_approx"``
+  (and ``"robust"`` or ``"robust_oim"``) decides whether to warn that the
+  covariance matrix is singular from the rank of the robust covariance
+  matrix, not from that of the outer product of gradients matrix. The
+  warning can now appear (or disappear) for such results; the covariance
+  matrices and standard errors do not change. :pr:`11130`
