@@ -1,6 +1,9 @@
 from statsmodels.compat.pandas import QUARTER_END
 
+import ast
 import datetime as dt
+import importlib.util
+import inspect
 import re
 import warnings
 
@@ -20,6 +23,7 @@ from statsmodels.tools.docstring import NumpyDocString
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.arima_process import (
     ArmaProcess,
+    _arma_lags_method_doc,
     ar2arma,
     arma2ar,
     arma2ma,
@@ -1036,6 +1040,40 @@ def test_arma_process_periodogram_docstring():
     method = parameters(ArmaProcess.periodogram)
     assert list(method) == ["nobs", "normalization"]
     assert method["normalization"] == parameters(arma_periodogram)["normalization"]
+
+
+@pytest.mark.parametrize("doc", [None, "", " \n    "])
+def test_arma_lags_method_doc_blank(doc):
+    # A blank docstring (Nuitka) raised TypeError, because Docstring does not
+    # parse it. It is returned unchanged, as None is
+    def func():
+        pass
+
+    func.__doc__ = doc
+    assert _arma_lags_method_doc(func, "lags", "The number of lags.") is doc
+
+
+def test_module_with_blank_docstrings(tmp_path):
+    # Nuitka can replace every docstring with "". The class body of
+    # ArmaProcess builds the docstrings of its methods from those of the
+    # functions, so importing the module raised TypeError
+    from statsmodels.tsa import arima_process
+
+    tree = ast.parse(inspect.getsource(arima_process))
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)):
+            continue
+        if ast.get_docstring(node, clean=False) is not None:
+            node.body[0].value = ast.Constant("")
+    path = tmp_path / "blank_arima_process.py"
+    path.write_text(ast.unparse(tree), encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("blank_arima_process", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert not module.arma_acf.__doc__
+    process = module.ArmaProcess([1, -0.5], [1])
+    assert not process.acf.__doc__.strip()
+    assert_allclose(process.acf(3), [1, 0.5, 0.25])
 
 
 def test_arma_periodogram_unit_root():
