@@ -1295,6 +1295,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         em_iter : int, optional
             Number of initial EM iteration steps used to improve starting
             parameters.
+
+            .. versionchanged:: 0.15.1
+
+               The EM step of the transition probabilities divides by the
+               smoothed probabilities of the previous regime. It used those of
+               the current regime, so the parameters after the EM steps (also
+               those of ``search_iter``), and the estimates that the optimizer
+               reaches from them, can change.
         search_reps : int, optional
             Number of randomly drawn search parameters that are drawn around
             `start_params` to try and improve starting parameters. Default is
@@ -1521,9 +1529,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         regime_transition = np.zeros((self.k_regimes, k_transition))
         for i in range(self.k_regimes):  # S_{t_1}
             for j in range(self.k_regimes - 1):  # S_t
+                # sum_t Pr[S_t = j, S_{t-1} = i] / sum_t Pr[S_{t-1} = i]
                 regime_transition[i, j] = np.sum(
                     smoothed_joint_probabilities[j, i]
-                ) / np.sum(result.smoothed_marginal_probabilities[i])
+                ) / np.sum(smoothed_joint_probabilities[:, i])
 
             # It may be the case that due to rounding error this estimates
             # transition probabilities that sum to greater than one. If so,

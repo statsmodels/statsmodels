@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 from scipy.special import logsumexp
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.regime_switching import markov_regression, markov_switching
 
 current_path = Path(__file__).resolve().parent
@@ -1786,6 +1787,10 @@ class MarkovRegression:
             res = self.model.fit(disp=False, **kwargs)
         assert_allclose(res.llf, self.true["llf_fit"], atol=self.atol, rtol=self.rtol)
 
+    # The llf_fit_em values are regression values, not external references:
+    # the log-likelihood that the EM algorithm of statsmodels reaches with its
+    # default settings. They were recomputed in 0.15.1, when the M-step of the
+    # transition probabilities was fixed.
     @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
@@ -2727,7 +2732,7 @@ class TestFedFundsConst(MarkovRegression):
             "params": np.r_[0.9820939, 0.0503587, 3.70877, 9.556793, 2.107562**2],
             "llf": -508.63592,
             "llf_fit": -508.63592,
-            "llf_fit_em": -508.65852,
+            "llf_fit_em": -508.65687,
             "bse_oim": np.r_[0.0104002, 0.0268434, 0.1767083, 0.2999889, np.nan],
             "smoothed0": results["const_sm1"],
             "smoothed1": results["const_sm2"],
@@ -3030,9 +3035,29 @@ class TestFedFundsConstShort(MarkovRegression):
             "params": np.r_[0.9820939, 0.0503587, 3.70877, 9.556793, 2.107562**2],
             "llf": -29.909297,
             "llf_fit": -7.8553370,
-            "llf_fit_em": -7.8554974,
+            "llf_fit_em": -7.8534865,
         }
         super().setup_class(true, fedfunds[-10:], k_regimes=2)
+
+    def test_fit(self, **kwargs):
+        # The start parameters that 5 EM iterations gave before the M-step of
+        # the transition probabilities was fixed in 0.15.1, so that the test
+        # keeps checking the same optimum. From those of the fixed EM, the
+        # optimizer reaches a degenerate maximum (llf 5.127) of this short
+        # series, where one regime holds only the first observation and the
+        # variance goes to zero.
+        kwargs.setdefault(
+            "start_params",
+            np.r_[
+                0.46031481590897694,
+                0.4608638922318685,
+                0.3072522679243685,
+                0.4402689398151199,
+                0.2773330925215867,
+            ],
+        )
+        kwargs.setdefault("em_iter", 0)
+        super().test_fit(**kwargs)
 
     def test_filter_output(self, **kwargs):
         res = self.result
@@ -3185,7 +3210,7 @@ class TestFedFundsConstL1(MarkovRegression):
             ],
             "llf": -264.71069,
             "llf_fit": -264.71069,
-            "llf_fit_em": -264.71153,
+            "llf_fit_em": -264.71084,
             "bse_oim": np.r_[
                 0.1202616, 0.0495924, 0.2886657, 0.1183838, 0.0337234, 0.0185031, np.nan
             ],
@@ -3222,7 +3247,7 @@ class TestFedFundsConstL1Exog(MarkovRegression):
             ],
             "llf": -229.25614,
             "llf_fit": -229.25614,
-            "llf_fit_em": -229.25624,
+            "llf_fit_em": -229.25628,
             "bse_oim": np.r_[
                 0.0929915,
                 0.0641179,
@@ -3308,7 +3333,7 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
             ],
             "llf": -189.89493,
             "llf_fit": -182.27188,
-            "llf_fit_em": -226.88581,
+            "llf_fit_em": -226.87619,
         }
         super().setup_class(
             true,
@@ -3340,7 +3365,7 @@ class TestAreturnsConstL1Variance(MarkovRegression):
             ],
             "llf": -745.7977,
             "llf_fit": -745.7977,
-            "llf_fit_em": -745.83654,
+            "llf_fit_em": -745.82796,
             "bse_oim": np.r_[
                 0.0634387,
                 0.0662574,
@@ -3378,7 +3403,7 @@ class TestMumpspcNoconstL1Variance(MarkovRegression):
             ],
             "llf": 131.7225,
             "llf_fit": 131.7225,
-            "llf_fit_em": 131.7175,
+            "llf_fit_em": 131.72149,
         }
         super().setup_class(
             true,
@@ -4221,3 +4246,36 @@ def test_exog_tvtp_forms(form):
     params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1]
 
     assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "k_regimes, params",
+    [
+        (2, np.r_[0.9, 0.2, 0.5, 2.0, 1.0]),
+        (3, np.r_[0.8, 0.1, 0.1, 0.1, 0.8, 0.1, 0.0, 1.0, 2.0, 1.0]),
+    ],
+)
+def test_em_transition_m_step(k_regimes, params):
+    # The M-step of the EM algorithm for the transition probabilities
+    # (Hamilton, 1990) is
+    #   p[i->j] = sum_t Pr[S_t = j, S_{t-1} = i | T] / sum_t Pr[S_{t-1} = i | T],
+    # here computed from the smoothed joint probabilities at the start params.
+    # It used to divide by sum_t Pr[S_t = i | T], which differs by
+    # Pr[S_{T-1} = i | T] - Pr[S_{-1} = i | T], so the test uses a short
+    # series that ends in another regime than it starts.
+    endog, _ = two_regime_data(nobs=18)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=k_regimes)
+    joint = mod.smooth(params).smoothed_joint_probabilities
+    numerator = joint.sum(axis=-1)
+    denominator = joint.sum(axis=(0, -1))
+
+    # One EM iteration, and no optimization after it
+    with pytest.warns(ConvergenceWarning):
+        params_em = mod.fit(
+            start_params=params, em_iter=1, maxiter=0, return_params=True, disp=False
+        )
+
+    for i in range(k_regimes):
+        for j in range(k_regimes - 1):
+            idx = mod.param_names.index(f"p[{i}->{j}]")
+            assert_allclose(params_em[idx], numerator[j, i] / denominator[i], rtol=1e-10)

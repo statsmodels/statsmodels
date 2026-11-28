@@ -15,6 +15,7 @@ import pytest
 from scipy.special import logsumexp
 
 from statsmodels.tools import add_constant
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.regime_switching import markov_autoregression
 
 current_path = Path(__file__).resolve().parent
@@ -241,6 +242,10 @@ class MarkovAutoregression:
         assert_allclose(res.llf, self.true["llf_fit"], atol=self.atol,
                         rtol=self.rtol)
 
+    # The llf_fit_em values are regression values, not external references:
+    # the log-likelihood that the EM algorithm of statsmodels reaches with its
+    # default settings. They were recomputed in 0.15.1, when the M-step of the
+    # transition probabilities was fixed.
     @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
@@ -382,10 +387,25 @@ class TestHamiltonAR2Short(MarkovAutoregression):
                             np.exp(-0.262658)**2, 0.013486, -0.057521],
             "llf": -10.14066,
             "llf_fit": -4.0523073,
-            "llf_fit_em": -8.885836
+            # With 10 observations, the last M-step of the AR coefficients
+            # jumps to explosive values, which have a much lower llf
+            "llf_fit_em": -49.954706
         }
         super().setup_class(
             true, rgnp[-10:], k_regimes=2, order=2, switching_ar=False)
+
+    def test_fit(self, **kwargs):
+        # The start parameters that 5 EM iterations gave before the M-step of
+        # the transition probabilities was fixed in 0.15.1, so that the test
+        # keeps checking the same optimum. From those of the fixed EM, the
+        # optimizer stops at another local maximum (llf -5.096) of this short
+        # series.
+        kwargs.setdefault("start_params", np.r_[
+            0.31702768919728885, 0.5157365498104214, 1.130500729202914,
+            1.4907348918903514, 0.43965524060175726, 0.5599364863986385,
+            -0.3666452085497568])
+        kwargs.setdefault("em_iter", 0)
+        super().test_fit(**kwargs)
 
     def test_fit_em(self):
         with warnings.catch_warnings():
@@ -503,7 +523,7 @@ class TestHamiltonAR4(MarkovAutoregression):
                             -0.246983, -0.212923],
             "llf": -181.26339,
             "llf_fit": -181.26339,
-            "llf_fit_em": -183.85444,
+            "llf_fit_em": -183.854455,
             "bse_oim": np.r_[.0965189, .0377362, .2645396, .0745187, np.nan,
                              .1199942, .137663, .1069103, .1105311, ]
         }
@@ -545,7 +565,7 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
                             -.3206652],
             "llf": -179.32354,
             "llf_fit": -179.38684,
-            "llf_fit_em": -184.99606,
+            "llf_fit_em": -184.97135,
             "bse_oim": np.r_[.1424841, .0994742, .2057086, .1225987, np.nan,
                              .1754383, .1652473, .187409, .1295937],
             "smoothed0": results.iloc[3:]["switchar2_sm1"],
@@ -558,6 +578,18 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
         }
         super().setup_class(
             true, rgnp, k_regimes=2, order=2)
+
+    def test_fit(self, **kwargs):
+        # The start parameters that 5 EM iterations gave before the M-step of
+        # the transition probabilities was fixed in 0.15.1, so that the test
+        # keeps checking the same optimum. From those of the fixed EM, the
+        # optimizer stops at llf -179.386805.
+        kwargs.setdefault("start_params", np.r_[
+            0.45176744470487884, 0.43977912171220745, 0.43346581152544417,
+            0.9493817695466249, 0.8845328340193991, 0.21301594066486612,
+            0.3382141963704141, 0.30089412361482243, -0.12488219601672114])
+        kwargs.setdefault("em_iter", 0)
+        super().test_fit(**kwargs)
 
     def test_smoothed_marginal_probabilities(self):
         assert_allclose(self.result.smoothed_marginal_probabilities[:, 0],
@@ -657,7 +689,7 @@ class TestHamiltonAR1Switch(MarkovAutoregression):
                             np.exp(-0.231404)**2, 0.243128, 0.713029],
             "llf": -186.7575,
             "llf_fit": -186.7575,
-            "llf_fit_em": -189.25446
+            "llf_fit_em": -189.25294
         }
         super().setup_class(
             true, rgnp, k_regimes=2, order=1)
@@ -1418,3 +1450,29 @@ def test_exog_tvtp_forms(form):
     params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1, 0.4, -0.2]
 
     assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
+
+
+def test_em_transition_m_step():
+    # As test_em_transition_m_step of MarkovRegression: the M-step of the
+    # transition probabilities is
+    #   p[i->j] = sum_t Pr[S_t = j, S_{t-1} = i | T] / sum_t Pr[S_{t-1} = i | T],
+    # where the smoothed joint probabilities of the AR model also cover
+    # S_{t-2}, which is summed out
+    endog, _ = two_regime_ar_data(nobs=20)
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=2, switching_ar=False
+    )
+    params = np.r_[0.9, 0.2, 0.5, 2.0, 1.0, 0.4, 0.1]
+    joint = mod.smooth(params).smoothed_joint_probabilities.sum(axis=2)
+    numerator = joint.sum(axis=-1)
+    denominator = joint.sum(axis=(0, -1))
+
+    # One EM iteration, and no optimization after it
+    with pytest.warns(ConvergenceWarning):
+        params_em = mod.fit(
+            start_params=params, em_iter=1, maxiter=0, return_params=True, disp=False
+        )
+
+    for i in range(2):
+        idx = mod.param_names.index(f"p[{i}->0]")
+        assert_allclose(params_em[idx], numerator[0, i] / denominator[i], rtol=1e-10)
