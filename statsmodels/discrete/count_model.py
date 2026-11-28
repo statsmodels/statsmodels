@@ -44,6 +44,24 @@ _doc_zi_params = """
         The model for zero inflation, either Logit (default) or Probit.
     """
 
+_doc_params_order = """
+    Notes
+    -----
+    The parameter vector ``params`` (and ``start_params`` in ``fit``) is
+    ordered with the inflation-model parameters first, followed by the
+    main count-model parameters. For the Generalized Poisson and Negative
+    Binomial variants the dispersion parameter ``alpha`` is appended last.
+
+    The exact names and order are available from the ``exog_names``
+    attribute once the model is instantiated. For example, when both
+    ``exog_infl`` and ``exog`` contain a constant and one regressor,
+    ``exog_names`` is ``['inflate_const', 'inflate_x1', 'const', 'x1']``
+    for Poisson, and ``['inflate_const', 'inflate_x1', 'const', 'x1',
+    'alpha']`` for Generalized Poisson and Negative Binomial. The
+    likelihood, score and Hessian methods split ``params`` at
+    ``k_inflate`` accordingly.
+    """
+
 
 class GenericZeroInflated(CountModel):
     __doc__ = f"""
@@ -51,6 +69,7 @@ class GenericZeroInflated(CountModel):
 
     {base._model_params_doc}
     {_doc_zi_params + base._missing_param_doc}
+    {_doc_params_order}
 
     Attributes
     ----------
@@ -685,6 +704,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
     {base._model_params_doc}
     {_doc_zi_params + base._missing_param_doc}
+    {_doc_params_order}
 
     Attributes
     ----------
@@ -883,6 +903,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
     {params}
     {extra_params}
+    {param_order}
 
     Attributes
     ----------
@@ -900,6 +921,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         for ZIGP-1 and p=2 for ZIGP-2. Default is p=2.
     """
         + base._missing_param_doc,
+        param_order=_doc_params_order,
     )
 
     def __init__(
@@ -1023,6 +1045,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     {params}
     {extra_params}
+    {param_order}
 
     Attributes
     ----------
@@ -1040,6 +1063,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         for ZINB-1 and p=2 for ZINB-2. Default is p=2.
     """
         + base._missing_param_doc,
+        param_order=_doc_params_order,
     )
 
     def __init__(
