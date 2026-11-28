@@ -102,6 +102,78 @@ def test_runstest_2samp_with_groups_argument():
     assert_allclose((z1, p1), (z2, p2))
 
 
+# Reference values below were derived independently by oracle/B_oracle.py,
+# which counts runs and computes the Wald-Wolfowitz mean/variance and p-value
+# without calling runstest_2samp or Runs.
+_EXPECTED_LABEL_CASE = (0.7637626158259734, 0.445008718746736)
+
+
+def test_runstest_2samp_non_binary_numeric_labels():
+    # Arbitrary (including negative) labels must decode to the same 0/1
+    # partition as the canonical labels.
+    x = np.arange(1, 9)
+    g01 = np.array([0, 1, 0, 0, 1, 1, 0, 1])
+    assert_allclose(
+        runstest_2samp(x, groups=g01, correction=False), _EXPECTED_LABEL_CASE
+    )
+    for labels in (np.where(g01 == 0, 10, 20), np.where(g01 == 0, -1, -5)):
+        assert_allclose(
+            runstest_2samp(x, groups=labels, correction=False), _EXPECTED_LABEL_CASE
+        )
+
+
+def test_runstest_2samp_swapped_labels_are_equivalent():
+    x = np.arange(1, 9)
+    g01 = np.array([0, 1, 0, 0, 1, 1, 0, 1])
+    g_hi = np.where(g01 == 0, 10, 20)
+    g_swap = np.where(g01 == 0, 20, 10)
+    res_hi = runstest_2samp(x, groups=g_hi, correction=False)
+    res_swap = runstest_2samp(x, groups=g_swap, correction=False)
+    assert_allclose(res_hi, _EXPECTED_LABEL_CASE)
+    assert_allclose(res_swap, _EXPECTED_LABEL_CASE)
+    assert_allclose(res_hi, res_swap)
+
+
+def test_runstest_2samp_string_labels():
+    x = np.arange(1, 9)
+    g01 = np.array([0, 1, 0, 0, 1, 1, 0, 1])
+    gstr = np.where(g01 == 0, "alpha", "beta")
+    assert_allclose(
+        runstest_2samp(x, groups=gstr, correction=False), _EXPECTED_LABEL_CASE
+    )
+
+
+def test_runstest_2samp_python_list_labels():
+    x = np.arange(1, 9)
+    for labels in ([0, 1, 0, 0, 1, 1, 0, 1], [10, 20, 10, 10, 20, 20, 10, 20]):
+        assert_allclose(
+            runstest_2samp(x, groups=labels, correction=False), _EXPECTED_LABEL_CASE
+        )
+
+
+def test_runstest_2samp_ndarray_labels_match_two_sample_form():
+    x = np.arange(1, 9)
+    g01 = np.array([0, 1, 0, 0, 1, 1, 0, 1])
+    expected = runstest_2samp(x[g01 == 0], x[g01 == 1], correction=False)
+    assert_allclose(runstest_2samp(x, groups=g01.copy(), correction=False), expected)
+    assert_allclose(
+        runstest_2samp(x, groups=np.where(g01 == 0, 10, 20), correction=False),
+        expected,
+    )
+
+
+def test_runstest_2samp_ties_non_binary_labels():
+    # Same root cause on the tie-breaking branch: labels must be normalized
+    # before Runs sees them.  Use float data so the unrelated integer-dtype
+    # tie bug (xfail test below) does not interfere.
+    x = np.array([1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0])
+    g01 = np.array([0, 1, 0, 1, 0, 1, 0, 1])
+    for labels in (g01, np.where(g01 == 0, 10, 20), [0, 1, 0, 1, 0, 1, 0, 1]):
+        assert_allclose(
+            runstest_2samp(x, groups=labels, correction=False), _EXPECTED_LABEL_CASE
+        )
+
+
 def test_runstest_2samp_requires_y_or_groups():
     with pytest.raises(ValueError, match="either y or groups"):
         runstest_2samp(np.arange(10))

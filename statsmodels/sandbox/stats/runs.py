@@ -226,12 +226,18 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
         x = np.concatenate((x, y))
         gruni = np.arange(2)
     elif groups is not None:
+        groups = np.asarray(groups)
         gruni = np.unique(groups)
         if gruni.size != 2:  # pylint: disable=E1103
             raise ValueError("not exactly two groups specified")
-        # require groups to be numeric ???
     else:
         raise ValueError("either y or groups is necessary")
+
+    # Runs encodes the two samples as 0 and 1, so map the two actual group
+    # labels onto those codes. This also handles non-numeric labels and
+    # python lists of labels.
+    groups = np.where(groups == gruni[1], 1, 0)
+    gruni = np.arange(2)
 
     xargsort = np.argsort(x)
     # check for ties
