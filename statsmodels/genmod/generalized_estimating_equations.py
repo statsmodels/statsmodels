@@ -2507,11 +2507,21 @@ class GEEResults(GLMResults):
             ("Time:", None),
         ]
 
-        # The skew of the residuals
-        skew1 = stats.skew(self.resid)
-        kurt1 = stats.kurtosis(self.resid)
-        skew2 = stats.skew(self.centered_resid)
-        kurt2 = stats.kurtosis(self.centered_resid)
+        # The skew and kurtosis of the residuals, kept for a summary after
+        # remove_data(), which deletes the residuals
+        def _resid_moments():
+            resid = self.resid
+            centered = self.centered_resid
+            return (
+                stats.skew(resid),
+                stats.kurtosis(resid),
+                stats.skew(centered),
+                stats.kurtosis(centered),
+            )
+
+        skew1, kurt1, skew2, kurt2 = self._summary_cache(
+            "resid_moments", _resid_moments
+        )
 
         diagn_left = [
             ("Skew:", [f"{skew1:12.4f}"]),

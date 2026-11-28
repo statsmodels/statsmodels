@@ -205,9 +205,16 @@ class cache_readonly:
         raise AttributeError(f"The attribute '{self.__name__}' cannot be set.")
 
 
-# cached_value and cached_data behave identically to cache_readonly, but
-# are used by `remove_data` to
-#   a) identify array-like attributes to remove (cached_data)
-#   b) make sure certain values are evaluated before caching (cached_value)
-cached_data = cache_readonly
+class cached_data(cache_readonly):
+    """
+    Decorator for read-only, cached properties that hold data arrays
+
+    Behaves like ``cache_readonly``. ``remove_data`` deletes the cached
+    values of these attributes when they are defined in a base class of the
+    results class, as well as all cached values of the results class itself.
+    """
+
+
+# cached_value behaves identically to cache_readonly. It marks values that
+# are not data, and has no effect.
 cached_value = cache_readonly

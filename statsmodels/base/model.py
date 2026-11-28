@@ -2613,18 +2613,21 @@ class LikelihoodModelResults(Results):
         result._data_attr_model : arrays attached to the model
             instance but not to the results instance
         """
+        # The cached attributes of the results class itself, and those that a
+        # base class marks as data with cached_data. The cached values of the
+        # base classes are kept otherwise, so that the statistics computed by
+        # summary() before remove_data() remain available. The class
+        # dictionaries are read because getattr would call the descriptors.
         cls = self.__class__
-        # Note: we cannot just use `getattr(cls, x)` or `getattr(self, x)`
-        # because of redirection involved with property-like accessors
-        cls_attrs = {}
-        for name in dir(cls):
-            try:
-                attr = object.__getattribute__(cls, name)
-            except AttributeError:
-                pass
-            else:
-                cls_attrs[name] = attr
-        data_attrs = [x for x in cls_attrs if isinstance(cls_attrs[x], cached_data)]
+        data_attrs = [
+            name for name, attr in vars(cls).items() if isinstance(attr, cache_readonly)
+        ]
+        seen = set(vars(cls))
+        for base in cls.__mro__[1:]:
+            for name, attr in vars(base).items():
+                if name not in seen and isinstance(attr, cached_data):
+                    data_attrs.append(name)
+            seen.update(vars(base))
         # Delete the cached values. Storing None would not reset them, because
         # cache_readonly caches None like any other value
         for name in data_attrs:

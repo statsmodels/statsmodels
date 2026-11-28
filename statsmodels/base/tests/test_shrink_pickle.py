@@ -17,6 +17,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.genmod.generalized_linear_model import GLMResults
 from statsmodels.tools._decorators import cache_readonly
 
 # log used in TestPickleFormula5
@@ -492,3 +493,59 @@ def test_pickle_fit_constrained_formula():
     expected = exog @ results.params.to_numpy()
     assert_allclose(results.predict(df.iloc[:5]).to_numpy(), expected)
     assert_allclose(res.predict(df.iloc[:5]).to_numpy(), expected)
+
+
+# The attributes that GLMResults marks as data with cached_data
+GLM_DATA = ["resid_response", "resid_pearson", "resid_deviance", "mu"]
+
+
+def glm_data():
+    rs = np.random.RandomState(34234)
+    exog = sm.add_constant(rs.standard_normal((200, 2)))
+    endog = exog.sum(1) + rs.standard_normal(200)
+    return endog, exog
+
+
+def test_remove_data_base_class_data():
+    # GEEResults inherits the data attributes of GLMResults. remove_data
+    # deletes them and keeps the statistics that the base classes cache
+    endog, exog = glm_data()
+    groups = np.repeat(np.arange(40), 5)
+    res = sm.GEE(endog, exog, groups).fit()._results
+    for name in GLM_DATA:
+        getattr(res, name)
+    tvalues = res.tvalues
+    pvalues = res.pvalues
+    res.remove_data()
+    assert not set(GLM_DATA) & set(res._cache)
+    assert res._cache["tvalues"] is tvalues
+    assert res._cache["pvalues"] is pvalues
+    res2, _ = check_pickle(res)
+    assert not set(GLM_DATA) & set(res2._cache)
+    assert_allclose(res2.pvalues, pvalues, rtol=1e-13)
+
+
+class _OverrideResults(GLMResults):
+    # resid_pearson is no longer marked as data
+    @cache_readonly
+    def resid_pearson(self):
+        return self._endog - self.mu
+
+
+class _InheritResults(_OverrideResults):
+    pass
+
+
+def test_remove_data_overridden_base_class_data():
+    # The class nearest in the method resolution order decides whether an
+    # attribute is data: resid_pearson of _OverrideResults is kept, and
+    # resid_response, which it inherits from GLMResults, is deleted
+    endog, exog = glm_data()
+    res = sm.GLM(endog, exog).fit()._results
+    res.__class__ = _InheritResults
+    resid_pearson = res.resid_pearson
+    assert res.resid_response.shape == endog.shape
+    assert "resid_response" in res._cache
+    res.remove_data()
+    assert res._cache["resid_pearson"] is resid_pearson
+    assert "resid_response" not in res._cache

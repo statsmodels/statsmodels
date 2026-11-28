@@ -130,9 +130,15 @@ class TestGEE:
         model = gee.GEE(endog, exog, groups)
         res = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
 
-        assert isinstance(res.summary(), Summary)
+        smry = res.summary()
+        assert isinstance(smry, Summary)
         res.remove_data()
-        assert isinstance(res.summary(), Summary)
+        assert "resid_response" not in res._results._cache
+        smry2 = res.summary()
+        assert isinstance(smry2, Summary)
+        # The skew and kurtosis of the residuals are kept
+        assert smry2.tables[2].as_text() == smry.tables[2].as_text()
+        assert "Skew" in smry2.tables[2].as_text()
 
     def test_margins_gaussian_lists_tuples(self):
         # Check marginal effects for a Gaussian GEE fit using lists and

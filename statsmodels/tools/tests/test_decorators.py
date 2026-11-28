@@ -145,3 +145,27 @@ def test_stub_declares_public_names():
         elif isinstance(node, ast.Assign):
             declared.update(t.id for t in node.targets if isinstance(t, ast.Name))
     assert set(_decorators.__all__) <= declared
+
+
+def test_cached_data():
+    # cached_data caches like cache_readonly. remove_data tells the two apart,
+    # so a cache_readonly attribute is not a cached_data one
+    calls = []
+
+    class Example:
+        @_decorators.cached_data
+        def a(self):
+            calls.append(None)
+            return [1, 2]
+
+        @cache_readonly
+        def b(self):
+            return 1
+
+    ex = Example()
+    assert ex.a is ex.a
+    assert ex._cache == {"a": [1, 2]}
+    assert len(calls) == 1
+    assert isinstance(vars(Example)["a"], cache_readonly)
+    assert not isinstance(vars(Example)["b"], _decorators.cached_data)
+    assert vars(Example)["a"].__name__ == "a"
