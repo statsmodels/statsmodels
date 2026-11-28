@@ -5277,6 +5277,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         can be much faster if the original dataset is large), see the `extend`
         method.
 
+        .. versionchanged:: 0.15.1
+
+           Appending pandas data to a SARIMAX model with simple differencing
+           preserves the index and name of the original observations.
+
         Examples
         --------
         >>> index = pd.period_range(start='2000', periods=2, freq='Y')
@@ -5311,34 +5316,56 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         2003    0.878
         Freq: A-DEC, dtype: float64
         """
-        start = self.nobs
-        end = self.nobs + len(endog) - 1
-        _, _, _, append_ix = self.model._get_prediction_index(start, end)
+        if copy_initialization:
+            init = Initialization.from_results(self.filter_results)
+            kwargs.setdefault("initialization", init)
+
+        mod = self._get_append_model(endog, exog, 0, kwargs)
+        return self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
+
+    def _get_append_model(self, endog, exog, history_start, clone_kwargs):
+        """Clone the model with new observations appended to its original data."""
+        endog, exog = self._get_append_data(endog, exog, history_start, self.model)
+        return self.model.clone(endog, exog=exog, **clone_kwargs)
+
+    def _get_append_data(self, endog, exog, history_start, data_model):
+        """Join observations using the index and names of the untransformed data."""
+        start = len(data_model.endog)
+        end = start + len(endog) - 1
+        _, _, _, append_ix = data_model._get_prediction_index(start, end)
 
         # Check the index of the new data
         if isinstance(self.model.data, PandasData):
             _check_index(append_ix, endog, "`endog`")
 
         # Concatenate the new data to original data
-        new_endog = concat([self.model.data.orig_endog, endog], axis=0, allow_mix=True)
+        new_endog = concat(
+            [self.model.data.orig_endog[history_start:], endog], axis=0, allow_mix=True
+        )
 
         # Handle `exog`
         if exog is not None:
             _, exog = prepare_exog(exog)
             _check_index(append_ix, exog, "`exog`")
 
-            new_exog = concat([self.model.data.orig_exog, exog], axis=0, allow_mix=True)
+            orig_exog = self.model.data.orig_exog
+            if orig_exog is not None:
+                orig_exog = orig_exog[history_start:]
+            new_exog = concat([orig_exog, exog], axis=0, allow_mix=True)
         else:
             new_exog = None
 
         # Create a continuous index for the combined data
         if isinstance(self.model.data, PandasData):
-            start = 0
-            end = len(new_endog) - 1
-            _, _, _, new_index = self.model._get_prediction_index(start, end)
+            end = history_start + len(new_endog) - 1
+            _, _, _, new_index = data_model._get_prediction_index(history_start, end)
+            if history_start and data_model._index_int64:
+                # An integer Index starting above zero needs to be a RangeIndex
+                # for the new model to recognize it as extendible.
+                new_index = pd.RangeIndex(history_start, end + 1, name=new_index.name)
 
             # Standardize `endog` to have the right index and columns
-            columns = self.model.endog_names
+            columns = data_model.endog_names
             if not isinstance(columns, list):
                 columns = [columns]
             new_endog = pd.DataFrame(new_endog, index=new_index, columns=columns)
@@ -5349,14 +5376,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     new_exog, index=new_index, columns=self.model.exog_names
                 )
 
-        if copy_initialization:
-            init = Initialization.from_results(self.filter_results)
-            kwargs.setdefault("initialization", init)
-
-        mod = self.model.clone(new_endog, exog=new_exog, **kwargs)
-        res = self._apply(mod, refit=refit, fit_kwargs=fit_kwargs)
-
-        return res
+        return new_endog, new_exog
 
     def extend(self, endog, exog=None, fit_kwargs=None, **kwargs):
         """
@@ -5447,6 +5467,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             endog = pd.DataFrame(endog, index=extend_ix, columns=columns)
         # Extend the current fit result to additional data
         mod = self.model.clone(endog, exog=exog, **kwargs)
+        return self._extend(mod, fit_kwargs)
+
+    def _extend(self, mod, fit_kwargs):
+        """Filter the extension starting from the last predicted state."""
         mod.ssm.initialization = Initialization(
             mod.k_states,
             "known",

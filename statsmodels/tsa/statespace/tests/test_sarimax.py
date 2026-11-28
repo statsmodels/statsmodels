@@ -2809,6 +2809,77 @@ def test_extend_results():
         res2.extend(endog[50:])
 
 
+@pytest.mark.parametrize("d, D, s", [(1, 0, 0), (0, 1, 4), (2, 2, 4)])
+@pytest.mark.parametrize("use_exog", [False, True])
+@pytest.mark.parametrize("index_type", ["array", "date", "integer"])
+def test_extend_simple_differencing(d, D, s, use_exog, index_type):
+    rng = np.random.default_rng(382)
+    endog = rng.normal(size=32)
+    exog = rng.normal(size=(32, 2)) if use_exog else None
+    if index_type != "array":
+        if index_type == "date":
+            index = pd.date_range("2000-01-01", periods=len(endog), freq="D")
+        else:
+            index = pd.Index(np.arange(len(endog)))
+        endog = pd.Series(endog, index=index, name="response")
+        if use_exog:
+            exog = pd.DataFrame(exog, index=index, columns=["a", "b"])
+
+    spec = dict(order=(1, d, 0), seasonal_order=(0, D, 0, s),
+                simple_differencing=True)
+    params = [0.4, -0.2, 0.6, 1.0] if use_exog else [0.6, 1.0]
+    res = sarimax.SARIMAX(
+        endog[:20], exog=exog[:20] if use_exog else None, **spec
+    ).filter(params)
+    for start, stop in [(20, 21), (21, 25)]:
+        x = exog[start:stop] if use_exog else None
+        res = res.extend(endog[start:stop], exog=x)
+        # Reference: filter all raw observations to date at the same parameters.
+        ref = sarimax.SARIMAX(
+            endog[:stop], exog=exog[:stop] if use_exog else None, **spec
+        ).filter(params)
+        n = stop - start
+        assert res.nobs == n
+        assert_allclose(res.model.endog, ref.model.endog[-n:])
+        if use_exog:
+            assert_allclose(res.model.exog, ref.model.exog[-n:])
+        assert_allclose(res.filtered_state, ref.filtered_state[:, -n:])
+        future = exog[stop:stop + 2] if use_exog else None
+        predicted = res.forecast(2, exog=future)
+        expected = ref.forecast(2, exog=future)
+        assert_allclose(predicted, expected, rtol=1e-12)
+        if index_type != "array":
+            assert res.fittedvalues.index.equals(index[start:stop])
+            assert predicted.index.equals(expected.index)
+            assert res.model.endog_names == ref.model.endog_names
+
+    # Appending to the last extension re-filters that window from its initial state.
+    x = exog[25:27] if use_exog else None
+    appended = res.append(endog[25:27], exog=x, copy_initialization=True)
+    ref = sarimax.SARIMAX(
+        endog[:27], exog=exog[:27] if use_exog else None, **spec
+    ).filter(params)
+    assert_allclose(appended.filtered_state, ref.filtered_state[:, -appended.nobs:])
+    x = exog[27:29] if use_exog else None
+    actual, expected = appended.forecast(2, exog=x), ref.forecast(2, exog=x)
+    assert_allclose(actual, expected, rtol=1e-12)
+    if index_type != "array":
+        assert actual.index.equals(expected.index)
+
+
+def test_append_simple_differencing_dates():
+    index = pd.date_range("2000-01-01", periods=12, freq="D")
+    endog = pd.Series([1, 3, 7, 12, 8, 17, 14, 21, 22, 19, 28, 13],
+                      index=index, name="response")
+    spec = dict(order=(1, 1, 0), simple_differencing=True)
+    params = [0.6, 1.0]
+    res = sarimax.SARIMAX(endog[:8], **spec).filter(params).append(endog[8:])
+    # Reference: filter the complete, unsplit sample with the same AR coefficient.
+    ref = sarimax.SARIMAX(endog, **spec).filter(params)
+    pd.testing.assert_series_equal(res.fittedvalues, ref.fittedvalues)
+    pd.testing.assert_series_equal(res.forecast(), ref.forecast())
+
+
 def test_extend_by_one():
     endog = np.arange(100)
     exog = np.ones_like(endog)
