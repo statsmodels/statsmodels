@@ -333,10 +333,22 @@ class ExponentialSmoothing(MLEModel):
         Returns
         -------
         ExponentialSmoothing
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           Cloning a model with known initialization preserves its initial
+           level, trend and seasonal factors unless overridden.
         """
         if exog is not None:
             raise NotImplementedError(
                 "ExponentialSmoothing does not support `exog`.")
+        method = kwargs.get("initialization_method", self.initialization_method)
+        if self.initialization_method == "known" and str(method).lower() == "known":
+            kwargs.setdefault("initial_level", self._initial_level)
+            kwargs.setdefault("initial_trend", self._initial_trend)
+            kwargs.setdefault("initial_seasonal", self._initial_seasonal)
         return self._clone_from_init_kwds(endog, **kwargs)
 
     @property

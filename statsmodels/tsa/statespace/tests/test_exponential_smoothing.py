@@ -1033,6 +1033,42 @@ def known_initial_state_results(endog):
     return mod.filter([0.5, 0.1])
 
 
+@pytest.mark.parametrize("method", ["append", "extend", "apply"])
+@pytest.mark.parametrize("seasonals", [[2, -1, 3], [2, -1, 3, -4]])
+def test_known_initialization_new_data(method, seasonals):
+    y = [8, 13, 9, 12, 7, 16, 13, 18, 11]
+    new = [15, 17, 19]
+    mod = ExponentialSmoothing(
+        y, trend=True, seasonal=4, initialization_method="known",
+        initial_level=10, initial_trend=0.5, initial_seasonal=seasonals,
+    )
+    res = mod.filter([0.4, 0.2, 0.1])
+    result = getattr(res, method)(new)
+
+    # Additive Holt-Winters innovations recursion, with seasons in time order.
+    level, slope = 10, 0.5
+    factors = [-4, 3, -1, 2]
+    observations = new if method == "apply" else y + new
+    for t, obs in enumerate(observations):
+        j = t % 4
+        error = obs - (level + slope + factors[j])
+        level += slope + 0.4 * error
+        slope += 0.2 * error
+        factors[j] += 0.1 * error
+    h = np.arange(1, 5)
+    expected = level + h * slope + np.take(factors, (len(observations) + h - 1) % 4)
+    assert_allclose(result.forecast(4), expected, rtol=1e-12)
+
+
+def test_clone_known_override():
+    mod = ExponentialSmoothing([8, 5, 7], initialization_method="known",
+                               initial_level=6)
+    clone = mod.clone([9, 10], initial_level=20)
+    assert_allclose(clone.filter([0.4]).fittedvalues, [20, 15.6])
+    estimated = mod.clone([9, 10], initialization_method="estimated")
+    assert_allclose(estimated.filter([0.4, 10]).fittedvalues, [10, 9.6])
+
+
 def test_initial_state_pandas_without_dates():
     # With pandas data without dates, the initial state is a DataFrame with
     # the default index (with dates it is labelled by the preceding date)
