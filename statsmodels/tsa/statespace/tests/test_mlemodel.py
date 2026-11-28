@@ -3368,3 +3368,39 @@ def test_positional_flag_also_by_keyword_raises(func):
         match = f"^got multiple values for keyword argument '{name}'$"
     with pytest.raises(TypeError, match=match):
         getattr(mod, func)([0.5, 4.0], value, **{name: value})
+
+
+@pytest.mark.parametrize("func", ["model", "results"])
+@pytest.mark.parametrize("use_dates", [False, True])
+def test_simulate_negative_anchor_is_from_the_end(func, use_dates):
+    # A negative integer anchor counts from the end of the sample, as an
+    # index does: the location from _get_index_loc is never negative. With
+    # exog, the observation intercept differs by period, so the simulations
+    # depend on the anchor.
+    rng = np.random.default_rng(9753)
+    endog = rng.standard_normal(20)
+    exog = rng.standard_normal(20)
+    if use_dates:
+        index = pd.date_range("2000-01-01", periods=20, freq="MS")
+        endog = pd.Series(endog, index=index)
+        exog = pd.Series(exog, index=index)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
+    params = [2.0, 0.5, 1.0]
+    shocks = rng.standard_normal((4, 2))
+
+    def simulate(anchor):
+        kwds = {
+            "anchor": anchor,
+            "measurement_shocks": shocks[:, 0],
+            "state_shocks": shocks[:, 1],
+            "initial_state": [0.3],
+        }
+        if func == "model":
+            out = mod.simulate(params, 4, **kwds)
+        else:
+            out = mod.smooth(params).simulate(4, **kwds)
+        return np.asarray(out)
+
+    desired = simulate(15)
+    assert_allclose(simulate(-5), desired, rtol=1e-14)
+    assert not np.allclose(simulate(14), desired)
