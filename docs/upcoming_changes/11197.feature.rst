@@ -1,0 +1,4 @@
+- Add :func:`~statsmodels.stats.inter_rater.krippendorff_alpha_bootstrap`,
+  Krippendorff's alpha with a percentile bootstrap confidence interval that
+  resamples the subjects. It is available from ``statsmodels.stats.api``.
+  :pr:`11197`

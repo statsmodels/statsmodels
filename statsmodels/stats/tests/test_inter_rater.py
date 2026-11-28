@@ -13,10 +13,12 @@ import pandas as pd
 import pytest
 
 from statsmodels.stats.inter_rater import (
+    KrippendorffAlphaBootstrapResult,
     aggregate_raters,
     cohens_kappa,
     fleiss_kappa,
     krippendorff_alpha,
+    krippendorff_alpha_bootstrap,
     to_table,
 )
 from statsmodels.tools.testing import Holder
@@ -1219,3 +1221,97 @@ def test_krippendorff_alpha_raises():
         krippendorff_alpha(np.array([[1, np.inf], [1, 2]]))
     with pytest.raises(ValueError, match="nonnegative"):
         krippendorff_alpha(np.array([[1, -1], [1, 2]]), level="ratio")
+
+
+@pytest.mark.parametrize("level", ["nominal", "ordinal", "interval", "ratio"])
+def test_krippendorff_alpha_bootstrap_samples(level):
+    # each bootstrap value is alpha of the subjects drawn with the same
+    # random numbers; the last subject has a single rating and is not drawn
+    pairable = kripp_data[:-1]
+    res = krippendorff_alpha_bootstrap(kripp_data, level=level, nboot=50, rng=1)
+    rng = np.random.default_rng(1)
+    expected = [
+        krippendorff_alpha(pairable[rng.integers(11, size=11)], level=level)
+        for _ in range(50)
+    ]
+    assert_allclose(res.bootstrap, expected, rtol=1e-12)
+    assert_allclose(res.statistic, krippendorff_alpha(kripp_data, level=level))
+
+
+def test_krippendorff_alpha_bootstrap_interval():
+    res = krippendorff_alpha_bootstrap(kripp_data, nboot=500, rng=0)
+    assert isinstance(res, KrippendorffAlphaBootstrapResult)
+    valid = res.bootstrap[~np.isnan(res.bootstrap)]
+    assert res.nboot_valid == valid.size
+    assert_allclose(
+        [res.ci_low, res.ci_upp], np.quantile(valid, [0.025, 0.975]), rtol=1e-12
+    )
+    statistic, ci_low, ci_upp = res
+    assert ci_low < statistic < ci_upp
+    narrow = krippendorff_alpha_bootstrap(kripp_data, nboot=500, alpha=0.5, rng=0)
+    assert ci_low <= narrow.ci_low <= narrow.ci_upp <= ci_upp
+
+
+def test_krippendorff_alpha_bootstrap_reproducible():
+    res1 = krippendorff_alpha_bootstrap(kripp_data, nboot=20, rng=3)
+    res2 = krippendorff_alpha_bootstrap(
+        kripp_data, nboot=20, rng=np.random.default_rng(3)
+    )
+    assert_equal(res1.bootstrap, res2.bootstrap)
+
+
+def test_krippendorff_alpha_bootstrap_random_state():
+    res = krippendorff_alpha_bootstrap(
+        kripp_data, nboot=20, rng=np.random.RandomState(3)
+    )
+    rs = np.random.RandomState(3)
+    expected = [
+        krippendorff_alpha(kripp_data[:-1][rs.randint(11, size=11)])
+        for _ in range(20)
+    ]
+    assert_allclose(res.bootstrap, expected, rtol=1e-12)
+
+
+def test_krippendorff_alpha_bootstrap_undefined_samples():
+    # two subjects: a sample of the first subject twice has the single
+    # value 1, where alpha is 0 / 0
+    data = np.array([[1, 1], [1, 2]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = krippendorff_alpha_bootstrap(data, nboot=200, rng=0)
+    undefined = np.isnan(res.bootstrap)
+    assert 0 < undefined.sum() < 200
+    assert res.nboot_valid == 200 - undefined.sum()
+    assert np.isfinite([res.ci_low, res.ci_upp]).all()
+
+
+@pytest.mark.parametrize(
+    "data",
+    [[[1, np.nan], [np.nan, 2]], [[1, 1], [1, 1]]],
+    ids=["no-pairs", "one-value"],
+)
+def test_krippendorff_alpha_bootstrap_undefined(data):
+    res = krippendorff_alpha_bootstrap(np.array(data), nboot=10, rng=0)
+    assert np.isnan([res.statistic, res.ci_low, res.ci_upp]).all()
+    assert res.nboot_valid == 0
+    assert np.isnan(res.bootstrap).all()
+
+
+def test_krippendorff_alpha_bootstrap_raises():
+    with pytest.raises(ValueError, match="nboot"):
+        krippendorff_alpha_bootstrap(kripp_data, nboot=0)
+    with pytest.raises(ValueError, match="alpha"):
+        krippendorff_alpha_bootstrap(kripp_data, alpha=1.5)
+    with pytest.raises(ValueError, match="level"):
+        krippendorff_alpha_bootstrap(kripp_data, level="circular")
+    with pytest.raises(ValueError, match="nonnegative"):
+        krippendorff_alpha_bootstrap(np.array([[1, -1], [1, 2]]), level="ratio")
+
+
+def test_krippendorff_alpha_bootstrap_no_valid_sample():
+    # alpha of the two subjects is 1, but a sample that draws one subject
+    # twice has a single value; with rng=0 the only sample does
+    res = krippendorff_alpha_bootstrap(np.array([[1, 1], [2, 2]]), nboot=1, rng=0)
+    assert_allclose(res.statistic, 1.0)
+    assert res.nboot_valid == 0
+    assert np.isnan([res.ci_low, res.ci_upp]).all()
