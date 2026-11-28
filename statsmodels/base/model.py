@@ -2625,8 +2625,10 @@ class LikelihoodModelResults(Results):
             else:
                 cls_attrs[name] = attr
         data_attrs = [x for x in cls_attrs if isinstance(cls_attrs[x], cached_data)]
+        # Delete the cached values. Storing None would not reset them, because
+        # cache_readonly caches None like any other value
         for name in data_attrs:
-            self._cache[name] = None
+            self._cache.pop(name, None)
 
         def wipe(obj, att):
             # get to last element in attribute path
@@ -2650,9 +2652,21 @@ class LikelihoodModelResults(Results):
 
         for key in self._data_in_cache:
             try:
-                self._cache[key] = None
+                self._cache.pop(key, None)
             except (AttributeError, KeyError):
                 pass
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Before 0.15.1, remove_data stored None in the cache for the values
+        # it removed, and cache_readonly computed a value cached as None again.
+        # cache_readonly now caches None, so results pickled by an earlier
+        # version would read the removed values as None. Dropping them means
+        # they are computed again, as before. A new dict is needed because
+        # copy.copy passes the __dict__ of the original as state.
+        cache = self.__dict__.get("_cache")
+        if isinstance(cache, dict) and any(val is None for val in cache.values()):
+            self._cache = {key: val for key, val in cache.items() if val is not None}
 
     def _summary_cache(self, key, compute):
         """

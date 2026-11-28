@@ -1,0 +1,7 @@
+- A ``cache_readonly`` results attribute whose value is None is
+  computed once and cached, as in 0.14, instead of on every access
+  (0.15.0). ``remove_data`` deletes the cached values instead of
+  setting them to None, so they are computed again from the
+  remaining data when accessed, as in 0.15.0. Results pickled
+  after ``remove_data`` by an earlier version drop those None
+  values when loaded, so they keep working. :pr:`11307`
