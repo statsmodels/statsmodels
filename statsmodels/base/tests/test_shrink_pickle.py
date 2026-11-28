@@ -7,6 +7,7 @@ Author: Josef Perktold
 
 from statsmodels.compat.pandas import assert_series_equal
 
+import copy
 from io import BytesIO
 import pickle
 
@@ -16,6 +17,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.tools._decorators import cache_readonly
 
 # log used in TestPickleFormula5
 log = np.log
@@ -29,6 +31,21 @@ def check_pickle(obj):
     res = pickle.load(fh)
     fh.close()
     return res, plen
+
+
+def remove_data_none(results):
+    # remove_data as in statsmodels 0.14 and 0.15.0, which stored None in the
+    # cache for every cached attribute of the class and for _data_in_cache
+    results.remove_data()
+    for name, attr in vars(type(results)).items():
+        if isinstance(attr, cache_readonly):
+            results._cache[name] = None
+    for key in results._data_in_cache:
+        results._cache[key] = None
+
+
+def n_none(cache):
+    return sum(val is None for val in cache.values())
 
 
 class RemoveDataPickle:
@@ -109,6 +126,25 @@ class RemoveDataPickle:
             assert pred1.equals(pred3)
         else:
             np.testing.assert_equal(pred3, pred1)
+
+    @pytest.mark.thread_unsafe
+    def test_pickle_none_in_cache(self):
+        # Results pickled after remove_data by statsmodels 0.14 or 0.15.0 hold
+        # None in the cache for the removed values. Loading drops them, so an
+        # old pickle has the same cache and summary as a new one.
+        expected = self.estimate_model()._results
+        expected.summary()
+        expected.remove_data()
+        expected, _ = check_pickle(expected)
+
+        results = self.estimate_model()._results
+        results.summary()
+        remove_data_none(results)
+        assert n_none(results._cache) > 0
+        res, _ = check_pickle(results)
+        assert n_none(res._cache) == 0
+        assert sorted(res._cache) == sorted(expected._cache)
+        assert str(res.summary().tables[1]) == str(expected.summary().tables[1])
 
     @pytest.mark.thread_unsafe
     def test_remove_data_docstring(self):
@@ -304,6 +340,27 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         res.remove_data()
         assert "aic" not in res._cache
         assert_allclose(res.aic, aic, rtol=1e-13)
+
+    def test_old_pickle_statistics(self):
+        # An old pickle read llf and aic as None, and summary raised TypeError
+        full = self.estimate_model()
+        results = self.estimate_model()._results
+        results.summary()
+        remove_data_none(results)
+        res, _ = check_pickle(results)
+        for name in ["llf", "aic", "bic", "bse", "pvalues"]:
+            assert_allclose(getattr(res, name), getattr(full, name), rtol=1e-13)
+        res.summary()
+
+    def test_copy_keeps_original_cache(self):
+        # copy.copy passes the original __dict__ to __setstate__, so the
+        # original keeps its cache
+        results = self.estimate_model()._results
+        remove_data_none(results)
+        cache = dict(results._cache)
+        res = copy.copy(results)
+        assert results._cache == cache
+        assert n_none(res._cache) == 0
 
 
 class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):

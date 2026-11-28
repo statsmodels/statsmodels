@@ -2656,6 +2656,18 @@ class LikelihoodModelResults(Results):
             except (AttributeError, KeyError):
                 pass
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # Before 0.15.1, remove_data stored None in the cache for the values
+        # it removed, and cache_readonly computed a value cached as None again.
+        # cache_readonly now caches None, so results pickled by an earlier
+        # version would read the removed values as None. Dropping them means
+        # they are computed again, as before. A new dict is needed because
+        # copy.copy passes the __dict__ of the original as state.
+        cache = self.__dict__.get("_cache")
+        if isinstance(cache, dict) and any(val is None for val in cache.values()):
+            self._cache = {key: val for key, val in cache.items() if val is not None}
+
     def _summary_cache(self, key, compute):
         """
         Compute and memoize a value that must survive remove_data().
