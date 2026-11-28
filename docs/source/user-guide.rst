@@ -46,6 +46,7 @@ Other Models
    :maxdepth: 1
 
    duration
+   extremes
    nonparametric
    gmm
    miscmodels

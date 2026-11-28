@@ -1,0 +1,4 @@
+- :class:`~statsmodels.extremes.generalized_pareto.GeneralizedParetoModel` in the new
+  ``statsmodels.extremes`` module fits a generalized Pareto regression for threshold
+  exceedances, with log scale and shape linear in covariates.
+  :issue:`7317`, :pr:`11203`

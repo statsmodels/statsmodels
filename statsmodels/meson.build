@@ -78,6 +78,7 @@ subdirs_list = [
     'duration',
     'emplike',
     'examples',
+    'extremes',
     'formula',
     'gam',
     'genmod',
