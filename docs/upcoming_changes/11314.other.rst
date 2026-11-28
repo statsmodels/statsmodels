@@ -1,0 +1,6 @@
+- ``str()`` of a ``statsmodels.tools.docstring.Docstring`` built
+  from an empty or whitespace-only docstring, as Nuitka produces,
+  returns that docstring instead of ``"None"``, and ``""`` for
+  None. ``remove_parameters`` returns such a docstring unchanged,
+  and ``Docstring.insert_parameters`` names a missing ``after``
+  parameter in its ``ValueError``. :issue:`9765`, :pr:`11314`
