@@ -1,0 +1,4 @@
+- An uppercase ``trend`` of :class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression` and :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression`, such as ``"C"`` or
+  ``"CT"``, added no trend columns, so the model had no constant or
+  time trend. These models now have them, and their results change.
+  :pr:`11005`

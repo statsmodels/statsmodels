@@ -104,6 +104,11 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
 
+    .. versionchanged:: 0.15.1
+
+       `trend` is case-insensitive. Before, an uppercase `trend` such as
+       `'C'` was accepted, but no trend was added to the model.
+
     See the notebook `Markov switching autoregression
     <../examples/notebooks/generated/markov_autoregression.html>`__
     for an overview.

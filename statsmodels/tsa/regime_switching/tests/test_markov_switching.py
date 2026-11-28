@@ -844,3 +844,31 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+@pytest.mark.parametrize("trend", ["C", "T", "CT", "Ct", "N"])
+@pytest.mark.parametrize("order", [0, 1])
+def test_trend_is_case_insensitive(trend, order):
+    # An uppercase trend adds the same columns as the lowercase one: a
+    # constant and the time trend 1, ..., nobs, which are the same as an
+    # exog with these columns and switching coefficients
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    columns = {"c": np.ones(40), "t": np.arange(1.0, 41.0)}
+    exog = [columns[name] for name in trend.lower() if name in columns]
+    exog = np.column_stack(exog) if exog else None
+    if order == 0:
+        model, kwargs = markov_regression.MarkovRegression, {}
+    else:
+        model, kwargs = markov_autoregression.MarkovAutoregression, {"order": 1}
+    mod = model(endog, k_regimes=2, trend=trend, **kwargs)
+    mod_exog = model(
+        endog, k_regimes=2, trend="n", exog=exog, switching_exog=True, **kwargs
+    )
+    assert mod.trend == trend.lower()
+    assert mod.k_trend == (0 if exog is None else exog.shape[1])
+    assert mod.k_params == mod_exog.k_params
+    params = mod_exog.start_params
+    assert_allclose(mod.loglikeobs(params), mod_exog.loglikeobs(params), rtol=1e-12)
+    expected = model(endog, k_regimes=2, trend=trend.lower(), **kwargs).param_names
+    assert mod.param_names == expected
