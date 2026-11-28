@@ -13,6 +13,10 @@ __all__ = [
     "deprecated_alias",
 ]
 
+# Marks a name that is not in the cache. None cannot do this, because None is a
+# valid cached value
+_NOT_CACHED = object()
+
 
 class ResettableCache(dict):
     """Dictionary cache retained for backward compatibility"""
@@ -152,6 +156,13 @@ class cache_readonly:
     Vendored to replace pandas._libs.properties.cache_readonly
     which is a private C extension.
 
+    .. versionchanged:: 0.15.1
+
+       A result of None is cached again, as in statsmodels 0.14, instead of
+       being computed on every access. ``remove_data`` deletes the cached
+       values instead of setting them to None, so that an attribute is
+       computed again from the remaining data when it is next accessed.
+
     Parameters
     ----------
     func : callable
@@ -184,8 +195,8 @@ class cache_readonly:
             cache = obj._cache
         except AttributeError:
             cache = obj._cache = {}
-        val = cache.get(self.__name__, None)
-        if val is None:
+        val = cache.get(self.__name__, _NOT_CACHED)
+        if val is _NOT_CACHED:
             val = self.func(obj)
             cache[self.__name__] = val
         return val
@@ -194,9 +205,16 @@ class cache_readonly:
         raise AttributeError(f"The attribute '{self.__name__}' cannot be set.")
 
 
-# cached_value and cached_data behave identically to cache_readonly, but
-# are used by `remove_data` to
-#   a) identify array-like attributes to remove (cached_data)
-#   b) make sure certain values are evaluated before caching (cached_value)
-cached_data = cache_readonly
+class cached_data(cache_readonly):
+    """
+    Decorator for read-only, cached properties that hold data arrays
+
+    Behaves like ``cache_readonly``. ``remove_data`` deletes the cached
+    values of these attributes when they are defined in a base class of the
+    results class, as well as all cached values of the results class itself.
+    """
+
+
+# cached_value behaves identically to cache_readonly. It marks values that
+# are not data, and has no effect.
 cached_value = cache_readonly

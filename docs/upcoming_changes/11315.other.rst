@@ -1,0 +1,3 @@
+- ``remove_data`` also deletes the data arrays that a base class
+  of the results class marks with ``cached_data``, so GEE results
+  no longer keep their residuals. :pr:`11315`

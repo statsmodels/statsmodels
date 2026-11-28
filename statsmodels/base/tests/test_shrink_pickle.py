@@ -7,6 +7,7 @@ Author: Josef Perktold
 
 from statsmodels.compat.pandas import assert_series_equal
 
+import copy
 from io import BytesIO
 import pickle
 
@@ -16,6 +17,8 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.genmod.generalized_linear_model import GLMResults
+from statsmodels.tools._decorators import cache_readonly
 
 # log used in TestPickleFormula5
 log = np.log
@@ -29,6 +32,21 @@ def check_pickle(obj):
     res = pickle.load(fh)
     fh.close()
     return res, plen
+
+
+def remove_data_none(results):
+    # remove_data as in statsmodels 0.14 and 0.15.0, which stored None in the
+    # cache for every cached attribute of the class and for _data_in_cache
+    results.remove_data()
+    for name, attr in vars(type(results)).items():
+        if isinstance(attr, cache_readonly):
+            results._cache[name] = None
+    for key in results._data_in_cache:
+        results._cache[key] = None
+
+
+def n_none(cache):
+    return sum(val is None for val in cache.values())
 
 
 class RemoveDataPickle:
@@ -109,6 +127,25 @@ class RemoveDataPickle:
             assert pred1.equals(pred3)
         else:
             np.testing.assert_equal(pred3, pred1)
+
+    @pytest.mark.thread_unsafe
+    def test_pickle_none_in_cache(self):
+        # Results pickled after remove_data by statsmodels 0.14 or 0.15.0 hold
+        # None in the cache for the removed values. Loading drops them, so an
+        # old pickle has the same cache and summary as a new one.
+        expected = self.estimate_model()._results
+        expected.summary()
+        expected.remove_data()
+        expected, _ = check_pickle(expected)
+
+        results = self.estimate_model()._results
+        results.summary()
+        remove_data_none(results)
+        assert n_none(results._cache) > 0
+        res, _ = check_pickle(results)
+        assert n_none(res._cache) == 0
+        assert sorted(res._cache) == sorted(expected._cache)
+        assert str(res.summary().tables[1]) == str(expected.summary().tables[1])
 
     @pytest.mark.thread_unsafe
     def test_remove_data_docstring(self):
@@ -282,15 +319,49 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
             res.remove_data()
 
         for name in names:
-            assert res._cache[name] is None
+            # The cached value is deleted, not stored as None, so the next
+            # access computes it again, which fails without the data
+            assert name not in res._cache
+            with pytest.raises(TypeError):
+                getattr(res, name)
 
     def test_cached_values_evaluated(self):
-        # check that value-like attributes are evaluated before data
-        # is removed
+        # remove_data neither evaluates the value-like attributes nor stores
+        # None for them
         res = self.estimate_model()
         assert res._cache == {}
         res.remove_data()
-        assert "aic" in res._cache
+        assert res._cache == {}
+
+        # A value computed before remove_data is deleted from the cache and
+        # computed again from what is left (llf keeps its own copy)
+        res = self.estimate_model()
+        aic = res.aic
+        assert res._cache["aic"] is aic
+        res.remove_data()
+        assert "aic" not in res._cache
+        assert_allclose(res.aic, aic, rtol=1e-13)
+
+    def test_old_pickle_statistics(self):
+        # An old pickle read llf and aic as None, and summary raised TypeError
+        full = self.estimate_model()
+        results = self.estimate_model()._results
+        results.summary()
+        remove_data_none(results)
+        res, _ = check_pickle(results)
+        for name in ["llf", "aic", "bic", "bse", "pvalues"]:
+            assert_allclose(getattr(res, name), getattr(full, name), rtol=1e-13)
+        res.summary()
+
+    def test_copy_keeps_original_cache(self):
+        # copy.copy passes the original __dict__ to __setstate__, so the
+        # original keeps its cache
+        results = self.estimate_model()._results
+        remove_data_none(results)
+        cache = dict(results._cache)
+        res = copy.copy(results)
+        assert results._cache == cache
+        assert n_none(res._cache) == 0
 
 
 class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):
@@ -422,3 +493,59 @@ def test_pickle_fit_constrained_formula():
     expected = exog @ results.params.to_numpy()
     assert_allclose(results.predict(df.iloc[:5]).to_numpy(), expected)
     assert_allclose(res.predict(df.iloc[:5]).to_numpy(), expected)
+
+
+# The attributes that GLMResults marks as data with cached_data
+GLM_DATA = ["resid_response", "resid_pearson", "resid_deviance", "mu"]
+
+
+def glm_data():
+    rs = np.random.RandomState(34234)
+    exog = sm.add_constant(rs.standard_normal((200, 2)))
+    endog = exog.sum(1) + rs.standard_normal(200)
+    return endog, exog
+
+
+def test_remove_data_base_class_data():
+    # GEEResults inherits the data attributes of GLMResults. remove_data
+    # deletes them and keeps the statistics that the base classes cache
+    endog, exog = glm_data()
+    groups = np.repeat(np.arange(40), 5)
+    res = sm.GEE(endog, exog, groups).fit()._results
+    for name in GLM_DATA:
+        getattr(res, name)
+    tvalues = res.tvalues
+    pvalues = res.pvalues
+    res.remove_data()
+    assert not set(GLM_DATA) & set(res._cache)
+    assert res._cache["tvalues"] is tvalues
+    assert res._cache["pvalues"] is pvalues
+    res2, _ = check_pickle(res)
+    assert not set(GLM_DATA) & set(res2._cache)
+    assert_allclose(res2.pvalues, pvalues, rtol=1e-13)
+
+
+class _OverrideResults(GLMResults):
+    # resid_pearson is no longer marked as data
+    @cache_readonly
+    def resid_pearson(self):
+        return self._endog - self.mu
+
+
+class _InheritResults(_OverrideResults):
+    pass
+
+
+def test_remove_data_overridden_base_class_data():
+    # The class nearest in the method resolution order decides whether an
+    # attribute is data: resid_pearson of _OverrideResults is kept, and
+    # resid_response, which it inherits from GLMResults, is deleted
+    endog, exog = glm_data()
+    res = sm.GLM(endog, exog).fit()._results
+    res.__class__ = _InheritResults
+    resid_pearson = res.resid_pearson
+    assert res.resid_response.shape == endog.shape
+    assert "resid_response" in res._cache
+    res.remove_data()
+    assert res._cache["resid_pearson"] is resid_pearson
+    assert "resid_response" not in res._cache

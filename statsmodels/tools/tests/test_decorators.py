@@ -87,6 +87,51 @@ def test_deprecated_alias(msg, remove_version, warning):
         assert msg in message
 
 
+@pytest.mark.parametrize("value", [None, 0, "b"], ids=["none", "zero", "str"])
+def test_cache_readonly_computed_once(value):
+    # Every result, None and falsy ones included, is computed once and then
+    # read from the cache
+    calls = []
+
+    class Example:
+        @cache_readonly
+        def b(self):
+            calls.append(None)
+            return value
+
+    ex = Example()
+    assert ex.b is value
+    assert ex.b is value
+    assert ex._cache == {"b": value}
+    assert len(calls) == 1
+
+
+def test_cache_readonly_deleted_value_computed_again():
+    # remove_data deletes the cached values, so that they are computed again
+    # from what is left on the next access
+    calls = []
+
+    class Example:
+        def __init__(self):
+            self.x = None
+
+        @cache_readonly
+        def b(self):
+            calls.append(None)
+            return self.x
+
+    ex = Example()
+    assert ex.b is None
+    ex.x = 2
+    # The cached None is kept until it is deleted
+    assert ex.b is None
+    assert len(calls) == 1
+    del ex._cache["b"]
+    assert ex.b == 2
+    assert ex._cache == {"b": 2}
+    assert len(calls) == 2
+
+
 def test_stub_declares_public_names():
     # The stub replaces the module for the type checkers, which report a name
     # that it does not declare as missing from the module
@@ -100,3 +145,27 @@ def test_stub_declares_public_names():
         elif isinstance(node, ast.Assign):
             declared.update(t.id for t in node.targets if isinstance(t, ast.Name))
     assert set(_decorators.__all__) <= declared
+
+
+def test_cached_data():
+    # cached_data caches like cache_readonly. remove_data tells the two apart,
+    # so a cache_readonly attribute is not a cached_data one
+    calls = []
+
+    class Example:
+        @_decorators.cached_data
+        def a(self):
+            calls.append(None)
+            return [1, 2]
+
+        @cache_readonly
+        def b(self):
+            return 1
+
+    ex = Example()
+    assert ex.a is ex.a
+    assert ex._cache == {"a": [1, 2]}
+    assert len(calls) == 1
+    assert isinstance(vars(Example)["a"], cache_readonly)
+    assert not isinstance(vars(Example)["b"], _decorators.cached_data)
+    assert vars(Example)["a"].__name__ == "a"
