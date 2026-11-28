@@ -1,0 +1,5 @@
+- ``forecast_cov(method="auto")`` of ``VARResults`` returned the forecast MSE
+  without the documented parameter-uncertainty adjustment for trend
+  ``"n"``, and treated one exog variable as a constant. Trend ``"n"``
+  gets the adjustment, and a non-constant exog variable with trend
+  ``"n"`` raises a ``ValueError``. :pr:`10969`

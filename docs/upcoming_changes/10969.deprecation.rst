@@ -1,0 +1,4 @@
+- ``forecast_cov(method="auto")`` of ``VARResults`` for models without the
+  adjustment (other trends, exog) returns the MSE with a
+  ``FutureWarning`` and will raise after statsmodels 0.17 is released.
+  :pr:`10969`

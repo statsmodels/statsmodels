@@ -3426,3 +3426,100 @@ def test_pprint_matrix_col_space():
         "row2".ljust(6) + "2.000000".rjust(12) + "0.125000".rjust(12),
         "",
     ]
+
+
+def _forecast_cov_auto_data():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    return np.diff(np.log(data.to_numpy()), axis=0)
+
+
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_forecast_cov_auto_closed_form(trend):
+    from statsmodels.tools.sm_exceptions import OutputWarning
+
+    # Lütkepohl (2005), pp. 96-97: Sigma_yhat(h) = MSE(h) + Omega(h) / T with
+    # Omega(h) = sum_{i,j<h} tr(B'^(h-1-i) G^-1 B^(h-1-j) G) Phi_i Sigma_u Phi_j'
+    # where Z_{t+1} = B Z_t for the regressors Z_t and G = Z'Z. Written out:
+    # Omega(1) = df Sigma_u and
+    # Omega(2) = tr(B' G^-1 B G) Sigma_u + tr(B) (Sigma_u A_1' + A_1 Sigma_u)
+    #            + df A_1 Sigma_u A_1'
+    y = _forecast_cov_auto_data()
+    res = VAR(y).fit(2, trend=trend)
+    k_trend = len(trend) if trend == "c" else 0
+    nobs = y.shape[0] - 2
+    z = np.column_stack([np.ones(nobs)] * k_trend + [y[1:-1], y[:-2]])
+    a1, a2 = res.coefs
+    df = 6 + k_trend
+    b = np.zeros((df, df))
+    if k_trend:
+        b[0, 0] = 1
+        b[1:4, 0] = res.intercept
+    b[k_trend : k_trend + 3, k_trend:] = np.hstack([a1, a2])
+    b[k_trend + 3 :, k_trend : k_trend + 3] = np.eye(3)
+    g = z.T @ z
+    sigma = res.sigma_u
+    omega1 = df * sigma
+    omega2 = (
+        np.trace(b.T @ np.linalg.solve(g, b @ g)) * sigma
+        + np.trace(b) * (sigma @ a1.T + a1 @ sigma)
+        + df * a1 @ sigma @ a1.T
+    )
+    expected = np.array(
+        [sigma + omega1 / nobs, sigma + a1 @ sigma @ a1.T + omega2 / nobs]
+    )
+    with pytest.warns(OutputWarning, match="parameter uncertainty"):
+        fc_cov = res.forecast_cov(3, method="auto")
+    assert_allclose(fc_cov[:2], expected, rtol=1e-10)
+
+
+def test_forecast_cov_auto_constant_exog():
+    from statsmodels.tools.sm_exceptions import OutputWarning
+
+    # trend="n" with a constant exog column is the model with trend="c"
+    y = _forecast_cov_auto_data()
+    expected = VAR(y).fit(2, trend="c")
+    res = VAR(y, exog=np.full((y.shape[0], 1), 2.0)).fit(2, trend="n")
+    with pytest.warns(OutputWarning, match="parameter uncertainty"):
+        fc_cov = res.forecast_cov(3, method="auto")
+    with pytest.warns(OutputWarning, match="parameter uncertainty"):
+        assert_allclose(fc_cov, expected.forecast_cov(3, method="auto"), rtol=1e-8)
+
+
+def test_forecast_cov_auto_stochastic_exog_raises():
+    # The exog variable was treated as a constant
+    y = _forecast_cov_auto_data()
+    exog = np.random.default_rng(3).standard_normal((y.shape[0], 1))
+    res = VAR(y, exog=exog).fit(2, trend="n")
+    with pytest.raises(ValueError, match='method="auto" does not support exog'):
+        res.forecast_cov(3, method="auto")
+
+
+@pytest.mark.parametrize(
+    "trend, k_exog, const_first",
+    [
+        ("ct", 0, False),
+        ("ctt", 0, False),
+        ("c", 1, False),
+        ("n", 2, False),
+        ("n", 2, True),  # the same model as trend="c" with one exog
+        ("ct", 2, False),
+    ],
+)
+def test_forecast_cov_auto_unsupported_deprecated(trend, k_exog, const_first):
+    # Unsupported models return the MSE, which is deprecated
+    y = _forecast_cov_auto_data()
+    exog = None
+    if k_exog:
+        exog = np.random.default_rng(4).standard_normal((y.shape[0], k_exog))
+        if const_first:
+            exog[:, 0] = 1.0
+    res = VAR(y, exog=exog).fit(2, trend=trend)
+    with pytest.warns(FutureWarning, match='method="auto" supports only trend'):
+        fc_cov = res.forecast_cov(3, method="auto")
+    a1, a2 = res.coefs
+    phi2 = a1 @ a1 + a2
+    sigma = res.sigma_u
+    mse = np.cumsum(
+        [sigma, a1 @ sigma @ a1.T, phi2 @ sigma @ phi2.T], axis=0
+    )
+    assert_allclose(fc_cov, mse, rtol=1e-10)

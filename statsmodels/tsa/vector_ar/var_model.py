@@ -2129,6 +2129,19 @@ class VARResults(VARProcess):
             is currently only supported if there is no exogenous data and the
             trend is one of "n" or "c".
 
+            .. versionchanged:: 0.15.1
+
+               "auto" adds the parameter uncertainty for trend "n". It
+               returned the MSE. With trend "n" and one exog variable that
+               is not constant, "auto" raises a ValueError. It treated the
+               variable as a constant.
+
+            .. deprecated:: 0.15.1
+
+               "auto" with another trend or with exog returns the MSE and
+               issues a FutureWarning. It will raise a ValueError after
+               statsmodels 0.17 is released.
+
         Returns
         -------
         covs : ndarray (steps x k x k)
@@ -2143,14 +2156,32 @@ class VARResults(VARProcess):
         if method == "mse":
             pass
         elif method == "auto":
-            if self.k_exog == 1 and self.k_trend < 2:
-                # currently only supported if no exog and trend in ['n', 'c']
+            # Supported: trend "n" or "c" without exog, and trend "n" with a
+            # constant exog column, which is the same model as trend "c"
+            const_exog = (
+                self.k_trend == 0
+                and self.k_exog_user == 1
+                and np.ptp(self.endog_lagged[:, 0]) == 0
+            )
+            if (self.k_exog_user == 0 and self.k_trend < 2) or const_exog:
                 fc_cov += self._omega_forc_cov(steps) / self.nobs
-                import warnings
-
                 warnings.warn(
                     "forecast cov takes parameter uncertainty into account",
                     OutputWarning,
+                    stacklevel=2,
+                )
+            elif self.k_trend == 0 and self.k_exog_user == 1:
+                raise ValueError(
+                    'method="auto" does not support exog. With trend="n" and '
+                    "one exog variable, it was treated as a constant."
+                )
+            else:
+                warnings.warn(
+                    'method="auto" supports only trend "n" or "c" without exog '
+                    "and returns the forecast MSE in other cases. This is "
+                    "deprecated and will raise a ValueError after statsmodels "
+                    '0.17 is released. Use method="mse" instead.',
+                    FutureWarning,
                     stacklevel=2,
                 )
         else:
