@@ -19,6 +19,7 @@ from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.regression.mixed_linear_model import MixedLM
 
 NOBS = 200
 
@@ -181,3 +182,26 @@ def test_phreg_014(data):
     assert "Num groups:" in expected
     res = roundtrip(res, ["groups"])
     assert res.summary().as_text() == expected
+
+
+@pytest.mark.parametrize("remove_data", [False, True])
+def test_mixedlm_015(data, remove_data):
+    # Results pickled by 0.15.0 or earlier lack _cov_vparams, which bse_re
+    # needs. It is computed again from the model's data when they are there.
+    _, exog, _, _, groups = data
+    rs = np.random.RandomState(987689)
+    endog = exog.sum(1) + rs.standard_normal(NOBS // 5).repeat(5)
+    endog += rs.standard_normal(NOBS)
+    res = MixedLM(endog, exog, groups=groups).fit()
+    bse_re = res.bse_re
+    res.summary()
+    if remove_data:
+        res.remove_data()
+    results = res._results
+    results._cache.pop("bse_re", None)
+    res._results = roundtrip(results, ["_cov_vparams"])
+    if remove_data:
+        assert np.all(np.isnan(res.bse_re))
+    else:
+        assert_allclose(res.bse_re, bse_re, rtol=1e-13)
+    res.summary()

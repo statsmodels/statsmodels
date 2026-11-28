@@ -2961,7 +2961,27 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
            The standard errors were off by about a factor of the square
            root of `scale` and did not include the uncertainty of `scale`.
         """
-        return np.sqrt(np.diag(self._cov_vparams))
+        cov_vparams = getattr(self, "_cov_vparams", None)
+        if cov_vparams is None:
+            cov_vparams = self._cov_vparams = self._cov_vparams_from_model()
+        return np.sqrt(np.diag(cov_vparams))
+
+    def _cov_vparams_from_model(self):
+        """
+        Return the covariance of the variance parameters for old results
+
+        Results pickled by statsmodels 0.15.0 or earlier do not have it. It is
+        computed as in fit, from the Hessian at the estimates, which needs the
+        model's exog. After remove_data it is not available and is NaN.
+        """
+        model = self.model
+        k_fe = model.k_fe
+        k_vparams = len(self.params) - k_fe
+        if model.exog is None:
+            return np.full((k_vparams, k_vparams), np.nan)
+        _, _, scale_grad = model._hessian(self.params_object)
+        pcov = self.normalized_cov_params * self.scale
+        return model._cov_vparams(pcov, self.params[k_fe:], self.scale, scale_grad)
 
     def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)
