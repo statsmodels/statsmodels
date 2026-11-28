@@ -102,6 +102,26 @@ def test_mv_mean():
     assert_allclose(res, ci2, rtol=1e-13)
 
 
+def test_mvmean_single_variable():
+    # With one variable Hotelling's T^2 reduces to the square of the
+    # Student t statistic.  np.cov returns a 0-d array in this case, which
+    # used to make np.linalg.solve raise a LinAlgError.
+    from scipy import stats
+
+    rng = np.random.RandomState(20261127)
+    x = rng.normal(size=(20, 1))
+    mu0 = 0.3
+    res = smmv.test_mvmean(x, [mu0])
+
+    n = x.shape[0]
+    s2 = x[:, 0].var(ddof=1)
+    t2 = n * (x[:, 0].mean() - mu0) ** 2 / s2
+    assert_allclose(res.t2, t2, rtol=1e-12)
+    assert_allclose(res.statistic, t2, rtol=1e-12)
+    assert_equal(res.df, (1, n - 1))
+    assert_allclose(res.pvalue, stats.f.sf(t2, 1, n - 1), rtol=1e-12)
+
+
 def test_mvmean_2indep():
     x = np.asarray([[1.0, 24.0, 23.5, 1.0],
                     [2.0, 25.0, 24.5, 1.0],
