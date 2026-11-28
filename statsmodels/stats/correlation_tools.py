@@ -1001,6 +1001,8 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     # Number of rows to process in one pass
     bs = int(np.floor(max_elt / nrow))
+    if bs < 1:
+        raise ValueError("max_elt must be at least the number of rows")
 
     ipos_all, jpos_all, cor_values = [], [], []
 

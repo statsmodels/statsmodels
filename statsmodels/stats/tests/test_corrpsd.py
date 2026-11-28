@@ -7,6 +7,8 @@ Author: Josef Perktold
 
 from statsmodels.compat.platform import PLATFORM_OSX
 
+import subprocess
+import sys
 import warnings
 
 import numpy as np
@@ -742,3 +744,57 @@ class Test_Factor:
         fcor *= np.abs(fcor) >= 0.2
 
         assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
+
+
+def _corr_thresholded_subprocess(seed, nrow, ncol, max_elt, timeout=20):
+    """Run corr_thresholded in a child with a hard timeout (no test hang)."""
+    code = (
+        "import numpy as np;"
+        "from statsmodels.stats.correlation_tools import corr_thresholded;"
+        "rs=np.random.RandomState(%d);"
+        "X=rs.normal(size=(%d,%d));"
+        "c=corr_thresholded(X,0.2,max_elt=%r);"
+        "print(c.shape, c.nnz)" % (seed, nrow, ncol, max_elt)
+    )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True,
+                          text=True, timeout=timeout)
+    return proc
+
+
+def test_corr_thresholded_max_elt_below_nrow_rejected():
+    # A max_elt below the row count cannot respect the documented memory
+    # ceiling.  It must raise a clear ValueError rather than spin forever.
+    # All calls run in a child with a watchdog, so the unfixed infinite loop
+    # fails this test instead of hanging CI or future runs.
+    proc = _corr_thresholded_subprocess(20261127, 1000, 5, 100, timeout=8)
+    assert proc.returncode != 0
+    assert "max_elt must be at least the number of rows" in proc.stderr
+
+
+def test_corr_thresholded_max_elt_equal_nrow():
+    # At the documented floor the computation is exact.
+    rs = np.random.RandomState(20261127)
+    X = rs.normal(size=(40, 4))
+    tcor = corr_thresholded(X, 0.2, max_elt=40).todense()
+    Z = X - X.mean(1)[:, None]
+    sd = Z.std(1, ddof=1)
+    good = sd > 1e-5
+    Z[good] /= sd[good, None]
+    Z[~good] = 0.0
+    expected = Z.dot(Z.T) / (X.shape[1] - 1)
+    expected[np.abs(expected) < 0.2] = 0.0
+    assert_allclose(tcor, expected, rtol=1e-12, atol=1e-12)
+
+
+def test_corr_thresholded_max_elt_above_nrow_unchanged():
+    rs = np.random.RandomState(20261127)
+    X = rs.normal(size=(40, 4))
+    tcor = corr_thresholded(X, 0.2, max_elt=1000).todense()
+    Z = X - X.mean(1)[:, None]
+    sd = Z.std(1, ddof=1)
+    good = sd > 1e-5
+    Z[good] /= sd[good, None]
+    Z[~good] = 0.0
+    expected = Z.dot(Z.T) / (X.shape[1] - 1)
+    expected[np.abs(expected) < 0.2] = 0.0
+    assert_allclose(tcor, expected, rtol=1e-12, atol=1e-12)
