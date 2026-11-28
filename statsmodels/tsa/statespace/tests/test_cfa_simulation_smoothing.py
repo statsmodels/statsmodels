@@ -427,3 +427,52 @@ def test_posterior_cov_and_update_posterior():
     )
     assert_allclose(sim.simulated_state, desired.reshape(2, -1, order="F"), rtol=1e-10)
     assert sim.posterior_mean is mean
+
+
+def test_posterior_moments_before_simulate():
+    # The posterior moments are available before simulate() is called (they
+    # raised AttributeError): they equal the Kalman smoother output for the
+    # current parameters, and simulate(update_posterior=False) then uses them
+    endog = dta[["realgdp", "cpi"]].iloc[:40]
+
+    def get_model():
+        mod = varmax.VARMAX(endog, order=(1, 0), measurement_error=True)
+        mod.update(mod.start_params)
+        return mod
+
+    res = get_model().ssm.smooth()
+    nobs, k_states = res.nobs, res.k_states
+
+    def get_simulation_smoother():
+        # The representation of the model was last filtered at other
+        # parameters, so the moments need the current matrices and
+        # initialization
+        mod = get_model()
+        mod.update(mod.start_params * 0.5)
+        mod.ssm.smooth()
+        mod.update(mod.start_params)
+        return mod.simulation_smoother(method="cfa")
+
+    sim_cfa = get_simulation_smoother()
+    assert_allclose(sim_cfa.posterior_mean, res.smoothed_state, rtol=1e-8)
+    assert sim_cfa.simulated_state is None
+
+    sim_cfa = get_simulation_smoother()
+    posterior_cov = sim_cfa.posterior_cov
+    blocks = [
+        posterior_cov[k_states * t : k_states * (t + 1), k_states * t : k_states * (t + 1)]
+        for t in range(nobs)
+    ]
+    assert_allclose(
+        np.array(blocks), res.smoothed_state_cov.transpose(2, 0, 1), rtol=1e-8
+    )
+
+    sim_cfa = get_simulation_smoother()
+    inv_chol = sim_cfa.posterior_cov_inv_chol_sparse
+    actual = cho_solve_banded((inv_chol, True), np.eye(nobs * k_states))
+    # atol: covariances of states far apart are close to zero
+    assert_allclose(actual, posterior_cov, rtol=1e-8, atol=1e-14)
+
+    # With zero variates the draw is the posterior mean
+    sim_cfa.simulate(variates=np.zeros((k_states, nobs)), update_posterior=False)
+    assert_allclose(sim_cfa.simulated_state, res.smoothed_state, rtol=1e-8)

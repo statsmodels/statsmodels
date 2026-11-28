@@ -1,0 +1,4 @@
+- ``posterior_mean``, ``posterior_cov`` and
+  ``posterior_cov_inv_chol_sparse`` of ``CFASimulationSmoother`` raised
+  an ``AttributeError`` before ``simulate`` was called. They are computed
+  for the current model. :pr:`11049`
