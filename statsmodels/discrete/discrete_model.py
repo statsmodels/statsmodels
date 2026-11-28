@@ -6039,6 +6039,10 @@ class BinaryResults(DiscreteResults):
         # Compute and store the separation diagnostic now, since fittedvalues
         # and model.endog are cleared by remove_data() and summary() must
         # still be able to run afterwards.
+        self._separation_etext = self._separation_text()
+
+    def _separation_text(self):
+        """Return the warnings about separation for the summary"""
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
         predclose_sum = (absprederror < 1e-4).sum()
@@ -6059,7 +6063,7 @@ class BinaryResults(DiscreteResults):
             wstr += "is complete\nquasi-separation. In this case some "
             wstr += "parameters will not be identified."
             etext.append(wstr)
-        self._separation_etext = etext
+        return etext
 
     def pred_table(self, threshold=0.5):
         """
@@ -6085,8 +6089,13 @@ class BinaryResults(DiscreteResults):
     @Appender(DiscreteResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=0.05, yname_list=None):
         smry = super().summary(yname, xname, title, alpha, yname_list)
-        if self._separation_etext:
-            smry.add_extra_txt(self._separation_etext)
+        etext = getattr(self, "_separation_etext", None)
+        if etext is None:
+            # Results pickled by statsmodels 0.14 do not store the diagnostic,
+            # which then needs the data, as it did in 0.14
+            etext = self._separation_text()
+        if etext:
+            smry.add_extra_txt(etext)
         return smry
 
     @cache_readonly

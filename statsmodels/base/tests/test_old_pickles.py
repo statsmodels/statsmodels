@@ -7,11 +7,13 @@ with objects created by this version, then pickles and loads the object.
 """
 
 import pickle
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.discrete.discrete_model import Logit, Probit
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -128,3 +130,22 @@ def test_glm_new_pickle_unchanged(data):
     assert model2._offset_name == "name"
     assert model2._has_offset
     assert model2.exposure is None
+
+
+@pytest.mark.parametrize(
+    "model, separation", [("logit", False), ("probit", False), ("logit", True)]
+)
+def test_binary_014(model, separation):
+    # 0.14 computed the separation warning in summary, from the data
+    rs = np.random.RandomState(987689)
+    exog = np.column_stack([np.ones(NOBS), rs.standard_normal((NOBS, 2))])
+    noise = 0.05 if separation else 1.0
+    endog = (exog[:, 1] + noise * rs.standard_normal(NOBS) > 0).astype(float)
+    mod = {"logit": Logit, "probit": Probit}[model](endog, exog)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = mod.fit(disp=0, maxiter=200)
+    expected = res.summary().extra_txt
+    assert bool(expected) is separation
+    res._results = roundtrip(res._results, ["_separation_etext"])
+    assert res.summary().extra_txt == expected
