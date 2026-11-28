@@ -1747,10 +1747,13 @@ class NewsResults:
         impacts = details["impact"].unstack(["impact date",
                                              "impacted variable"])
 
-        if groupby is not None:
+        # An empty table has nothing to group, and pandas < 2 cannot stack it
+        if groupby is not None and not impacts.empty:
+            # Drop the all-NaN rows, as stack did before pandas 3
             impacts = (impacts.unstack("update date")
                               .groupby(groupby).sum(min_count=1)
-                              .stack("update date")
+                              .stack("update date", **FUTURE_STACK)
+                              .dropna(how="all")
                               .swaplevel()
                               .sort_index())
 
