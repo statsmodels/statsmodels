@@ -689,7 +689,7 @@ class SimulationSmoothResults:
         if create_statespace:
             raise ValueError(
                 "The simulation smoother currently cannot replace"
-                " the underlying _{{prefix}}Representation model"
+                " the underlying compiled representation model"
                 " object if it changes (which happens e.g., if the"
                 " dimensions of some system matrices change.)"
             )

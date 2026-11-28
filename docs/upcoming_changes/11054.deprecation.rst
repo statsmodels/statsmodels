@@ -1,0 +1,3 @@
+- The ``design`` argument of ``news`` of ``SmootherResults`` has no effect and is
+  deprecated; it will be removed after statsmodels 0.17 is released.
+  :pr:`11054`

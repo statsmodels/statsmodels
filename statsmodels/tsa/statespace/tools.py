@@ -1054,8 +1054,6 @@ def constrain_stationary_multivariate(unconstrained, variance,
 
     if order < 1:
         raise ValueError("Must have order at least 1")
-    if k_endog < 1:
-        raise ValueError("Must have at least 1 endogenous variable")
 
     if prefix is None:
         prefix, dtype, _ = find_best_blas_type(
@@ -1093,7 +1091,7 @@ def constrain_stationary_multivariate(unconstrained, variance,
     return constrained, variance
 
 
-def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
+def _unconstrain_sv_less_than_one(constrained, order, k_endog):
     """
     Transform matrices with singular values less than one to arbitrary
     matrices.
@@ -1103,9 +1101,9 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     constrained : list
         The partial autocorrelation matrices. Should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`.
-    order : int, optional
+    order : int
         The order of the autoregression.
-    k_endog : int, optional
+    k_endog : int
         The dimension of the data vector.
 
     Returns
@@ -1126,11 +1124,6 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     from scipy import linalg
 
     unconstrained = []  # A_s,  s = 1, ..., p
-    if order is None:
-        order = len(constrained)
-    if k_endog is None:
-        k_endog = constrained[0].shape[0]
-
     eye = np.eye(k_endog)
     for i in range(order):
         P = constrained[i]
@@ -1198,29 +1191,22 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
 
 
 def _compute_multivariate_acovf_from_coefficients(
-        coefficients, error_variance, maxlag=None,
-        forward_autocovariances=False):
+        coefficients, error_variance, maxlag=None):
     r"""
     Compute multivariate autocovariances from vector autoregression coefficient
     matrices
 
     Parameters
     ----------
-    coefficients : ndarray or list of ndarray
-        The coefficients matrices. If a list, should be a list of length
-        `order`, where each element is an array sized `k_endog` x `k_endog`. If
-        an array, should be the coefficient matrices horizontally concatenated
-        and sized `k_endog` x `k_endog * order`.
+    coefficients : list of ndarray
+        The coefficients matrices. A list of length `order`, where each
+        element is an array sized `k_endog` x `k_endog`.
     error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
     maxlag : int, optional
         The maximum autocovariance to compute. Default is `order`-1. Can be
         zero, in which case it returns the variance.
-    forward_autocovariances : bool, optional
-        Whether or not to compute forward autocovariances
-        :math:`E(y_t y_{t+j}')`. Default is False, so that backward
-        autocovariances :math:`E(y_t y_{t-j}')` are returned.
 
     Returns
     -------
@@ -1236,12 +1222,7 @@ def _compute_multivariate_acovf_from_coefficients(
 
         \Gamma(j) = E(y_t y_{t-j}')
 
-    for j = 1, ..., `maxlag`, unless `forward_autocovariances` is specified,
-    in which case it computes:
-
-    .. math::
-
-        E(y_t y_{t+j}') = \Gamma(j)'
+    for j = 1, ..., `maxlag`.
 
     Coefficients are assumed to be provided from the VAR model:
 
@@ -1253,19 +1234,9 @@ def _compute_multivariate_acovf_from_coefficients(
     """
     from scipy import linalg
 
-    # Convert coefficients to a list of matrices, for use in
-    # `companion_matrix`; get dimensions
-    if type(coefficients) is list:
-        order = len(coefficients)
-        k_endog = coefficients[0].shape[0]
-    else:
-        k_endog, order = coefficients.shape
-        order //= k_endog
-
-        coefficients = [
-            coefficients[:k_endog, i*k_endog:(i+1)*k_endog]
-            for i in range(order)
-        ]
+    # Get dimensions
+    order = len(coefficients)
+    k_endog = coefficients[0].shape[0]
 
     if maxlag is None:
         maxlag = order-1
@@ -1298,10 +1269,6 @@ def _compute_multivariate_acovf_from_coefficients(
             stacked_cov[:k_endog, -k_endog:]
         ]
 
-    if forward_autocovariances:
-        for i in range(len(autocovariances)):
-            autocovariances[i] = autocovariances[i].T
-
     return autocovariances
 
 
@@ -1329,8 +1296,7 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
         sample_autocovariances)
 
 
-def _compute_multivariate_pacf_from_autocovariances(autocovariances,
-                                                    order=None, k_endog=None):
+def _compute_multivariate_pacf_from_autocovariances(autocovariances):
     """
     Compute multivariate partial autocorrelations from autocovariances
 
@@ -1339,10 +1305,6 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     autocovariances : list
         Autocorrelations matrices. Should be a list of length `order` + 1,
         where each element is an array sized `k_endog` x `k_endog`.
-    order : int, optional
-        The order of the autoregression.
-    k_endog : int, optional
-        The dimension of the data vector.
 
     Returns
     -------
@@ -1365,10 +1327,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     """
     from scipy import linalg
 
-    if order is None:
-        order = len(autocovariances)-1
-    if k_endog is None:
-        k_endog = autocovariances[0].shape[0]
+    order = len(autocovariances)-1
 
     # Now apply the Ansley and Kohn (1986) algorithm, except that instead of
     # calculating phi_{s+1, s+1} = L_s P_{s+1} {L_s^*}^{-1} (which requires
@@ -1489,26 +1448,19 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     return partial_autocorrelations
 
 
-def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
-                                                 order=None, k_endog=None):
+def _compute_multivariate_pacf_from_coefficients(constrained, error_variance):
     r"""
     Transform matrices corresponding to a stationary (or invertible) process
     to matrices with singular values less than one.
 
     Parameters
     ----------
-    constrained : ndarray or list of ndarray
-        The coefficients matrices. If a list, should be a list of length
-        `order`, where each element is an array sized `k_endog` x `k_endog`. If
-        an array, should be the coefficient matrices horizontally concatenated
-        and sized `k_endog` x `k_endog * order`.
+    constrained : list of ndarray
+        The coefficients matrices. A list of length `order`, where each
+        element is an array sized `k_endog` x `k_endog`.
     error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    order : int, optional
-        The order of the autoregression.
-    k_endog : int, optional
-        The dimension of the data vector.
 
     Returns
     -------
@@ -1531,13 +1483,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     .. math::
         y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
     """
-
-    if type(constrained) is list:
-        order = len(constrained)
-        k_endog = constrained[0].shape[0]
-    else:
-        k_endog, order = constrained.shape
-        order //= k_endog
+    order = len(constrained)
 
     # Get autocovariances for the process; these are defined to be
     # E z_t z_{t-j}'
@@ -1609,7 +1555,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
     # coefficient matrices to our "partial autocorrelation matrix" space
     # (matrices with singular values less than one)
     partial_autocorrelations = _compute_multivariate_pacf_from_coefficients(
-        constrained, error_variance, order, k_endog)
+        constrained, error_variance)
 
     # Step 2: convert from arbitrary matrices to those with singular values
     # less than one.
@@ -1851,13 +1797,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     if not inplace:
         B = np.array(B, dtype=prefix_dtype_map[prefix], order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we do
-    # not want to alter it or convert it to a numpy array
-    try:
-        if not A.is_f_contig():
-            raise ValueError
-    except (AttributeError, ValueError):
-        A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
+    A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
     missing = _mask_as_intc(missing)
     copy(A, B, missing, missing_rows, missing_cols, is_diagonal)
@@ -1896,13 +1836,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     if not inplace:
         b = np.array(b, dtype=prefix_dtype_map[prefix], order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we do
-    # not want to alter it or convert it to a numpy array
-    try:
-        if not a.is_f_contig():
-            raise ValueError
-    except (AttributeError, ValueError):
-        a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
+    a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
     missing = _mask_as_intc(missing)
     copy(a, b, missing)
@@ -1952,13 +1886,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     if not inplace:
         B = np.array(B, dtype=prefix_dtype_map[prefix], order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we do
-    # not want to alter it or convert it to a numpy array
-    try:
-        if not A.is_f_contig():
-            raise ValueError
-    except (AttributeError, ValueError):
-        A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
+    A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
     index = _mask_as_intc(index)
     copy(A, B, index, index_rows, index_cols, is_diagonal)
@@ -1996,13 +1924,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     if not inplace:
         b = np.array(b, dtype=prefix_dtype_map[prefix], order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we do
-    # not want to alter it or convert it to a numpy array
-    try:
-        if not a.is_f_contig():
-            raise ValueError
-    except (AttributeError, ValueError):
-        a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
+    a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
     index = _mask_as_intc(index)
     copy(a, b, index)
@@ -2507,42 +2429,32 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
     return start, end, prediction_index
 
 
-def _atleast_1d(*arys):
+def _atleast_1d(ary):
     """
     Version of `np.atleast_1d`, copied from
     https://github.com/numpy/numpy/blob/master/numpy/core/shape_base.py,
     with the following modifications:
 
-    1. It allows for `None` arguments, and passes them directly through
+    1. It allows for a `None` argument, and passes it directly through
+    2. It takes one input
 
     Parameters
     ----------
-    *arys : array_like or None
-        One or more input arrays (or None) to be converted to arrays with
-        at least one dimension.
+    ary : array_like or None
+        The input array (or None) to be converted to an array with at least
+        one dimension.
 
     Returns
     -------
-    ret : ndarray or None or list
-        An array (or None, if the corresponding input was None) with
-        `a.ndim >= 1`. A list of arrays (or None values) is returned if
-        more than one input was given.
+    ret : ndarray or None
+        An array (or None, if the input was None) with `a.ndim >= 1`.
     """
-    res = []
-    for ary in arys:
-        if ary is None:
-            result = None
-        else:
-            arr = np.asanyarray(ary)
-            if arr.ndim == 0:
-                result = arr.reshape(1)
-            else:
-                result = arr
-        res.append(result)
-    if len(res) == 1:
-        return res[0]
-    else:
-        return res
+    if ary is None:
+        return None
+    arr = np.asanyarray(ary)
+    if arr.ndim == 0:
+        return arr.reshape(1)
+    return arr
 
 
 def _atleast_2d(*arys):
@@ -2562,10 +2474,9 @@ def _atleast_2d(*arys):
 
     Returns
     -------
-    ret : ndarray or None or list
-        An array (or None, if the corresponding input was None) with
-        `a.ndim >= 2`. A list of arrays (or None values) is returned if
-        more than one input was given.
+    ret : list of ndarray or None
+        A list with an array (or None, if the corresponding input was None)
+        with `a.ndim >= 2` for each input.
     """
     res = []
     for ary in arys:
@@ -2580,7 +2491,4 @@ def _atleast_2d(*arys):
             else:
                 result = arr
         res.append(result)
-    if len(res) == 1:
-        return res[0]
-    else:
-        return res
+    return res

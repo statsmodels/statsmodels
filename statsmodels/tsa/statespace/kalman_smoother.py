@@ -380,12 +380,6 @@ class KalmanSmoother(KalmanFilter):
                 smoother_output, smooth_method, **kwargs
             ))
 
-        # Check that the filter and statespace weren't just recreated
-        if create_filter or create_statespace:
-            raise ValueError("Passed settings forced re-creation of the"
-                             " Kalman filter. Please run `_filter` before"
-                             " running `_smooth`.")
-
         # Get the appropriate smoother
         smoother = self._kalman_smoothers[prefix]
 
@@ -873,7 +867,7 @@ class SmootherResults(FilterResults):
         self.__smoothed_state_autocovariance = {}
 
     def _smoothed_state_autocovariance(self, shift, start, end,
-                                       extend_kwargs=None):
+                                       extend_kwargs):
         """
         Compute "forward" autocovariances, Cov(t, t+j)
 
@@ -890,7 +884,7 @@ class SmootherResults(FilterResults):
             The end of the interval (exclusive) autocovariances to compute and
             return. Note that since it is an exclusive endpoint, the returned
             autocovariances do not include the value at this index.
-        extend_kwargs : dict, optional
+        extend_kwargs : dict
             Keyword arguments containing updated state space system matrices
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
@@ -901,9 +895,6 @@ class SmootherResults(FilterResults):
             Array of autocovariance matrices, shaped `(n, k_states, k_states)`
             where `n = end - start`.
         """
-        if extend_kwargs is None:
-            extend_kwargs = {}
-
         # Size of returned array in the time dimension
         n = end - start
 
@@ -1240,10 +1231,15 @@ class SmootherResults(FilterResults):
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
         design : ndarray, optional
-            Design matrix for the period `t` in time-varying models. If this
-            model has a time-varying design matrix, and the argument `t` is out
-            of this model's sample, then a new design matrix for period `t`
-            must be provided. Unused otherwise.
+            Not used. The impacts on periods outside of the sample of a
+            time-varying model cannot be computed (they raise a
+            RuntimeError), and otherwise the design matrix of this results
+            object is used.
+
+            .. deprecated:: 0.15.1
+
+               `design` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
         state_index : array_like, optional
             An optional index specifying a subset of states to use when
             constructing the impacts of revisions and news. For example, if
@@ -1331,6 +1327,15 @@ class SmootherResults(FilterResults):
                Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
 
         """
+        if design is not None:
+            warnings.warn(
+                "design has no effect in SmootherResults.news and is"
+                " deprecated. It will be removed after statsmodels 0.17 is"
+                " released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+
         # Handle `t`
         if t is not None and (start is not None or end is not None):
             raise ValueError("Cannot specify both `t` and `start` or `end`.")
@@ -1579,15 +1584,10 @@ class SmootherResults(FilterResults):
                     revision_weights = revision_weights[0]
                     revision_detailed_impacts = revision_detailed_impacts[0]
 
-            # Get total revision impacts
+            # Get total revision impacts (the revision model extends through
+            # `end`)
             revised_impact_forecasts = (
                 revision_results.smoothed_forecasts[..., start:end])
-            if end > revision_results.nobs:
-                predict_start = max(start, revision_results.nobs)
-                p = revision_results.predict(
-                    start=predict_start, end=end, **extend_kwargs)
-                revised_impact_forecasts = np.concatenate(
-                    (revised_impact_forecasts, p.forecasts), axis=1)
 
             revision_impacts = (revised_impact_forecasts -
                                 prev_impacted_forecasts).T
@@ -1628,21 +1628,13 @@ class SmootherResults(FilterResults):
             update_forecasts = forecasts[ix_t, update_k]
             update_forecasts_error = forecasts_error[ix_t, update_k]
 
-            # Get the gains associated with each of the periods
+            # Get the gains associated with each of the periods (with a
+            # time-varying design matrix, end <= nobs, since periods outside
+            # of the sample raise above)
             if self.design.shape[2] == 1:
                 design = self.design[..., 0][None, ...]
-            elif end <= self.nobs:
-                design = self.design[..., start:end].transpose(2, 0, 1)
-            # Note: this case is no longer possible, since above we raise
-            # ValueError for time-varying case with end > self.nobs
-            elif design is None:
-                raise ValueError("Model has time-varying design matrix, so"
-                                 " an updated time-varying matrix for"
-                                 " period `t` is required.")
-            elif design.ndim == 2:
-                design = design[None, ...]
             else:
-                design = design.transpose(2, 0, 1)
+                design = self.design[..., start:end].transpose(2, 0, 1)
 
             state_gain = previous.smoothed_state_gain(
                 updates_ix, start=start, end=end, extend_kwargs=extend_kwargs)
