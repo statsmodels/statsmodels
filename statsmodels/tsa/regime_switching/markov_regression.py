@@ -5,7 +5,9 @@ Author: Chad Fulton
 License: BSD-3
 """
 import numpy as np
+import pandas as pd
 
+from statsmodels.base.data import _make_exog_names
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.regime_switching import markov_switching
 
@@ -86,6 +88,14 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     i.e., the model is a dynamic linear regression where the coefficients and
     the variance of the error term may be switching across regimes.
 
+    .. versionchanged:: 0.15.1
+
+       With a trend, the coefficients of a pandas `exog` are named after its
+       columns, and the time trend is named "trend" (the columns of an
+       ndarray `exog` are "x1", "x2", ... after it). Before, a pandas
+       `exog` lost its column names, and the time trend was named like an
+       exog column, such as "x1".
+
     The `trend` is accommodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
@@ -132,7 +142,16 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             trend_exog = np.c_[np.ones((nobs, 1)),
                                (np.arange(nobs) + 1)[:, np.newaxis]]
             self.k_trend = 2
+        exog_names = None
         if trend_exog is not None:
+            # Name the trend columns as other TSA models do, and keep the names
+            # of the exog columns, which np.c_ drops
+            trend_names = {"c": ["const"], "t": ["trend"], "ct": ["const", "trend"]}
+            exog_names = trend_names[self.trend]
+            if isinstance(exog, pd.DataFrame):
+                exog_names += list(exog.columns)
+            elif exog is not None:
+                exog_names += _make_exog_names(exog)
             exog = trend_exog if exog is None else np.c_[trend_exog, exog]
             self._k_exog += self.k_trend
 
@@ -140,6 +159,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         super().__init__(
             endog, k_regimes, order=order, exog_tvtp=exog_tvtp, exog=exog,
             dates=dates, freq=freq, missing=missing)
+        if exog_names is not None:
+            self.data.xnames = exog_names
 
         # Switching options
         # A scalar (bool, numpy bool or 0/1) applies to every coefficient

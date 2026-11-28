@@ -844,3 +844,56 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+@pytest.mark.parametrize(
+    "trend, exog_form, names",
+    [
+        ("c", "frame", ["const", "xa", "xb"]),
+        ("t", "frame", ["trend", "xa", "xb"]),
+        ("ct", "frame", ["const", "trend", "xa", "xb"]),
+        ("n", "frame", ["xa", "xb"]),
+        ("ct", "series", ["const", "trend", "xa"]),
+        ("c", "array", ["const", "x1", "x2"]),
+        ("t", "array", ["trend", "x1", "x2"]),
+        ("ct", "array", ["const", "trend", "x1", "x2"]),
+        ("t", None, ["trend"]),
+        ("ct", None, ["const", "trend"]),
+    ],
+)
+@pytest.mark.parametrize("order", [0, 1])
+def test_trend_and_exog_names(trend, exog_form, names, order):
+    rng = np.random.default_rng(20261122)
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    endog = pd.Series(rng.standard_normal(40), index=index)
+    frame = pd.DataFrame(rng.standard_normal((40, 2)), columns=["xa", "xb"], index=index)
+    exog = {"frame": frame, "series": frame["xa"], "array": frame.to_numpy()}.get(
+        exog_form
+    )
+    if order == 0:
+        model, kwargs = markov_regression.MarkovRegression, {}
+    else:
+        model, kwargs = markov_autoregression.MarkovAutoregression, {"order": 1}
+    # All coefficients switch, so that every name has a regime suffix
+    mod = model(endog, k_regimes=2, trend=trend, exog=exog, switching_exog=True, **kwargs)
+    assert mod.exog_names == names
+    coefficients = [f"{name}[{i}]" for name in names for i in range(2)]
+    ar_names = ["ar.L1[0]", "ar.L1[1]"] if order else []
+    expected = ["p[0->0]", "p[1->0]", *coefficients, "sigma2", *ar_names]
+    assert mod.param_names == expected
+
+    # Only the names change: the model of the same values as ndarrays has the
+    # same log-likelihood, and the results label the parameters
+    exog_array = None if exog is None else np.asarray(exog)
+    mod_array = model(
+        endog.to_numpy(),
+        k_regimes=2,
+        trend=trend,
+        exog=exog_array,
+        switching_exog=True,
+        **kwargs,
+    )
+    params = mod_array.start_params
+    assert_allclose(mod.loglikeobs(params), mod_array.loglikeobs(params), rtol=1e-13)
+    res = mod.smooth(params, cov_type="none")
+    assert res.params.index.tolist() == expected
