@@ -1106,10 +1106,14 @@ class CountModel(DiscreteModel):
         self.exog = np.asarray(self.exog, dt)
 
     def _check_inputs(self, offset, exposure, endog):
-        if offset is not None and offset.shape[0] != endog.shape[0]:
+        if offset is not None and offset.ndim > 0 and offset.shape[0] != endog.shape[0]:
             raise ValueError("offset is not the same length as endog")
 
-        if exposure is not None and exposure.shape[0] != endog.shape[0]:
+        if (
+            exposure is not None
+            and exposure.ndim > 0
+            and exposure.shape[0] != endog.shape[0]
+        ):
             raise ValueError("exposure is not the same length as endog")
 
     def _get_init_kwds(self):

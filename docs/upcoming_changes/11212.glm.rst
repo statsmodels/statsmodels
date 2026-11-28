@@ -1,0 +1,2 @@
+- Count models now accept scalar and zero-dimensional ``offset`` and
+  ``exposure`` values using the existing broadcasting behavior. :pr:`11212`
