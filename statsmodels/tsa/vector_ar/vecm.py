@@ -4,13 +4,14 @@ import warnings
 import numpy as np
 from numpy import hstack, vstack
 from numpy.linalg import inv, svd
+import pandas as pd
 import scipy
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning, MissingDataError
 from statsmodels.tools.validation import int_like, is_int_like, string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
@@ -932,6 +933,37 @@ class JohansenTestResult:
         return self._meth
 
 
+def _handle_missing_rows(endog, exog, exog_coint, missing):
+    """
+    Handle the missing values of endog, exog and exog_coint together.
+
+    The missing data handling of the base class drops the rows and the
+    columns of a 2-d extra array, so the rows of exog_coint are handled
+    here, before the base class handles endog and exog.
+    """
+    nobs = len(endog)
+    if len(exog_coint) != nobs:
+        raise ValueError("exog_coint must have as many rows as endog")
+    arrays = (endog, exog, exog_coint)
+    nan_rows = np.zeros(nobs, dtype=bool)
+    for arr in arrays:
+        if arr is not None:
+            nan_rows |= pd.isna(np.asarray(arr)).reshape(nobs, -1).any(axis=1)
+    if not nan_rows.any():
+        return arrays
+    if missing == "raise":
+        raise MissingDataError("NaNs were encountered in the data")
+    keep = ~nan_rows
+    return tuple(
+        None
+        if arr is None
+        else arr.iloc[keep]
+        if isinstance(arr, (pd.Series, pd.DataFrame))
+        else np.asarray(arr)[keep]
+        for arr in arrays
+    )
+
+
 class VECM(tsbase.TimeSeriesModel):
     """
     Class representing a Vector Error Correction Model (VECM).
@@ -963,6 +995,13 @@ class VECM(tsbase.TimeSeriesModel):
         information.
     missing : str, optional
         See :class:`statsmodels.base.model.Model` for more information.
+
+        .. versionchanged:: 0.15.1
+
+           The missing values of `exog_coint` are handled with those of
+           `endog` and `exog`. Before, ``missing="drop"`` did not drop the
+           rows of `exog_coint`, so that the rows of `endog` before a
+           dropped row were used with the next row of `exog_coint`.
     k_ar_diff : int, optional
         Number of lagged differences in the model. Equals :math:`k_{ar} - 1` in
         the formula above.
@@ -1067,6 +1106,11 @@ class VECM(tsbase.TimeSeriesModel):
         seasons=0,
         first_season=0,
     ):
+        if exog_coint is not None and missing in ("drop", "raise"):
+            endog, exog, exog_coint = _handle_missing_rows(
+                endog, exog, exog_coint, missing
+            )
+
         super().__init__(endog, exog, dates, freq, missing=missing)
         if exog_coint is not None and not exog_coint.shape[0] == len(endog):
             raise ValueError("exog_coint must have as many rows as endog")

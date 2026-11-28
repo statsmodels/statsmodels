@@ -1,0 +1,4 @@
+- With ``missing="drop"``, :class:`~statsmodels.tsa.vector_ar.vecm.VECM` did not drop the rows of
+  ``exog_coint``, so the rows before a dropped row were used with the
+  wrong rows of ``exog_coint``. The rows are dropped together, and
+  results for data with missing values change. :pr:`10958`
