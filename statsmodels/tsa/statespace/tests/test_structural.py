@@ -897,7 +897,7 @@ def test_invalid_freq_seasonal(kwargs, match):
 @pytest.mark.parametrize(
     "freq, bounds, start",
     [
-        ("YS", (1.5, 12), None),
+        ("YS", (1.5, 12), 2 * np.pi / 3),
         ("QS", (6, 48), 2 * np.pi / 12),
         ("MS", (18, 144), 2 * np.pi / 36),
         ("D", (2, np.inf), np.pi / 2),
@@ -908,8 +908,7 @@ def test_cycle_frequency_bounds(freq, bounds, start):
     # The default periods of the cycle are 1.5 to 12 years for annual,
     # quarterly and monthly data, otherwise at least 2 periods. The cycle
     # frequency starts at that of a three-year cycle, or in the middle of the
-    # bounds (the annual start is not checked: it depends on the pandas
-    # version)
+    # bounds
     rng = np.random.default_rng(20261123)
     index = pd.date_range("2000-01-01", periods=60, freq=freq)
     endog = pd.Series(rng.standard_normal(60), index=index)
@@ -919,9 +918,8 @@ def test_cycle_frequency_bounds(freq, bounds, start):
         (2 * np.pi / bounds[1], 2 * np.pi / bounds[0]),
         rtol=1e-12,
     )
-    if start is not None:
-        start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
-        assert_allclose(start_params["frequency.cycle"], start, rtol=1e-12)
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    assert_allclose(start_params["frequency.cycle"], start, rtol=1e-12)
 
 
 def test_undamped_cycle_transform():
@@ -1138,3 +1136,67 @@ def test_fixed_slope_boolean_specification(kwargs, params):
         mod_clone = mod.clone(endog)
     assert_equal(mod_clone.trend_specification, "fixed slope")
     assert_allclose(mod_clone.loglike(params), res.llf, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(level="irregular", seasonal=4),
+        dict(level="irregular", freq_seasonal=[{"period": 4}]),
+        dict(level="ntrend", autoregressive=1),
+        dict(level="irregular", cycle=True, stochastic_cycle=True, damped_cycle=True),
+        dict(level="irregular", exog=True),
+        dict(autoregressive=1, exog=True),
+    ],
+    ids=["seasonal", "freq_seasonal", "autoregressive", "cycle", "exog", "exog-ar"],
+)
+def test_start_params_missing_without_level(kwargs):
+    # Without a level, the starting parameters also ignore missing
+    # observations: they are those of the model of the data without them (as
+    # with a level, test_start_params_missing)
+    rng = np.random.default_rng(20261202)
+    endog = rng.standard_normal(60)
+    endog[1:] += 0.5 * endog[:-1]
+    exog = rng.standard_normal((60, 1))
+    endog += exog[:, 0]
+    endog[[5, 20, 21]] = np.nan
+    keep = ~np.isnan(endog)
+    kwargs = kwargs.copy()
+    use_exog = kwargs.pop("exog", False)
+    mod = UnobservedComponents(endog, exog=exog if use_exog else None, **kwargs)
+    mod_dropped = UnobservedComponents(
+        endog[keep], exog=exog[keep] if use_exog else None, **kwargs
+    )
+    assert_allclose(mod.start_params, mod_dropped.start_params, rtol=1e-12)
+    if "seasonal" in kwargs or "freq_seasonal" in kwargs:
+        # Every variance starts at the variance of the observed data, and the
+        # fit is finite (it was NaN)
+        assert_allclose(mod.start_params, np.var(endog[keep]), rtol=1e-12)
+        res = mod.fit(disp=False)
+        assert np.all(np.isfinite(res.params))
+        assert np.isfinite(res.llf)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("1950-01-01", periods=60, freq=pd.offsets.YearEnd()),
+        pd.date_range("1950-01-01", periods=60, freq=pd.offsets.YearBegin(month=7)),
+        pd.date_range("1950-01-01", periods=60, freq=pd.offsets.YearEnd(month=6)),
+        pd.period_range("1950", periods=60, freq="Y"),
+    ],
+    ids=["year-end", "year-start-jul", "year-end-jun", "period"],
+)
+def test_cycle_start_annual(index):
+    # For annual data, the frequency of the cycle starts at that of a
+    # three-year cycle (inside the default bounds of 1.5 to 12 years) with
+    # the frequency strings of every pandas version: they start with "A"
+    # before pandas 2.2 and with "Y" from pandas 2.2
+    rng = np.random.default_rng(20261203)
+    endog = pd.Series(rng.standard_normal(60), index=index)
+    mod = UnobservedComponents(endog, "llevel", cycle=True, stochastic_cycle=True)
+    assert_allclose(
+        mod.cycle_frequency_bound, (2 * np.pi / 12, 2 * np.pi / 1.5), rtol=1e-12
+    )
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    assert_allclose(start_params["frequency.cycle"], 2 * np.pi / 3, rtol=1e-12)

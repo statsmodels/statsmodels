@@ -925,6 +925,26 @@ class UnobservedComponents(MLEModel):
 
     @property
     def start_params(self):
+        """
+        (list) Starting parameters for maximum likelihood estimation.
+
+        Missing observations are dropped before the starting parameters are
+        computed.
+
+        .. versionchanged:: 0.15.1
+
+           Missing observations are also dropped in models without a level.
+           Before, the starting parameters of such a model with missing data
+           were NaN, so ``fit`` returned NaN parameters, or computing them
+           raised an error.
+
+        .. versionchanged:: 0.15.1
+
+           The frequency of the cycle starts at that of a three-year cycle
+           for annual data also on pandas 2.2 and later, where the frequency
+           strings of annual data start with "Y". Before, it started in the
+           middle of its bounds there.
+        """
         if not hasattr(self, "parameters"):
             return []
 
@@ -953,7 +973,7 @@ class UnobservedComponents(MLEModel):
             elif self.stochastic_level:
                 _start_params["level_var"] = np.std(trend1) ** 2
         else:
-            resid = self.ssm.endog[0]
+            resid = endog[:, 0]
 
         # Regression
         if self.regression and self.mle_regression:
@@ -993,7 +1013,7 @@ class UnobservedComponents(MLEModel):
             # Set initial period estimate to 3 year, if we know the frequency
             # of the data observations
             freq = self.data.freq[0] if self.data.freq is not None else ""
-            if freq == "A":
+            if freq in ("A", "Y"):
                 _start_params["cycle_freq"] = 2 * np.pi / 3
             elif freq == "Q":
                 _start_params["cycle_freq"] = 2 * np.pi / 12
