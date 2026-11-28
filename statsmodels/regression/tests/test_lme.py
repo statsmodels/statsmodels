@@ -29,6 +29,7 @@ from statsmodels.regression.mixed_linear_model import (
 )
 import statsmodels.tools.numdiff as nd
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
 
 from .results import lme_r_results, mixedlm_optimum_r_results
 
@@ -831,6 +832,16 @@ class TestMixedLMSummaryRegularized(TestMixedLMSummary):
         exog = df[["x0", "x1", "x2"]].values
         groups = df["pid"].values
         cls.res = MixedLM(endog, exog, groups=groups).fit_regularized()
+        # The variance of the variance estimate of this small regularized fit
+        # is negative, so bse_re (cached for the summaries) is NaN with a
+        # RuntimeWarning, which Pyodide may not emit
+        with warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"):
+            cls.bse_re = cls.res.bse_re
+
+    def test_bse_re_negative_variance(self):
+        # A NaN standard error, not a number, for the negative variance
+        assert np.diag(self.res._cov_vparams)[0] < 0
+        assert np.isnan(self.bse_re).all()
 
 
 # ------------------------------------------------------------------

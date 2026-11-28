@@ -979,7 +979,10 @@ class TestProbitL1Compatability(CheckL1Compatability):
         )
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = data.exog[:, : cls.m]
-        cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
+        # tol=1e-15 is below what newton reaches in some environments: the
+        # steps stall at rounding level and it does not converge in 35
+        # iterations. With tol=1e-12 it converges in 6 to the same estimates.
+        cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-12)
 
 
 class CompareL1:

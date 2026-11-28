@@ -3578,10 +3578,12 @@ def test_pacf_burg():
 
 
 def test_pacf_burg_error():
+    # zeros, not np.empty: the series is demeaned before nlags is checked,
+    # and uninitialized memory can hold nan and inf (a RuntimeWarning)
     with pytest.raises(ValueError):
-        pacf_burg(np.empty((20, 2)), 10)
+        pacf_burg(np.zeros((20, 2)), 10)
     with pytest.raises(ValueError):
-        pacf_burg(np.empty(100), 101)
+        pacf_burg(np.zeros(100), 101)
 
 
 def _column_input_cases():
@@ -4706,8 +4708,12 @@ def test_zivot_andrews_change_data():
     # Zivot-Andrews test with data with type float64
     df = df.astype(float)
     df_original = df.copy()
-    zivot_andrews(df["variable1"])
-    zivot_andrews(df["variable1"], regression="c")
+    # The series is piecewise constant, so the break regressions are
+    # degenerate: on some CI runners (macOS) a variance rounds below zero and
+    # its t-value is NaN. Only the data matter here.
+    with warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"):
+        zivot_andrews(df["variable1"])
+        zivot_andrews(df["variable1"], regression="c")
     pd.testing.assert_frame_equal(df, df_original)
 
 

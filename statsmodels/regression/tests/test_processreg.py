@@ -14,6 +14,8 @@ from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.process_regression import GaussianCovariance, ProcessMLE
 from statsmodels.tools.docstring import Docstring
 import statsmodels.tools.numdiff as nd
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 
 
 # Parameters for a test model, with or without additive
@@ -164,7 +166,11 @@ def run_formula(n, get_model, noise, rng):
         time="time",
         groups="groups",
     )
-    f = preg.fit()
+    # With noise, BFGS stops close to the maximum without reporting success
+    # with SciPy 1.8 (|gradient| about 5e-5); the estimates are checked
+    # against the population values with a loose tolerance
+    with warns_or_none(ConvergenceWarning, match="Fitting did not converge"):
+        f = preg.fit()
 
     return f, df
 
