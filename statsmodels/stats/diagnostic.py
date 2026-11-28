@@ -2035,6 +2035,22 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     This test assumes residuals are homoskedastic and may reject a correct
     linear specification if the residuals are heteroskedastic.
 
+    The subset model of a ``WLS`` result is a ``WLS`` model with the weights
+    of the observations in the subset, and that of a ``GLS`` result is a
+    ``GLS`` model with the part of ``sigma`` that belongs to these
+    observations. The test is then the F test of the model of `res` against
+    the same model with a dummy variable for each observation outside of the
+    subset. The subset model of other results, including those of ``GLSAR``,
+    which have no ``sigma``, is estimated by OLS.
+
+    .. versionchanged:: 0.15.1
+
+        The subset model of a ``WLS`` or ``GLS`` result was estimated by OLS,
+        which ignored the weights or ``sigma`` of the model, although the sum
+        of squared residuals of the full sample is weighted. The statistic and
+        the p-value change for results of ``WLS`` and ``GLS`` but not for those
+        of ``OLS`` and ``GLSAR``.
+
     When ``use_distance`` is True the observations are ordered by their
     Mahalanobis distance to the centroid of ``exog``. Using the centroid (the
     multivariate mean) as the center follows Utts (1982) [1]_; the subset used
@@ -2062,6 +2078,8 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     nobs = res.nobs
     endog = res.model.endog
     exog = res.model.exog
+    # rows of the original data in the order used to select the subset
+    perm = np.arange(endog.shape[0])
     if order_by is not None and use_distance:
         raise ValueError("order_by and use_distance cannot be simultaneously used.")
     if order_by is not None:
@@ -2086,6 +2104,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
             order_by = np.asarray(cols[name])
         endog = endog[order_by]
         exog = exog[order_by]
+        perm = perm[order_by]
     if use_distance:
         if center is not None:
             warnings.warn(
@@ -2112,6 +2131,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         idx = np.lexsort((*exog.T[::-1], dist.ravel()))
         endog = endog[idx]
         exog = exog[idx]
+        perm = perm[idx]
 
     lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
     uppidx = np.floor(lowidx + frac * nobs).astype(int)
@@ -2122,7 +2142,22 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
             "variables in the model."
         )
     mi_sl = slice(lowidx, uppidx)
-    res_mi = OLS(endog[mi_sl], exog[mi_sl]).fit()
+    # the subset model uses the weights or sigma of the subset, so that its
+    # sum of squared residuals is weighted as that of the full sample is
+    mod_class = OLS
+    mod_kwds = {}
+    sel = perm[mi_sl]
+    if isinstance(res.model, WLS) and not isinstance(res.model, OLS):
+        mod_class = WLS
+        mod_kwds["weights"] = res.model.weights[sel]
+    elif isinstance(res.model, GLS) and res.model.sigma is not None:
+        mod_class = GLS
+        sigma = res.model.sigma
+        if sigma.ndim == 1:
+            mod_kwds["sigma"] = sigma[sel]
+        else:
+            mod_kwds["sigma"] = sigma[np.ix_(sel, sel)]
+    res_mi = mod_class(endog[mi_sl], exog[mi_sl], **mod_kwds).fit()
     nobs_mi = res_mi.model.endog.shape[0]
     ss_mi = res_mi.ssr
     ss = res.ssr
