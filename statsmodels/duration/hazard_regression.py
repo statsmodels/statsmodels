@@ -1991,8 +1991,11 @@ class PHRegResults(base.LikelihoodModelResults):
         info["Sample size:"] = str(self.model.surv.n_obs)
         info["Num. events:"] = str(int(sum(self.model.status)))
 
-        if self.groups is not None:
-            mn, mx, avg, num = self._group_stats(self.groups)
+        # Results pickled by statsmodels 0.14 do not keep their own groups,
+        # and summary read them from the model, as it does here
+        groups = getattr(self, "groups", self.model.groups)
+        if groups is not None:
+            mn, mx, avg, num = self._group_stats(groups)
             info["Num groups:"] = f"{num:.0f}"
             info["Min group size:"] = f"{mn:.0f}"
             info["Max group size:"] = f"{mx:.0f}"
@@ -2034,7 +2037,7 @@ class PHRegResults(base.LikelihoodModelResults):
             else:
                 smry.add_text(f"{n_entry:d} observations have positive entry times")
 
-        if self.groups is not None:
+        if groups is not None:
             smry.add_text("Standard errors account for dependence within groups")
 
         if hasattr(self, "regularized"):

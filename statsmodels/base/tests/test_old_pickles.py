@@ -15,6 +15,7 @@ import pytest
 
 from statsmodels.discrete.discrete_model import Logit, Probit
 from statsmodels.discrete.truncated_model import HurdleCountModel
+from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -167,3 +168,16 @@ def test_hurdle_014(data, remove_data):
     if not remove_data:
         res2 = res.model.fit(disp=0)
         assert_allclose(res2.params, res.params, rtol=1e-6)
+
+
+def test_phreg_014(data):
+    # 0.14 read the groups for summary from the model
+    _, exog, _, _, groups = data
+    rs = np.random.RandomState(987689)
+    time = rs.exponential(np.exp(-0.3 * exog[:, 1]))
+    status = (rs.random_sample(NOBS) < 0.8).astype(float)
+    res = PHReg(time, exog[:, 1:], status=status).fit(groups=groups)
+    expected = res.summary().as_text()
+    assert "Num groups:" in expected
+    res = roundtrip(res, ["groups"])
+    assert res.summary().as_text() == expected
