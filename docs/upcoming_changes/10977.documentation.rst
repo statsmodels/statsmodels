@@ -1,0 +1,6 @@
+- Correct docstrings in ``statsmodels.tsa.regime_switching.markov_switching``:
+  the return values of ``cy_hamilton_filter_log`` and ``cy_kim_smoother_log``,
+  the shapes accepted by ``initial_probabilities`` and
+  ``regime_transition_matrix``, the default ``cov_type`` of ``filter`` and
+  ``smooth``, the attributes of the results classes, and that ``forecast``
+  and out-of-sample ``predict`` raise ``NotImplementedError``. :pr:`10977`

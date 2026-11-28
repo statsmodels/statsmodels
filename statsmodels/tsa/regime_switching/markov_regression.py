@@ -272,7 +272,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         return coeffs
 
-    def _em_variance(self, result, endog, exog, betas, tmp=None):
+    def _em_variance(self, result, endog, exog, betas, tmp):
         """EM step for variances"""
         k_exog = 0 if exog is None else exog.shape[1]
 
@@ -289,8 +289,6 @@ class MarkovRegression(markov_switching.MarkovSwitching):
                     np.sum(result.smoothed_marginal_probabilities[i]))
         else:
             variance = 0
-            if tmp is None:
-                tmp = np.sqrt(result.smoothed_marginal_probabilities)
             for i in range(self.k_regimes):
                 tmp_endog = tmp[i] * endog
                 if k_exog > 0:

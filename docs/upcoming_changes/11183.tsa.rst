@@ -1,0 +1,11 @@
+- ``untransform_params`` of the Markov switching models
+  (:class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression`,
+  :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression`)
+  with three or more regimes raised "Could not untransform parameters."
+  for transition probabilities that are zero or nearly zero, so that
+  ``fit`` raised when the EM steps (``em_iter``) drove one to zero. It
+  uses the closed-form inverse of the logistic transform, with zero
+  probabilities replaced by the smallest positive normal float.
+  Negative or NaN probabilities, or probabilities out of a regime that
+  sum to more than one, raise a ``ValueError`` for any number of
+  regimes. :pr:`11183`
