@@ -1,0 +1,7 @@
+- A date string with a UTC offset that ends prediction after the end of a
+  time-zone-aware index, such as ``end="2002-03-01T00:00:00-08:00"`` for
+  monthly data in US/Eastern, is taken at its time in the time zone of the
+  index, as a ``pd.Timestamp`` of the same time is. Its offset was dropped,
+  so that prediction ended at the string's local time (2002-03-01 instead of
+  2002-04-01), and the results of such calls change. With pandas < 2.2, such
+  a string without seconds no longer raises a ``KeyError``. :pr:`11233`

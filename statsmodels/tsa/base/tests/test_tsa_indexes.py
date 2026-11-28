@@ -2663,6 +2663,51 @@ def test_get_index_loc_tz_aware_key_after_sample(key, loc):
     assert prediction_index.equals(expected[20:])
 
 
+@pytest.mark.parametrize(
+    "freq, key, last, out_of_sample",
+    [
+        # 03:00 in US/Eastern, not a date: through the next one
+        ("MS", "2002-03-01T00:00:00-08:00", "2002-04-01", 4),
+        ("MS", "2002-03-01T05:00:00Z", "2002-03-01", 3),
+        # A date of the index whose local date in its offset is the day before
+        ("MS", "2002-02-28T21:00:00-08:00", "2002-03-01", 3),
+        ("h", "2000-01-02T05:00:00Z", "2000-01-02 00:00", 1),
+        ("h", "2000-01-02T00:00:00-08:00", "2000-01-02 03:00", 4),
+        # A minute (00:01 in US/Eastern) covers 60 dates: through the last
+        # one. pandas < 2.2 cannot parse the minute of a key with a UTC offset
+        # (it raised a KeyError), so it is located as the time 00:01
+        (
+            "s",
+            "2000-01-01T05:01Z",
+            "2000-01-01 00:01:" + ("00" if PD_LT_2_2_0 else "59"),
+            37 if PD_LT_2_2_0 else 96,
+        ),
+        # No offset: the period in the time zone of the index
+        ("MS", "2002Q1", "2002-03-01", 3),
+    ],
+)
+def test_get_prediction_index_utc_offset_key_after_sample(
+    freq, key, last, out_of_sample
+):
+    # A date string with a UTC offset after the end of a tz-aware index is
+    # taken at its time in the time zone of the index. The offset was
+    # dropped, so that prediction ended at the key's local time instead
+    tz = "US/Eastern"
+    index = pd.date_range("2000-01-01", periods=24, freq=freq, tz=tz)
+    expected = pd.date_range(index[20], pd.Timestamp(last, tz=tz), freq=freq)
+    endog = pd.Series(np.zeros(24), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    with warnings.catch_warnings():
+        # pandas >= 3.2 warned that the period of the key drops its offset
+        warnings.simplefilter("error")
+        result = tsa_model.get_prediction_index(
+            20, key, 24, mod._index, data=mod.data
+        )
+    assert result[:3] == (20, 23, out_of_sample)
+    assert result[3].equals(expected)
+    assert len(expected) == 4 + out_of_sample
+
+
 @pytest.mark.parametrize("tz", ["UTC", "US/Eastern", "Asia/Tokyo"])
 @pytest.mark.parametrize(
     "freq, nobs", [("D", 500), ("MS", 24), ("QS", 12), ("h", 24 * 200)]

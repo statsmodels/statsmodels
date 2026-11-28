@@ -26,6 +26,7 @@ from pandas import (
     to_datetime,
 )
 from pandas.tseries.frequencies import to_offset
+from pandas.tseries.offsets import Tick
 
 from statsmodels.base.covtype import _stacklevel_outside_statsmodels
 from statsmodels.base.data import PandasData
@@ -484,6 +485,15 @@ def get_prediction_index(
            date of the period in the frequency of the index (2002-06).
            Previously prediction ended at the first date of the period
            (2002-04).
+
+        .. versionchanged:: 0.15.1
+
+           A date string with a UTC offset after the end of a tz-aware
+           index is taken at its time in the time zone of the index, as a
+           pd.Timestamp is. For monthly data in US/Eastern,
+           "2002-03-01T00:00:00-08:00" (03:00 in US/Eastern) ends prediction
+           at 2002-04-01, the first date after that time. Previously the
+           offset was dropped and prediction ended at 2002-03-01.
     nobs : int
         The number of observations in the model.
     base_index : pd.Index
@@ -644,9 +654,10 @@ def _period_end(key, index):
     A date string such as "2002Q2" covers several dates of a monthly index.
     In the sample, partial-string indexing selects all of them. If the
     period starts after the index, this returns its last date in the
-    frequency of the index, so that prediction can end there. Other keys,
-    keys whose period starts in the index, and keys of a period without a
-    date of the frequency are returned unchanged.
+    frequency of the index, so that prediction can end there. A key with a
+    UTC offset is taken at its time in the time zone of a tz-aware index.
+    Other keys, keys whose period starts in the index, and keys of a period
+    without a date of the frequency are returned unchanged.
     """
     if not (
         isinstance(key, str)
@@ -654,14 +665,31 @@ def _period_end(key, index):
         and index.freq is not None
     ):
         return key
+    aware = isinstance(index, DatetimeIndex) and index.tz is not None
     try:
-        # The period of the resolution of the string, e.g. a quarter
-        period = Period(key)
-    except ValueError:
+        with warnings.catch_warnings():
+            if aware:
+                # pandas >= 3.2 warns that the period of a key with a UTC
+                # offset drops the offset; it is applied below
+                warnings.filterwarnings(
+                    "ignore", "Converting to Period representation", UserWarning
+                )
+            # The period of the resolution of the string, e.g. a quarter
+            period = Period(key)
+    except (ValueError, KeyError):
+        # pandas < 2.2 raises KeyError for a UTC offset without seconds
         period = None
     if not isinstance(period, Period):
         # Not a date of pandas' parser, e.g. "now", or NaT, e.g. ""
         return key
+    if aware and isinstance(period.freq, Tick):
+        # Only a key with a time of day can have a UTC offset
+        stamp = Timestamp(key)
+        if stamp.tz is not None:
+            # The period of the key's time in the time zone of the index,
+            # not of its local time in its own UTC offset
+            local = stamp.tz_convert(index.tz).tz_localize(None)
+            period = Period(local, freq=period.freq)
     if isinstance(index, PeriodIndex):
         if period.asfreq(index.freq, how="start") <= index[-1]:
             return key
