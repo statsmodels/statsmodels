@@ -51,9 +51,11 @@ class QuantReg(RegressionModel):
     The Least Absolute Deviation (LAD) estimator is a special case where
     quantile is set to 0.5 (q argument of the fit method).
 
-    The asymptotic covariance matrix is estimated following the procedure in
-    Greene (2008, p.407-408), using either the logistic or gaussian kernels
-    (kernel argument of the fit method).
+    The asymptotic covariance matrix is estimated with a kernel estimate of
+    the density of the errors (kernel and bandwidth arguments of the fit
+    method). The default ``vcov="robust"`` uses the sandwich of Powell (1991)
+    and Koenker (2005, Section 3.4), ``vcov="iid"`` assumes that the errors
+    are independent of exog, as in Greene (2008, p.407-408).
 
     References
     ----------
@@ -63,6 +65,10 @@ class QuantReg(RegressionModel):
     * Green, W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
     * LeSage, J. P. (1999). Applied Econometrics Using MATLAB,
+    * Powell, J. L. (1991). Estimation of monotonic regression models under
+      quantile restrictions. In Nonparametric and Semiparametric Methods in
+      Econometrics, ed. W. Barnett, J. Powell and G. Tauchen, 357-384.
+      Cambridge: Cambridge University Press.
 
     Kernels (used by the fit method):
 
@@ -108,9 +114,17 @@ class QuantReg(RegressionModel):
             Method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
-            - robust : heteroskedasticity robust standard errors (as suggested
-              in Greene 6th edition)
+            - robust : heteroskedasticity robust standard errors based on a
+              kernel estimate of the density of the errors at each
+              observation (Powell 1991). This is the ``se="ker"`` method of
+              R's quantreg.
             - iid : iid errors (as in Stata 12)
+
+            .. versionchanged:: 0.15.1
+
+               ``robust`` used a single density estimate for all
+               observations, which does not allow for heteroskedasticity and
+               is identical to ``iid`` at ``q=0.5``.
 
         kernel : {'biw', 'cos', 'epa', 'gau', 'par'}, optional
             Kernel to use in the kernel density estimation for the
@@ -239,10 +253,16 @@ class QuantReg(RegressionModel):
 
         vcov = string_like(vcov, "vcov", options=("robust", "iid"), lower=False)
         if vcov == "robust":
-            d = np.where(e > 0, (q / fhat0) ** 2, ((1 - q) / fhat0) ** 2)
-            xtxi = pinv(np.dot(exog.T, exog))
-            xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
-            vcov = xtxi @ xtdx @ xtxi
+            # Powell kernel sandwich: the density of the errors is estimated
+            # at each observation, which allows it to depend on exog
+            fhat = kernel(e / h) / h
+            xfx = np.dot(exog.T * fhat[np.newaxis, :], exog)
+            if np.all(np.isfinite(xfx)):
+                xfxi = pinv(xfx)
+                vcov = q * (1 - q) * xfxi @ np.dot(exog.T, exog) @ xfxi
+            else:
+                # bandwidth is not defined, e.g. in very small samples
+                vcov = np.full(xfx.shape, np.nan)
         else:  # vcov == "iid"
             vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
 
