@@ -1239,38 +1239,21 @@ class MLEModel(tsbase.TimeSeriesModel):
         params,
         transformed=True,
         includes_fixed=False,
-        approx_complex_step=None,
+        approx_complex_step=False,
         approx_centered=False,
-        res=None,
+        *,
+        res,
         **kwargs,
     ):
+        # `res` is the output of the filter at `params`. The callers check
+        # that complex-step differentiation is only used with transformed
+        # parameters.
         params = np.array(params, ndmin=1)
-
-        # We cannot use complex-step differentiation with non-transformed
-        # parameters
-        if approx_complex_step is None:
-            approx_complex_step = transformed
-        if not transformed and approx_complex_step:
-            raise ValueError(
-                "Cannot use complex-step approximations to"
-                " calculate the observed_information_matrix"
-                " with untransformed parameters."
-            )
 
         # If we're using complex-step differentiation, then we cannot use
         # Cholesky factorization
         if approx_complex_step:
             kwargs["inversion_method"] = INVERT_UNIVARIATE | SOLVE_LU
-
-        # Get values at the params themselves
-        if res is None:
-            self.update(
-                params,
-                transformed=transformed,
-                includes_fixed=includes_fixed,
-                complex_step=approx_complex_step,
-            )
-            res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
 
         # Setup
         n = len(params)
@@ -2639,8 +2622,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             if isinstance(iloc, slice):
                 iloc = iloc.start
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 
@@ -2879,8 +2860,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             if isinstance(iloc, slice):
                 iloc = iloc.start
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc >= self.nobs:
             raise ValueError(
                 "Cannot anchor impulse responses outside of the sample."
@@ -3297,12 +3276,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res = self
         else:
             raise NotImplementedError
-            res = self.__class__(
-                self.model,
-                self.params,
-                normalized_cov_params=self.normalized_cov_params,
-                scale=self.scale,
-            )
 
         # Set the new covariance type
         res.cov_type = cov_type
@@ -3505,6 +3478,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.cov_params_robust_oim
 
     def _cov_params_robust_oim(self, approx_complex_step=True, approx_centered=False):
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self._cov_params_opg(
             approx_complex_step=approx_complex_step, approx_centered=approx_centered
         )
@@ -3536,7 +3512,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
-        if self._rank is None:
+        if set_rank:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
 
@@ -3545,6 +3521,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         method from Harvey (1989) as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust"`` or ``"robust_oim"``, the
+           rank of this matrix decides whether ``summary`` warns that the
+           covariance matrix is singular. The rank of the outer product of
+           gradients matrix was used.
         """
         return self._cov_params_robust_oim(
             self._cov_approx_complex_step, self._cov_approx_centered
@@ -3553,6 +3536,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _cov_params_robust_approx(
         self, approx_complex_step=True, approx_centered=False
     ):
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self._cov_params_opg(
             approx_complex_step=approx_complex_step, approx_centered=approx_centered
         )
@@ -3585,7 +3571,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
-        if self._rank is None:
+        if set_rank:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
 
@@ -3594,6 +3580,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         numerical Hessian as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust_approx"``, the rank of this
+           matrix decides whether ``summary`` warns that the covariance matrix
+           is singular. The rank of the outer product of gradients matrix was
+           used.
         """
         return self._cov_params_robust_approx(
             self._cov_approx_complex_step, self._cov_approx_centered
@@ -4528,8 +4521,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             if isinstance(iloc, slice):
                 iloc = iloc.start
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 
