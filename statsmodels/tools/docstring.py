@@ -2,7 +2,6 @@
 
 from collections.abc import Mapping
 import copy
-import inspect
 import re
 import textwrap
 from typing import NamedTuple
@@ -16,7 +15,7 @@ def dedent_lines(lines):
 
     Parameters
     ----------
-    lines : list of str
+    lines : sequence of str
         The lines to dedent.
 
     Returns
@@ -137,7 +136,7 @@ class Parameter(NamedTuple):
     """
 
     name: str
-    type: type
+    type: str
     desc: list[str]
 
 
@@ -216,25 +215,17 @@ class NumpyDocString(Mapping):
         return l2.startswith(("-" * len(l1), "=" * len(l1)))
 
     def _strip(self, doc):
-        i = 0
-        j = 0
-        for line in doc:
-            if line.strip():
-                break
-
-        for line in doc[::-1]:
-            if line.strip():
-                break
-
+        # Number of blank lines at the start and at the end
+        i = next((k for k, line in enumerate(doc) if line.strip()), len(doc))
+        j = next((k for k, line in enumerate(reversed(doc)) if line.strip()), 0)
         return doc[i : len(doc) - j]
 
     def _read_to_next_section(self):
         section = self._doc.read_to_next_empty_line()
 
         while not self._is_at_section() and not self._doc.eof():
-            if not self._doc.peek(-1).strip():  # previous line was empty
-                section += [""]
-
+            # The read stopped at an empty line, which is kept
+            section += [""]
             section += self._doc.read_to_next_empty_line()
 
         return section
@@ -246,8 +237,6 @@ class NumpyDocString(Mapping):
 
             if name.startswith(".."):  # index section
                 yield name, data[1:]
-            elif len(data) < 2:
-                yield StopIteration
             else:
                 yield name, self._strip(data[2:])
 
@@ -324,8 +313,6 @@ class NumpyDocString(Mapping):
         def parse_item_name(text):
             """Match ':role:`name`' or 'name'"""
             m = self._func_rgx.match(text)
-            if not m:
-                raise ParseError(f"{text} is not a item name")
             role = m.group("role")
             name = m.group("name") if role else m.group("name2")
             return name, role, m.end()
@@ -375,8 +362,7 @@ class NumpyDocString(Mapping):
 
         out = {}
         section = section.split("::")
-        if len(section) > 1:
-            out["default"] = strip_each_in(section[1].split(","))[0]
+        out["default"] = strip_each_in(section[1].split(","))[0]
         for line in content:
             line_parts = line.split(":")
             if len(line_parts) > 2:
@@ -399,8 +385,7 @@ class NumpyDocString(Mapping):
                     continue
             break
 
-        if summary is not None:
-            self["Summary"] = summary
+        self["Summary"] = summary
 
         if not self._is_at_section():
             self["Extended Summary"] = self._read_to_next_section()
@@ -454,14 +439,6 @@ class NumpyDocString(Mapping):
                 self[section_name] = content
 
     def _error_location(self, msg):
-        if hasattr(self, "_obj"):
-            # we know where the docs came from:
-            try:
-                filename = inspect.getsourcefile(self._obj)
-            except TypeError:
-                filename = None
-            msg = msg + (f" in the docstring of {self._obj} in {filename}.")
-
         raise ValueError(msg)
 
     # string conversion routines
@@ -596,8 +573,10 @@ class Docstring:
 
     Parameters
     ----------
-    docstring : str
-        The docstring to modify.
+    docstring : str or None
+        The docstring to modify. None (docstrings are None under
+        ``python -OO``) or a blank string gives an empty instance whose
+        methods do nothing.
     """
 
     def __init__(self, docstring):
@@ -614,7 +593,7 @@ class Docstring:
 
         Parameters
         ----------
-        parameters : str or list of str
+        parameters : str or sequence of str
             The names of the parameters to remove.
         """
         if self._docstring is None:
@@ -639,7 +618,7 @@ class Docstring:
             If None, insert the parameters before the first parameter in the
             docstring. Otherwise, the name of the existing parameter after
             which the new parameters are inserted.
-        parameters : Parameter, list[Parameter]
+        parameters : Parameter or list of Parameter
             A Parameter or a list of Parameters.
         """
         if self._docstring is None:
@@ -689,7 +668,7 @@ class Docstring:
 
         Parameters
         ----------
-        parameters : str or list of str
+        parameters : str or sequence of str
             The names of the parameters to extract.
         indent : int, optional
             Number of spaces to indent every line of the output. Default is
@@ -697,8 +676,9 @@ class Docstring:
 
         Returns
         -------
-        str
-            A docstring fragment containing only the requested parameters.
+        str or None
+            A docstring fragment containing only the requested parameters, or
+            None if the docstring is None or blank.
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -735,15 +715,15 @@ def remove_parameters(docstring, parameters):
 
     Parameters
     ----------
-    docstring : str
+    docstring : str or None
         The docstring to modify.
-    parameters : str or list of str
+    parameters : str or sequence of str
         The names of the parameters to remove.
 
     Returns
     -------
-    str
-        The modified docstring.
+    str or None
+        The modified docstring, or None if `docstring` is None.
     """
     if docstring is None:
         return None

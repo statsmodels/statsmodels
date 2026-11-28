@@ -1,4 +1,38 @@
-from statsmodels.tools.docstring_helpers import Substitution, indent
+import pytest
+
+from statsmodels.tools.docstring_helpers import Appender, Substitution, indent
+
+
+@pytest.mark.parametrize(
+    "indents, expected",
+    [
+        (0, "Doc.\nAdded\nlines"),
+        (1, "Doc.\nAdded\n    lines"),
+        (2, "Doc.\nAdded\n        lines"),
+    ],
+    ids=["0", "1", "2"],
+)
+def test_appender_indents(indents, expected):
+    # Each indent adds 4 spaces to the lines of the addendum after the first
+    @Appender("Added\nlines", join="\n", indents=indents)
+    def f():
+        "Doc."
+
+    assert f.__doc__ == expected
+
+
+def test_appender_none():
+    # A docstring or an addendum of None (as under python -OO) counts as ""
+    def f():
+        pass
+
+    f.__doc__ = None
+    assert Appender("Added", join="\n")(f).__doc__ == "\nAdded"
+
+    def g():
+        "Doc."
+
+    assert Appender(None, join="\n")(g).__doc__ == "Doc.\n"
 
 
 def test_substitution_update_dict_params():
