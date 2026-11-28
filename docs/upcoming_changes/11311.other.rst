@@ -1,0 +1,4 @@
+- A docstring processed with ``statsmodels.tools.docstring.Docstring``
+  whose See Also section ends with an entry without a description
+  keeps the blank line before the next section; the next section
+  was merged into See Also. :pr:`11311`
