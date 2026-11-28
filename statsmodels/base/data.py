@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lmap
 
+import sys
+
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
@@ -96,10 +98,15 @@ class ModelData:
         return d
 
     def __setstate__(self, d):
+        # Pickles written by statsmodels 0.14 mark the design to build again
+        # with restore_design_info
+        if d.pop("restore_design_info", False):
+            d["restore_model_spec"] = True
         if "restore_model_spec" in d:
             # NOTE: there may be a more performant way to do this
 
             from statsmodels.formula._manager import FormulaManager
+
             mgr = FormulaManager()
             exc = []
             try:
@@ -108,6 +115,12 @@ class ModelData:
                 data = d["orig_endog"].join(d["orig_exog"])
 
             for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
+                try:
+                    sys._getframe(depth)
+                except ValueError:
+                    # The call stack is shorter than depth, for example when
+                    # the pickle is loaded at the top level of a script
+                    continue
                 try:
                     _, design = mgr.get_matrices(
                         d["formula"], data, eval_env=depth, pandas=True
@@ -118,6 +131,17 @@ class ModelData:
             else:
                 raise exc[-1]
 
+            # A design with other columns, from another formula engine or other
+            # functions in the frame, would make predict silently wrong
+            columns = getattr(d.get("orig_exog"), "columns", None)
+            if columns is not None and list(design.columns) != list(columns):
+                raise ValueError(
+                    f"The formula {d['formula']!r} gives the columns "
+                    f"{list(design.columns)} when the pickle is loaded, but the "
+                    f"model was estimated with {list(columns)}. The formula "
+                    "engine, or a function that the formula uses, differs from "
+                    "the one that estimated the model."
+                )
             self.model_spec = mgr.spec
             del d["restore_model_spec"]
         self.__dict__.update(d)
