@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 from scipy.special import logsumexp
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.regime_switching import markov_regression, markov_switching
 
 current_path = Path(__file__).resolve().parent
@@ -1786,12 +1787,19 @@ class MarkovRegression:
             res = self.model.fit(disp=False, **kwargs)
         assert_allclose(res.llf, self.true["llf_fit"], atol=self.atol, rtol=self.rtol)
 
+    # The llf_fit_em values are regression values, not external references:
+    # the log-likelihood that the EM algorithm of statsmodels reaches with its
+    # default settings. They were recomputed in 0.15.1, when the M-step of the
+    # transition probabilities was fixed.
     @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
-        res_em = self.model._fit_em(**kwargs)
+        params_em = self.model._fit_em(**kwargs)
         assert_allclose(
-            res_em.llf, self.true["llf_fit_em"], atol=self.atol, rtol=self.rtol
+            self.model.loglike(params_em),
+            self.true["llf_fit_em"],
+            atol=self.atol,
+            rtol=self.rtol,
         )
 
 
@@ -2727,7 +2735,7 @@ class TestFedFundsConst(MarkovRegression):
             "params": np.r_[0.9820939, 0.0503587, 3.70877, 9.556793, 2.107562**2],
             "llf": -508.63592,
             "llf_fit": -508.63592,
-            "llf_fit_em": -508.65852,
+            "llf_fit_em": -508.65687,
             "bse_oim": np.r_[0.0104002, 0.0268434, 0.1767083, 0.2999889, np.nan],
             "smoothed0": results["const_sm1"],
             "smoothed1": results["const_sm2"],
@@ -3030,9 +3038,29 @@ class TestFedFundsConstShort(MarkovRegression):
             "params": np.r_[0.9820939, 0.0503587, 3.70877, 9.556793, 2.107562**2],
             "llf": -29.909297,
             "llf_fit": -7.8553370,
-            "llf_fit_em": -7.8554974,
+            "llf_fit_em": -7.8534865,
         }
         super().setup_class(true, fedfunds[-10:], k_regimes=2)
+
+    def test_fit(self, **kwargs):
+        # The start parameters that 5 EM iterations gave before the M-step of
+        # the transition probabilities was fixed in 0.15.1, so that the test
+        # keeps checking the same optimum. From those of the fixed EM, the
+        # optimizer reaches a degenerate maximum (llf 5.127) of this short
+        # series, where one regime holds only the first observation and the
+        # variance goes to zero.
+        kwargs.setdefault(
+            "start_params",
+            np.r_[
+                0.46031481590897694,
+                0.4608638922318685,
+                0.3072522679243685,
+                0.4402689398151199,
+                0.2773330925215867,
+            ],
+        )
+        kwargs.setdefault("em_iter", 0)
+        super().test_fit(**kwargs)
 
     def test_filter_output(self, **kwargs):
         res = self.result
@@ -3185,7 +3213,7 @@ class TestFedFundsConstL1(MarkovRegression):
             ],
             "llf": -264.71069,
             "llf_fit": -264.71069,
-            "llf_fit_em": -264.71153,
+            "llf_fit_em": -264.71084,
             "bse_oim": np.r_[
                 0.1202616, 0.0495924, 0.2886657, 0.1183838, 0.0337234, 0.0185031, np.nan
             ],
@@ -3222,7 +3250,7 @@ class TestFedFundsConstL1Exog(MarkovRegression):
             ],
             "llf": -229.25614,
             "llf_fit": -229.25614,
-            "llf_fit_em": -229.25624,
+            "llf_fit_em": -229.25628,
             "bse_oim": np.r_[
                 0.0929915,
                 0.0641179,
@@ -3308,7 +3336,7 @@ class TestFedFundsConstL1Exog3(MarkovRegression):
             ],
             "llf": -189.89493,
             "llf_fit": -182.27188,
-            "llf_fit_em": -226.88581,
+            "llf_fit_em": -226.87619,
         }
         super().setup_class(
             true,
@@ -3340,7 +3368,7 @@ class TestAreturnsConstL1Variance(MarkovRegression):
             ],
             "llf": -745.7977,
             "llf_fit": -745.7977,
-            "llf_fit_em": -745.83654,
+            "llf_fit_em": -745.82796,
             "bse_oim": np.r_[
                 0.0634387,
                 0.0662574,
@@ -3378,7 +3406,7 @@ class TestMumpspcNoconstL1Variance(MarkovRegression):
             ],
             "llf": 131.7225,
             "llf_fit": 131.7225,
-            "llf_fit_em": 131.7175,
+            "llf_fit_em": 131.72149,
         }
         super().setup_class(
             true,
@@ -3655,12 +3683,9 @@ def test_exog_tvtp():
 
     params = np.r_[0.98209618, 0.05036498, 3.70877542, 9.55676298, 4.44181911]
     params_tvtp = params.copy()
-    params_tvtp[0] = np.squeeze(
-        mod2._untransform_logistic(np.r_[0.0], np.r_[1 - params[0]])
-    )
-    params_tvtp[1] = np.squeeze(
-        mod2._untransform_logistic(np.r_[0.0], np.r_[1 - params[1]])
-    )
+    # With a constant exog_tvtp, the coefficients are the logits of the
+    # transition probabilities
+    params_tvtp[:2] = np.log(params[:2] / (1 - params[:2]))
 
     res1 = mod1.smooth(params)
     res2 = mod2.smooth(params_tvtp)
@@ -4221,3 +4246,154 @@ def test_exog_tvtp_forms(form):
     params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1]
 
     assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "k_regimes, params",
+    [
+        (2, np.r_[0.9, 0.2, 0.5, 2.0, 1.0]),
+        (3, np.r_[0.8, 0.1, 0.1, 0.1, 0.8, 0.1, 0.0, 1.0, 2.0, 1.0]),
+    ],
+)
+def test_em_transition_m_step(k_regimes, params):
+    # The M-step of the EM algorithm for the transition probabilities
+    # (Hamilton, 1990) is
+    #   p[i->j] = sum_t Pr[S_t = j, S_{t-1} = i | T] / sum_t Pr[S_{t-1} = i | T],
+    # here computed from the smoothed joint probabilities at the start params.
+    # It used to divide by sum_t Pr[S_t = i | T], which differs by
+    # Pr[S_{T-1} = i | T] - Pr[S_{-1} = i | T], so the test uses a short
+    # series that ends in another regime than it starts.
+    endog, _ = two_regime_data(nobs=18)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=k_regimes)
+    joint = mod.smooth(params).smoothed_joint_probabilities
+    numerator = joint.sum(axis=-1)
+    denominator = joint.sum(axis=(0, -1))
+
+    # One EM iteration, and no optimization after it
+    with pytest.warns(ConvergenceWarning):
+        params_em = mod.fit(
+            start_params=params, em_iter=1, maxiter=0, return_params=True, disp=False
+        )
+
+    for i in range(k_regimes):
+        for j in range(k_regimes - 1):
+            idx = mod.param_names.index(f"p[{i}->{j}]")
+            assert_allclose(params_em[idx], numerator[j, i] / denominator[i], rtol=1e-10)
+
+
+def transition_model(k_regimes):
+    endog, _ = two_regime_data()
+    mod = markov_regression.MarkovRegression(endog, k_regimes=k_regimes)
+    k_trans = k_regimes * (k_regimes - 1)
+    return mod, k_trans
+
+
+@pytest.mark.parametrize("k_regimes", [2, 3, 4])
+@pytest.mark.parametrize("tiny", [False, True], ids=["ordinary", "tiny"])
+def test_untransform_params_round_trip_transition(k_regimes, tiny):
+    mod, k_trans = transition_model(k_regimes)
+    rng = np.random.default_rng(20261124)
+    unconstrained = np.r_[
+        rng.standard_normal(k_trans), rng.standard_normal(k_regimes), 1.5
+    ]
+    if tiny:
+        # Probabilities of about 1e-22 and 1e-304 out of the first two regimes
+        unconstrained[0] = -50.0
+        unconstrained[1] = -700.0
+    constrained = mod.transform_params(unconstrained)
+    if tiny:
+        assert constrained[0] < 1e-21
+        assert constrained[1] < 1e-300
+    assert_allclose(mod.untransform_params(constrained), unconstrained, rtol=1e-12)
+    # and back to the probabilities
+    assert_allclose(
+        mod.transform_params(mod.untransform_params(constrained)),
+        constrained,
+        rtol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("k_regimes", [2, 3])
+def test_untransform_params_zero_transition(k_regimes):
+    mod, k_trans = transition_model(k_regimes)
+    # Zero probabilities are replaced by the smallest positive normal float
+    log_tiny = np.log(2.2250738585072014e-308)
+    if k_regimes == 2:
+        # p[0->0] = 0, and p[1->0] = 1 so that p[1->1] = 0
+        probs = np.r_[0.0, 1.0]
+        desired = probs
+        # log(p[i->0]) - log(p[i->1])
+        desired_unconstrained = np.r_[log_tiny, -log_tiny]
+    else:
+        # Out of regime 0: p[0->0] = 0; out of regime 1: p[1->2] = 0;
+        # out of regime 2: the sum exceeds one by 1e-9 (rounding is accepted)
+        probs = np.r_[0.0, 0.3, 0.5, 0.4, 0.7, 0.5 + 1e-9]
+        desired = probs.copy()
+        desired[[2, 5]] /= 1 + 1e-9
+        # log(p[i->j]) - log(p[i->2]), in the order p[0->0], p[1->0], p[2->0],
+        # p[0->1], p[1->1], p[2->1]
+        desired_unconstrained = np.r_[
+            log_tiny - np.log(0.6),
+            np.log(0.3) - log_tiny,
+            np.log(0.5) - log_tiny,
+            np.log(0.4) - np.log(0.6),
+            np.log(0.7) - log_tiny,
+            np.log(0.5 + 1e-9) - log_tiny,
+        ]
+    constrained = np.r_[probs, np.arange(k_regimes, dtype=float), 1.0]
+    unconstrained = mod.untransform_params(constrained)
+    assert_allclose(unconstrained[:k_trans], desired_unconstrained, rtol=1e-12)
+    # A zero probability comes back as about 2.2e-308 (the smallest positive
+    # normal float), hence the atol. Unconstrained values near 708 are
+    # accurate to about 1e-13, hence the rtol.
+    assert_allclose(
+        mod.transform_params(unconstrained)[:k_trans], desired, rtol=1e-11, atol=1e-300
+    )
+
+
+@pytest.mark.parametrize("k_regimes", [2, 3])
+@pytest.mark.parametrize("case", ["negative", "nan", "sum"])
+def test_untransform_params_invalid_transition(k_regimes, case):
+    mod, k_trans = transition_model(k_regimes)
+    constrained = mod.start_params
+    if case == "negative":
+        constrained[0] = -1e-3
+    elif case == "nan":
+        constrained[0] = np.nan
+    elif k_regimes == 2:
+        constrained[0] = 1 + 1e-7
+    else:
+        constrained[[0, 3]] = [0.5, 0.5 + 1e-7]
+    with pytest.raises(ValueError, match="non-negative and sum to at most one"):
+        mod.untransform_params(constrained)
+
+
+def three_regime_data(seed):
+    rng = np.random.default_rng(seed)
+    # Column j holds the probabilities of moving out of regime j
+    transition = np.array([[0.95, 0.05, 0.05], [0.05, 0.9, 0.05], [0.0, 0.05, 0.9]])
+    states = [0]
+    for _ in range(1, 100):
+        states.append(rng.choice(3, p=transition[:, states[-1]]))
+    return np.array([0.0, 4.0, 8.0])[np.array(states)] + rng.standard_normal(100)
+
+
+@pytest.mark.parametrize("excess", [0.0, 8e-13], ids=["exactly-one", "near-one"])
+def test_fit_zero_transition_start_params(excess):
+    # Start parameters with p[0->2] zero: p[0->0] + p[0->1] is exactly one,
+    # or one up to 8e-13 (20 EM iterations give such parameters for some
+    # data, depending on the platform). untransform_params raised "Could not
+    # untransform parameters." for them.
+    mod = markov_regression.MarkovRegression(three_regime_data(6), k_regimes=3)
+    params = mod.start_params.copy()
+    params[0] = 0.6
+    params[3] = 0.4 - excess
+    # No EM steps and no optimization, so fit returns the start parameters,
+    # through untransform_params and transform_params
+    with pytest.warns(ConvergenceWarning):
+        res = mod.fit(
+            start_params=params, em_iter=0, maxiter=0, return_params=True, disp=False
+        )
+    # The unconstrained values of p[0->0] and p[0->1] are near 708 when
+    # p[0->2] is zero, accurate to about 1e-13
+    assert_allclose(res, params, rtol=1e-11)

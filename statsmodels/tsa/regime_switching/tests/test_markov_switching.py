@@ -10,7 +10,6 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import MissingDataError
 from statsmodels.tsa.regime_switching import (
     markov_autoregression,
@@ -301,120 +300,6 @@ def test_initialize_known_failure_keeps_initialization(probabilities, previous):
     with pytest.raises(ValueError):
         mod.initialize_known(probabilities)
     assert_allclose(mod.initial_probabilities(params), expected, rtol=1e-12)
-
-
-def test_logistic():
-    logistic = markov_switching._logistic
-
-    # For a number, logistic(x) = np.exp(x) / (1 + np.exp(x))
-    cases = [0, 10.0, -4]
-    for x in cases:
-        # Have to use allclose b/c logistic() actually uses logsumexp, so
-        # they're not equal
-        assert_allclose(logistic(x), np.exp(x) / (1 + np.exp(x)))
-
-    # For a vector, logistic(x) returns
-    # np.exp(x[i]) / (1 + np.sum(np.exp(x[:]))) for each i
-    # but squeezed
-    cases = [[1.0], [0, 1.0], [-2, 3.0, 1.2, -30.0]]
-    for x in cases:
-        actual = logistic(x)
-        desired = [np.exp(i) / (1 + np.sum(np.exp(x))) for i in x]
-        assert_allclose(actual, desired)
-
-    # For a 2-dim, logistic(x) returns
-    # np.exp(x[i, t]) / (1 + np.sum(np.exp(x[:, t]))) for each i, each t
-    # but squeezed
-    case = [[1.0]]
-    actual = logistic(case)
-    assert_equal(actual.shape, (1, 1))
-    assert_allclose(actual, np.exp(1) / (1 + np.exp(1)))
-
-    # Here, np.array(case) is 2x1, so it is interpreted as i=0, 1 and t=0
-    case = [[0], [1.0]]
-    actual = logistic(case)
-    desired = [np.exp(i) / (1 + np.sum(np.exp(case))) for i in case]
-    assert_allclose(actual, desired)
-
-    # Here, np.array(case) is 1x2, so it is interpreted as i=0 and t=0, 1
-    case = [[0, 1.0]]
-    actual = logistic(case)
-    desired = np.exp(case) / (1 + np.exp(case))
-    assert_allclose(actual, desired)
-
-    # For a 3-dim, logistic(x) returns
-    # np.exp(x[i, j, t]) / (1 + np.sum(np.exp(x[:, j, t])))
-    # for each i, each j, each t
-    case = np.arange(2 * 3 * 4).reshape(2, 3, 4)
-    actual = logistic(case)
-    for j in range(3):
-        assert_allclose(actual[:, j, :], logistic(case[:, j, :]))
-
-
-def test_partials_logistic():
-    # Here we compare to analytic derivatives and to finite-difference
-    # approximations
-    logistic = markov_switching._logistic
-    partials_logistic = markov_switching._partials_logistic
-
-    # For a number, logistic(x) = np.exp(x) / (1 + np.exp(x))
-    # Then d/dx = logistix(x) - logistic(x)**2
-    cases = [0, 10.0, -4]
-    for x in cases:
-        assert_allclose(partials_logistic(x), logistic(x) - logistic(x) ** 2)
-        assert_allclose(partials_logistic(x), approx_fprime_cs([x], logistic))
-
-    # For a vector, logistic(x) returns
-    # np.exp(x[i]) / (1 + np.sum(np.exp(x[:]))) for each i
-    # Then d logistic(x[i]) / dx[i] = (logistix(x) - logistic(x)**2)[i]
-    # And d logistic(x[i]) / dx[j] = -(logistic(x[i]) * logistic[x[j]])
-    cases = [[1.0], [0, 1.0], [-2, 3.0, 1.2, -30.0]]
-    for x in cases:
-        evaluated = np.atleast_1d(logistic(x))
-        partials = np.diag(evaluated - evaluated**2)
-        for i in range(len(x)):
-            for j in range(i):
-                partials[i, j] = partials[j, i] = -evaluated[i] * evaluated[j]
-        assert_allclose(partials_logistic(x), partials)
-        assert_allclose(partials_logistic(x), approx_fprime_cs(x, logistic))
-
-    # For a 2-dim, logistic(x) returns
-    # np.exp(x[i, t]) / (1 + np.sum(np.exp(x[:, t]))) for each i, each t
-    # but squeezed
-    case = [[1.0]]
-    evaluated = logistic(case)
-    partial = [evaluated - evaluated**2]
-    assert_allclose(partials_logistic(case), partial)
-    assert_allclose(partials_logistic(case), approx_fprime_cs(case, logistic))
-
-    # # Here, np.array(case) is 2x1, so it is interpreted as i=0, 1 and t=0
-    case = [[0], [1.0]]
-    evaluated = logistic(case)[:, 0]
-    partials = np.diag(evaluated - evaluated**2)
-    partials[0, 1] = partials[1, 0] = -np.multiply(*evaluated)
-    assert_allclose(partials_logistic(case)[:, :, 0], partials)
-    assert_allclose(
-        partials_logistic(case), approx_fprime_cs(np.squeeze(case), logistic)[..., None]
-    )
-
-    # Here, np.array(case) is 1x2, so it is interpreted as i=0 and t=0, 1
-    case = [[0, 1.0]]
-    evaluated = logistic(case)
-    partials = (evaluated - evaluated**2)[None, ...]
-    assert_allclose(partials_logistic(case), partials)
-    assert_allclose(partials_logistic(case), approx_fprime_cs(case, logistic).T)
-
-    # For a 3-dim, logistic(x) returns
-    # np.exp(x[i, j, t]) / (1 + np.sum(np.exp(x[:, j, t])))
-    # for each i, each j, each t
-    case = np.arange(2 * 3 * 4).reshape(2, 3, 4)
-    evaluated = logistic(case)
-    partials = partials_logistic(case)
-    for t in range(4):
-        for j in range(3):
-            desired = np.diag(evaluated[:, j, t] - evaluated[:, j, t] ** 2)
-            desired[0, 1] = desired[1, 0] = -np.multiply(*evaluated[:, j, t])
-            assert_allclose(partials[..., j, t], desired)
 
 
 @pytest.mark.parametrize(
@@ -844,3 +729,51 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+def test_cov_kwds_not_changed():
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9, 0.2, 0.2, 2.8, 1.0]
+    cov_kwds = {"approx_complex_step": True, "approx_centered": False}
+    res = mod.smooth(params, cov_type="approx", cov_kwds=cov_kwds)
+    assert cov_kwds == {"approx_complex_step": True, "approx_centered": False}
+    # The defaults: complex-step differentiation
+    assert_allclose(res.cov_params(), mod.smooth(params).cov_params_approx)
+    assert "complex-step" in res.cov_kwds["description"]
+
+
+@pytest.mark.parametrize("cov_type", ["approx", "opg", "robust"])
+@pytest.mark.parametrize("centered", [False, True])
+def test_cov_kwds_finite_differences(cov_type, centered):
+    from statsmodels.tools.numdiff import approx_fprime, approx_hess1, approx_hess3
+
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9, 0.2, 0.2, 2.8, 1.0]
+    cov_kwds = {"approx_complex_step": False, "approx_centered": centered}
+    res = mod.smooth(params, cov_type=cov_type, cov_kwds=cov_kwds)
+    assert cov_kwds == {"approx_complex_step": False, "approx_centered": centered}
+
+    # The covariance matrix from finite-difference derivatives: forward
+    # differences, or centered ones
+    approx_hess = approx_hess3 if centered else approx_hess1
+    hessian = approx_hess(params, mod.loglike)
+    scores = approx_fprime(params, mod.loglikeobs, centered=centered)
+    opg = np.linalg.pinv(scores.T @ scores)
+    expected = {
+        "approx": -np.linalg.pinv(hessian),
+        "opg": opg,
+        "robust": np.linalg.pinv(hessian @ opg @ hessian),
+    }[cov_type]
+    assert_allclose(res.cov_params(), expected, rtol=1e-8)
+    method = "centered finite differences" if centered else "finite differences"
+    assert f"({method})" in res.cov_kwds["description"]
+
+    # The finite differences approximate the complex-step derivatives, up to
+    # their truncation error
+    cov_cs = mod.smooth(params, cov_type=cov_type).cov_params()
+    scale = np.sqrt(np.abs(np.outer(np.diag(cov_cs), np.diag(cov_cs))))
+    assert_allclose(res.cov_params() / scale, cov_cs / scale, atol=1e-2)
