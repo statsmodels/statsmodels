@@ -1,0 +1,6 @@
+- ``ARDL`` dynamic predictions (``predict`` and ``get_prediction`` with
+  ``dynamic``) of a window inside the sample that ends before the last
+  observation overwrote the regressors of the model with the forecasts. Later
+  predictions of the same results object, and the log-likelihood of the model,
+  then used the changed regressors. The regressors are no longer modified.
+  :pr:`11293`
