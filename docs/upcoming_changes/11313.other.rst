@@ -1,0 +1,3 @@
+- Setting an attribute defined with ``cache_writable`` before it
+  is read works when the object has no cache yet; it raised an
+  ``AttributeError``. :pr:`11313`
