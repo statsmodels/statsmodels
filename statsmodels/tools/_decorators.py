@@ -40,8 +40,14 @@ def deprecated_alias(
     msg : str, optional
         Message to show.  Default is
         `old_name` is a deprecated alias for `new_name`
-    warning : Warning, optional
-        Warning class to give.  Default is FutureWarning.
+    warning : type, optional
+        Warning class, a subclass of Warning, to give.  Default is
+        FutureWarning.
+
+    Returns
+    -------
+    property
+        A property that warns and then gets or sets `new_name`.
 
     Notes
     -----
@@ -134,7 +140,15 @@ class _cache_readonly(property):
 
 
 class cache_writable(_cache_readonly):
-    """Decorate a method as a CachedWritableAttribute"""
+    """
+    Decorate a method as a CachedWritableAttribute
+
+    Parameters
+    ----------
+    cachename : str, optional
+        Name of the instance attribute that holds the cache dictionary.
+        Default is "_cache".
+    """
 
     def __call__(self, func):
         """Return a writable cached descriptor for func"""
