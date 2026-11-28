@@ -120,8 +120,6 @@ def test_bool_dummy_exog(model):
 @pytest.mark.parametrize("model", list(MODELS))
 def test_nullable_with_missing(model, dtype):
     # pd.NA in nullable inputs is dropped in the same way as nan in floats
-    if model == "MixedLM":
-        pytest.skip("missing='drop' is not supported by MixedLM, see GH 7978")
     kind, fit = MODELS[model]
     endog = ENDOG[kind].astype(float)
     endog[MISSING] = np.nan
