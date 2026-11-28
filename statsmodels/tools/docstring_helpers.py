@@ -30,8 +30,8 @@ class Appender:
         A string placed between the original docstring and the addendum.
         Default is "".
     indents : int, optional
-        Number of indents (4-space blocks) added to all lines of the
-        addendum. Default is 0.
+        Number of indents (4-space blocks) added to every line of the
+        addendum after the first. Default is 0.
 
     Examples
     --------
@@ -74,9 +74,9 @@ class Substitution:
 
     Parameters
     ----------
-    *args : str
+    *args : object
         Positional arguments for %s-style substitution.
-    **kwargs : str
+    **kwargs : object
         Keyword arguments for %(name)s-style substitution.
         Cannot be combined with positional args.
 
@@ -118,6 +118,13 @@ class Substitution:
 
         Only valid when Substitution was constructed with keyword arguments
         (i.e., self.params is a dict). No-op for positional (tuple) params.
+
+        Parameters
+        ----------
+        *args : mapping or iterable of key-value pairs
+            Passed to ``dict.update``.
+        **kwargs : object
+            Keyword substitutions to add or replace.
         """
         if isinstance(self.params, dict):
             self.params.update(*args, **kwargs)
@@ -125,21 +132,21 @@ class Substitution:
 
 def indent(text: str | None, indents: int = 1) -> str:
     """
-    Add indentation to each line of text
+    Indent every line of text after the first
 
     Uses 4-space blocks per indent level, matching pandas' original behavior.
 
     Parameters
     ----------
     text : str or None
-        The text to indent. Returns "" if None or empty.
+        The text to indent.
     indents : int, optional
         Number of 4-space indent levels to add. Default is 1.
 
     Returns
     -------
     str
-        Indented text, or "" if input was None/empty.
+        Indented text, or "" if `text` is None, empty or not a str.
     """
     if not text or not isinstance(text, str):
         return ""
