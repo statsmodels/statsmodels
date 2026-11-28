@@ -146,6 +146,11 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
+    # Only in-range negative axes are aliases of ``axis + o.ndim``.  Leave
+    # out-of-range axes untouched so NumPy still raises AxisError for them.
+    if -o.ndim <= axis < 0:
+        axis += o.ndim
+
     if isinstance(lambd, str):
         lambd = string_like(
             lambd,

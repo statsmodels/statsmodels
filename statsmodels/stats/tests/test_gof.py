@@ -511,3 +511,130 @@ def test_chisquare_power_invalid_inputs_raises():
     p = chisquare_power(0.3, 50, 5, alpha=0.1)
     assert np.isfinite(p)
     assert 0 < p < 1
+
+
+@pytest.mark.parametrize(
+    "observed, expected, axis",
+    [
+        (np.array([[2.0, 4.0], [5.0, 1.0]]),
+         np.array([[3.0, 3.0], [3.0, 3.0]]), -3),
+        (np.array([[2.0, 4.0], [5.0, 1.0]]),
+         np.array([[3.0, 3.0], [3.0, 3.0]]), -4),
+        (np.array([2.0, 4.0, 4.0]), np.array([0.2, 0.3, 0.5]), -2),
+        (np.array([[2.0, 4.0], [5.0, 1.0]]),
+         np.array([[3.0, 3.0], [3.0, 3.0]]), 3),
+        (np.array([2.0, 4.0, 4.0]), np.array([0.2, 0.3, 0.5]), 2),
+    ],
+)
+def test_powerdiscrepancy_invalid_axis_rejected(observed, expected, axis):
+    # Out-of-range axes must remain errors; only in-range negative axes
+    # are normalized to their positive equivalents.
+    with pytest.raises(np.exceptions.AxisError):
+        powerdiscrepancy(observed, expected, axis=axis)
+
+
+def test_powerdiscrepancy_legal_negative_axis_1d():
+    observed = np.array([2.0, 4.0, 4.0])
+    expected = np.array([0.2, 0.3, 0.5])
+    d_pos, p_pos = powerdiscrepancy(observed, expected, axis=0)
+    d_neg, p_neg = powerdiscrepancy(observed, expected, axis=-1)
+    assert_allclose(d_pos, d_neg, rtol=1e-13, atol=1e-13)
+    assert_allclose(p_pos, p_neg, rtol=1e-13, atol=1e-13)
+
+
+POWERDISCREPANCY_NEG_AXIS_CASES = [
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]], [0.2, 0.3, 0.5], 0.0, 1, -1, 0, 3,
+        [[0.5163081691005691, 2.4482697928373365]],
+        [[0.7724761962890626, 0.29401194111858137]],
+        id="non_square_2x3_gtest",
+    ),
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]], [0.2, 0.3, 0.5], "pearson", 1, -1, 0, 3,
+        [[0.5333333333333332, 2.1499999999999995]],
+        [[0.7659283383646487, 0.34129775530099377]],
+        id="non_square_2x3_pearson",
+    ),
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]], [0.2, 0.3, 0.5], "cressie_read", 1, -1, 0, 3,
+        [[0.5269507528860957, 2.2370155789411674]],
+        [[0.7683765423698412, 0.3267670362112144]],
+        id="non_square_2x3_cressie_read",
+    ),
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]], [0.2, 0.3, 0.5], -0.5, 1, -1, 0, 3,
+        [[0.5100994389013245, 2.6461776622224997]],
+        [[0.7748779704962834, 0.2663114391757649]],
+        id="non_square_2x3_freeman_tukey",
+    ),
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]], [0.2, 0.3, 0.5], -1, 1, -1, 0, 3,
+        [[0.5053430784314121, 2.8861866203265736]],
+        [[0.7767229629629628, 0.23619599999999996]],
+        id="non_square_2x3_modified_loglikeratio",
+    ),
+    pytest.param(
+        [[2, 4, 4]], [[2.0, 3.0, 5.0]], 2 / 3.0, 1, -1, 0, 3,
+        [0.5269507528860957], [0.7683765423698412],
+        id="single_row_1x3",
+    ),
+    pytest.param(
+        [[2], [5], [13]], [[4.0], [6.0], [10.0]], 2 / 3.0, 0, -2, 0, 3,
+        [2.1104363082768822], [0.34811647597205697],
+        id="single_column_3x1",
+    ),
+    pytest.param(
+        [[2, 5], [4, 3], [4, 12]], [0.2, 0.3, 0.5], "pearson", 0, -2, 0, 3,
+        [[0.5333333333333332, 2.1499999999999995]],
+        [[0.7659283383646487, 0.34129775530099377]],
+        id="shared_probability_vector_axis0",
+    ),
+    pytest.param(
+        [[3, 5, 7, 5], [4, 6, 6, 4], [5, 5, 5, 5]],
+        [0.25, 0.25, 0.25, 0.25], "pearson", 1, -1, 0, 4,
+        [[1.5999999999999992, 0.7999999999999998, 0.0]],
+        [[0.6593898197119852, 0.8494670333918256, 1.0]],
+        id="shared_probability_vector_axis1",
+    ),
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]],
+        [[2.0, 3.0, 5.0], [4.0, 6.0, 10.0]], 0.0, 1, -1, 0, 3,
+        [[0.5163081691005691, 2.4482697928373365]],
+        [[0.7724761962890626, 0.29401194111858137]],
+        id="per_sample_expected_counts",
+    ),
+    pytest.param(
+        [[2, 4, 4], [5, 3, 12]], [0.2, 0.3, 0.5], 2 / 3.0, 1, -1, 1, 3,
+        [[0.5269507528860957, 2.2370155789411674]],
+        [[0.4678916549398682, 0.13474081964075177]],
+        id="ddof_one",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "observed, expected, lambd, pos_axis, neg_axis, ddof, k, d_ref, p_ref",
+    POWERDISCREPANCY_NEG_AXIS_CASES,
+)
+def test_powerdiscrepancy_negative_axis(
+    observed, expected, lambd, pos_axis, neg_axis, ddof, k, d_ref, p_ref
+):
+    # The negative axis is an alias and must reproduce the positive-axis
+    # result exactly, including shape and degrees of freedom.
+    d_pos, p_pos = powerdiscrepancy(
+        observed, expected, lambd=lambd, axis=pos_axis, ddof=ddof
+    )
+    d_neg, p_neg = powerdiscrepancy(
+        observed, expected, lambd=lambd, axis=neg_axis, ddof=ddof
+    )
+
+    assert np.shape(d_neg) == np.shape(d_pos) == np.shape(d_ref)
+    assert np.shape(p_neg) == np.shape(p_pos) == np.shape(p_ref)
+    assert_allclose(d_pos, d_ref, rtol=1e-12, atol=1e-12)
+    assert_allclose(p_pos, p_ref, rtol=1e-12, atol=1e-12)
+    assert_allclose(d_neg, d_ref, rtol=1e-12, atol=1e-12)
+    assert_allclose(p_neg, p_ref, rtol=1e-12, atol=1e-12)
+    assert_allclose(d_neg, d_pos, rtol=1e-13, atol=1e-13)
+    assert_allclose(p_neg, p_pos, rtol=1e-13, atol=1e-13)
+    # ddof is reflected in the chi-square degrees of freedom k - 1 - ddof.
+    assert_allclose(p_neg, stats.chi2.sf(d_ref, k - 1 - ddof), rtol=1e-12, atol=1e-12)
