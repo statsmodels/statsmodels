@@ -1,0 +1,4 @@
+- Multiplicatively adjusted Theta forecasts now scale prediction interval
+  widths by the seasonal factor at each forecast horizon. Intervals were
+  too narrow for factors above one and too wide for factors below one.
+  :pr:`11292`
