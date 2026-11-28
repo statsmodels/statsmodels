@@ -2184,11 +2184,6 @@ def test_get_details_and_impacts(include_revisions, include_updates):
         assert_equal(impacts.shape, (0, 0))
 
 
-# pandas < 3 warns in `get_impacts` with a `groupby` (stack without
-# future_stack)
-@pytest.mark.filterwarnings(
-    "ignore:The previous implementation of stack:FutureWarning")
-@pytest.mark.filterwarnings("ignore:The behavior of Index.insert:FutureWarning")
 def test_get_impacts_groupby():
     news = bivariate_news()
     impacts = news.get_impacts()
@@ -2765,3 +2760,79 @@ def test_revisions_details_start_float():
     res_upd = res_prev.apply(y)
     with pytest.raises(ValueError):
         res_upd.news(res_prev, comparison_type="previous", revisions_details_start=36.0)
+
+
+@pytest.mark.parametrize("include_revisions", [True, False])
+@pytest.mark.parametrize("include_updates", [True, False])
+def test_get_impacts_groupby_rows(include_revisions, include_updates):
+    # Only unemp is revised (in 2009Q2) and only realgdp is new (in 2009Q3),
+    # so each date has impacts of one group only. The rows are the dates and
+    # groups with impacts, on every pandas version (pandas 3 kept all-NaN
+    # rows for the other group, and pandas < 3 warned).
+    endog = dta[["realgdp", "unemp"]].copy()
+    endog["realgdp"] = np.log(endog["realgdp"]).diff() * 400
+    endog = endog.iloc[1:]
+    previous = endog.loc[:"2009Q2"].copy()
+    previous.loc["2009Q2", "unemp"] = 0.0
+    updated = endog.copy()
+    updated.loc["2009Q3", "unemp"] = np.nan
+    res = varmax.VARMAX(previous, trend="n").smooth(
+        np.r_[0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1])
+    news = res.news(updated, start="2009Q2", end="2010Q1",
+                    revisions_details_start=True)
+    q2, q3 = pd.Period("2009Q2", freq="Q"), pd.Period("2009Q3", freq="Q")
+    rows = []
+    if include_revisions:
+        rows.append((q2, "unemp"))
+    if include_updates:
+        rows.append((q3, "realgdp"))
+    kwargs = {"include_revisions": include_revisions,
+              "include_updates": include_updates}
+    impacts = news.get_impacts(**kwargs)
+    assert_equal(impacts.index.tolist(), rows)
+
+    groups = {"realgdp": "real", "unemp": "labor"}
+    grouped = news.get_impacts(groupby=groups, **kwargs)
+    assert_equal(grouped.index.names, ["update date", "updated variable"])
+    assert_equal(grouped.index.tolist(),
+                 [(date, groups[variable]) for date, variable in rows])
+    if rows:
+        # Each group has a single variable
+        assert_allclose(grouped.to_numpy(),
+                        impacts.loc[rows, grouped.columns].to_numpy(),
+                        rtol=1e-12)
+
+
+@pytest.mark.parametrize("revisions_group", ["all prior revisions",
+                                             "revisions"])
+def test_get_impacts_groupby_dict_grouped_revisions(revisions_group):
+    # The revisions of 2009Q2 are all grouped ("all prior revisions"). A dict
+    # that does not map them keeps them as a group of their own (their row
+    # was dropped); a dict that maps them puts them in that group.
+    groupby = {"realgdp": "output", "unemp": "labor"}
+    if revisions_group != "all prior revisions":
+        groupby["all prior revisions"] = revisions_group
+    original = dict(groupby)
+    news = bivariate_news(revisions_details_start=False)
+    assert_equal(news.n_revisions_grouped, 2)
+    q2, q3 = pd.Period("2009Q2", freq="Q"), pd.Period("2009Q3", freq="Q")
+    grouped = news.get_impacts(groupby=groupby)
+    assert_equal(grouped.index.tolist(),
+                 [(q2, revisions_group), (q3, "labor"), (q3, "output")])
+    # The dict is not changed
+    assert_equal(groupby, original)
+    # The grouped revisions have the impacts of all revisions
+    desired = news.revision_impacts.stack(**FUTURE_STACK)
+    assert_allclose(grouped.loc[(q2, revisions_group), desired.index],
+                    desired, rtol=1e-12)
+    # Each news group has the impacts of its variable
+    impacts = news.get_impacts()
+    for variable, group in [("realgdp", "output"), ("unemp", "labor")]:
+        assert_allclose(grouped.loc[(q3, group)],
+                        impacts.loc[(q3, variable), grouped.columns],
+                        rtol=1e-12)
+    # Nothing is dropped: the sum over the rows is the total impact (atol
+    # as in test_get_details_and_impacts)
+    desired = news.total_impacts.stack(**FUTURE_STACK)
+    assert_allclose(grouped.sum()[desired.index], desired,
+                    rtol=1e-10, atol=1e-12)

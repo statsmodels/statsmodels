@@ -1,0 +1,7 @@
+- ``get_impacts`` of the news of state space models with a ``groupby``
+  raised two ``FutureWarning`` on pandas 2.1 to 2.3, and on pandas 3 it
+  returned rows of NaN for the groups without impacts on an update
+  date. The rows are those with impacts on every pandas version, as
+  before pandas 3, so on pandas 3 the rows of NaN are gone; on pandas
+  2.1 to 2.3, a grouped table without impacts is empty instead of
+  raising a ``ValueError``. :pr:`11081`

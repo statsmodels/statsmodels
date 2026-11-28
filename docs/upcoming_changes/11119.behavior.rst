@@ -1,0 +1,6 @@
+- ``get_impacts`` of the news of state space models (``NewsResults``)
+  with ``groupby`` given as a dict dropped the impacts of the grouped
+  revisions (the rows "all prior revisions", for the revisions before
+  ``revisions_details_start``) unless the dict mapped "all prior
+  revisions". They are a group of their own, so such grouped tables
+  gain a row with the impacts of these revisions. :pr:`11119`
