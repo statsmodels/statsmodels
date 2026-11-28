@@ -1998,6 +1998,22 @@ class SARIMAXResults(MLEResults):
         # Handle removing data
         self._data_attr_model.extend(["orig_endog", "orig_exog"])
 
+    def _get_append_model(self, endog, exog, history_start, clone_kwargs):
+        model = self.model
+        if not model.simple_differencing:
+            return super()._get_append_model(endog, exog, history_start, clone_kwargs)
+
+        # The specification retains the raw index and name from before differencing.
+        end = self.nobs + len(endog) - 1
+        endog, exog = self._get_append_data(
+            endog, exog, history_start, model._spec._model)
+        mod = model.clone(endog, exog=exog, **clone_kwargs)
+        if isinstance(model._index, pd.RangeIndex) and not model._index_generated:
+            # Integer labels on the differenced scale may start at 1,
+            # independently of the labels of the raw observations.
+            _, _, _, mod._index = model._get_prediction_index(end - mod.nobs + 1, end)
+        return mod
+
     def extend(self, endog, exog=None, **kwargs):
         """
         Recreate the results object for new data that extends the original data
@@ -2025,6 +2041,13 @@ class SARIMAXResults(MLEResults):
         See Also
         --------
         statsmodels.tsa.statespace.mlemodel.MLEResults.extend
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           With simple differencing, differences across the sample boundary
+           are included when extending the results.
         """
         # The time trend continues from the end of this sample, which starts
         # at the model's trend_offset (itself shifted if the results were
@@ -2037,6 +2060,18 @@ class SARIMAXResults(MLEResults):
         # sample would raise as though it collided with a constant trend.
         # Disable just that check and leave the rest of the validation active.
         kwargs.setdefault("validate_exog", False)
+        model = self.model
+        if kwargs.get("simple_differencing", model.simple_differencing):
+            d = kwargs.get("order", model.order)[1]
+            _, D, _, s = kwargs.get("seasonal_order", model.seasonal_order)
+            history = d + D * s
+            if history:
+                # The clone differences these raw observations together with
+                # the new data, leaving only new periods for the filter.
+                start = max(0, len(model.data.orig_endog) - history)
+                fit_kwargs = kwargs.pop("fit_kwargs", None)
+                mod = self._get_append_model(endog, exog, start, kwargs)
+                return self._extend(mod, fit_kwargs)
         return super().extend(endog, exog=exog, **kwargs)
 
     @cache_readonly
