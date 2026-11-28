@@ -6,8 +6,11 @@ License: BSD-3
 
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
 import pytest
 
 from statsmodels.regression.linear_model import OLS
@@ -28,6 +31,7 @@ from statsmodels.stats.oneway import (
     equivalence_oneway_generic,
     f2_to_wellek,
     fstat_to_wellek,
+    icc_oneway,
     power_equivalence_oneway,
     wellek_to_f2,
 )
@@ -946,3 +950,193 @@ def test_scale_transform_center_not_a_number(center):
     # a bool and a complex number were accepted as numbers (numbers.Number)
     with pytest.raises(ValueError, match="center should be"):
         scale_transform(np.array([0.5, 1.5, 4.0]), center=center)
+
+
+# R 4.5.3, ICC 2.4.0, ICCest(x, y, CI.type = "THD"), and anova(aov(y ~ x)),
+# see results/icc_oneway.R
+icc_data = {
+    "unbalanced": (
+        [5.1, 4.8, 6.0, 7.2, 6.9, 7.5, 7.0, 3.9, 4.4, 4.1, 5.5, 5.9, 6.2, 5.0,
+         5.3, 8.1, 7.7],
+        [1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6],
+    ),
+    "single": (
+        [2.3, 2.9, 2.6, 4.1, 3.8, 1.7, 2.2, 2.0, 1.5, 3.3],
+        ["a", "a", "a", "b", "b", "c", "c", "c", "c", "d"],
+    ),
+    "negative": (
+        [1.0, 3.0, 2.1, 1.1, 2.9, 2.0, 0.9, 3.1, 1.9, 1.0, 3.0, 2.0],
+        [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4],
+    ),
+    "balanced": (
+        [9, 2, 5, 8, 6, 1, 3, 2, 8, 4, 6, 8, 7, 1, 2, 6, 10, 5, 6, 9, 6, 2,
+         4, 7],
+        np.repeat(np.arange(6), 4),
+    ),
+}
+
+icc_results = {
+    "unbalanced": {
+        "icc": 0.92993136680221,
+        "conf_int": (0.750810057797512, 0.98890796276468),
+        "var_between": 1.79570409982175,
+        "var_within": 0.13530303030303,
+        "nobs_mean": 2.8,
+        "statistic": 38.1608194453593,
+        "pvalue": 1.37837676471408e-06,
+        "df": (5, 11),
+    },
+    "single": {
+        "icc": 0.910488156130506,
+        "conf_int": (0.540825995987838, 0.993620965327198),
+        "var_between": 0.873071428571428,
+        "var_within": 0.0858333333333333,
+        "nobs_mean": 2.33333333333333,
+        "statistic": 24.7339805825243,
+        "pvalue": 0.000889806399896639,
+        "df": (3, 6),
+    },
+    "negative": {
+        "icc": -0.498346196251378,
+        "conf_int": (-0.499694367927055, -0.476307566707531),
+        "var_between": -0.334814814814815,
+        "var_within": 1.00666666666667,
+        "nobs_mean": 3.0,
+        "statistic": 0.00220750551876387,
+        "pvalue": 0.99984412259272,
+        "df": (3, 8),
+    },
+    # irr 0.85, icc(ratings, model = "oneway") gives the same values
+    "balanced": {
+        "icc": 0.165741768405475,
+        "conf_int": (-0.132932324874751, 0.722560062328121),
+        "var_between": 1.24444444444444,
+        "var_within": 6.26388888888889,
+        "nobs_mean": 4.0,
+        "statistic": 1.79467849223947,
+        "pvalue": 0.16476880834464,
+        "df": (5, 18),
+    },
+}
+
+
+def _icc_groups(y, g):
+    y, g = np.asarray(y, dtype=float), np.asarray(g)
+    return [y[g == u] for u in np.unique(g)]
+
+
+class TestIccOneway:
+    @pytest.mark.parametrize("name", list(icc_data))
+    @pytest.mark.parametrize("layout", ["long", "list", "pandas"])
+    def test_r(self, name, layout):
+        y, g = icc_data[name]
+        if layout == "long":
+            res = icc_oneway(y, g)
+        elif layout == "list":
+            res = icc_oneway(_icc_groups(y, g))
+        else:
+            index = np.arange(100, 100 + len(y))
+            res = icc_oneway(pd.Series(y, index=index), pd.Series(g, index=index))
+        expected = icc_results[name]
+        for key in ["icc", "var_between", "var_within", "nobs_mean", "statistic"]:
+            assert_allclose(getattr(res, key), expected[key], rtol=1e-12, err_msg=key)
+        assert_allclose(res.conf_int, expected["conf_int"], rtol=1e-12)
+        assert_allclose(res.pvalue, expected["pvalue"], rtol=1e-10)
+        assert_equal(res.df, expected["df"])
+        assert_equal(res.n_groups, expected["df"][0] + 1)
+        assert_equal(res.nobs_total, len(y))
+        assert res.conf_int[0] <= res.icc <= res.conf_int[1]
+
+    @pytest.mark.parametrize("layout", ["array", "frame"])
+    def test_wide(self, layout):
+        # one row for each group, as the ratings matrix of irr::icc
+        y, _ = icc_data["balanced"]
+        ratings = np.reshape(y, (6, 4))
+        if layout == "frame":
+            ratings = pd.DataFrame(ratings, columns=list("abcd"))
+        res = icc_oneway(ratings)
+        expected = icc_results["balanced"]
+        assert_allclose(res.icc, expected["icc"], rtol=1e-12)
+        assert_allclose(res.conf_int, expected["conf_int"], rtol=1e-12)
+        assert_equal(res.df, expected["df"])
+
+    @pytest.mark.parametrize("seed", range(20))
+    def test_anova_and_invariance(self, seed):
+        # the F test is the equal variance oneway Anova, and the results do
+        # not depend on the order of the groups or on a linear transformation
+        # anova_oneway needs two observations in each group for the variances
+        rng = np.random.default_rng(seed)
+        n_groups = rng.integers(2, 8)
+        nobs = rng.integers(2, 6, size=n_groups)
+        effects = rng.normal(scale=rng.uniform(0, 2), size=n_groups)
+        data = [e + rng.normal(size=n) for e, n in zip(effects, nobs, strict=True)]
+        res = icc_oneway(data, alpha=0.1)
+        res_anova = anova_oneway(data, use_var="equal")
+        assert_allclose(res.statistic, res_anova.statistic, rtol=1e-12)
+        assert_allclose(res.pvalue, res_anova.pvalue, rtol=1e-10)
+
+        res2 = icc_oneway([3 * x - 7 for x in data[::-1]], alpha=0.1)
+        # atol because the correlation and the limits can be close to zero,
+        # where the rounding errors of the transformed data dominate
+        assert_allclose(res2.icc, res.icc, rtol=1e-10, atol=1e-12)
+        assert_allclose(res2.conf_int, res.conf_int, rtol=1e-10, atol=1e-12)
+        assert_allclose(res2.statistic, res.statistic, rtol=1e-10)
+
+        assert res.conf_int[0] <= res.icc <= res.conf_int[1]
+        res_wide = icc_oneway(data, alpha=0.01)
+        assert res_wide.conf_int[0] <= res.conf_int[0]
+        assert res_wide.conf_int[1] >= res.conf_int[1]
+
+    @pytest.mark.parametrize("value", [0.1, 1.0, 1e-8])
+    def test_no_within_variation(self, value):
+        # the group means of equal values like 0.1 have rounding errors
+        data = [[value] * 3, [2 * value] * 4, [value] * 2, [3 * value]]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = icc_oneway(data)
+        assert_equal(res.icc, 1)
+        assert_equal(res.conf_int, (1, 1))
+        assert_equal(res.statistic, np.inf)
+        assert_equal(res.pvalue, 0)
+        assert_equal(res.var_within, 0)
+        assert res.var_between > 0
+
+    @pytest.mark.parametrize("value", [0.1, 1.0, -3.7])
+    def test_constant(self, value):
+        data = [[value] * 3, [value] * 2, [value] * 4]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = icc_oneway(data)
+        for key in ["icc", "statistic", "pvalue"]:
+            assert np.isnan(getattr(res, key)), key
+        assert np.isnan(res.conf_int).all()
+        assert_equal(res.var_between, 0)
+        assert_equal(res.var_within, 0)
+
+    @pytest.mark.parametrize(
+        "data, groups, match",
+        [
+            ([[1.0, 2.0, 3.0]], None, "two groups"),
+            ([1.0, 2.0, 3.0], [1, 1, 1], "two groups"),
+            ([[1.0], [2.0], [3.0]], None, "two or more"),
+            ([[1.0, 2.0], []], None, "at least one observation"),
+            ([[1.0, np.nan], [2.0, 3.0]], None, "finite"),
+            ([[1.0, np.inf], [2.0, 3.0]], None, "finite"),
+            ([[[1.0, 2.0]], [[2.0, 3.0]]], None, "ndim 1"),
+            ([1.0, 2.0, 3.0], [1, 2], "same length"),
+            ([[1.0, 2.0], [2.0, 3.0]], [1, 2], "ndim 1"),
+            ([1.0, 2.0, 3.0, 4.0], [[1, 1], [2, 2]], "ndim 1"),
+            ([1.0, 2.0, 3.0, 4.0], [1, 1, np.nan, 2], "missing"),
+            ([1.0, 2.0, 3.0, 4.0], ["a", "a", None, "b"], "missing"),
+            ([1.0, 2.0, 3.0, 4.0], pd.Series(["a", "a", None, "b"]), "missing"),
+        ],
+    )
+    def test_errors(self, data, groups, match):
+        with pytest.raises(ValueError, match=match):
+            icc_oneway(data, groups)
+
+    @pytest.mark.parametrize("alpha", [0, 1, -0.1, np.nan])
+    def test_alpha(self, alpha):
+        with pytest.raises(ValueError, match="alpha"):
+            icc_oneway([[1.0, 2.0], [3.0, 5.0]], alpha=alpha)
+
