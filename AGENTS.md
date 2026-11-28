@@ -184,10 +184,27 @@ in review. Check before submitting:
 
 ### Inputs and edge cases
 
-- Public array arguments accept `array_like` (lists, pandas objects): coerce
-  and validate with `statsmodels.tools.validation` (`array_like`,
-  `float_like`, `int_like`, ...), and do not test a value that may be an array
-  with `if x == 0`.
+- Validate every argument of a public function or method fully before it is
+  used: its type, its dimensions or shape, and its allowed values. Always
+  prefer the helpers in `statsmodels.tools.validation` to hand-written checks
+  (`isinstance`, `np.asarray`, `int(x)`, `if x not in (...)`), and use them
+  consistently wherever an argument needs checking, so that the same kind of
+  argument accepts the same values and raises the same error throughout the
+  package:
+  - `array_like` for arrays, with the `ndim`, `shape` and `dtype` the code
+    needs. Public array arguments accept `array_like` (lists, pandas
+    objects); do not test a value that may be an array with `if x == 0`.
+  - `int_like` (or `required_int_like`), `float_like`, `bool_like`,
+    `string_like` (with `options` for a fixed set of strings) and `dict_like`
+    for other arguments.
+  - `is_int_like`, `is_float_like` and `is_bool_like` to test a value without
+    converting it, for example to tell an int from a sequence of ints. Do not
+    use `isinstance(x, int)`, which accepts `True` and rejects NumPy integers.
+  - `strict=True` for positions, indices and keys, where `3.0` is a mistake,
+    and the default for counts and sizes.
+  - Check each element of a sequence argument, not only the container.
+  - Input that gave a correct result and would now raise needs a
+    `FutureWarning` first, as with any deprecation.
 - For the degenerate input that a change touches (empty, constant, NaN,
   rank-deficient design), raise a clear error or return NaN by a documented
   rule, and test it. Do not return a plausible number silently. Silence a
