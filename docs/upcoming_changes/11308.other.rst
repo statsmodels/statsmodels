@@ -1,0 +1,2 @@
+- ``statsmodels.tsa.arima_process`` can be imported when the
+  docstrings are blank, as Nuitka can leave them. :pr:`11308`

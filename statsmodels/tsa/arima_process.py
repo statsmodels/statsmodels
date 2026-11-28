@@ -1004,8 +1004,10 @@ def _arma_lags_method_doc(func, name, description, changes=(), keep=()):
         description of the parameter states the default value, that the
         value must be positive, and the behavior changes.
     """
-    if func.__doc__ is None:
-        return None
+    if func.__doc__ is None or not func.__doc__.strip():
+        # No docstring (python -OO) or a blank one (Nuitka), which Docstring
+        # does not parse
+        return func.__doc__
     ds = Docstring(func.__doc__)
     desc = textwrap.wrap(
         f"{description} If not given, the ``nobs`` attribute of the process "
