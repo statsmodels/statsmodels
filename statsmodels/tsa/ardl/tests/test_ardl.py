@@ -3300,3 +3300,44 @@ def test_uecm_predict_dynamic_numpy_false(dynamic):
     )
     with pytest.raises(NotImplementedError, match="dynamic forecasts"):
         res.predict(dynamic=np.True_)
+
+
+@pytest.mark.parametrize("start", [10, 1], ids=["start-in-sample", "start-hold-back"])
+@pytest.mark.parametrize("dynamic", [True, 3], ids=["True", "offset"])
+@pytest.mark.parametrize("method", ["predict", "get_prediction"])
+def test_ardl_predict_dynamic_does_not_modify_model(method, dynamic, start):
+    # A dynamic prediction of an in-sample window that ends before the last
+    # observation wrote its forecasts into model._x, so that every later
+    # prediction of the same results object, and the model's own fit and
+    # loglike, used the modified regressors
+    rng = np.random.default_rng(87)
+    nobs = 60
+    index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    x = pd.DataFrame(rng.standard_normal((nobs, 1)), columns=["x"], index=index)
+    shocks = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.5 * y[t - 1] + 0.8 * x.iloc[t, 0] + shocks[t]
+    y = pd.Series(y, index=index, name="y")
+
+    res = ARDL(y, [1, 2], x, 1, trend="c").fit()
+    model_x = res.model._x.copy()
+    params = np.asarray(res.params).copy()
+    llf = res.model.loglike(params)
+    before = res.predict(start, 20)
+
+    dyn = getattr(res, method)(start, 20, dynamic=dynamic)
+    if method == "get_prediction":
+        dyn = dyn.predicted_mean
+    # The dynamic and the one-step predictions differ, so the recursion ran
+    assert np.nanmax(np.abs(np.asarray(dyn) - np.asarray(before))) > 1e-3
+
+    # The dynamic prediction left the regressors of the model untouched
+    assert_allclose(res.model._x, model_x, rtol=1e-12)
+    assert_allclose(res.model.loglike(params), llf, rtol=1e-12)
+    # and so the next prediction is the same as the one before it and the one
+    # of a fit that did not predict dynamically
+    after = res.predict(start, 20)
+    assert_allclose(after, before, rtol=1e-12)
+    fresh = ARDL(y, [1, 2], x, 1, trend="c").fit()
+    assert_allclose(after, fresh.predict(start, 20), rtol=1e-12)
