@@ -836,6 +836,13 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             current regime. For larger integers, returns predictions
             conditional on the current regime and some number of past regimes.
 
+            .. versionchanged:: 0.15.1
+
+               With `start` or `end`, conditional predictions are selected
+               along the time axis. Before, the selection was applied to the
+               regime axis, so the result had every period and the wrong
+               regimes (none if `start` was at least ``k_regimes``).
+
         Returns
         -------
         predict : ndarray
@@ -879,7 +886,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         else:
             predict = squeezed
 
-        return predict[start : end + out_of_sample + 1]
+        # Select the periods, the last axis
+        return predict[..., start : end + out_of_sample + 1]
 
     def predict_conditional(self, params):
         """
@@ -2244,6 +2252,13 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             predictions. If True or 1, returns predictions conditional on the
             current regime. For larger integers, returns predictions
             conditional on the current regime and some number of past regimes.
+
+            .. versionchanged:: 0.15.1
+
+               With `start` or `end`, conditional predictions are selected
+               along the time axis. Before, the selection was applied to the
+               regime axis, so the result had every period and the wrong
+               regimes (none if `start` was at least ``k_regimes``).
 
         Returns
         -------

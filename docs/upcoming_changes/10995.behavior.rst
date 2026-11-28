@@ -1,0 +1,4 @@
+- ``predict`` of Markov switching models and of ``MarkovSwitchingResults`` with ``conditional`` and ``start``
+  or ``end`` selected regimes instead of periods, so it returned every
+  period for the wrong regimes, or no regimes at all. Such predictions
+  change. :pr:`10995`
