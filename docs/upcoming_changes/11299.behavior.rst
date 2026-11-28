@@ -1,0 +1,4 @@
+- Extending SARIMAX results with simple differencing now includes differences
+  across the boundary between samples. Appending pandas data also preserves
+  the original observation labels when the model uses simple differencing.
+  :pr:`11299`
