@@ -1069,3 +1069,45 @@ def test_formula_pickle_load_top_level():
     assert proc.returncode == 0, proc.stderr.decode()
     predicted = json.loads(proc.stdout.decode().strip().splitlines()[-1])
     assert_allclose(predicted, res.predict(df.iloc[:3]), rtol=1e-13)
+
+
+def formula_pickle(monkeypatch, change):
+    # Pickle formula results with the state changed by change(state)
+    rs = np.random.RandomState(0)
+    df = pd.DataFrame(rs.standard_normal((50, 2)), columns=["x1", "x2"])
+    df["y"] = df["x1"] + rs.standard_normal(50)
+    df["g"] = np.where(rs.random_sample(50) < 0.5, "a", "b")
+    res = OLS.from_formula("y ~ x1 + np.log(x2 ** 2) + C(g)", data=df).fit()
+    getstate = sm_data.ModelData.__getstate__
+
+    def getstate_changed(self):
+        state = getstate(self)
+        change(state)
+        return state
+
+    with monkeypatch.context() as m:
+        m.setattr(sm_data.ModelData, "__getstate__", getstate_changed)
+        return res, df, pickle.dumps(res)
+
+
+def test_formula_pickle_014(monkeypatch):
+    # Pickles written by statsmodels 0.14 mark the design to build again with
+    # restore_design_info
+    def as_014(state):
+        state["restore_design_info"] = state.pop("restore_model_spec")
+
+    res, df, pkl = formula_pickle(monkeypatch, as_014)
+    res2 = pickle.loads(pkl)
+    data = res2.model.data
+    assert data.model_spec is not None
+    assert "restore_design_info" not in data.__dict__
+    assert_allclose(res2.predict(df.iloc[:5]), res.predict(df.iloc[:5]), rtol=1e-13)
+
+
+def test_formula_pickle_other_columns(monkeypatch):
+    def rename(state):
+        state["orig_exog"] = state["orig_exog"].add_suffix(" old")
+
+    _, _, pkl = formula_pickle(monkeypatch, rename)
+    with pytest.raises(ValueError, match="model was estimated with"):
+        pickle.loads(pkl)
