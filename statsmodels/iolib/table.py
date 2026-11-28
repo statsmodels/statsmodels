@@ -187,7 +187,7 @@ class SimpleTable(list):
         datatypes : list of int, optional
             indexes to `data_fmts`
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                NumPy integers are indexes, as ints are. Bools are not. A
                ``colwidths`` option that is a NumPy integer or an integral

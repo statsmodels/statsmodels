@@ -93,7 +93,7 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
 
         Default is to have at most 10000 elements in intermediate arrays.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``batch_size`` bounds the size of the intermediate kernel arrays
            on both axes, the evaluation points and the sample. Previously a
@@ -174,7 +174,7 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
 
         Default is to have at most 10000 elements in intermediate arrays.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``batch_size`` bounds the size of the intermediate kernel arrays
            on both axes, the evaluation points and the sample. Previously a

@@ -1320,7 +1320,7 @@ class MultiComparison:
         of comparisons of the studentized maximum modulus distribution,
         which is conservative.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
         References
         ----------

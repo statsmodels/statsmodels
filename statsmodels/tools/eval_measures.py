@@ -378,7 +378,7 @@ def iqr(x1, x2, axis=0):
     integers. For other ``n``, for example 6 or 10, the results generally
     differ.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Inputs that are broadcast, an ``x1`` of length 1 or a scalar ``x1``,
        and ``axis=None`` with ``x1`` and ``x2`` of different shapes, now use

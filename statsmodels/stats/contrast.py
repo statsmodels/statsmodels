@@ -379,7 +379,7 @@ def contrastfromcols(L, D, pseudo=None):
         in the column space of D (if L.shape[0] == n) or a contrast matrix
         (if L.shape[1] == p).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 1-d L of length p is a single contrast row; it raised an
            IndexError. A scalar L or a 1-d L of another length raises a

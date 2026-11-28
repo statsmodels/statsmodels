@@ -1238,7 +1238,7 @@ class BSplines(AdditiveGamSmoother):
         degree(s) of the spline; the same length and type rules apply as
         to `df`
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer or a float with an integral value, such as 3.0,
            is accepted for `df` and `degree` as an int is. A bool raises a

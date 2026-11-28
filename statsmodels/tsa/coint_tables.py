@@ -123,13 +123,13 @@ def c_sja(n, p):
         deterministic part, 0 for a constant term, or 1 for a constant and
         a linear trend.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A value that is not an integer raises ValueError. A value
            between -1 and 1 raised an UnboundLocalError, and a value
            outside returned NaN.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A bool is deprecated and will raise a ValueError after
            statsmodels 0.17 is released. It is used as 0 or 1.
@@ -141,7 +141,7 @@ def c_sja(n, p):
         the 90%, 95%, and 99% levels. NaNs are returned if ``n`` or ``p``
         is out of range.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A new array is returned. It used to be a view of the table, so
            changing it changed the values returned by later calls.
@@ -284,13 +284,13 @@ def c_sjt(n, p):
         deterministic part, 0 for a constant term, or 1 for a constant and
         a linear trend.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A value that is not an integer raises ValueError. A value
            outside -1 to 1 returned NaN, and the error message for a value
            between them was "invalid p".
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A bool is deprecated and will raise a ValueError after
            statsmodels 0.17 is released. It is used as 0 or 1.
@@ -301,7 +301,7 @@ def c_sjt(n, p):
         Array of critical values for the trace statistic at the 90%, 95%,
         and 99% levels. NaNs are returned if ``n`` or ``p`` is out of range.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A new array is returned. It used to be a view of the table, so
            changing it changed the values returned by later calls.

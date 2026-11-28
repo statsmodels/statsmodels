@@ -1120,7 +1120,7 @@ class Representation:
         ``initialize_diffuse`` for such models. Explosive transition matrices
         that are not close to a unit root are not detected.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A transition matrix with a unit root raises or gives ``-inf``
            instead of being filtered with an initial state covariance that

@@ -192,7 +192,7 @@ class _ConditionalModel(base.LikelihoodModel):
             Robust covariance estimators are not available, so ``cov_type``
             must be "nonrobust" if it is passed.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``fargs``, ``callback``, ``retall`` and the additional
                keyword arguments are forwarded to the solver. They were
@@ -770,7 +770,7 @@ class ConditionalMNLogit(_ConditionalModel):
             Robust covariance estimators are not available, so ``cov_type``
             must be "nonrobust" if it is passed.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``fargs``, ``callback``, ``retall`` and the additional
                keyword arguments are forwarded to the solver. They were

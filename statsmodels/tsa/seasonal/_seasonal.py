@@ -86,7 +86,7 @@ def seasonal_mean(x, period):
         Time series values, with time in the first axis. If 2d, individual
         series are in columns.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``x`` is converted with ``array_like``, so a list, tuple, Series
            or DataFrame works where it raised.
@@ -125,7 +125,7 @@ def seasonal_decompose(
         Time series. If 2d, individual series are in columns. x must contain 2
         complete cycles.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A DataFrame with more than one column is decomposed column by
            column, as a 2d ndarray is, and the components are DataFrames with

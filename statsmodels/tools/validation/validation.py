@@ -100,7 +100,7 @@ def array_like(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Subclasses of ndarray are converted to ndarray. They were returned
        unchanged, so ``np.matrix`` input kept matrix semantics and the mask
@@ -308,7 +308,7 @@ def is_bool_like(value: Any, strict: bool = False) -> bool:
     something else, such as ``dynamic : bool, int, str or datetime``. Test
     it with ``strict=True`` before :func:`is_int_like`, which rejects bools.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Examples
     --------
@@ -370,7 +370,7 @@ def bool_like(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        With ``strict=True``, ``np.bool_`` and 0-d boolean arrays are
        accepted. Values that are only convertible to a bool are deprecated.
@@ -438,7 +438,7 @@ def is_int_like(value: Any, strict: bool = False) -> bool:
     something else, such as ``lags : int or str``. Test for the other types
     first when they are unambiguous, for example ``isinstance(lags, str)``.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Examples
     --------
@@ -466,7 +466,7 @@ def is_int_like(value: Any, strict: bool = False) -> bool:
 
 def _legacy_int_like(value: Any, strict: bool) -> int | None:
     """
-    Apply the rules int_like used before 0.15.1 to a value is_int_like rejects
+    Apply the rules int_like used before 0.16.0 to a value is_int_like rejects
 
     They accepted a container holding a single value (a size-1 ndarray,
     Series or DataFrame) and, unless strict, any number that equals its floor,
@@ -533,7 +533,7 @@ def int_like(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        ``np.bool_`` and boolean arrays and Series are rejected, as ``bool``
        always was. Objects that support ``__index__`` are accepted.
@@ -630,7 +630,7 @@ def is_float_like(value: Any, strict: bool = False) -> bool:
     Use this function to dispatch on a parameter that can be a number or
     something else, such as ``scale : float or str``.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Examples
     --------
@@ -652,7 +652,7 @@ def is_float_like(value: Any, strict: bool = False) -> bool:
 
 def _legacy_float_like(value: Any, strict: bool) -> float | None:
     """
-    Apply the rules float_like used before 0.15.1 to a value is_float_like rejects
+    Apply the rules float_like used before 0.16.0 to a value is_float_like rejects
 
     They accepted a container holding a single value (a size-1 ndarray,
     Series or DataFrame) and, unless strict, a complex number with a zero
@@ -722,7 +722,7 @@ def float_like(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        ``np.bool_``, ``np.timedelta64`` and boolean arrays and Series are
        rejected, as ``bool`` always was. Containers that hold a single value

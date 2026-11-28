@@ -169,7 +169,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         :meth:`fix_params` to fix some initial values and estimate the other
         parameters.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An array of length ``seasonal_periods - 1`` is completed with the
            value that makes the average effect zero: minus the sum of the
@@ -185,7 +185,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         transform. An int is used as a bool: 0 applies no transform and any
         other int estimates lambda. Pass a float, such as 1.0, to fix lambda.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With an int `use_boxcox`, the initial values are computed from
            the same transform as the fit. They were computed with the int as
@@ -211,7 +211,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With 'drop', the initial values, the Box-Cox transformation, the
            parameter estimates and ``simulate`` use the data with the nans
@@ -396,7 +396,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "initial_trend" and "initial_seasonal.<j>" for
             j=0,...,m-1, where m is `seasonal_periods`, can be fixed too.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A fit with a fixed ``initial_seasonal.<j>`` no longer changes
                the initial values stored on the model. It previously did,
@@ -409,12 +409,12 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A fit with ``optimized=False`` uses fixed ``initial_seasonal.<j>``
            values. It previously ignored them.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            The key ``"initial_seasonal"`` is deprecated and will raise a
            KeyError after statsmodels 0.17 is released. Optimized fits ignore
@@ -1056,7 +1056,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                If False, a ValueError is raised unless `smoothing_level`, and
                `smoothing_trend`, `smoothing_seasonal` and `damping_trend` if

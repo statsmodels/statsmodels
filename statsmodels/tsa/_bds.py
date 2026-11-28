@@ -35,7 +35,7 @@ def distance_indicators(x, epsilon=None, distance=1.5):
         observations of time series for which heaviside distance indicators
         are calculated. Must be 1-D.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            Input with more than one dimension is deprecated. After
            statsmodels 0.17 is released, a column with shape (nobs, 1)

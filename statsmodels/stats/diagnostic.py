@@ -364,7 +364,7 @@ class VuongTestResult(NamedTuple):
     """
     Result of :func:`compare_vuong`.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
     """
 
     statistic: float
@@ -393,7 +393,7 @@ def compare_vuong(results1, results2, correction="none", alternative="two-sided"
     r"""
     Vuong test for non-nested likelihood models.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Parameters
     ----------
@@ -824,7 +824,7 @@ def acorr_ljungbox(
         than nobs, the number of observations. An empty sequence is not
         allowed.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             A ``ValueError`` is raised if lags is empty or contains a value
             below 1. Previously lag 0 and negative lags silently reported the
@@ -846,7 +846,7 @@ def acorr_ljungbox(
     return_df : bool, optional
         Unused. A DataFrame is always returned.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
             ``return_df`` has no effect and will be removed in statsmodels
             0.17.0. Passing any value issues a ``FutureWarning``.
@@ -1672,7 +1672,7 @@ def het_goldfeldquandt(
     first subsample as numerator and denominator degrees of freedom, in this
     order.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The p-values for ``alternative="increasing"`` and ``"decreasing"`` use
        the degrees of freedom in this order. Before, the order was reversed,
@@ -1809,7 +1809,7 @@ def linear_reset(
         powers 2, 3, ..., power. If an list of integers, includes all powers
         in the list.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A float with an integral value, such as 3.0, is the maximum power,
            as an int is.
@@ -1856,7 +1856,7 @@ def linear_reset(
       the principal component. In either case, the principal component
       is extracted from the correlation matrix of remaining columns.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         The auxiliary regression of a ``WLS`` result now uses the weights of
         the model and that of a ``GLS`` result uses its ``sigma``. It was an
@@ -2043,7 +2043,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     subset. The subset model of other results, including those of ``GLSAR``,
     which have no ``sigma``, is estimated by OLS.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         The subset model of a ``WLS`` or ``GLS`` result was estimated by OLS,
         which ignored the weights or ``sigma`` of the model, although the sum

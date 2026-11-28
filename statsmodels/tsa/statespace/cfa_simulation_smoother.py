@@ -33,7 +33,7 @@ class CFASimulationSmoother:
         with `rng`. If `rng` is already a ``Generator`` or ``RandomState``
         instance, that instance is used.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Notes
     -----
@@ -78,7 +78,7 @@ class CFASimulationSmoother:
     precision zero, so that the posterior mean and covariance matrix are those
     of the exact diffuse Kalman smoother.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A block initialization in which only some blocks are diffuse is
        supported. Depending on which block was set last, it raised
@@ -193,7 +193,7 @@ class CFASimulationSmoother:
             or for testing. If not specified, random variates are drawn with
             the simulation smoother's `rng`. Must be shaped (k_states, nobs).
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The variates are drawn with `rng`. They were drawn from a new
                generator seeded with fresh entropy on every call.

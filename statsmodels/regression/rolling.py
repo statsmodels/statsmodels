@@ -1069,7 +1069,7 @@ class RollingRegressionResults:
             to plot. Can also be an iterable of integers or strings. Default
             plots all coefficients.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array selects a variable, as the integer it
                holds does. A bool raises a TypeError, and a list that holds

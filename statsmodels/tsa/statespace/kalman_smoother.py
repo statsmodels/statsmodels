@@ -286,7 +286,7 @@ class KalmanSmoother(KalmanFilter):
             Keyword arguments may be used to influence the smoothing method by
             setting individual boolean flags. See notes for details.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                `smooth_univariate` sets the univariate smoothing flag if
                univariate filtering is used. Before, it was ignored. Without
@@ -411,7 +411,7 @@ class KalmanSmoother(KalmanFilter):
             the smoother method specified by `smooth_method` in the current
             state space model.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                `smooth_method` is used. Before, it was ignored and the
                smoothing method of the model was always used. A method that
@@ -422,14 +422,14 @@ class KalmanSmoother(KalmanFilter):
             Not used. A new object of the model's results class is always
             returned.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                `results` has no effect. It is deprecated and will be removed
                after statsmodels 0.17 is released.
         run_filter : bool, optional
             Not used. The Kalman filter is always run before smoothing.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                `run_filter` has no effect. It is deprecated and will be
                removed after statsmodels 0.17 is released.
@@ -437,7 +437,7 @@ class KalmanSmoother(KalmanFilter):
             Not used. The prefix of the current representation matrices is
             always used.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                `prefix` has no effect. It is deprecated and will be removed
                after statsmodels 0.17 is released.
@@ -445,7 +445,7 @@ class KalmanSmoother(KalmanFilter):
             Whether or not to compute the complex-step derivative. Default is
             False.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                `complex_step` is passed to the Kalman filter. Before, it was
                ignored, so that a stationary initialization of the state was
@@ -1017,7 +1017,7 @@ class SmootherResults(FilterResults):
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The result does not depend on earlier calls. Before, a cached
                result computed without `extend_kwargs` was returned for

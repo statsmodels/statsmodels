@@ -231,7 +231,7 @@ class ARDL(AutoReg):
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behaves identically to 0.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 0-d array that holds an integer is a number of lags, as an int
            is. It raised a TypeError.
@@ -245,7 +245,7 @@ class ARDL(AutoReg):
         than a DataFrame, the keys are the column index of exog (e.g., 0,
         1, ...). If a DataFrame, keys are column names.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             The int values of a dict can be numpy integers. They raised a
             TypeError. If ``exog`` is not a DataFrame, the keys can be numpy
@@ -285,7 +285,7 @@ class ARDL(AutoReg):
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             With hold_back None and a largest exog lag above the largest
             endog lag, ``nobs`` of the model and its results is the number of
@@ -771,7 +771,7 @@ class ARDL(AutoReg):
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a RangeIndex that does not start at 0 or has a step
                other than 1, the default is the last observation. It was
@@ -797,7 +797,7 @@ class ARDL(AutoReg):
             are selected by name. If it was a 1-d array or a Series, a 1-d
             array, a Series or an array with one column.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The columns of a replacement DataFrame are selected by name.
                They were used by position, so that a DataFrame with the
@@ -813,7 +813,7 @@ class ARDL(AutoReg):
             by name. If it was a 1-d array or a Series, a 1-d array, a Series
             or an array with one column.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The columns of a DataFrame are selected by name. They were
                used by position, so that a DataFrame with the columns in
@@ -1029,7 +1029,7 @@ class ARDL(AutoReg):
             frames above it, -1 an empty namespace, and a dict maps names to
             values.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------
@@ -1176,7 +1176,7 @@ class ARDLResults(AutoRegResults):
             However, if the dates index does not have a fixed frequency,
             steps must be an integer. The default is 1.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A float with an integral value, such as 3.0, and a 0-d integer
                array are a number of steps, as an int is. Before, they were
@@ -1190,7 +1190,7 @@ class ARDLResults(AutoRegResults):
             which are selected by name. If it was a 1-d array or a Series, a
             1-d array, a Series or an array with one column.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The columns of a DataFrame are selected by name. They were
                used by position, so that a DataFrame with the columns in
@@ -1407,7 +1407,7 @@ class ARDLResults(AutoRegResults):
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a RangeIndex that does not start at 0 or has a step
                other than 1, the default is the last observation. It was
@@ -1430,7 +1430,7 @@ class ARDLResults(AutoRegResults):
             are selected by name. If it was a 1-d array or a Series, a 1-d
             array, a Series or an array with one column.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The columns of a replacement DataFrame are selected by name.
                They were used by position, so that a DataFrame with the
@@ -1446,7 +1446,7 @@ class ARDLResults(AutoRegResults):
             it was a 1-d array or a Series, a 1-d array, a Series or an array
             with one column.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The columns of a DataFrame are selected by name. They were
                used by position, so that a DataFrame with the columns in
@@ -1793,7 +1793,7 @@ def ardl_select_order(
         a dict, then sets individual lag length. They keys are column names
         if exog is a DataFrame or column indices otherwise.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             Column indices can be numpy integers. They raised an
             AssertionError.
@@ -1824,7 +1824,7 @@ def ardl_select_order(
         maxlag*maxorder**k which may also be substantial when k and maxorder
         are large.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             If True, the model that includes all candidate lags is
             considered. It was left out, so a different model could be
@@ -2066,7 +2066,7 @@ class UECM(ARDL):
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             The regressors are floating point when endog is an integer array.
             The lagged levels of exog were truncated to integers (and rounded
@@ -2078,7 +2078,7 @@ class UECM(ARDL):
         always included, so that ``None`` and 0 are equivalent to 1, and do
         not include any lagged differences.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             A float with an integral value, such as 2.0, and a 0-d array that
             holds an integer are accepted as an int is. They raised a
@@ -2087,7 +2087,7 @@ class UECM(ARDL):
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             Bool variables are differenced as 0 and 1. The differences were
             their absolute values, so a change from True to False was 1
@@ -2107,7 +2107,7 @@ class UECM(ARDL):
         variable must have an order of at least 1, and at least one variable
         must be included.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             If ``exog`` is not a DataFrame, the keys of a dict can be numpy
             integers. They raised an AssertionError. A float with an
@@ -2146,7 +2146,7 @@ class UECM(ARDL):
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             With hold_back None and a largest exog lag above the largest
             endog lag, ``nobs`` of the model and its results is the number of
@@ -2562,7 +2562,7 @@ class UECM(ARDL):
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a RangeIndex that does not start at 0 or has a step
                other than 1, the default is the last observation. It was
@@ -2581,7 +2581,7 @@ class UECM(ARDL):
             exog was a DataFrame, a DataFrame with the same columns, which
             are selected by name.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The lagged levels and the differences of the replacement exog
                are used. It was ignored, so that the predictions were those
@@ -2595,7 +2595,7 @@ class UECM(ARDL):
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The replacement fixed is used. It was ignored, so that the
                predictions were those of the fixed used when the model was
@@ -2613,7 +2613,7 @@ class UECM(ARDL):
             forecasts. A Series with the index of the data if the endog is
             a pandas Series or DataFrame.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The predictions are a Series for pandas data, as those of
                ``ARDL.predict``. They were an ndarray, so that
@@ -2945,7 +2945,7 @@ class UECMResults(ARDLResults):
         case : {1, 2, 3, 4, 5}
             One of the cases covered in the PSS test.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                 Any other value raises a ValueError. It raised an
                 UnboundLocalError.
@@ -3051,7 +3051,7 @@ class UECMResults(ARDLResults):
         terms. A variable in ``exog`` that is excluded from the model by
         setting its order to ``None`` is not counted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The asymptotic critical values and p-values were previously looked
            up with :math:`k` one too large, which made the p-values too small.
@@ -3066,7 +3066,7 @@ class UECMResults(ARDLResults):
         and a ``NotImplementedError`` is raised. Use ``trend``, ``seasonal`` and
         ``fixed`` to specify the deterministic terms instead.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The fixed regressors and the seasonal terms of the model are
            included in the test. They were previously omitted. A model

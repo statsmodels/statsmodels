@@ -117,7 +117,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behaves identically to 0.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A 0-d array that holds an integer is a number of lags, as an int
            is. It raised a TypeError.
@@ -854,7 +854,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a RangeIndex that does not start at 0 or has a step
                other than 1, the default is the last observation. It was
@@ -1284,7 +1284,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             warns that the default will change to "ar" after statsmodels
             0.17 is released.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                "ar" and "regressors" are accepted. The default will change
                from "regressors" to "ar"; leaving `model_df` unset issues a
@@ -1296,7 +1296,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                 The test statistics, p-values and degrees of freedom are
                 returned. Since statsmodels 0.14.0 every value was NaN.
@@ -1430,7 +1430,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             A summary instance with panels for serial correlation tests,
             normality tests and heteroskedasticity tests.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                 The serial correlation panel is shown for the lags with a
                 positive test degree of freedom. Since statsmodels 0.14.0 it
@@ -1525,7 +1525,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With a RangeIndex that does not start at 0 or has a step
                other than 1, the default is the last observation. It was
@@ -1585,7 +1585,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             However, if the dates index does not have a fixed frequency,
             steps must be an integer. The default is 1.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A float with an integral value, such as 3.0, and a 0-d integer
                array are a number of steps, as an int is. Before, they were

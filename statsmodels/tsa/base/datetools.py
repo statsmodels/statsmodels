@@ -127,7 +127,7 @@ def date_range_str(start, end=None, length=None):
     date_range : list of str
         List of abbreviated date strings.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A range within one year is supported instead of raising, and a
            range given by `length` continues into the next year, for

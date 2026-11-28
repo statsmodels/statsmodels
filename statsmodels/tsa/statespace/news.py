@@ -1508,7 +1508,7 @@ class NewsResults:
             were many updates and in multivariate models. The default is to
             show detailed tables only for univariate models.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The default and the other univariate defaults (a single
                details table, the variable in the titles) apply to every

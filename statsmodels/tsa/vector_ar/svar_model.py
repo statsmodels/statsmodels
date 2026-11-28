@@ -54,7 +54,7 @@ class SVAR(tsbase.TimeSeriesModel):
         "B" - estimate structural parameters of B matrix, A assumed = I
         "AB" - estimate structural parameters indicated in both A and B matrix
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            "E" entries in the matrix that svar_type does not estimate raise a
            ValueError. For "B" with "E" in A, fit raised an error or
@@ -183,7 +183,7 @@ class SVAR(tsbase.TimeSeriesModel):
         method : {'ols'}, optional
             Estimation method to use
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                Other values were ignored and the VAR was estimated by OLS.
                They issue a FutureWarning and will raise a ValueError after
@@ -195,7 +195,7 @@ class SVAR(tsbase.TimeSeriesModel):
             hqic : Hannan-Quinn
             bic : Bayesian a.k.a. Schwarz
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The order is selected by VAR.select_order with `maxlags` and
                `trend`. It raised an AttributeError.
@@ -208,7 +208,7 @@ class SVAR(tsbase.TimeSeriesModel):
             "n" - no constant, no trend
             Note that these are prepended to the columns of the dataset.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The time trend of "ct" and "ctt" counts from the first
                observation, as in VAR, so the coefficients of the constant,
@@ -218,7 +218,7 @@ class SVAR(tsbase.TimeSeriesModel):
         s_method : {'mle'}, optional
             Estimation method for structural parameters
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                Other values were ignored and the structural parameters were
                estimated by maximum likelihood. They issue a FutureWarning
@@ -233,7 +233,7 @@ class SVAR(tsbase.TimeSeriesModel):
             If True, returns estimates of A and B without checking
             order or rank condition
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The rank condition uses the derivatives of the covariance of
                the model, A^-1 B B' A^-1', at the starting values. The
@@ -246,7 +246,7 @@ class SVAR(tsbase.TimeSeriesModel):
         maxfun : int, optional
             Unused.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                maxfun was ignored. Passing it issues a FutureWarning, and it
                will be removed after statsmodels 0.17 is released. Use
@@ -268,7 +268,7 @@ class SVAR(tsbase.TimeSeriesModel):
         Lütkepohl pp. 146-153
         Hamilton pp. 324-336
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The results hold their own A and B. They were the arrays of the
            model, so a later fit, or a call of loglike, score or hessian,
@@ -466,7 +466,7 @@ class SVAR(tsbase.TimeSeriesModel):
         is estimated. It uses the residual covariance and the number of
         observations of the last call to `fit`.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The term of B is log(det(B) ** 2). It was the log of the
            determinant of the elementwise square of B, which differs when B
@@ -529,7 +529,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         of which the entries of the unknown values are returned.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The gradient is computed analytically. It was computed with
            forward differences with a step of 1e-8, whose error (about 1e-5
@@ -797,7 +797,7 @@ class SVARProcess(VARProcess):
         The deterministic terms of SVARResults continue those of the
         estimation sample.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Forecasts are available. They raised an AttributeError.
         """
@@ -922,7 +922,7 @@ class SVARResults(SVARProcess, VARResults):
     intercept : ndarray
         The constant of the VAR, zeros for trend "n".
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With trend "n" it is zeros. It was the first row of params, the
            coefficients of the first lag of the first variable, which mean,
@@ -1071,7 +1071,7 @@ class SVARResults(SVARProcess, VARResults):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The decomposition is available. It raised a TypeError.
         """
@@ -1097,7 +1097,7 @@ class SVARResults(SVARProcess, VARResults):
         orth : bool, optional
             Compute orthogonalized impulse response error bands
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                True was ignored and gave the bands of the structural
                responses. It issues a FutureWarning and will raise a
@@ -1147,7 +1147,7 @@ class SVARResults(SVARProcess, VARResults):
         -----
         Lütkepohl (2005) Appendix D
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The replications are fitted with the trend of the results. They
            were fitted with a constant, trend "c".

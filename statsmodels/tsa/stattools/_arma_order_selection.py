@@ -59,7 +59,7 @@ def arma_order_select_ic(
         Information criteria to report, from "aic", "aicc", "bic" and
         "hqic". Either a single name or a sequence of names.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An unknown name raises a ValueError before any model is fitted.
            It used to raise an AttributeError from the first fitted model.
@@ -70,7 +70,7 @@ def arma_order_select_ic(
     fit_kw : dict, optional
         Keyword arguments to be passed to ``ARIMA.fit``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A TypeError from ``model_kw`` or ``fit_kw``, such as one for a
            mistyped keyword, is raised. It used to make every fit fail.
@@ -85,7 +85,7 @@ def arma_order_select_ic(
         model with the smallest criterion. Models with a NaN criterion, such
         as those whose fit failed, are ignored.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The minimum orders ignore models with a NaN criterion. They used
            to point at the first such model whenever a fit had failed.
@@ -105,7 +105,7 @@ def arma_order_select_ic(
         If the fits of some, but not all, models fail. The warning lists their
         orders and the error raised by the first.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Notes
     -----

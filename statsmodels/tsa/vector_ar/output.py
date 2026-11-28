@@ -207,7 +207,7 @@ def normality_summary(results):
     """
     Format a normality test result as a text table
 
-    .. deprecated:: 0.15.1
+    .. deprecated:: 0.16.0
         ``normality_summary`` has no callers in statsmodels. It will be
         removed after statsmodels 0.17 is released. Use the ``summary``
         method of the result of ``VARResults.test_normality`` instead.
@@ -241,7 +241,7 @@ def hypothesis_test_table(results, title, null_hyp):
     """
     Format a hypothesis test result as a text table
 
-    .. deprecated:: 0.15.1
+    .. deprecated:: 0.16.0
         ``hypothesis_test_table`` has no callers in statsmodels. It will be
         removed after statsmodels 0.17 is released.
 

@@ -520,7 +520,7 @@ class DistributedModel:
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Raises ``NotImplementedError`` before fitting for models that
            cannot use the default estimation method.

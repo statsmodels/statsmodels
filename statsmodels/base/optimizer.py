@@ -636,7 +636,7 @@ def _fit_newton(
     beyond it. An iteration that only takes shortened steps ends at `maxiter`
     with `warnflag` 1, or at a point beyond which no step is found.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Added ``step_halving``. Before, a step that left the region where the
        objective is finite continued with nan parameters and `converged` True.

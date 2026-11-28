@@ -933,7 +933,7 @@ def q_stat(x, nobs):
         Array of autocorrelation coefficients.  Can be obtained from acf.
         The array is 1-D; a column with shape (nlags, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nlags, 1) now gives the same result as the
            1-D array, and input with more than one column raises
@@ -1035,7 +1035,7 @@ def acf(
         When missing is "drop" or "conservative", nobs is the number of
         non-missing observations.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The default counts only the non-missing observations when
            missing is "drop" or "conservative". It used to count the NaNs
@@ -1145,7 +1145,7 @@ def acf(
     If adjusted is true, the denominator for the autocovariance is adjusted
     for the loss of data.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Returns 1.0 for lag 0 and NaN for lags 1 and higher when `x` is
        constant.
@@ -1403,7 +1403,7 @@ def pacf_burg(
         Observations of time series for which pacf is calculated. The
         series is 1-D; a column with shape (nobs, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1) now gives the same result as the
            1-D series, and input with more than one column raises
@@ -1693,7 +1693,7 @@ def pacf(
     x : array_like
         Observations of time series for which pacf is calculated.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With method="burg", a column with shape (nobs, 1) now gives the
            same result as the 1-D series, as with the other methods.
@@ -1772,7 +1772,7 @@ def pacf(
     Yule-Walker (adjusted) and Levinson-Durbin (adjusted) performed
     consistently worse than the other options.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Returns 1.0 for lag 0 and NaN for lags 1 and higher when `x` is
        constant.
@@ -1864,7 +1864,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         The time series data to use in the calculation. Each series is 1-D;
         a column with shape (nobs, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1) now gives the same result as the
            1-D series, and input with more than one column raises
@@ -1950,7 +1950,7 @@ def ccf(
         The time series data to use in the calculation. Each series is 1-D;
         a column with shape (nobs, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1) now gives the same result as the
            1-D series, and input with more than one column raises
@@ -2014,7 +2014,7 @@ def ccf(
     -----
     If adjusted is True, the denominator for the cross-correlation is adjusted.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Returns NaN when either series is constant.
 
@@ -2246,7 +2246,7 @@ def pccf(
         The time series data to use in the calculation. Each series is 1-D;
         a column with shape (nobs, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1) now gives the same result as the
            1-D series, and input with more than one column raises
@@ -2349,7 +2349,7 @@ def pccf(
     and a matrix as singular when its smallest singular value is at most
     ``100 * nobs * eps`` times its largest.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        These decisions no longer depend on the scales of x and y
        (rescaling one series could make every lag NaN). Series that are
@@ -2490,7 +2490,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
         then this is interpreted as autocovariance starting with lag 0. The
         array is 1-D; a column with shape (n, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With isacov=True, a column with shape (n, 1) now gives the same
            result as the 1-D array, as it did with isacov=False. Input with
@@ -2859,7 +2859,7 @@ def grangercausalitytests(x, maxlag, addconst=True):
         the second column Granger causes the time series in the first column.
         Missing values are not supported.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            x with a number of columns other than two raises a ValueError
            that says so.
@@ -2867,7 +2867,7 @@ def grangercausalitytests(x, maxlag, addconst=True):
         If an integer, computes the test for all lags up to maxlag. If a
         sequence, computes the tests only for the lags in maxlag.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A sequence with one element, such as ``np.array([3])`` or a
            Series, gives only that lag, as a list does. It used to give
@@ -3130,7 +3130,7 @@ def coint(
         named tuple, so it also unpacks as the tuple
         ``coint_t, pvalue, critical_values``.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
             ``return_results`` has no effect and will be removed after
             statsmodels 0.17 is released. Passing any value other than
@@ -3152,7 +3152,7 @@ def coint(
             number of observations. For trend "n" they are not available
             and are NaN.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With trend "n", critical_values is an ndarray, as it is for
                the other trends. It was a list.
@@ -3270,11 +3270,11 @@ class DieboldMarianoResult(LimitedIterationMixin[float]):
         The alternative hypothesis, one of "two-sided", "larger" or
         "smaller".
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
     kernel : str
         The kernel of the HAC estimator, "bartlett" or "uniform".
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Notes
     -----
@@ -3391,7 +3391,7 @@ def diebold_mariano_test(
         Array of forecasted values from the second model. The array is 1-D;
         a column with shape (nobs, 1) is also accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1), such as a one-column DataFrame,
            in y, forecast_a or forecast_b now gives the same result as the
@@ -3439,7 +3439,7 @@ def diebold_mariano_test(
         ``forecast_a``, and "smaller" is :math:`E[d_t] < 0`, i.e.
         ``forecast_a`` is more accurate. Default is "two-sided".
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
     kernel : {"bartlett", "uniform"}, optional
         The kernel of the HAC estimator of the long-run variance of the
         loss differential. "bartlett" (the default) is the Newey-West
@@ -3447,7 +3447,7 @@ def diebold_mariano_test(
         equally, which with ``lags=horizon - 1`` is the estimator of
         Diebold and Mariano (1995) and Harvey et al. (1997). See the Notes.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Returns
     -------
@@ -3572,7 +3572,7 @@ def diebold_mariano_test(
     callable, for example an asymmetric loss or a loss appropriate for
     strictly positive series such as QLIKE (see Examples).
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A ``ValueError`` is raised if the loss differential is constant up
        to rounding error, if ``horizon`` or ``lags`` is too large for the
@@ -3718,7 +3718,7 @@ class ClarkWestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`clark_west_test`.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Parameters
     ----------
@@ -3771,7 +3771,7 @@ def clark_west_test(
     """
     Clark-West test of equal predictive accuracy of nested models.
 
-    .. versionadded:: 0.15.1
+    .. versionadded:: 0.16.0
 
     Parameters
     ----------
@@ -4050,7 +4050,7 @@ def kpss(
         The data series to test. A column with shape (nobs, 1) is also
         accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1) now gives the same result as the
            1-D series with regression="c", as it did with "ct".
@@ -4378,7 +4378,7 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
         The data series to test. A column with shape (nobs, 1) is also
         accepted.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A column with shape (nobs, 1) now gives the same result as the
            1-D series.
@@ -4435,7 +4435,7 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     first case the actual p-value is smaller than the reported 0.01 and in
     the second it is larger than the reported 0.95.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The null hypothesis is documented correctly: the null is that `x` has
        a unit root, and it is rejected for small values of the statistic. The
@@ -5047,7 +5047,7 @@ class ZivotAndrewsUnitRoot:
             lag search, or the number of lags if autolag is None. Use 0 for
             a test without lagged differences.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With autolag=None, the default is the same as with a lag
                search. It was int(12 * (nobs / 100) ** (1 / 4)), which is
@@ -5083,7 +5083,7 @@ class ZivotAndrewsUnitRoot:
             The index of x of the last observation before the endogenously
             calculated break, for all three models.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With ``regression="t"``, ``bpidx`` is the last observation
                before the break, as with "c" and "ct". It used to be the
@@ -5116,7 +5116,7 @@ class ZivotAndrewsUnitRoot:
         and ``nobs - trimcnt - 1`` for all three models, where
         ``trimcnt = int(trim * nobs)``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            These break periods are skipped. They used to give a NaN or
            meaningless statistic, or raise, when the number of lags was not

@@ -1719,7 +1719,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         args (for example `scipy.optimize.fmin_l_bfgs`).
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With the "harvey" method and finite differences,
            ``approx_centered=True`` was ignored and forward differences were
@@ -1847,7 +1847,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         parameters is computed from the score with respect to the transformed
         parameters by the chain rule.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            With ``transformed=False``, the "harvey" method returned the score
            with respect to the transformed parameters, at the untransformed
@@ -1997,7 +1997,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         rule, so that complex-step differentiation can be used although
         `transform_params` need not accept complex values.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The Hessian with respect to the unconstrained parameters is computed
            by the chain rule, and the keyword-only argument ``average`` was
@@ -2770,7 +2770,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`. Default is 0.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A custom impulse vector of shape `(1, 1)` works when
                `k_posdef` is 1. It raised a ValueError.
@@ -4125,7 +4125,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             argument. Any arguments that are not explicitly set in this
             dictionary will be copied from the current model instance.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The dictionary is not changed. Defaults of the extended
                model, such as its trend offset, were added to it, so
@@ -4247,7 +4247,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer, a 0-d integer array or a float with an integral
            value, such as 3.0, is the number of steps, as an int is.
@@ -4390,7 +4390,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer, a 0-d integer array or a float with an integral
            value, such as 3.0, is the number of steps, as an int is.
@@ -4592,7 +4592,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Alternatively, a custom impulse vector may be provided; must be
             shaped `k_posdef x 1`. Default is 0.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A custom impulse vector of shape `(1, 1)` works when
                `k_posdef` is 1. It raised a ValueError.
@@ -4839,7 +4839,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             news can be computed, or an updated or previous results object
             to use in computing the news.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A dataset for a univariate model works when `exog` has more
                periods than the dataset. It raised a TypeError.
@@ -4890,7 +4890,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A NumPy integer or a 0-d integer array is a period, as an int
                is, so that a negative value is an offset from the end of the
@@ -5231,7 +5231,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         endog : array_like
             New observations from the modeled time-series process.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A pandas Series without a name is accepted when the model's
                `endog` is a named Series; it raised ValueError.

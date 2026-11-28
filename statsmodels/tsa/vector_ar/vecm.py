@@ -69,7 +69,7 @@ def select_order(
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            Other values, which VECM does not accept, are deprecated and will
            raise a ValueError after statsmodels 0.17 is released. They add a
@@ -612,7 +612,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The test statistics, and so the rank, were wrong for ``k_ar_diff=0``
        before, because the levels were not lagged. The results for
@@ -697,7 +697,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     ``LinAlgError`` is raised if these columns are linearly dependent, for
     example if ``endog`` contains a duplicated series.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The eigenvalues, the eigenvectors and the test statistics were wrong
        for ``k_ar_diff=0`` before, because the levels were not lagged. The
@@ -1037,7 +1037,7 @@ class VECM(tsbase.TimeSeriesModel):
     V     :math:`\\neq 0`                   :math:`\\neq 0`                       ``"colo"``
     ====  ===============================  ===================================  =============
 
-    .. deprecated:: 0.15.1
+    .. deprecated:: 0.16.0
 
        A `coint_rank` larger than the number of variables is deprecated and
        will raise a ValueError after statsmodels 0.17 is released. Such a
@@ -2212,7 +2212,7 @@ class VECMResults:
             variables are Granger-caused by the variable(s) specified
             by `causing`.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array is an index, as an int is, in `caused`
                and `causing`. It raised a TypeError. A bool is not an index
@@ -2380,7 +2380,7 @@ class VECMResults:
             If sequence of int or str, test whether the corresponding variables
             are causing the variable(s) specified in caused.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array is an index, as an int is. It raised a
                TypeError. A bool is not an index and raises a TypeError:

@@ -39,7 +39,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     X : None
         Must be None: all of the data are passed in ``Y``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Other values raise a ValueError. They never worked: the formula
            engine could not look variables up in the pair ``(Y, X)``.
@@ -47,14 +47,14 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
         The formula, as a string or as a formula object of the formula engine
         in use (a patsy ``ModelDesc`` or a formulaic ``Formula``).
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            A formula object of another type can be handled by a function
            registered in ``formula_handler``, a dict that maps the class of
            the formula object to the function. It is called with
            ``(Y, X, formula, depth=depth, missing=missing)`` and must return
            what this function returns. The registry is deprecated and will
-           be removed after 0.17. Before 0.15.1, the registered function was
+           be removed after 0.17. Before 0.16.0, the registered function was
            returned instead of called.
     depth : int or dict, optional
         The number of stack frames to go up from this function to the
@@ -74,7 +74,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     model_spec : ModelSpec or DesignInfo
         The model specification of the right-hand side.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            It is also returned for data with a single row, which returned
            None.
@@ -155,7 +155,7 @@ def advance_eval_env(kwargs):
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        Integers other than -1 are moved up too. Before, they were kept, so
        an integer referred to a namespace one frame lower than in the

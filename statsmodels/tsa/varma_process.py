@@ -88,7 +88,7 @@ def varfilter(x, a):
                      for p = 0,...nlags-1, j = 0,...nvars-1,
                      for t = nlags-1,...,nobs-1
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
        In case 3 the result previously used the variables of x in reverse
        order, and unless nlags was 2 it had the wrong number of rows, none
        when nlags was 1. It now follows the formula above. In case 2, an
@@ -504,7 +504,7 @@ class _Var:
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            The result was previously neither the fitted values nor the
            residuals, and it had nobs - nlags rows only when nlags was 1.
            It was also not updated when `fit` was called again with a
@@ -535,7 +535,7 @@ class _Var:
         ``cov_params`` of ``VAR(y).fit(nlags, trend="n")``; the covariances
         between the coefficients of different equations are not computed.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            ``paramcov`` was previously too large by the factor
            ``df_resid``: it scaled ``inv(xred.T @ xred)`` by the residual
            sum of squares of each equation instead of its residual

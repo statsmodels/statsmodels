@@ -232,7 +232,7 @@ class HoltWintersResults(Results):
             The number of out of sample forecasts from the end of the
             sample.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A float with an integral value, such as 3.0, is a number of
                steps, as an int is, and so is a 0-d integer array with a date
@@ -542,7 +542,7 @@ class HoltWintersResults(Results):
                        L_t\quad\text{else}
                    \end{cases}
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The trend coefficient :math:`\beta` in the simulation equations is
            ``smoothing_level * smoothing_trend``, as implied by the fitted

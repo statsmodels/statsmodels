@@ -321,7 +321,7 @@ _gee_fit_doc = """
         DeRouen, Kauermann and Carroll, Fay and Graubard, and Morel,
         Bokossa and Neerchal. See Notes.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            Added "kauermann_carroll", "fay_graubard" and
            "morel_bokossa_neerchal".
 
@@ -355,7 +355,7 @@ _gee_fit_doc = """
         groups. A ``ValueError`` is raised if the number of groups is not
         larger than the number of parameters.
 
-        .. versionadded:: 0.15.1
+        .. versionadded:: 0.16.0
 
     Returns
     -------
@@ -370,7 +370,7 @@ _gee_fit_doc = """
         variable, or if the covariance of the parameter estimates is not
         finite, so that the leverages cannot be computed.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            The ``ValueError`` replaces a ``LinAlgError`` and, for some
            families, a meaningless covariance.
 
@@ -860,7 +860,7 @@ class GEE(GLM):
             frames above ``from_formula``. -1 is an empty namespace, and a
             dict maps names to values.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An integer counts stack frames as in other models. Before, it
                referred to one frame lower: 2 was the calling namespace.
@@ -2093,7 +2093,7 @@ class GEE(GLM):
         When using the QIC for models with unknown scale parameter, use a
         common estimate of the scale parameter for all models being compared.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The penalty of the QIC uses the model-based information under
            independence, which includes the inverse of the variance function
@@ -2573,7 +2573,7 @@ class GEEResults(GLMResults):
         """
         Get marginal effects of the fitted model
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            P-values and confidence intervals follow ``use_t`` of the results.
 

@@ -509,7 +509,7 @@ class PHReg(model.LikelihoodModel):
             stack frames above ``from_formula``. -1 is an empty namespace,
             and a dict maps names to values.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An integer counts stack frames as in other models. Before, it
                referred to one frame lower: 2 was the calling namespace.

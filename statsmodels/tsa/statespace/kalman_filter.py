@@ -488,7 +488,7 @@ class KalmanFilter(Representation):
             matrix of a dynamic factor model with lagged factors in the state
             vector has zero columns.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The error for a design matrix that is not of full column rank
                names this requirement.
@@ -514,7 +514,7 @@ class KalmanFilter(Representation):
         matrix gives a warning, and a matrix that is not positive
         semi-definite raises a ``LinAlgError``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            An observation covariance matrix that is not positive
            semi-definite raises a ``LinAlgError`` with univariate filtering.
@@ -1238,7 +1238,7 @@ class KalmanFilter(Representation):
             space model. Alternatively, a custom impulse vector may be
             provided, shaped `(k_posdef,)` or `(k_posdef, 1)`. Default is 0.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                NumPy integers and 0-d integer arrays are accepted as the
                index of the state innovation. They raised ValueError. A
@@ -1255,7 +1255,7 @@ class KalmanFilter(Representation):
         direct : bool, optional
             Not used.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                `direct` has no effect. It is deprecated and will be removed
                after statsmodels 0.17 is released.

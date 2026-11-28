@@ -406,7 +406,7 @@ class ProcessMLE(base.LikelihoodModel):
             The covariance model of the process. Defaults to
             GaussianCovariance.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                It is used. Before, it was ignored and GaussianCovariance
                was always used.
@@ -417,14 +417,14 @@ class ProcessMLE(base.LikelihoodModel):
             namespace k stack frames above it, -1 an empty namespace, and a
             dict maps names to values.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
                It was ignored, and only variables in `data` were found.
         **kwargs
             Other keyword arguments, for example `hasconst`, are passed to
             the model.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                They were ignored.
 
@@ -435,7 +435,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            The arguments after `drop_cols` are keyword-only and part of the
            signature. A missing required argument raises a TypeError

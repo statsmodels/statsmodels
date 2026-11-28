@@ -159,7 +159,7 @@ def maybe_name_or_idx(idx, model):
         tuple, each element is resolved recursively and the results are
         collected into lists.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A NumPy integer or a 0-d integer array is an integer location, as
            an int is. A bool is not: True was the location 1.

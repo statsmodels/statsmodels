@@ -109,7 +109,7 @@ def test_second_formula_eval_env(engine, case, eval_env, expected):
 
 
 @pytest.mark.thread_unsafe(reason="changes the global formula engine")
-# patsy warned about its own empty environment for eval_env=-1 before 0.15.1
+# patsy warned about its own empty environment for eval_env=-1 before 0.16.0
 @pytest.mark.filterwarnings("ignore:EvalEnvironment is deprecated:FutureWarning")
 @pytest.mark.parametrize("case", CASES)
 def test_second_formula_eval_env_empty(engine, case):

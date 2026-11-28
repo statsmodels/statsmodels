@@ -179,14 +179,14 @@ class LeybourneMcCabeStationarity:
             ``leybourne.run(x)``, which warns that its default will change
             to None after statsmodels 0.17 is released.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A float with an integral value, such as 2.0, or a 0-d integer
                array is a number of terms, as an int is. They raised a
                ValueError. A bool raises the same ValueError. It raised a
                TypeError from a later step.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                The default 1 of ``leybourne.run`` is deprecated and will
                change to None, the default of ``leybourne(x)``. Pass
@@ -209,7 +209,7 @@ class LeybourneMcCabeStationarity:
             ``leybourne.run(x)``, which warns that its default will change
             to 'ols' after statsmodels 0.17 is released.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                The default 'mle' of ``leybourne.run`` is deprecated and will
                change to 'ols', the default of ``leybourne(x)``. Pass

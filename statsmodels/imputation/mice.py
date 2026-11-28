@@ -192,7 +192,7 @@ class MICEData:
     `MICE` fits its analysis model to `MICEData.data`, so the data of the
     analysis model have this index.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        A ``ValueWarning`` is issued if rows in which all variables are
        missing are dropped.  They were dropped without a warning before.
@@ -1259,7 +1259,7 @@ class MICE:
         ``fit`` method, wrapped or not, must provide ``params``,
         ``cov_params()`` and ``scale``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Results without a ``_results`` attribute, for example those of
            ``PHReg``, are accepted.

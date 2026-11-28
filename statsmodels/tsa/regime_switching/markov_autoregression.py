@@ -44,7 +44,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Raises ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf.
            The ``missing`` option does not apply to ``exog_tvtp``.
@@ -390,7 +390,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         (list of str) List of human readable parameter names (for parameters
         actually included in the model)
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            A coefficient that does not switch has no regime suffix, also when
            other coefficients switch. Before, it had the suffix of the last

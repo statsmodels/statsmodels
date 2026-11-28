@@ -460,7 +460,7 @@ class _BayesMixedGLM(base.Model):
             frames above it, -1 an empty namespace, and a dict maps names to
             values.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
         """
 
         ident = []
@@ -590,7 +590,7 @@ class _BayesMixedGLM(base.Model):
             If True, return the linear predictor without passing through the
             link function.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                 Use ``which="linear"`` instead of ``linear=True`` and
                 ``which="mean"`` instead of ``linear=False``. ``linear`` will
@@ -603,7 +603,7 @@ class _BayesMixedGLM(base.Model):
             - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
               without passing through the link function.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------
@@ -1136,7 +1136,7 @@ class BayesMixedGLMResults:
             If True, returns the linear predictor, otherwise
             transform the linear predictor using the link function.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                 Use ``which="linear"`` instead of ``linear=True`` and
                 ``which="mean"`` instead of ``linear=False``. ``linear`` will
@@ -1149,7 +1149,7 @@ class BayesMixedGLMResults:
             - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
               without passing through the link function.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------
@@ -1234,7 +1234,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             frames above it, -1 an empty namespace, and a dict maps names to
             values.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------
@@ -1411,7 +1411,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             frames above it, -1 an empty namespace, and a dict maps names to
             values.
 
-            .. versionadded:: 0.15.1
+            .. versionadded:: 0.16.0
 
         Returns
         -------

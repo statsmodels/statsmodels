@@ -827,7 +827,7 @@ class OLSInfluence(_BaseInfluenceMixin):
     """
     Class to calculate outlier and influence measures for OLS and WLS results
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        The weights of WLS results are used. Previously the weights were
        ignored, so that the hat matrix diagonal, the studentized residuals,

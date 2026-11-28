@@ -271,7 +271,7 @@ class SimulationSmoother(KalmanSmoother):
             `rng`. If `rng` is already a ``Generator`` or ``RandomState``
             instance, that instance is used.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                With ``method="cfa"``, the simulations use `rng`. It was
                ignored.

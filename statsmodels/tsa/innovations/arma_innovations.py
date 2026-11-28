@@ -244,7 +244,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     prefix : str, optional
         Not used. The score is always computed in double precision.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            `prefix` has no effect. It is deprecated and will be removed after
            statsmodels 0.17 is released.
@@ -298,7 +298,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     prefix : str, optional
         Not used. The score is always computed in double precision.
 
-        .. deprecated:: 0.15.1
+        .. deprecated:: 0.16.0
 
            `prefix` has no effect. It is deprecated and will be removed after
            statsmodels 0.17 is released.

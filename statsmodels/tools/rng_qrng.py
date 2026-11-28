@@ -38,7 +38,7 @@ def check_random_state(seed=None, deprecated=False, warn=True):
     `scipy.stats.qmc.QMCEngine` requires SciPy >=1.7. It also means that the
     generator only has the method ``random``.
 
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
        An integer seed is checked with
        :func:`~statsmodels.tools.validation.is_int_like` (``strict=True``).

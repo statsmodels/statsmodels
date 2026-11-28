@@ -489,7 +489,7 @@ class Initialization:
             (to select all the states). The selected states must be
             consecutive.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array selects a state, as an int does. It
                raised a ValueError. A bool is not an integer and raises a
@@ -502,7 +502,7 @@ class Initialization:
             case it is used directly as the initialization for the selected
             block of states. It must have as many states as the block.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                An `Initialization` object is also accepted for all the
                states (`index` None); it raised ValueError. A call that
@@ -704,7 +704,7 @@ class Initialization:
             an integer (to select a specific state), or None (to select all the
             states).
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A 0-d integer array selects a state, as an int does. It
                raised a ValueError. A bool is not an integer and raises a

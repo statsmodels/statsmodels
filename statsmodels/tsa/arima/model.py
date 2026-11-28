@@ -280,12 +280,12 @@ class ARIMA(sarimax.SARIMAX):
             element for each parameter of the model, or for each free
             parameter if parameters were fixed and `includes_fixed` is False.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                A `start_params` with the wrong number of elements raises a
                ValueError where it previously raised another error.
 
-            .. deprecated:: 0.15.1
+            .. deprecated:: 0.16.0
 
                A `start_params` with too many elements, or with a single
                element for several free parameters, returned a result. This

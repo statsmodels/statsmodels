@@ -173,7 +173,7 @@ class BaseIRAnalysis:
             ``Line2D`` property raises an ``AttributeError``. Does not affect
             error bands or horizontal reference lines.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``plot_params`` was ignored before.
         figsize : tuple of float, optional
@@ -182,7 +182,7 @@ class BaseIRAnalysis:
             Plot standard impulse response error bands. The default is
             True.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Any false value, such as ``numpy.False_``, turns the error
                bands off. Only ``False`` did.
@@ -361,7 +361,7 @@ class BaseIRAnalysis:
             ``Line2D`` property raises an ``AttributeError``. Does not affect
             error bands or horizontal reference lines.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                ``plot_params`` was ignored before.
         figsize : tuple of float, optional
@@ -681,7 +681,7 @@ class IRAnalysis(BaseIRAnalysis):
             eigenvalue is used for each element. The eigenvalues are in the
             order returned by :func:`scipy.linalg.eig`, which is not sorted.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Each value must be between 0 and periods - 1. A valid
                component could be rejected and a value of periods or more
@@ -796,7 +796,7 @@ class IRAnalysis(BaseIRAnalysis):
             eigenvalue is used for each element. The eigenvalues are in the
             order returned by :func:`scipy.linalg.eig`, which is not sorted.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Each value must be between 0 and periods - 1. A valid
                component could be rejected and a value of periods or more
@@ -921,7 +921,7 @@ class IRAnalysis(BaseIRAnalysis):
             component. If None, the column of the largest eigenvalue is
             used for each element.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                Each value must be between 0 and neqs * periods - 1. Values
                of neqs * periods or more were not checked. Negative values
@@ -1231,7 +1231,7 @@ class IRAnalysis(BaseIRAnalysis):
         orth : bool, optional
             Compute orthogonalized impulse responses. The default is False.
 
-            .. versionchanged:: 0.15.1
+            .. versionchanged:: 0.16.0
 
                The term from the estimate of sigma_u is divided by the
                number of observations, as in `cum_effect_cov`. It was

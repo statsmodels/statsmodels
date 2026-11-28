@@ -2106,7 +2106,7 @@ def power_poisson_ratio_2indep(
         positive and finite because the test is based on the log of the rate
         ratio.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             The default was changed from 0 to 1. A rate ratio of 0 made
             the power 0, 1 or nan with a divide by zero warning. Values that
@@ -2326,7 +2326,7 @@ def power_equivalence_poisson_2indep(
         Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
         positive and finite.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             A nobs_ratio that is not positive and finite raises a
             ``ValueError``. Previously it returned nan or an arbitrary power.
@@ -2361,7 +2361,7 @@ def power_equivalence_poisson_2indep(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         The power is changed if ``nobs_ratio`` is not equal to 1. The variances
         of the test statistic used the wrong sample size and, for
@@ -2847,7 +2847,7 @@ def power_negbin_ratio_2indep(
         be positive and finite because the test is based on the log of the
         rate ratio.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             Values that are not positive and finite now raise a
             ``ValueError``. A rate ratio of 0 previously gave a divide by zero
@@ -3000,7 +3000,7 @@ def power_equivalence_neginb_2indep(
         Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
         positive and finite.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             A nobs_ratio that is not positive and finite raises a
             ``ValueError``. Previously it returned nan or raised a
@@ -3036,7 +3036,7 @@ def power_equivalence_neginb_2indep(
 
     Notes
     -----
-    .. versionchanged:: 0.15.1
+    .. versionchanged:: 0.16.0
 
         The power is changed if ``nobs_ratio`` is not equal to 1. The variances
         of the test statistic used the wrong sample size and, for

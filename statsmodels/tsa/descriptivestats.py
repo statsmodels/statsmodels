@@ -179,7 +179,7 @@ class TsaDescriptive:
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            Since statsmodels 0.12 this method, and `plot4`, raised
            AttributeError, because it called
            ``statsmodels.tsa.stattools.periodogram``, which was removed. It
@@ -217,7 +217,7 @@ class TsaDescriptive:
 
         Notes
         -----
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
            Since statsmodels 0.12 this method raised AttributeError, from
            `periodogram`. It now draws all four plots.
         """

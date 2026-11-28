@@ -96,7 +96,7 @@ class KernelReg(GenericKDE):
         ``levels`` is the number of distinct values of the variable, and the
         bandwidth of an ordered variable is less than 1.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
             The bandwidths of discrete variables that are selected by
             'cv_ls' or 'aic' are bounded.  They were not bounded before and

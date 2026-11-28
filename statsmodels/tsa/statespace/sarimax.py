@@ -80,7 +80,7 @@ class SARIMAX(MLEModel):
         allowed to vary over time. Default is False. Without `exog` it has no
         effect: it is set to False, with a ``SpecificationWarning``.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            Without `exog`, the model is the one without time-varying
            regression. Before, a model without autoregressive or moving

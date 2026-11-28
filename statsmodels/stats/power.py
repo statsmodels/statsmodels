@@ -1160,7 +1160,7 @@ class TTestIndPower(Power):
         If ``ratio`` is an array_like, then the one sample convention for
         ``ratio=0`` is applied to the elements that are zero.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``ratio=0`` returns the power of the one sample t-test, it used to
            raise a ``ZeroDivisionError`` or to return alpha with a
@@ -1273,7 +1273,7 @@ class TTestIndPower(Power):
         of the power equation, for example because it has no solution, a
         ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
-        .. versionchanged:: 0.15.1
+        .. versionchanged:: 0.16.0
 
            ``ratio=0`` solves the power equation of the one sample t-test, it
            used to raise a ``ZeroDivisionError`` or to give wrong results. A
