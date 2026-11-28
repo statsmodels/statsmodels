@@ -282,15 +282,28 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
             res.remove_data()
 
         for name in names:
-            assert res._cache[name] is None
+            # The cached value is deleted, not stored as None, so the next
+            # access computes it again, which fails without the data
+            assert name not in res._cache
+            with pytest.raises(TypeError):
+                getattr(res, name)
 
     def test_cached_values_evaluated(self):
-        # check that value-like attributes are evaluated before data
-        # is removed
+        # remove_data neither evaluates the value-like attributes nor stores
+        # None for them
         res = self.estimate_model()
         assert res._cache == {}
         res.remove_data()
-        assert "aic" in res._cache
+        assert res._cache == {}
+
+        # A value computed before remove_data is deleted from the cache and
+        # computed again from what is left (llf keeps its own copy)
+        res = self.estimate_model()
+        aic = res.aic
+        assert res._cache["aic"] is aic
+        res.remove_data()
+        assert "aic" not in res._cache
+        assert_allclose(res.aic, aic, rtol=1e-13)
 
 
 class TestRemoveDataPickleGLMConstrained(RemoveDataPickle):

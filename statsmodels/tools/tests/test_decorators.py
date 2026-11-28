@@ -87,6 +87,51 @@ def test_deprecated_alias(msg, remove_version, warning):
         assert msg in message
 
 
+@pytest.mark.parametrize("value", [None, 0, "b"], ids=["none", "zero", "str"])
+def test_cache_readonly_computed_once(value):
+    # Every result, None and falsy ones included, is computed once and then
+    # read from the cache
+    calls = []
+
+    class Example:
+        @cache_readonly
+        def b(self):
+            calls.append(None)
+            return value
+
+    ex = Example()
+    assert ex.b is value
+    assert ex.b is value
+    assert ex._cache == {"b": value}
+    assert len(calls) == 1
+
+
+def test_cache_readonly_deleted_value_computed_again():
+    # remove_data deletes the cached values, so that they are computed again
+    # from what is left on the next access
+    calls = []
+
+    class Example:
+        def __init__(self):
+            self.x = None
+
+        @cache_readonly
+        def b(self):
+            calls.append(None)
+            return self.x
+
+    ex = Example()
+    assert ex.b is None
+    ex.x = 2
+    # The cached None is kept until it is deleted
+    assert ex.b is None
+    assert len(calls) == 1
+    del ex._cache["b"]
+    assert ex.b == 2
+    assert ex._cache == {"b": 2}
+    assert len(calls) == 2
+
+
 def test_stub_declares_public_names():
     # The stub replaces the module for the type checkers, which report a name
     # that it does not declare as missing from the module
