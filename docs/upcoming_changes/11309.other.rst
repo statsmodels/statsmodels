@@ -1,0 +1,5 @@
+- GLM, GEE, GLMGam, Logit, Probit, HurdleCountModel and PHReg
+  results pickled by statsmodels 0.14, and MixedLM results
+  pickled by 0.14 or 0.15.0, can be loaded and used again.
+  MixedLM results that ``remove_data`` was called on report the
+  standard errors of the variance parameters as NaN. :pr:`11309`
