@@ -1511,6 +1511,12 @@ def table_values(table):
     return [[str(cell) for cell in row] for row in table.data]
 
 
+def frame_rows(frame):
+    # (label, row) pairs of a DataFrame, as DataFrame.iterrows gives them;
+    # pandas 3.2 deprecates iterrows
+    return ((frame.index[i], frame.iloc[i]) for i in range(len(frame)))
+
+
 def sparsified(values):
     # Blank each value that repeats the value of the previous row
     return [str(value) if i == 0 or value != values[i - 1] else ""
@@ -1658,7 +1664,7 @@ def test_summary_impacts_univariate(revision, show_revisions_columns):
     impacts = news.impacts.droplevel(1)
     assert_equal([row[0] for row in values[1:]],
                  [str(date) for date in impacts.index])
-    for row, (_, desired) in zip(values[1:], impacts.iterrows(), strict=True):
+    for row, (_, desired) in zip(values[1:], frame_rows(impacts), strict=True):
         assert_equal(row[1:], [f"{value:.4f}" for value in desired[columns]])
 
 
@@ -1677,7 +1683,7 @@ def test_summary_impacts_by_impacted_variable(sparsify):
                  sparsified(variables) if sparsify else variables)
     assert_equal([row[1] for row in values[1:]],
                  [str(date) for date in impacts.index.get_level_values(1)])
-    for row, (_, desired) in zip(values[1:], impacts.iterrows(), strict=True):
+    for row, (_, desired) in zip(values[1:], frame_rows(impacts), strict=True):
         assert_equal(row[2:], [f"{value:.4f}" for value in desired])
 
 
@@ -1693,7 +1699,7 @@ def test_summary_impacts_selection():
     assert_equal(values[0], ["impacted variable"] + IMPACTS_COLUMNS)
     desired = impacts.loc["2009Q3"]
     assert_equal([row[0] for row in values[1:]], desired.index.tolist())
-    for row, (_, value) in zip(values[1:], desired.iterrows(), strict=True):
+    for row, (_, value) in zip(values[1:], frame_rows(desired), strict=True):
         assert_equal(row[1:], [f"{x:.2f}" for x in value])
     # A range of impact dates and a single impacted variable, without
     # sparsifying: every key is shown
@@ -1704,7 +1710,7 @@ def test_summary_impacts_selection():
                  + IMPACTS_COLUMNS)
     desired = impacts.loc[(slice("2009Q4", "2010Q1"), "unemp"), :]
     assert_equal(len(values) - 1, len(desired))
-    for row, (key, value) in zip(values[1:], desired.iterrows(), strict=True):
+    for row, (key, value) in zip(values[1:], frame_rows(desired), strict=True):
         assert_equal(row[:2], [str(key[0]), key[1]])
         assert_equal(row[2:], [f"{x:.2f}" for x in value])
 
@@ -1812,7 +1818,7 @@ def test_summary_details_groupby(source, groupby):
     assert_equal(values[0], columns)
     assert_equal(len(values) - 1, len(desired))
     is_key = np.isin(columns, keys)
-    for row, (_, value) in zip(values[1:], desired.iterrows(), strict=True):
+    for row, (_, value) in zip(values[1:], frame_rows(desired), strict=True):
         row = np.array(row)
         assert_equal(row[is_key], [str(x) for x in value[is_key]])
         # The weights are rounded to 1.0 when they are within the tolerance
@@ -2016,7 +2022,7 @@ def test_summary_news_and_revisions(sparsify):
     dates = [str(x) for x in updates.index.get_level_values(0)]
     assert_equal([row[0] for row in values[1:]],
                  sparsified(dates) if sparsify else dates)
-    for row, (key, value) in zip(values[1:], updates.iterrows(), strict=True):
+    for row, (key, value) in zip(values[1:], frame_rows(updates), strict=True):
         desired = [value["observed"], value["forecast (prev)"],
                    news.news.loc[key]]
         assert_equal(row[1:], [key[1]] + [f"{x:.2f}" for x in desired])
@@ -2030,7 +2036,7 @@ def test_summary_news_and_revisions(sparsify):
     dates = [str(x) for x in revisions.index.get_level_values(0)]
     assert_equal([row[0] for row in values[1:]],
                  sparsified(dates) if sparsify else dates)
-    for row, (key, value) in zip(values[1:], revisions.iterrows(),
+    for row, (key, value) in zip(values[1:], frame_rows(revisions),
                                  strict=True):
         desired = [value["observed (prev)"],
                    value["revised"] - value["observed (prev)"]]
@@ -2386,7 +2392,7 @@ def test_summary_details_multiple_tables_by_impact(source, groupby):
         assert_equal(values[0], columns)
         subset = desired.loc[desired[groupby] == group, columns]
         assert_equal(len(values) - 1, len(subset))
-        for row, (_, value) in zip(values[1:], subset.iterrows(),
+        for row, (_, value) in zip(values[1:], frame_rows(subset),
                                    strict=True):
             row = np.array(row)
             assert_equal(row[is_key], [str(x) for x in value[is_key]])
