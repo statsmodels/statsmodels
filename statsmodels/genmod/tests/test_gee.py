@@ -2326,6 +2326,26 @@ def test_qic_warnings():
         result.qic()
 
 
+# R 4.6.2, geepack 1.3.13, on the data of simple_qic_data:
+#   m <- geeglm(y ~ x, family=family, id=g, corstr="independence")
+#   sum(diag(solve(m$geese$vbeta.naiv) %*% m$geese$vbeta)) * m$geese$gamma
+# is the penalty of the QIC at scale 1 (QIC() reports it as CIC at the
+# estimated scale gamma): 0.24 (gaussian), 4/3 (binomial), 0.4 (poisson).
+@pytest.mark.parametrize(
+    "family, trace",
+    [(families.Gaussian, 0.24), (families.Binomial, 4 / 3), (families.Poisson, 0.4)],
+)
+def test_qic_penalty(family, trace):
+    y, x1, x2, g = simple_qic_data(family)
+    exog = np.column_stack((x2, x1))
+    model = gee.GEE(
+        y, exog, family=family(), groups=g, cov_struct=cov_struct.Independence()
+    )
+    result = model.fit()
+    ql, qic, _ = model.qic(result.params, 1.0, result.cov_params())
+    assert_allclose((qic + 2 * ql) / 2, trace, rtol=1e-6)
+
+
 @pytest.mark.parametrize("reg", [False, True])
 def test_quasipoisson(reg):
 
