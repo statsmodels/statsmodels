@@ -1,0 +1,4 @@
+- The start-parameter search of ``fit`` of Markov switching models (``search_reps``)
+  could keep worse start parameters after ``untransform_params``
+  failed for a candidate. Results of such searches can change.
+  :pr:`11004`
