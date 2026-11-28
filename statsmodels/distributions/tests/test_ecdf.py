@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
@@ -162,3 +164,86 @@ def test_step_function_keeps_complex_values():
 def test_ecdf_rejects_2d():
     with pytest.raises(ValueError, match="x must have"):
         ECDF(np.ones((3, 2)))
+
+
+# --- Regressions: large finite weights and non-finite weight compatibility ---
+_X3 = [0, 1, 2]
+_EQUAL_EXPECTED = [1 / 3, 2 / 3, 1.0]
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [
+        [2**62] * 3,
+        np.array([2**62] * 3, dtype=np.int64),
+    ],
+    ids=["python-int", "np.int64"],
+)
+def test_ecdf_discrete_large_int_weights(weights):
+    e = ECDFDiscrete(_X3, freq_weights=weights)
+    npt.assert_allclose(e(_X3), _EQUAL_EXPECTED, rtol=1e-14)
+
+
+@pytest.mark.parametrize(
+    "weights",
+    [
+        [np.finfo(np.float64).max] * 3,
+        np.array([np.finfo(np.float32).max] * 3, dtype=np.float32),
+    ],
+    ids=["float64-max", "float32-max"],
+)
+def test_ecdf_discrete_large_finite_float_weights(weights):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        e = ECDFDiscrete(_X3, freq_weights=weights)
+    npt.assert_allclose(e(_X3), _EQUAL_EXPECTED, rtol=1e-14)
+
+
+@pytest.mark.parametrize("dtype", [int, np.int32, np.int64, np.float32, np.float64])
+def test_ecdf_discrete_large_weight_scale_invariance(dtype):
+    small = np.array([1, 2, 3], dtype=dtype)
+    large = small * np.array(2**28, dtype=dtype)
+    w_before = large.copy()
+    expected = [1 / 6, 1 / 2, 1.0]
+    npt.assert_allclose(ECDFDiscrete(_X3, freq_weights=small)(_X3),
+                        expected, rtol=1e-6)
+    npt.assert_allclose(ECDFDiscrete(_X3, freq_weights=large)(_X3),
+                        expected, rtol=1e-6)
+    npt.assert_array_equal(large, w_before)
+
+
+@pytest.mark.parametrize("position", [0, 1, 2])
+def test_ecdf_discrete_positive_inf_weight_position_preserved(position):
+    # Positive infinity is not a finite scale factor.  The historical
+    # position-dependent NaN pattern must be preserved unchanged.
+    weights = [1.0, 2.0, 3.0]
+    weights[position] = np.inf
+    expected = [0.0] * position + [np.nan] * (3 - position)
+    result = ECDFDiscrete(_X3, freq_weights=weights)(_X3)
+    npt.assert_array_equal(np.isnan(result), np.isnan(expected))
+    npt.assert_allclose(np.nan_to_num(result, nan=0.0),
+                        np.nan_to_num(np.array(expected), nan=0.0))
+
+
+@pytest.mark.parametrize(
+    "weights, raises",
+    [
+        ([0.0, 0.0, 0.0], AssertionError),
+        ([-1.0, -2.0, -3.0], AssertionError),
+        ([np.nan, 1.0, 2.0], AssertionError),
+        ([-np.inf, 1.0, 2.0], AssertionError),
+    ],
+)
+def test_ecdf_discrete_preserves_invalid_weight_behavior(weights, raises):
+    with pytest.raises(raises):
+        ECDFDiscrete(_X3, freq_weights=weights)
+
+
+def test_ecdf_discrete_zero_weight_preserved():
+    result = ECDFDiscrete(_X3, freq_weights=[0.0, 1.0, 2.0])(_X3)
+    npt.assert_allclose(result, [0.0, 1 / 3, 1.0])
+
+
+def test_ecdf_discrete_negative_weight_preserved():
+    result = ECDFDiscrete(_X3, freq_weights=[-1.0, 3.0, 4.0])(_X3)
+    npt.assert_allclose(result, [-1 / 6, 1 / 3, 1.0])

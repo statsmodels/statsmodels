@@ -216,13 +216,22 @@ class ECDFDiscrete(StepFunction):
         else:
             x = np.asarray(x)
         assert len(freq_weights) == len(x)
-        w = np.asarray(freq_weights)
-        sw = np.sum(w)
+        w = np.asarray(freq_weights, dtype=float)
+        with np.errstate(over="ignore", invalid="ignore"):
+            sw = np.sum(w)
         assert sw > 0
         ax = x.argsort()
         x = x[ax]
-        y = np.cumsum(w[ax])
-        y = y / sw
+        # Normalize by max |w| so that finite large weights cannot overflow.
+        # The ratio cumsum(w)/sum(w) is invariant under positive rescaling,
+        # but only apply it when the scale is finite and positive so that
+        # pre-existing handling of non-finite weights is preserved.
+        scale = np.max(np.abs(w))
+        if np.isfinite(scale) and scale > 0:
+            w = w[ax] / scale
+        else:
+            w = w[ax]
+        y = np.cumsum(w) / np.sum(w)
         super().__init__(x, y, side=side, sorted=True)
 
 
