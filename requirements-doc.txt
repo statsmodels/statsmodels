@@ -1,7 +1,5 @@
 # Requirements for doc build, in addition to requirements.txt
 sphinx
-# Avoid warnings which break Sphinx by pinning pandas
-pandas>=2.2.2,!=2.1.0
 pydata-sphinx-theme
 jupyter
 notebook
